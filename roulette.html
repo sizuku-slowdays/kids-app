@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ルーレット 1〜9</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+JP:wght@700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0f0c1a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 16px;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(123,79,255,0.3) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 80% 100%, rgba(255,79,200,0.15) 0%, transparent 60%);
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  h1 {
+    font-family: 'Dela Gothic One', sans-serif;
+    font-size: clamp(1.6rem, 7vw, 2.8rem);
+    letter-spacing: 0.1em;
+    background: linear-gradient(135deg, #ff4fc8, #7b4fff, #ffd700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 32px;
+  }
+
+  .wheel-wrap {
+    position: relative;
+    width: min(280px, 78vw);
+    height: min(280px, 78vw);
+    margin-bottom: 24px;
+  }
+
+  canvas#wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: 0 0 50px rgba(123,79,255,0.5), 0 0 0 4px rgba(255,255,255,0.08);
+    display: block;
+  }
+
+  .wheel-pointer {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-top: 26px solid #ffd700;
+    filter: drop-shadow(0 3px 6px rgba(255,215,0,0.8));
+  }
+
+  /* 結果表示 */
+  .result-display {
+    font-family: 'Dela Gothic One', sans-serif;
+    font-size: clamp(4rem, 18vw, 7rem);
+    color: #ffd700;
+    text-shadow: 0 0 30px rgba(255,215,0,0.8);
+    line-height: 1;
+    min-height: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+    margin-bottom: 12px;
+  }
+
+  /* 履歴 */
+  .history-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+
+  .history-bar {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 320px;
+    min-height: 36px;
+    margin-bottom: 28px;
+  }
+
+  .hist-chip {
+    background: rgba(255,255,255,0.07);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Dela Gothic One', sans-serif;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.75);
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  /* ボタン */
+  .spin-btn {
+    font-family: 'Dela Gothic One', sans-serif;
+    font-size: clamp(1.1rem, 4vw, 1.4rem);
+    letter-spacing: 0.12em;
+    background: linear-gradient(135deg, #ff4fc8, #7b4fff);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 16px 52px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 6px 24px rgba(255,79,200,0.45);
+    margin-bottom: 16px;
+  }
+  .spin-btn:hover  { transform: scale(1.05); box-shadow: 0 8px 32px rgba(255,79,200,0.65); }
+  .spin-btn:active { transform: scale(0.97); }
+  .spin-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .reset-btn {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: transparent;
+    color: rgba(255,255,255,0.45);
+    border: 1.5px solid rgba(255,255,255,0.18);
+    border-radius: 50px;
+    padding: 9px 28px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .reset-btn:hover { border-color: #ff4fc8; color: #ff4fc8; }
+</style>
+</head>
+<body>
+
+<h1>🎯 ルーレット</h1>
+
+<div class="wheel-wrap">
+  <canvas id="wheel" width="400" height="400"></canvas>
+  <div class="wheel-pointer"></div>
+</div>
+
+<div class="result-display" id="resultDisplay">？</div>
+
+<div class="history-label">履歴</div>
+<div class="history-bar" id="historyBar"></div>
+
+<button class="spin-btn" id="spinBtn" onclick="spin()">🎰 まわす</button>
+<button class="reset-btn" onclick="reset()">🔄 リセット</button>
+
+<script>
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const W = 400, CX = W/2, CY = W/2, R = 188;
+const NUMS = [1,2,3,4,5,6,7,8,9];
+const COLORS = ['#ff4fc8','#7b4fff','#ff6b6b','#ffd700','#4fc8ff','#ff8c69','#a0d832','#c87bff','#ff9f4f'];
+const SLICE = (Math.PI * 2) / 9;
+
+let angle = 0;
+let spinning = false;
+let history = [];
+
+function drawWheel(rot) {
+  ctx.clearRect(0, 0, W, W);
+
+  NUMS.forEach((n, i) => {
+    const start = rot + i * SLICE - Math.PI / 2;
+    const end = start + SLICE;
+
+    // スライス
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, start, end);
+    ctx.closePath();
+    ctx.fillStyle = COLORS[i];
+    ctx.fill();
+
+    // 区切り線
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, start, end);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // 数字
+    const mid = start + SLICE / 2;
+    const tx = CX + R * 0.65 * Math.cos(mid);
+    const ty = CY + R * 0.65 * Math.sin(mid);
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(mid + Math.PI / 2);
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.font = 'bold 38px "Dela Gothic One", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n, 0, 0);
+    ctx.restore();
+  });
+
+  // 外枠
+  ctx.beginPath();
+  ctx.arc(CX, CY, R, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  // 中心
+  ctx.beginPath();
+  ctx.arc(CX, CY, 18, 0, Math.PI * 2);
+  ctx.fillStyle = '#0f0c1a';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+drawWheel(0);
+
+function spin() {
+  if (spinning) return;
+  spinning = true;
+  document.getElementById('spinBtn').disabled = true;
+
+  const extraRot = Math.PI * 2 * (6 + Math.random() * 6);
+  const duration = 3200 + Math.random() * 800;
+  const startAngle = angle;
+  const startTime = performance.now();
+
+  function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+
+  function animate(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    angle = startAngle + extraRot * easeOut(t);
+    drawWheel(angle);
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // drawWheel では各スライスi の開始角度 = angle + i*SLICE - π/2
+      // ポインターは真上 = 絶対角度 -π/2
+      // ポインターがスライスiに入る条件:
+      //   angle + i*SLICE - π/2 <= -π/2 < angle + (i+1)*SLICE - π/2
+      //   → i*SLICE <= -angle < (i+1)*SLICE
+      //   → i = floor(-angle / SLICE) mod 9
+      const norm = ((-angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const idx = Math.floor(norm / SLICE) % 9;
+      const result = NUMS[idx];
+
+      history.push(result);
+      showResult(result);
+      updateHistory();
+
+      spinning = false;
+      document.getElementById('spinBtn').disabled = false;
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function showResult(n) {
+  const el = document.getElementById('resultDisplay');
+  el.style.transform = 'scale(1.5)';
+  el.textContent = n;
+  setTimeout(() => el.style.transform = 'scale(1)', 250);
+}
+
+function updateHistory() {
+  const bar = document.getElementById('historyBar');
+  bar.innerHTML = '';
+  history.forEach(n => {
+    const c = document.createElement('div');
+    c.className = 'hist-chip';
+    c.textContent = n;
+    bar.appendChild(c);
+  });
+}
+
+function reset() {
+  history = [];
+  angle = 0;
+  drawWheel(0);
+  document.getElementById('resultDisplay').textContent = '？';
+  document.getElementById('historyBar').innerHTML = '';
+}
+</script>
+</body>
+</html>

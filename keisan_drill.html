@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>けいさんドリル</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  :root {
+    --bg: #fff9f0;
+    --primary: #ff6b6b;
+    --secondary: #ffd93d;
+    --accent: #6bcb77;
+    --blue: #4d96ff;
+    --purple: #c77dff;
+    --text: #3a3a3a;
+    --card: #ffffff;
+    --shadow: 0 4px 20px rgba(0,0,0,0.1);
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', 'Hiragino Maru Gothic Pro', 'ヒラギノ丸ゴ Pro', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* floating bg shapes */
+  body::before {
+    content: '';
+    position: fixed;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, #ffd93d33, transparent 70%);
+    top: -100px; right: -100px;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, #ff6b6b22, transparent 70%);
+    bottom: -50px; left: -50px;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
+
+  /* ===== START SCREEN ===== */
+  .app-title {
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--primary), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+    margin-top: 30px;
+    line-height: 1.2;
+  }
+  .app-subtitle {
+    font-size: 1.1rem;
+    color: #888;
+    margin-top: 6px;
+    margin-bottom: 30px;
+  }
+
+  .section-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #aaa;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    align-self: flex-start;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 1rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn-select {
+    padding: 10px 18px;
+    border-radius: 50px;
+    border: 2.5px solid #e0e0e0;
+    background: #f8f8f8;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text);
+  }
+  .btn-select:hover { transform: translateY(-2px); }
+  .btn-select.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255,107,107,0.35);
+  }
+  .btn-select.grade-active {
+    border-color: var(--blue);
+    background: var(--blue);
+    color: white;
+    box-shadow: 0 4px 12px rgba(77,150,255,0.35);
+  }
+  .btn-select.op-active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 4px 12px rgba(107,203,119,0.35);
+  }
+  .btn-select.level-active {
+    border-color: var(--purple);
+    background: var(--purple);
+    color: white;
+    box-shadow: 0 4px 12px rgba(199,125,255,0.35);
+  }
+  .btn-select.mode-active {
+    border-color: var(--secondary);
+    background: var(--secondary);
+    color: var(--text);
+    box-shadow: 0 4px 12px rgba(255,217,61,0.35);
+  }
+  .btn-select.furigana-active {
+    border-color: #ff9f43;
+    background: #ff9f43;
+    color: white;
+  }
+
+  .start-btn {
+    margin-top: 10px;
+    padding: 18px 60px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, var(--primary), var(--purple));
+    color: white;
+    font-family: inherit;
+    font-size: 1.3rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(255,107,107,0.4);
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .start-btn:hover { transform: translateY(-3px) scale(1.03); }
+  .start-btn:active { transform: scale(0.97); }
+
+  /* ===== QUIZ SCREEN ===== */
+  .quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 16px;
+    margin-top: 16px;
+  }
+  .progress-text { font-size: 0.9rem; font-weight: 700; color: #888; }
+  .score-badge {
+    background: var(--accent);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+
+  .timer-bar-wrap {
+    width: 100%;
+    max-width: 600px;
+    height: 12px;
+    background: #eee;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .timer-bar {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--accent), var(--secondary));
+    transition: width 0.1s linear;
+  }
+  .timer-bar.warning { background: linear-gradient(90deg, var(--secondary), var(--primary)); }
+  .timer-bar.danger { background: var(--primary); }
+
+  .question-card {
+    background: var(--card);
+    border-radius: 28px;
+    padding: 40px 30px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, #ffd93d44, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .question-num-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ccc;
+    margin-bottom: 12px;
+  }
+
+  .question-text {
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .question-text .operator { color: var(--primary); }
+  .question-text .equals { color: #aaa; }
+  .question-text .blank {
+    display: inline-block;
+    min-width: 80px;
+    border-bottom: 4px solid var(--blue);
+    color: var(--blue);
+    vertical-align: bottom;
+  }
+
+  /* fraction display */
+  .fraction-display {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 900;
+    line-height: 1.1;
+    vertical-align: middle;
+  }
+  .fraction-display .numerator { border-bottom: 3px solid currentColor; padding: 0 6px; }
+  .fraction-display .denominator { padding: 0 6px; }
+
+  /* feedback */
+  .feedback-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+    border-radius: 28px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .feedback-overlay.show { opacity: 1; pointer-events: all; }
+  .feedback-overlay.correct { background: rgba(107,203,119,0.25); }
+  .feedback-overlay.wrong { background: rgba(255,107,107,0.25); }
+
+  /* choices */
+  .choices-area {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 20px;
+  }
+  .choice-btn {
+    padding: 20px 10px;
+    border-radius: 18px;
+    border: 3px solid #e0e0e0;
+    background: white;
+    font-family: inherit;
+    font-size: clamp(1.2rem, 3.5vw, 2rem);
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text);
+  }
+  .choice-btn:hover:not(:disabled) { transform: translateY(-3px); border-color: var(--blue); box-shadow: 0 4px 16px rgba(77,150,255,0.2); }
+  .choice-btn.correct-ans { background: var(--accent); border-color: var(--accent); color: white; }
+  .choice-btn.wrong-ans { background: var(--primary); border-color: var(--primary); color: white; }
+  .choice-btn:disabled { cursor: not-allowed; }
+
+  /* keypad */
+  .keypad-area {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 20px;
+  }
+  .answer-display {
+    background: white;
+    border: 3px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 14px 20px;
+    font-size: 2rem;
+    font-weight: 900;
+    text-align: right;
+    min-height: 64px;
+    margin-bottom: 12px;
+    color: var(--blue);
+    letter-spacing: 0.05em;
+  }
+  .answer-display.error { border-color: var(--primary); color: var(--primary); }
+  /* fraction keypad display */
+  .fraction-answer-display {
+    background: white;
+    border: 3px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 10px 20px;
+    min-height: 80px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+  .frac-input-part {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--blue);
+  }
+  .frac-input-part span { border-bottom: 3px solid var(--blue); padding: 2px 10px; min-width: 40px; text-align: center; }
+  .frac-slash { font-size: 2rem; font-weight: 900; color: #aaa; }
+  .frac-tab-btns { display: flex; gap: 8px; margin-bottom: 8px; }
+  .frac-tab-btn {
+    flex: 1; padding: 8px;
+    border-radius: 10px; border: 2.5px solid #e0e0e0;
+    background: #f8f8f8; font-family: inherit;
+    font-size: 0.85rem; font-weight: 700; cursor: pointer;
+    transition: all 0.15s; color: var(--text);
+  }
+  .frac-tab-btn.active { background: var(--blue); border-color: var(--blue); color: white; }
+
+  .keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .key-btn {
+    padding: 16px;
+    border-radius: 14px;
+    border: 2.5px solid #e0e0e0;
+    background: white;
+    font-family: inherit;
+    font-size: 1.4rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text);
+  }
+  .key-btn:hover { background: #f0f0f0; transform: scale(1.05); }
+  .key-btn:active { transform: scale(0.95); }
+  .key-btn.del-btn { color: var(--primary); }
+  .key-btn.submit-btn {
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    color: white; border: none;
+    box-shadow: 0 4px 14px rgba(77,150,255,0.3);
+    font-size: 1rem;
+  }
+  .key-btn.dot-btn { color: var(--purple); }
+
+  /* ===== RESULT SCREEN ===== */
+  .result-stamp {
+    font-size: 5rem;
+    margin: 20px 0;
+    animation: stampIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes stampIn {
+    from { transform: scale(0) rotate(-15deg); opacity: 0; }
+    to { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .result-title {
+    font-size: 2rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .result-sub {
+    color: #888;
+    margin-bottom: 24px;
+    font-size: 1rem;
+  }
+  .result-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 24px;
+  }
+  .stat-box {
+    background: white;
+    border-radius: 18px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .stat-num {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--primary);
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    color: #aaa;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  .mistakes-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 20px;
+  }
+  .mistakes-title {
+    font-weight: 800;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    color: var(--primary);
+  }
+  .mistake-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.95rem;
+  }
+  .mistake-item:last-child { border-bottom: none; }
+  .mistake-q { font-weight: 700; }
+  .mistake-detail { color: #aaa; font-size: 0.85rem; }
+
+  .result-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 8px;
+    margin-bottom: 30px;
+  }
+  .result-btn {
+    padding: 14px 30px;
+    border-radius: 50px;
+    border: none;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .result-btn:hover { transform: translateY(-2px); }
+  .result-btn.retry { background: var(--primary); color: white; box-shadow: 0 4px 14px rgba(255,107,107,0.3); }
+  .result-btn.home { background: white; color: var(--text); box-shadow: var(--shadow); }
+
+  /* confetti */
+  .confetti-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 999;
+    overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  .hidden { display: none !important; }
+
+  /* animations */
+  @keyframes bounceIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .bounce-in { animation: bounceIn 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60% { transform: translateX(-6px); }
+    40%,80% { transform: translateX(6px); }
+  }
+  .shake { animation: shake 0.4s ease; }
+
+  .furigana-label {
+    font-size: 0.7em;
+    display: block;
+    color: #aaa;
+    font-weight: 400;
+  }
+  ruby rt { font-size: 0.55em; }
+</style>
+</head>
+<body>
+
+<div id="confetti-container" class="confetti-container"></div>
+
+<!-- ===== START SCREEN ===== -->
+<div id="screen-start" class="screen active">
+  <div class="app-title">✏️ けいさん<br>ドリル</div>
+  <div class="app-subtitle">たのしく　れんしゅうしよう！</div>
+
+  <!-- ふりがな -->
+  <div class="section-label">FURIGANA</div>
+  <div class="card">
+    <div class="card-title" id="label-furigana">ふりがな</div>
+    <div class="btn-group">
+      <button class="btn-select furigana-active" onclick="setSetting('furigana','on',this,'furigana-active','furigana-group')">ふりがな あり</button>
+      <button class="btn-select" onclick="setSetting('furigana','off',this,'furigana-active','furigana-group')">ふりがな なし</button>
+    </div>
+  </div>
+
+  <!-- 学年 -->
+  <div class="section-label">GRADE</div>
+  <div class="card">
+    <div class="card-title" id="label-grade"><ruby>学年<rt>がくねん</rt></ruby>をえらぼう</div>
+    <div class="btn-group" id="grade-group">
+      <button class="btn-select grade-active" onclick="setSetting('grade','1-2',this,'grade-active','grade-group')"><ruby>１<rt>いち</rt></ruby>〜<ruby>２<rt>に</rt></ruby><ruby>年生<rt>ねんせい</rt></ruby></button>
+      <button class="btn-select" onclick="setSetting('grade','3-4',this,'grade-active','grade-group')"><ruby>３<rt>さん</rt></ruby>〜<ruby>４<rt>よん</rt></ruby><ruby>年生<rt>ねんせい</rt></ruby></button>
+      <button class="btn-select" onclick="setSetting('grade','5-6',this,'grade-active','grade-group')"><ruby>５<rt>ご</rt></ruby>〜<ruby>６<rt>ろく</rt></ruby><ruby>年生<rt>ねんせい</rt></ruby></button>
+    </div>
+  </div>
+
+  <!-- 演算 -->
+  <div class="section-label">OPERATION</div>
+  <div class="card">
+    <div class="card-title" id="label-op"><ruby>けいさん<rt></rt></ruby>のしゅるい</div>
+    <div class="btn-group" id="op-group">
+      <button class="btn-select op-active" onclick="setSetting('op','add',this,'op-active','op-group')">➕ たしざん</button>
+      <button class="btn-select" onclick="setSetting('op','sub',this,'op-active','op-group')">➖ ひきざん</button>
+      <button class="btn-select" onclick="setSetting('op','both',this,'op-active','op-group')">➕➖ ミックス</button>
+    </div>
+    <div id="grade56-extra" class="hidden" style="margin-top:12px;">
+      <div style="font-size:0.85rem;font-weight:700;color:#aaa;margin-bottom:8px;">かずのしゅるい</div>
+      <div class="btn-group" id="numtype-group">
+        <button class="btn-select op-active" onclick="setSetting('numtype','int',this,'op-active','numtype-group')"><ruby>整数<rt>せいすう</rt></ruby>（３けた）</button>
+        <button class="btn-select" onclick="setSetting('numtype','decimal',this,'op-active','numtype-group')"><ruby>小数<rt>しょうすう</rt></ruby></button>
+        <button class="btn-select" onclick="setSetting('numtype','fraction',this,'op-active','numtype-group')"><ruby>分数<rt>ぶんすう</rt></ruby></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- レベル -->
+  <div class="section-label" id="level-section-label">LEVEL</div>
+  <div class="card" id="level-card">
+    <div class="card-title" id="label-level">レベル</div>
+    <div class="btn-group" id="level-group">
+      <button class="btn-select level-active" onclick="setSetting('level','nocarry',this,'level-active','level-group')">くりあがり なし</button>
+      <button class="btn-select" onclick="setSetting('level','carry',this,'level-active','level-group')">くりあがり あり</button>
+      <button class="btn-select" onclick="setSetting('level','both',this,'level-active','level-group')">どちらも</button>
+    </div>
+  </div>
+
+  <!-- 回答モード -->
+  <div class="section-label">ANSWER MODE</div>
+  <div class="card">
+    <div class="card-title" id="label-mode">こたえかた</div>
+    <div class="btn-group" id="mode-group">
+      <button class="btn-select mode-active" onclick="setSetting('mode','choice',this,'mode-active','mode-group')">🔢 ３たく</button>
+      <button class="btn-select" onclick="setSetting('mode','keypad',this,'mode-active','mode-group')">⌨️ キーパッド</button>
+    </div>
+  </div>
+
+  <!-- 問題数 -->
+  <div class="section-label">QUESTIONS</div>
+  <div class="card">
+    <div class="card-title" id="label-qcount">もんだいかず</div>
+    <div class="btn-group" id="qcount-group">
+      <button class="btn-select" onclick="setSetting('qcount',10,this,'active','qcount-group')">10もん</button>
+      <button class="btn-select active" onclick="setSetting('qcount',20,this,'active','qcount-group')">20もん</button>
+      <button class="btn-select" onclick="setSetting('qcount',30,this,'active','qcount-group')">30もん</button>
+    </div>
+  </div>
+
+  <!-- 制限時間 -->
+  <div class="section-label">TIME LIMIT</div>
+  <div class="card">
+    <div class="card-title" id="label-time"><ruby>せいげん<rt></rt></ruby>じかん（１もんあたり）</div>
+    <div class="btn-group" id="time-group">
+      <button class="btn-select" onclick="setSetting('timelimit',5,this,'active','time-group')">５びょう</button>
+      <button class="btn-select active" onclick="setSetting('timelimit',10,this,'active','time-group')">10びょう</button>
+      <button class="btn-select" onclick="setSetting('timelimit',15,this,'active','time-group')">15びょう</button>
+      <button class="btn-select" onclick="setSetting('timelimit',0,this,'active','time-group')">じかんなし</button>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="startQuiz()">はじめる 🚀</button>
+  <div style="height:40px;"></div>
+</div>
+
+<!-- ===== QUIZ SCREEN ===== -->
+<div id="screen-quiz" class="screen">
+  <div class="quiz-header">
+    <div class="progress-text" id="progress-text">1 / 20</div>
+    <div class="score-badge" id="score-badge">⭐ 0</div>
+    <button style="background:none;border:none;cursor:pointer;font-size:1.4rem;" onclick="goHome()" title="もどる">🏠</button>
+  </div>
+  <div class="timer-bar-wrap" id="timer-bar-wrap">
+    <div class="timer-bar" id="timer-bar"></div>
+  </div>
+  <div class="question-card">
+    <div class="question-num-label" id="q-num-label">もんだい 1</div>
+    <div class="question-text" id="question-text"></div>
+    <div class="feedback-overlay" id="feedback-overlay"></div>
+  </div>
+
+  <!-- 3択 -->
+  <div class="choices-area hidden" id="choices-area">
+    <button class="choice-btn" id="choice-0" onclick="submitChoice(0)"></button>
+    <button class="choice-btn" id="choice-1" onclick="submitChoice(1)"></button>
+    <button class="choice-btn" id="choice-2" onclick="submitChoice(2)"></button>
+  </div>
+
+  <!-- キーパッド（通常） -->
+  <div class="keypad-area hidden" id="keypad-area">
+    <div class="answer-display" id="answer-display">_</div>
+    <div class="keypad-grid">
+      <button class="key-btn" onclick="keyPress('7')">7</button>
+      <button class="key-btn" onclick="keyPress('8')">8</button>
+      <button class="key-btn" onclick="keyPress('9')">9</button>
+      <button class="key-btn" onclick="keyPress('4')">4</button>
+      <button class="key-btn" onclick="keyPress('5')">5</button>
+      <button class="key-btn" onclick="keyPress('6')">6</button>
+      <button class="key-btn" onclick="keyPress('1')">1</button>
+      <button class="key-btn" onclick="keyPress('2')">2</button>
+      <button class="key-btn" onclick="keyPress('3')">3</button>
+      <button class="key-btn del-btn" onclick="keyPress('del')">⌫</button>
+      <button class="key-btn" onclick="keyPress('0')">0</button>
+      <button class="key-btn submit-btn" onclick="keyPress('enter')">✓</button>
+    </div>
+  </div>
+
+  <!-- キーパッド（小数） -->
+  <div class="keypad-area hidden" id="keypad-decimal-area">
+    <div class="answer-display" id="answer-decimal-display">_</div>
+    <div class="keypad-grid">
+      <button class="key-btn" onclick="decKeyPress('7')">7</button>
+      <button class="key-btn" onclick="decKeyPress('8')">8</button>
+      <button class="key-btn" onclick="decKeyPress('9')">9</button>
+      <button class="key-btn" onclick="decKeyPress('4')">4</button>
+      <button class="key-btn" onclick="decKeyPress('5')">5</button>
+      <button class="key-btn" onclick="decKeyPress('6')">6</button>
+      <button class="key-btn" onclick="decKeyPress('1')">1</button>
+      <button class="key-btn" onclick="decKeyPress('2')">2</button>
+      <button class="key-btn" onclick="decKeyPress('3')">3</button>
+      <button class="key-btn del-btn" onclick="decKeyPress('del')">⌫</button>
+      <button class="key-btn dot-btn" onclick="decKeyPress('.')">.</button>
+      <button class="key-btn" onclick="decKeyPress('0')">0</button>
+      <button class="key-btn submit-btn" style="grid-column:span 3;" onclick="decKeyPress('enter')">✓ こたえる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RESULT SCREEN ===== -->
+<div id="screen-result" class="screen">
+  <div style="height:20px;"></div>
+  <div class="result-stamp" id="result-stamp">🥇</div>
+  <div class="result-title" id="result-title">すごい！　まんてん！</div>
+  <div class="result-sub" id="result-sub">20もん　ぜんぶ　せいかい！</div>
+  <div class="result-stats">
+    <div class="stat-box">
+      <div class="stat-num" id="stat-correct" style="color:var(--accent)">20</div>
+      <div class="stat-label">せいかい</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="stat-wrong" style="color:var(--primary)">0</div>
+      <div class="stat-label">まちがい</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="stat-time" style="color:var(--blue)">0s</div>
+      <div class="stat-label">じかん</div>
+    </div>
+  </div>
+  <div class="mistakes-card hidden" id="mistakes-card">
+    <div class="mistakes-title">📝 まちがえた　もんだい</div>
+    <div id="mistakes-list"></div>
+  </div>
+  <div class="result-btns">
+    <button class="result-btn retry" onclick="retryQuiz()">🔄 もういちど</button>
+    <button class="result-btn home" onclick="goHome()">🏠 トップへもどる</button>
+  </div>
+</div>
+
+<script>
+// ===== SETTINGS =====
+const settings = {
+  furigana: 'on',
+  grade: '1-2',
+  op: 'add',
+  numtype: 'int',
+  level: 'nocarry',
+  mode: 'choice',
+  qcount: 20,
+  timelimit: 10,
+};
+
+function setSetting(key, val, btn, activeClass, groupId) {
+  settings[key] = val;
+  if (groupId) {
+    document.querySelectorAll(`#${groupId} .btn-select`).forEach(b => b.classList.remove(activeClass));
+  }
+  btn.classList.add(activeClass);
+  if (key === 'grade') updateGradeUI();
+  if (key === 'furigana') updateFuriganaUI();
+}
+
+function updateGradeUI() {
+  const is56 = settings.grade === '5-6';
+  document.getElementById('grade56-extra').classList.toggle('hidden', !is56);
+  document.getElementById('level-card').classList.toggle('hidden', is56);
+  document.getElementById('level-section-label').classList.toggle('hidden', is56);
+}
+
+function updateFuriganaUI() {
+  const hasFuri = settings.furigana === 'on';
+  // update card titles
+  const labels = {
+    'label-furigana': hasFuri ? 'ふりがな' : 'ふりがな',
+    'label-grade': hasFuri ? '<ruby>学年<rt>がくねん</rt></ruby>をえらぼう' : '学年を選ぼう',
+    'label-op': hasFuri ? 'けいさんのしゅるい' : '計算の種類',
+    'label-level': hasFuri ? 'レベル' : 'レベル',
+    'label-mode': hasFuri ? 'こたえかた' : '答え方',
+    'label-qcount': hasFuri ? 'もんだいかず' : '問題数',
+    'label-time': hasFuri ? '<ruby>せいげん<rt></rt></ruby>じかん（１もんあたり）' : '制限時間（1問あたり）',
+  };
+  for (const [id, html] of Object.entries(labels)) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  }
+}
+
+// ===== QUESTION GENERATION =====
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function simplify(n, d) { const g = gcd(Math.abs(n), Math.abs(d)); return [n/g, d/g]; }
+
+function genQuestion() {
+  const g = settings.grade;
+  const op = settings.op === 'both' ? (Math.random()<0.5?'add':'sub') : settings.op;
+  const level = settings.level;
+  const numtype = settings.numtype;
+
+  if (g === '5-6') {
+    if (numtype === 'decimal') return genDecimalQ(op);
+    if (numtype === 'fraction') return genFractionQ(op);
+    return genIntQ(op, g, level);
+  }
+  return genIntQ(op, g, level);
+}
+
+function genIntQ(op, grade, level) {
+  let a, b, carry;
+  const tries = 100;
+  for (let i=0; i<tries; i++) {
+    if (grade === '1-2') {
+      a = rand(1,9); b = rand(1,9);
+    } else if (grade === '3-4') {
+      a = rand(10,99); b = rand(10,99);
+    } else {
+      a = rand(100,999); b = rand(100,999);
+    }
+    if (op === 'sub' && a < b) [a,b] = [b,a];
+    if (op === 'sub' && a === b) continue;
+
+    carry = hasCarry(a, b, op);
+    if (level === 'nocarry' && carry) continue;
+    if (level === 'carry' && !carry) continue;
+    break;
+  }
+  const ans = op === 'add' ? a + b : a - b;
+  return { type:'int', op, a, b, ans, display: `${a} ${op==='add'?'＋':'－'} ${b} ＝` };
+}
+
+function hasCarry(a, b, op) {
+  if (op === 'add') {
+    const a1=a%10, b1=b%10;
+    if (a1+b1>=10) return true;
+    const a10=Math.floor(a/10)%10, b10=Math.floor(b/10)%10;
+    if (a10+b10>=10) return true;
+    return false;
+  } else {
+    const a1=a%10, b1=b%10;
+    if (a1<b1) return true;
+    const a10=Math.floor(a/10)%10, b10=Math.floor(b/10)%10;
+    if (a10<b10) return true;
+    return false;
+  }
+}
+
+function genDecimalQ(op) {
+  const d1 = rand(1,2);
+  let a = +(rand(1,9) + rand(1,9)/10).toFixed(d1);
+  let b = +(rand(1,9) + rand(1,9)/10).toFixed(d1);
+  if (op === 'sub' && a < b) [a,b] = [b,a];
+  if (op === 'sub' && a === b) b = +(b - 0.1).toFixed(1);
+  const ans = +(op === 'add' ? a+b : a-b).toFixed(2);
+  return { type:'decimal', op, a, b, ans, display:`${a} ${op==='add'?'＋':'－'} ${b} ＝` };
+}
+
+function genFractionQ(op) {
+  const denoms = [2,3,4,5,6,8,10,12];
+  let d1 = denoms[rand(0,denoms.length-1)];
+  let d2 = denoms[rand(0,denoms.length-1)];
+  let n1 = rand(1, d1-1);
+  let n2 = rand(1, d2-1);
+  // compute
+  const lcd = d1*d2/gcd(d1,d2);
+  let numAns = op==='add' ? n1*(lcd/d1)+n2*(lcd/d2) : n1*(lcd/d1)-n2*(lcd/d2);
+  if (numAns <= 0) { [n1,n2]=[n2,n1]; [d1,d2]=[d2,d1]; numAns = op==='add'?n1*(lcd/d1)+n2*(lcd/d2):n1*(lcd/d1)-n2*(lcd/d2); }
+  const [sn,sd] = simplify(numAns, lcd);
+  return { type:'fraction', op, a:n1, da:d1, b:n2, db:d2, ans:`${sn}/${sd}`, ansN:sn, ansD:sd, display:'' };
+}
+
+function rand(min,max) { return Math.floor(Math.random()*(max-min+1))+min; }
+
+// ===== DISTRACTOR GENERATION =====
+function makeChoices(q) {
+  const ans = q.ans;
+  let distractors = [];
+
+  if (q.type === 'fraction') {
+    // wrong fractions
+    const [an, ad] = [q.ansN, q.ansD];
+    const opts = [
+      `${an+1}/${ad}`, `${an-1}/${ad}`, `${an}/${ad+1}`,
+      `${an}/${ad-1 > 0 ? ad-1 : ad+2}`,
+      `${q.a}/${q.da}`, `${q.b}/${q.db}`,
+      `${an+1}/${ad+1}`
+    ].filter(s => s !== ans && !s.includes('/0') && !s.startsWith('0/') && !s.startsWith('-'));
+    distractors = shuffle([...new Set(opts)]).slice(0,2);
+    while (distractors.length < 2) distractors.push(`${an+distractors.length+1}/${ad}`);
+  } else if (q.type === 'decimal') {
+    const a = q.ans;
+    distractors = [+(a+0.1).toFixed(2), +(a-0.1).toFixed(2), +(a+1).toFixed(2), +(a-1).toFixed(2), +(q.a).toFixed(2), +(q.b).toFixed(2)];
+    distractors = [...new Set(distractors.filter(x => x > 0 && x !== a))].slice(0,2);
+    while(distractors.length<2) distractors.push(+(a+distractors.length*0.2).toFixed(2));
+  } else {
+    const a = q.ans;
+    const pool = [a-1, a+1, a-2, a+2, q.a, q.b, a+10, a-10];
+    const op = q.op;
+    if (op === 'add') pool.push(q.a + q.b - 10, q.a - q.b);
+    else pool.push(q.a + q.b, q.a - q.b + 10);
+    distractors = [...new Set(pool.filter(x => x > 0 && x !== a && x < 2000))].slice(0,2);
+    while(distractors.length<2) distractors.push(a+distractors.length+3);
+  }
+
+  const choices = shuffle([ans, distractors[0], distractors[1]]);
+  return choices;
+}
+
+function shuffle(arr) { return arr.sort(()=>Math.random()-0.5); }
+
+// ===== QUIZ STATE =====
+let questions = [];
+let current = 0;
+let score = 0;
+let mistakes = [];
+let timerInterval = null;
+let timerRemaining = 0;
+let startTime = 0;
+let totalElapsed = 0;
+let currentChoices = [];
+let currentInput = '';
+let fracInputPart = 'num'; // 'num' or 'den'
+let fracNumerator = '';
+let fracDenominator = '';
+
+function startQuiz() {
+  questions = [];
+  for (let i=0; i<settings.qcount; i++) questions.push(genQuestion());
+  current = 0; score = 0; mistakes = [];
+  totalElapsed = 0; startTime = Date.now();
+  showScreen('quiz');
+  loadQuestion();
+}
+
+function retryQuiz() {
+  startQuiz();
+}
+
+function goHome() {
+  clearTimer();
+  showScreen('start');
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function loadQuestion() {
+  clearTimer();
+  const q = questions[current];
+  currentInput = '';
+  fracNumerator = ''; fracDenominator = ''; fracInputPart = 'num';
+
+  document.getElementById('progress-text').textContent = `${current+1} / ${settings.qcount}`;
+  document.getElementById('score-badge').textContent = `⭐ ${score}`;
+  document.getElementById('q-num-label').textContent = `もんだい ${current+1}`;
+
+  // render question
+  const qtEl = document.getElementById('question-text');
+  if (q.type === 'fraction') {
+    qtEl.innerHTML = renderFrac(q.a, q.da) + ` <span class="operator">${q.op==='add'?'＋':'－'}</span> ` + renderFrac(q.b, q.db) + ` <span class="equals">＝</span> <span class="blank">?</span>`;
+  } else {
+    qtEl.innerHTML = `${q.a} <span class="operator">${q.op==='add'?'＋':'－'}</span> ${q.b} <span class="equals">＝</span> <span class="blank">?</span>`;
+  }
+
+  // reset feedback
+  const fb = document.getElementById('feedback-overlay');
+  fb.className = 'feedback-overlay';
+  fb.textContent = '';
+
+  // mode
+  const isFrac = q.type === 'fraction';
+  const useChoice = settings.mode === 'choice' || isFrac;
+
+  document.getElementById('choices-area').classList.toggle('hidden', !useChoice);
+  document.getElementById('keypad-area').classList.toggle('hidden', useChoice || q.type==='decimal');
+  document.getElementById('keypad-decimal-area').classList.toggle('hidden', useChoice || q.type!=='decimal');
+
+  if (useChoice) {
+    currentChoices = makeChoices(q);
+    for (let i=0;i<3;i++) {
+      const btn = document.getElementById('choice-'+i);
+      const val = currentChoices[i];
+      if (q.type==='fraction') {
+        const [n,d] = val.toString().split('/');
+        btn.innerHTML = renderFrac(parseInt(n), parseInt(d));
+      } else {
+        btn.textContent = val;
+      }
+      btn.className = 'choice-btn';
+      btn.disabled = false;
+    }
+  } else if (q.type === 'decimal') {
+    document.getElementById('answer-decimal-display').textContent = '_';
+    document.getElementById('answer-decimal-display').classList.remove('error');
+    currentInput = '';
+  } else {
+    document.getElementById('answer-display').textContent = '_';
+    document.getElementById('answer-display').classList.remove('error');
+    currentInput = '';
+  }
+
+  // timer
+  if (settings.timelimit > 0) {
+    document.getElementById('timer-bar-wrap').style.display = 'block';
+    startTimer(settings.timelimit);
+  } else {
+    document.getElementById('timer-bar-wrap').style.display = 'none';
+  }
+}
+
+function renderFrac(n, d) {
+  return `<span class="fraction-display"><span class="numerator">${n}</span><span class="denominator">${d}</span></span>`;
+}
+
+function startTimer(secs) {
+  timerRemaining = secs;
+  updateTimerBar(1);
+  timerInterval = setInterval(()=>{
+    timerRemaining -= 0.1;
+    const frac = timerRemaining/secs;
+    updateTimerBar(frac);
+    if (timerRemaining <= 0) {
+      clearTimer();
+      timeUp();
+    }
+  }, 100);
+}
+
+function updateTimerBar(frac) {
+  const bar = document.getElementById('timer-bar');
+  bar.style.width = (frac*100)+'%';
+  bar.className = 'timer-bar';
+  if (frac < 0.3) bar.classList.add('danger');
+  else if (frac < 0.6) bar.classList.add('warning');
+}
+
+function clearTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+}
+
+function timeUp() {
+  const q = questions[current];
+  showFeedback(false);
+  mistakes.push({q, userAns:'（じかんぎれ）', correct: q.ans});
+  setTimeout(nextQuestion, 1200);
+}
+
+function submitChoice(idx) {
+  clearTimer();
+  const q = questions[current];
+  const chosen = currentChoices[idx];
+  const correct = String(chosen) === String(q.ans);
+
+  for(let i=0;i<3;i++) {
+    const btn = document.getElementById('choice-'+i);
+    btn.disabled = true;
+    if(String(currentChoices[i]) === String(q.ans)) btn.classList.add('correct-ans');
+  }
+  if (!correct) document.getElementById('choice-'+idx).classList.add('wrong-ans');
+
+  if (correct) { score++; showFeedback(true); }
+  else { showFeedback(false); mistakes.push({q, userAns: chosen, correct: q.ans}); }
+
+  setTimeout(nextQuestion, 1200);
+}
+
+function keyPress(k) {
+  const disp = document.getElementById('answer-display');
+  if (k === 'del') { currentInput = currentInput.slice(0,-1); }
+  else if (k === 'enter') { checkKeypadAnswer(); return; }
+  else {
+    if (currentInput.length >= 4) return;
+    currentInput += k;
+  }
+  disp.textContent = currentInput || '_';
+  disp.classList.remove('error');
+}
+
+function decKeyPress(k) {
+  const disp = document.getElementById('answer-decimal-display');
+  if (k === 'del') { currentInput = currentInput.slice(0,-1); }
+  else if (k === 'enter') { checkKeypadAnswer(true); return; }
+  else if (k === '.') {
+    if (currentInput.includes('.')) return;
+    currentInput += '.';
+  } else {
+    if (currentInput.replace('.','').length >= 5) return;
+    currentInput += k;
+  }
+  disp.textContent = currentInput || '_';
+  disp.classList.remove('error');
+}
+
+function checkKeypadAnswer(isDecimal=false) {
+  clearTimer();
+  const q = questions[current];
+  const userVal = isDecimal ? parseFloat(currentInput) : parseInt(currentInput);
+  const correct = isDecimal
+    ? Math.abs(userVal - q.ans) < 0.001
+    : userVal === q.ans;
+
+  const disp = document.getElementById(isDecimal ? 'answer-decimal-display' : 'answer-display');
+  if (isNaN(userVal)) {
+    disp.classList.add('error');
+    disp.classList.add('shake');
+    setTimeout(()=>disp.classList.remove('shake'),400);
+    return;
+  }
+
+  if (correct) { score++; showFeedback(true); }
+  else { showFeedback(false); mistakes.push({q, userAns: currentInput, correct: q.ans}); }
+
+  setTimeout(nextQuestion, 1200);
+}
+
+function showFeedback(correct) {
+  const fb = document.getElementById('feedback-overlay');
+  fb.textContent = correct ? '⭕' : '❌';
+  fb.className = 'feedback-overlay show ' + (correct ? 'correct' : 'wrong');
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= settings.qcount) { showResult(); return; }
+  loadQuestion();
+}
+
+function showResult() {
+  totalElapsed = Math.round((Date.now()-startTime)/1000);
+  showScreen('result');
+  const pct = score / settings.qcount;
+
+  let stamp, title, sub;
+  if (pct === 1) { stamp='🥇'; title='すごい！　まんてん！'; sub=`${settings.qcount}もん　ぜんぶ　せいかい！`; launchConfetti(); }
+  else if (pct >= 0.8) { stamp='🥈'; title='よくできました！'; sub=`もうすこし！　がんばった！`; launchConfetti(30); }
+  else if (pct >= 0.5) { stamp='🥉'; title='がんばった！'; sub='またちょうせんしてみよう！'; }
+  else { stamp='💪'; title='つぎは　もっとできる！'; sub='れんしゅうして　またやってみよう！'; }
+
+  document.getElementById('result-stamp').textContent = stamp;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent = sub;
+  document.getElementById('stat-correct').textContent = score;
+  document.getElementById('stat-wrong').textContent = settings.qcount - score;
+  document.getElementById('stat-time').textContent = totalElapsed+'s';
+
+  const mc = document.getElementById('mistakes-card');
+  if (mistakes.length > 0) {
+    mc.classList.remove('hidden');
+    const ml = document.getElementById('mistakes-list');
+    ml.innerHTML = '';
+    mistakes.forEach(m => {
+      const q = m.q;
+      let qStr, ansStr;
+      if (q.type==='fraction') {
+        qStr = `${q.a}/${q.da} ${q.op==='add'?'＋':'－'} ${q.b}/${q.db} ＝ ?`;
+        ansStr = q.ans;
+      } else {
+        qStr = `${q.a} ${q.op==='add'?'＋':'－'} ${q.b} ＝ ?`;
+        ansStr = q.ans;
+      }
+      const div = document.createElement('div');
+      div.className = 'mistake-item';
+      div.innerHTML = `<span class="mistake-q">${qStr}</span><span class="mistake-detail">こたえ: <b>${ansStr}</b>　あなた: ${m.userAns}</span>`;
+      ml.appendChild(div);
+    });
+  } else { mc.classList.add('hidden'); }
+}
+
+function launchConfetti(count=60) {
+  const container = document.getElementById('confetti-container');
+  container.innerHTML = '';
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff9f43'];
+  for (let i=0;i<count;i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random()*100+'vw';
+    piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+    piece.style.animationDuration = (1.5+Math.random()*2)+'s';
+    piece.style.animationDelay = (Math.random()*1.5)+'s';
+    piece.style.transform = `rotate(${Math.random()*360}deg)`;
+    container.appendChild(piece);
+  }
+  setTimeout(()=>container.innerHTML='', 5000);
+}
+</script>
+</body>
+</html>

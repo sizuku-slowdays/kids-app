@@ -336,7 +336,7 @@
         <button class="main-btn" onclick="makeRandomQuestion()">おすすめでえらぶ</button>
       </div>
       <div class="two-buttons">
-        <button class="clear-btn" onclick="clearSelectedOnly()">えらびなおす</button>
+        <button class="clear-btn" onclick="changeShopItems()">商品をいれかえる</button>
         <button class="reset-btn" onclick="resetGame()">ポイントもリセット</button>
       </div>
     </section>
@@ -365,19 +365,33 @@
   </div>
 
   <script>
-    // 商品リスト：ここを変えると商品名や金額を変更できます
-    const allItems = [
-      { id: 1, name: "りんご", price: 80, emoji: "🍎" },
-      { id: 2, name: "みかん", price: 60, emoji: "🍊" },
-      { id: 3, name: "バナナ", price: 90, emoji: "🍌" },
-      { id: 4, name: "パン", price: 120, emoji: "🥐" },
-      { id: 5, name: "ジュース", price: 150, emoji: "🧃" },
-      { id: 6, name: "おにぎり", price: 130, emoji: "🍙" },
-      { id: 7, name: "アイス", price: 180, emoji: "🍦" },
-      { id: 8, name: "ケーキ", price: 250, emoji: "🍰" },
-      { id: 9, name: "カレー", price: 300, emoji: "🍛" },
-      { id: 10, name: "べんとう", price: 480, emoji: "🍱" }
+    // 商品のもとデータ：ここを増やすと、お店に出る商品の候補が増えます
+    // minPrice〜maxPriceの間で、毎回10円単位の値段になります
+    const itemPool = [
+      { name: "りんご", minPrice: 50, maxPrice: 100, emoji: "🍎" },
+      { name: "みかん", minPrice: 40, maxPrice: 100, emoji: "🍊" },
+      { name: "バナナ", minPrice: 50, maxPrice: 100, emoji: "🍌" },
+      { name: "いちご", minPrice: 80, maxPrice: 200, emoji: "🍓" },
+      { name: "ぶどう", minPrice: 90, maxPrice: 250, emoji: "🍇" },
+      { name: "メロン", minPrice: 200, maxPrice: 500, emoji: "🍈" },
+      { name: "パン", minPrice: 80, maxPrice: 180, emoji: "🥐" },
+      { name: "ドーナツ", minPrice: 90, maxPrice: 180, emoji: "🍩" },
+      { name: "クッキー", minPrice: 60, maxPrice: 150, emoji: "🍪" },
+      { name: "ケーキ", minPrice: 180, maxPrice: 400, emoji: "🍰" },
+      { name: "プリン", minPrice: 100, maxPrice: 250, emoji: "🍮" },
+      { name: "アイス", minPrice: 100, maxPrice: 250, emoji: "🍦" },
+      { name: "ジュース", minPrice: 100, maxPrice: 180, emoji: "🧃" },
+      { name: "ぎゅうにゅう", minPrice: 120, maxPrice: 250, emoji: "🥛" },
+      { name: "おちゃ", minPrice: 80, maxPrice: 160, emoji: "🍵" },
+      { name: "おにぎり", minPrice: 100, maxPrice: 180, emoji: "🍙" },
+      { name: "サンドイッチ", minPrice: 180, maxPrice: 350, emoji: "🥪" },
+      { name: "カレー", minPrice: 250, maxPrice: 500, emoji: "🍛" },
+      { name: "べんとう", minPrice: 300, maxPrice: 500, emoji: "🍱" },
+      { name: "ピザ", minPrice: 200, maxPrice: 500, emoji: "🍕" }
     ];
+
+    // 実際に今日のお店に並ぶ商品。ゲーム中で作り直します。
+    let allItems = [];
 
     let level = "easy";
     let selectedItems = [];
@@ -415,6 +429,7 @@
     function setLevel(newLevel) {
       level = newLevel;
       selectedItems = [];
+      makeShopItems();
       document.querySelectorAll(".difficulty-buttons button").forEach(btn => {
         btn.classList.remove("selected-level");
       });
@@ -422,6 +437,35 @@
       document.getElementById("levelNote").textContent = levelSettings[level].label;
       renderShop();
       clearQuestion();
+    }
+
+    // 商品候補から、今日のお店に並ぶ商品をランダムに作ります
+    function makeShopItems() {
+      const setting = levelSettings[level];
+      const availablePool = itemPool.filter(item => item.minPrice <= setting.maxPrice);
+      const shuffledPool = shuffle([...availablePool]);
+      const shopItemCount = level === "easy" ? 6 : level === "normal" ? 8 : 10;
+
+      allItems = shuffledPool.slice(0, shopItemCount).map((item, index) => {
+        const limitedMaxPrice = Math.min(item.maxPrice, setting.maxPrice);
+        return {
+          id: index + 1,
+          name: item.name,
+          emoji: item.emoji,
+          price: randomPrice(item.minPrice, limitedMaxPrice)
+        };
+      });
+    }
+
+    // 10円単位のランダム価格を作ります
+    function randomPrice(min, max) {
+      const min10 = Math.ceil(min / 10);
+      const max10 = Math.floor(max / 10);
+      return randomInt(min10, max10) * 10;
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
     function renderShop() {
@@ -483,15 +527,21 @@
       makeQuestionFromItems(currentItems);
     }
 
-    function makeRandomQuestion() {
-      const setting = levelSettings[level];
-      const availableItems = allItems.filter(item => item.price <= setting.maxPrice);
-      const count = setting.maxItemCount;
-      currentItems = shuffle([...availableItems]).slice(0, count);
-      selectedItems = [...currentItems];
-      renderShop();
-      makeQuestionFromItems(currentItems);
-    }
+function makeRandomQuestion() {
+  makeShopItems();
+  selectedItems = [];
+  renderShop();
+
+  const setting = levelSettings[level];
+  const availableItems = allItems.filter(item => item.price <= setting.maxPrice);
+  const count = setting.maxItemCount;
+
+  currentItems = shuffle([...availableItems]).slice(0, count);
+  selectedItems = [...currentItems];
+
+  renderShop();
+  makeQuestionFromItems(currentItems);
+}
 
     function makeQuestionFromItems(items) {
       const setting = levelSettings[level];
@@ -597,6 +647,18 @@
       document.getElementById("masterBadge").style.display = points >= 5 ? "block" : "none";
     }
 
+    function changeShopItems() {
+      selectedItems = [];
+      currentItems = [];
+      correctAnswer = 0;
+      answeredCorrectly = false;
+      currentSaleItem = null;
+      makeShopItems();
+      renderShop();
+      clearQuestion();
+      showMessage("商品をいれかえたよ", "correct");
+    }
+
     function clearSelectedOnly() {
       selectedItems = [];
       currentItems = [];
@@ -643,6 +705,7 @@
       }
     });
 
+    makeShopItems();
     renderShop();
     renderPoints();
   </script>

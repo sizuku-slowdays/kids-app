@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>都道府県パズル v5</title>
+
+  <link rel="apple-touch-icon" href="img/japan-map-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="都道府県パズル">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --blue: #185FA5;
+      --blue-soft: #E6F1FB;
+      --sky: #DDEEFF;
+      --text: #1F2A37;
+      --muted: #6B7280;
+      --line: #D1D5DB;
+      --bg: #F7FAFC;
+      --card: #FFFFFF;
+      --green: #52A832;
+      --green-soft: #EAF3DE;
+      --red: #D94040;
+      --red-soft: #FCEBEB;
+      --orange: #E09820;
+      --yellow-soft: #FFF4CF;
+      --radius: 14px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) 10px env(safe-area-inset-bottom);
+    }
+
+    #app {
+      width: min(100%, 760px);
+      margin: 0 auto;
+      padding: 14px 0 22px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--blue);
+      letter-spacing: .02em;
+    }
+
+    .header p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 10px 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, .05);
+    }
+
+    .tab-btn.active {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
+    .score-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .score-item {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 8px 6px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+    }
+
+    .score-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .score-val {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .question-banner {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+    }
+
+    .q-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .q-name {
+      font-size: 25px;
+      font-weight: 900;
+      color: var(--blue);
+      margin-top: 4px;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .map-outer {
+      width: 100%;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(#DDEEFF, #F5FBFF);
+      padding: 8px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.75), 0 2px 8px rgba(15, 23, 42, .05);
+    }
+
+    .map-outer.map-mode {
+      height: min(68vh, 620px);
+    }
+
+    .map-box {
+      min-width: 520px;
+      width: 100%;
+    }
+
+    .quiz-map-svg,
+    .quiz-where-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      touch-action: manipulation;
+    }
+
+    .quiz-map-svg .prefecture,
+    .quiz-map-svg [data-code] {
+      fill: #8AABCC;
+      stroke: #FFFFFF;
+      stroke-width: 1;
+      cursor: pointer;
+      transition: fill .12s ease, filter .12s ease;
+    }
+
+    .quiz-map-svg .prefecture:hover,
+    .quiz-map-svg [data-code]:hover,
+    .quiz-map-svg .prefecture:focus,
+    .quiz-map-svg [data-code]:focus {
+      fill: #4D88BB;
+      filter: brightness(1.05);
+      outline: none;
+    }
+
+    .quiz-map-svg .prefecture.done,
+    .quiz-map-svg [data-code].done {
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .quiz-map-svg .prefecture.correct,
+    .quiz-map-svg [data-code].correct {
+      fill: var(--green) !important;
+    }
+
+    .quiz-map-svg .prefecture.wrong,
+    .quiz-map-svg [data-code].wrong {
+      fill: var(--red) !important;
+    }
+
+    .quiz-map-svg .prefecture.reveal,
+    .quiz-map-svg [data-code].reveal {
+      fill: var(--orange) !important;
+    }
+
+    .where-wrap {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      min-height: 190px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+    }
+
+    .where-box {
+      width: min(100%, 340px);
+      max-height: 260px;
+    }
+
+    .quiz-where-svg .prefecture,
+    .quiz-where-svg [data-code] {
+      fill: #B5D4F4 !important;
+      stroke: var(--blue) !important;
+      stroke-width: 1.5 !important;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .opt-btn {
+      min-height: 48px;
+      padding: 12px 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+    }
+
+    .opt-btn:hover:not(:disabled) {
+      background: var(--blue-soft);
+    }
+
+    .opt-btn.correct {
+      background: var(--green-soft);
+      border-color: var(--green);
+      color: #27500A;
+    }
+
+    .opt-btn.wrong {
+      background: var(--red-soft);
+      border-color: var(--red);
+      color: #501313;
+    }
+
+    .feedback-bar {
+      margin: 10px 0 0;
+      padding: 11px;
+      border-radius: var(--radius);
+      text-align: center;
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .feedback-bar.correct {
+      background: var(--green-soft);
+      color: #27500A;
+    }
+
+    .feedback-bar.wrong {
+      background: var(--red-soft);
+      color: #501313;
+    }
+
+    .feedback-bar.info {
+      background: var(--yellow-soft);
+      color: #6B4E00;
+    }
+
+    .next-btn,
+    .restart-btn {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: 900;
+      margin-top: 10px;
+      box-shadow: 0 4px 12px rgba(24, 95, 165, .25);
+    }
+
+    .result-screen {
+      text-align: center;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 34px 18px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+    }
+
+    .result-screen h2 {
+      font-size: 28px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      color: var(--blue);
+    }
+
+    .result-screen p {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+
+    .loading {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .credit {
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    .small-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .small-btn {
+      flex: 1;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      .header h1 {
+        font-size: 22px;
+      }
+
+      .tab-btn {
+        font-size: 12px;
+        padding: 9px 4px;
+      }
+
+      .q-name {
+        font-size: 24px;
+      }
+
+      .map-box {
+        min-width: 460px;
+      }
+
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .opt-btn {
+        font-size: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+<div id="app">
+  <div class="header">
+    <h1>都道府県パズル</h1>
+    <p>日本の都道府県を、場所・地図タップ・県庁所在地で覚えよう</p>
+  </div>
+
+  <div class="mode-tabs">
+    <button class="tab-btn active" id="tab-where" onclick="setMode('where')">ここどこ？</button>
+    <button class="tab-btn" id="tab-map" onclick="setMode('map')">地図タップ</button>
+    <button class="tab-btn" id="tab-capital" onclick="setMode('capital')">県庁所在地</button>
+  </div>
+
+  <div id="game-area" class="loading">地図を読み込み中...</div>
+
+  <div class="credit">
+    地図SVG：Geolonia japanese-prefectures / GFDL<br>
+    一部離島は元データ側で省略されている場合があります。
+  </div>
+</div>
+
+<script>
+const PREFS = [
+  {id:"01",name:"北海道",capital:"札幌市",region:"北海道"},
+  {id:"02",name:"青森県",capital:"青森市",region:"東北"},
+  {id:"03",name:"岩手県",capital:"盛岡市",region:"東北"},
+  {id:"04",name:"宮城県",capital:"仙台市",region:"東北"},
+  {id:"05",name:"秋田県",capital:"秋田市",region:"東北"},
+  {id:"06",name:"山形県",capital:"山形市",region:"東北"},
+  {id:"07",name:"福島県",capital:"福島市",region:"東北"},
+  {id:"08",name:"茨城県",capital:"水戸市",region:"関東"},
+  {id:"09",name:"栃木県",capital:"宇都宮市",region:"関東"},
+  {id:"10",name:"群馬県",capital:"前橋市",region:"関東"},
+  {id:"11",name:"埼玉県",capital:"さいたま市",region:"関東"},
+  {id:"12",name:"千葉県",capital:"千葉市",region:"関東"},
+  {id:"13",name:"東京都",capital:"新宿区（都庁）",region:"関東"},
+  {id:"14",name:"神奈川県",capital:"横浜市",region:"関東"},
+  {id:"15",name:"新潟県",capital:"新潟市",region:"中部"},
+  {id:"16",name:"富山県",capital:"富山市",region:"中部"},
+  {id:"17",name:"石川県",capital:"金沢市",region:"中部"},
+  {id:"18",name:"福井県",capital:"福井市",region:"中部"},
+  {id:"19",name:"山梨県",capital:"甲府市",region:"中部"},
+  {id:"20",name:"長野県",capital:"長野市",region:"中部"},
+  {id:"21",name:"岐阜県",capital:"岐阜市",region:"中部"},
+  {id:"22",name:"静岡県",capital:"静岡市",region:"中部"},
+  {id:"23",name:"愛知県",capital:"名古屋市",region:"中部"},
+  {id:"24",name:"三重県",capital:"津市",region:"近畿"},
+  {id:"25",name:"滋賀県",capital:"大津市",region:"近畿"},
+  {id:"26",name:"京都府",capital:"京都市",region:"近畿"},
+  {id:"27",name:"大阪府",capital:"大阪市",region:"近畿"},
+  {id:"28",name:"兵庫県",capital:"神戸市",region:"近畿"},
+  {id:"29",name:"奈良県",capital:"奈良市",region:"近畿"},
+  {id:"30",name:"和歌山県",capital:"和歌山市",region:"近畿"},
+  {id:"31",name:"鳥取県",capital:"鳥取市",region:"中国"},
+  {id:"32",name:"島根県",capital:"松江市",region:"中国"},
+  {id:"33",name:"岡山県",capital:"岡山市",region:"中国"},
+  {id:"34",name:"広島県",capital:"広島市",region:"中国"},
+  {id:"35",name:"山口県",capital:"山口市",region:"中国"},
+  {id:"36",name:"徳島県",capital:"徳島市",region:"四国"},
+  {id:"37",name:"香川県",capital:"高松市",region:"四国"},
+  {id:"38",name:"愛媛県",capital:"松山市",region:"四国"},
+  {id:"39",name:"高知県",capital:"高知市",region:"四国"},
+  {id:"40",name:"福岡県",capital:"福岡市",region:"九州"},
+  {id:"41",name:"佐賀県",capital:"佐賀市",region:"九州"},
+  {id:"42",name:"長崎県",capital:"長崎市",region:"九州"},
+  {id:"43",name:"熊本県",capital:"熊本市",region:"九州"},
+  {id:"44",name:"大分県",capital:"大分市",region:"九州"},
+  {id:"45",name:"宮崎県",capital:"宮崎市",region:"九州"},
+  {id:"46",name:"鹿児島県",capital:"鹿児島市",region:"九州"},
+  {id:"47",name:"沖縄県",capital:"那覇市",region:"沖縄"},
+];
+
+const QUIZ_COUNT = 10;
+
+// jsDelivr経由。GitHub Pages上でも読み込みやすい。
+// 完全オフラインにしたい場合は、このSVG内容をHTML内へ埋め込む方式に変更できます。
+const MAP_URLS = [
+  "https://cdn.jsdelivr.net/gh/geolonia/japanese-prefectures@master/map-full.svg",
+  "https://raw.githubusercontent.com/geolonia/japanese-prefectures/master/map-full.svg"
+];
+
+let mode = "where";
+let score = 0;
+let total = 0;
+let streak = 0;
+let answered = false;
+let queue = [];
+let currentQ = null;
+let mapSvgText = "";
+
+function shuffle(a) {
+  return [...a].sort(() => Math.random() - 0.5);
+}
+
+function normalizeCode(code) {
+  return String(code || "").replace(/\D/g, "").padStart(2, "0");
+}
+
+function prefById(id) {
+  return PREFS.find(p => p.id === normalizeCode(id));
+}
+
+function getOptions(correct, key, n = 4) {
+  const pool = shuffle(PREFS.filter(p => p.id !== correct.id)).slice(0, n - 1).map(p => p[key]);
+  return shuffle([correct[key], ...pool]);
+}
+
+async function loadMap() {
+  const gameArea = document.getElementById("game-area");
+  gameArea.innerHTML = `<div class="loading">地図を読み込み中...</div>`;
+
+  let lastError = null;
+
+  for (const url of MAP_URLS) {
+    try {
+      const res = await fetch(url, {cache: "force-cache"});
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const text = await res.text();
+
+      if (!text.includes("<svg") || !text.includes("data-code")) {
+        throw new Error("SVGの形式が想定と違います");
+      }
+
+      mapSvgText = text;
+      startGame();
+      return;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  gameArea.innerHTML = `
+    <div class="feedback-bar wrong">
+      地図SVGを読み込めませんでした。<br>
+      ネット接続、またはGitHub Pages上での公開状態を確認してください。<br>
+      <span style="font-size:12px;font-weight:600;">${String(lastError || "")}</span>
+    </div>
+  `;
+}
+
+function setMode(m) {
+  mode = m;
+  score = 0;
+  total = 0;
+  streak = 0;
+  queue = [];
+  answered = false;
+
+  ["where", "map", "capital"].forEach(id => {
+    const tab = document.getElementById("tab-" + id);
+    if (tab) tab.classList.toggle("active", id === m);
+  });
+
+  if (mapSvgText || mode === "capital") {
+    startGame();
+  } else {
+    loadMap();
+  }
+}
+
+function startGame() {
+  queue = shuffle(PREFS).slice(0, QUIZ_COUNT);
+  nextQuestion();
+}
+
+function nextQuestion() {
+  if (!queue.length) {
+    renderResult();
+    return;
+  }
+
+  currentQ = queue.shift();
+  answered = false;
+
+  if (mode === "where") renderWhereQuiz();
+  else if (mode === "map") renderMapQ();
+  else renderCapital();
+}
+
+function scoreBar() {
+  return `
+    <div class="score-bar">
+      <div class="score-item">
+        <div class="score-label">正解</div>
+        <div class="score-val" style="color:#3B6D11">${score}</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">問題数</div>
+        <div class="score-val">${total}/${QUIZ_COUNT}</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">連続正解</div>
+        <div class="score-val" style="color:#BA7517">${streak}</div>
+      </div>
+    </div>
+  `;
+}
+
+function createMapElement(extraClass = "quiz-map-svg") {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(mapSvgText, "image/svg+xml");
+  const svg = doc.documentElement;
+
+  svg.classList.add(extraClass);
+  svg.removeAttribute("width");
+  svg.removeAttribute("height");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "日本地図");
+
+  // クリックしやすいように、data-codeを持つ都道府県グループを統一処理
+  svg.querySelectorAll("[data-code]").forEach(el => {
+    const code = normalizeCode(el.dataset.code);
+    const pref = prefById(code);
+
+    el.dataset.pid = code;
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("role", "button");
+    el.classList.add("prefecture");
+
+    if (pref) {
+      el.setAttribute("aria-label", pref.name);
+      el.dataset.name = pref.name;
+    }
+  });
+
+  return svg;
+}
+
+function renderWhereQuiz() {
+  const opts = getOptions(currentQ, "name");
+
+  document.getElementById("game-area").innerHTML = scoreBar() + `
+    <div class="question-banner">
+      <div class="q-label">オレンジ色の都道府県はどこ？</div>
+      <div class="hint">日本地図の中で色がついている県を、4択から選んでね。</div>
+    </div>
+
+    <div class="map-outer" style="height:min(58vh,520px);">
+      <div class="map-box" id="where-map-box"></div>
+    </div>
+
+    <div class="options-grid" id="opts"></div>
+    <div id="feedback"></div>
+    <button class="next-btn" id="nxt" style="display:none" onclick="nextQuestion()">次の問題 →</button>
+  `;
+
+  const svg = createMapElement("quiz-map-svg");
+  document.getElementById("where-map-box").appendChild(svg);
+
+  // 出題中の県だけオレンジにする
+  const all = [...svg.querySelectorAll("[data-code]")];
+  const target = all.find(el => normalizeCode(el.dataset.code) === currentQ.id);
+
+  all.forEach(el => {
+    el.style.pointerEvents = "none";
+    const isTarget = normalizeCode(el.dataset.code) === currentQ.id;
+
+    if (isTarget) {
+      el.classList.add("reveal");
+      el.style.fill = "#E09820";
+      el.style.stroke = "#FFFFFF";
+      el.style.strokeWidth = "1.4";
+
+      // Geolonia SVGはgやaの中にpath/polygonがあるため子要素にも色指定
+      el.querySelectorAll("path, polygon, polyline, rect").forEach(child => {
+        child.style.fill = "#E09820";
+        child.style.stroke = "#FFFFFF";
+        child.style.strokeWidth = "1.4";
+      });
+
+      // 小さい県も見つけやすいように、そこへ少しスクロール
+      requestAnimationFrame(() => scrollPrefIntoView(el));
+    }
+  });
+
+  document.getElementById("opts").innerHTML = opts.map(o =>
+    `<button class="opt-btn" onclick="answerQ('${escapeAttr(o)}','name')">${escapeHtml(o)}</button>`
+  ).join("");
+}
+
+
+function renderCapital() {
+  const opts = getOptions(currentQ, "capital");
+
+  document.getElementById("game-area").innerHTML = scoreBar() + `
+    <div class="question-banner">
+      <div class="q-label">県庁所在地はどこ？</div>
+      <div class="q-name">${escapeHtml(currentQ.name)}</div>
+    </div>
+    <div class="options-grid" id="opts">
+      ${opts.map(o => `<button class="opt-btn" onclick="answerQ('${escapeAttr(o)}','capital')">${escapeHtml(o)}</button>`).join("")}
+    </div>
+    <div id="feedback"></div>
+    <button class="next-btn" id="nxt" style="display:none" onclick="nextQuestion()">次の問題 →</button>
+  `;
+}
+
+function answerQ(chosen, key) {
+  if (answered) return;
+
+  answered = true;
+  total++;
+
+  const correct = currentQ[key];
+  const ok = chosen === correct;
+
+  if (ok) {
+    score++;
+    streak++;
+  } else {
+    streak = 0;
+  }
+
+  document.querySelectorAll(".opt-btn").forEach(b => {
+    b.disabled = true;
+    if (b.textContent === correct) b.classList.add("correct");
+    else if (b.textContent === chosen && !ok) b.classList.add("wrong");
+  });
+
+  document.getElementById("feedback").innerHTML = `
+    <div class="feedback-bar ${ok ? "correct" : "wrong"}">
+      ${ok ? "⭕ 正解！" : `❌ 不正解… 正解は「${escapeHtml(correct)}」`}
+    </div>
+  `;
+  document.getElementById("nxt").style.display = "block";
+}
+
+function renderMapQ() {
+  document.getElementById("game-area").innerHTML = scoreBar() + `
+    <div class="question-banner">
+      <div class="q-label">地図から探してタップ！</div>
+      <div class="q-name">${escapeHtml(currentQ.name)}</div>
+      <div class="hint">スマホでは横に動かしたり、画面を拡大して探せます。</div>
+    </div>
+
+    <div id="feedback-map"></div>
+
+    <div class="map-outer map-mode">
+      <div class="map-box" id="map-box"></div>
+    </div>
+
+    <div class="small-actions">
+      <button class="small-btn" onclick="showHint()">ヒント</button>
+      <button class="small-btn" onclick="revealAnswer()">答えを見る</button>
+    </div>
+
+    <button class="next-btn" id="nxt-map" style="display:none" onclick="nextQuestion()">次の問題 →</button>
+  `;
+
+  const svg = createMapElement("quiz-map-svg");
+  document.getElementById("map-box").appendChild(svg);
+
+  svg.querySelectorAll("[data-code]").forEach(el => {
+    const handler = () => handleMapAnswer(el, svg);
+    el.addEventListener("click", handler);
+    el.addEventListener("keydown", ev => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        handler();
+      }
+    });
+  });
+}
+
+function handleMapAnswer(el, svg) {
+  if (answered) return;
+
+  answered = true;
+  total++;
+
+  const pid = normalizeCode(el.dataset.code);
+  const ok = pid === currentQ.id;
+
+  if (ok) {
+    score++;
+    streak++;
+  } else {
+    streak = 0;
+  }
+
+  svg.querySelectorAll("[data-code]").forEach(p => {
+    p.classList.add("done");
+    p.style.pointerEvents = "none";
+  });
+
+  if (ok) {
+    el.classList.add("correct");
+  } else {
+    el.classList.add("wrong");
+    const c = [...svg.querySelectorAll("[data-code]")].find(p => normalizeCode(p.dataset.code) === currentQ.id);
+    if (c) {
+      c.classList.add("reveal");
+      scrollPrefIntoView(c);
+    }
+  }
+
+  document.getElementById("feedback-map").innerHTML = `
+    <div class="feedback-bar ${ok ? "correct" : "wrong"}">
+      ${ok ? "⭕ 正解！" : `❌ 不正解… 正解はオレンジ色の場所（${escapeHtml(currentQ.region)}地方）`}
+    </div>
+  `;
+  document.getElementById("nxt-map").style.display = "block";
+}
+
+function showHint() {
+  if (answered) return;
+  document.getElementById("feedback-map").innerHTML = `
+    <div class="feedback-bar info">
+      ヒント：${escapeHtml(currentQ.name)}は「${escapeHtml(currentQ.region)}」地方です。
+    </div>
+  `;
+}
+
+function revealAnswer() {
+  if (answered) return;
+
+  answered = true;
+  total++;
+  streak = 0;
+
+  const svg = document.querySelector(".quiz-map-svg");
+  if (!svg) return;
+
+  svg.querySelectorAll("[data-code]").forEach(p => {
+    p.classList.add("done");
+    p.style.pointerEvents = "none";
+  });
+
+  const c = [...svg.querySelectorAll("[data-code]")].find(p => normalizeCode(p.dataset.code) === currentQ.id);
+  if (c) {
+    c.classList.add("reveal");
+    scrollPrefIntoView(c);
+  }
+
+  document.getElementById("feedback-map").innerHTML = `
+    <div class="feedback-bar wrong">
+      答えはオレンジ色の場所：${escapeHtml(currentQ.name)}
+    </div>
+  `;
+  document.getElementById("nxt-map").style.display = "block";
+}
+
+function scrollPrefIntoView(el) {
+  try {
+    const outer = document.querySelector(".map-outer");
+    if (!outer || !el.getBBox) return;
+
+    const b = el.getBBox();
+    const svg = document.querySelector(".quiz-map-svg");
+    const vb = svg.viewBox.baseVal;
+    const rect = svg.getBoundingClientRect();
+
+    const scaleX = rect.width / vb.width;
+    const scaleY = rect.height / vb.height;
+
+    const x = (b.x - vb.x) * scaleX;
+    const y = (b.y - vb.y) * scaleY;
+
+    outer.scrollTo({
+      left: Math.max(0, x - outer.clientWidth / 2),
+      top: Math.max(0, y - outer.clientHeight / 2),
+      behavior: "smooth"
+    });
+  } catch(e) {}
+}
+
+function renderResult() {
+  const pct = Math.round(score / QUIZ_COUNT * 100);
+  const msg = pct >= 80 ? "🎉 すごい！" : pct >= 50 ? "👍 なかなか！" : "💪 もう一回！";
+  const comment = pct >= 80
+    ? "かなり覚えてきています。次は別モードにも挑戦！"
+    : pct >= 50
+      ? "半分以上できています。地図タップで場所を確認すると伸びます。"
+      : "まずは地方ごとに、場所を見ながら覚えるのがおすすめです。";
+
+  document.getElementById("game-area").innerHTML = `
+    <div class="result-screen">
+      <h2>${msg}</h2>
+      <p>${QUIZ_COUNT}問中 <strong>${score}問</strong> 正解（${pct}%）<br>${comment}</p>
+      <button class="restart-btn" onclick="setMode('${mode}')">もう一度</button>
+    </div>
+  `;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function escapeAttr(str) {
+  return escapeHtml(str).replaceAll("`", "&#96;");
+}
+
+loadMap();
+</script>
+</body>
+</html>

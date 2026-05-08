@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>漢字れんしゅう</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; }
+#app { max-width: 480px; margin: 0 auto; padding: 1.25rem 1rem 3rem; min-height: 100vh; background: #fff; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.08); }
+.screen { display: none; }
+.screen.active { display: block; }
+
+.app-header { font-size: 22px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
+.app-sub { font-size: 13px; color: #888; margin-bottom: 1rem; }
+
+.section-label { font-size: 13px; font-weight: 600; color: #1a1a1a; margin: 1rem 0 0.35rem; }
+
+.grade-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grade-btn { background: #fff; border: 0.5px solid #ddd; border-radius: 12px; padding: 0.8rem 0.5rem; cursor: pointer; text-align: center; transition: background 0.12s, transform 0.1s; }
+.grade-btn:hover { background: #f5f4f0; }
+.grade-btn:active { transform: scale(0.97); }
+.grade-btn .num { font-size: 17px; font-weight: 600; color: #1a1a1a; }
+.grade-btn .sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+.grade-btn.selected { border: 2px solid #378ADD; background: #EAF3FB; }
+.grade-btn.selected .num { color: #185FA5; }
+
+.tab-row { display: flex; gap: 6px; margin: 0.4rem 0; }
+.tab-btn { flex: 1; padding: 0.5rem; border: 0.5px solid #ddd; border-radius: 8px; background: #fff; font-size: 13px; cursor: pointer; color: #888; transition: background 0.12s; text-align: center; font-family: inherit; }
+.tab-btn.active { background: #EAF3FB; color: #185FA5; border-color: #378ADD; font-weight: 600; }
+.form-desc { font-size: 12px; color: #aaa; margin-bottom: 0.25rem; }
+
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0.4rem; }
+.mode-btn { background: #fff; border: 0.5px solid #ddd; border-radius: 12px; padding: 1rem 0.75rem; cursor: pointer; text-align: center; transition: background 0.12s, transform 0.1s; }
+.mode-btn:hover { background: #f5f4f0; }
+.mode-btn:active { transform: scale(0.97); }
+.mode-btn .icon { font-size: 20px; }
+.mode-btn .label { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-top: 5px; }
+.mode-btn .desc { font-size: 11px; color: #aaa; margin-top: 2px; }
+
+.progress-bar-wrap { background: #eee; border-radius: 99px; height: 5px; margin: 0.6rem 0; overflow: hidden; }
+.progress-bar { height: 5px; background: #378ADD; border-radius: 99px; transition: width 0.3s; }
+
+.kanji-card { background: #fff; border: 0.5px solid #e8e8e8; border-radius: 14px; padding: 1.5rem 1rem; text-align: center; margin: 0.75rem 0; }
+.kanji-display { font-size: 80px; font-weight: 600; color: #1a1a1a; line-height: 1; margin-bottom: 0.75rem; }
+.word-display { font-size: 46px; font-weight: 600; color: #1a1a1a; line-height: 1.1; margin-bottom: 0.75rem; }
+.hint-text { font-size: 14px; color: #888; }
+.sub-text { font-size: 12px; color: #bbb; margin-top: 4px; }
+
+.reading-tags { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.rtag { font-size: 12px; padding: 3px 10px; border-radius: 99px; }
+.rtag.on { background: #EAF3FB; color: #185FA5; }
+.rtag.kun { background: #EAF3E5; color: #2E7D32; }
+.rtag.wr { background: #f0f0f0; color: #555; font-size: 13px; padding: 3px 12px; }
+
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 0.6rem 0; }
+.choice-btn { background: #fff; border: 0.5px solid #ddd; border-radius: 10px; padding: 0.7rem 0.5rem; cursor: pointer; font-size: 14px; color: #1a1a1a; transition: background 0.12s, transform 0.1s; text-align: center; line-height: 1.4; font-family: inherit; }
+.choice-btn:hover:not(:disabled) { background: #f5f4f0; }
+.choice-btn:active:not(:disabled) { transform: scale(0.97); }
+.choice-btn.correct { background: #EAF3E5; border-color: #4CAF50; color: #2E7D32; }
+.choice-btn.wrong { background: #FDECEA; border-color: #E53935; color: #B71C1C; }
+
+.feedback-text { text-align: center; font-size: 14px; min-height: 18px; margin: 4px 0; }
+
+.action-row { display: flex; gap: 8px; margin-top: 0.7rem; }
+.btn { flex: 1; background: #fff; border: 0.5px solid #ddd; border-radius: 10px; padding: 0.65rem 1rem; cursor: pointer; font-size: 14px; color: #1a1a1a; transition: background 0.12s, transform 0.1s; text-align: center; font-family: inherit; }
+.btn:hover { background: #f5f4f0; }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: #185FA5; color: #fff; border-color: #185FA5; }
+.btn.primary:hover { background: #0C447C; }
+.btn.success { background: #EAF3E5; color: #2E7D32; border-color: #4CAF50; }
+.btn.danger-soft { background: #FDECEA; color: #B71C1C; border-color: #E53935; }
+
+.fc-card { background: #fff; border: 0.5px solid #e8e8e8; border-radius: 14px; padding: 1.5rem 1rem; text-align: center; margin: 0.75rem 0; cursor: pointer; }
+.reveal-divider { border-top: 0.5px solid #e8e8e8; padding-top: 1rem; margin-top: 1rem; display: none; }
+.reveal-divider.shown { display: block; }
+.tap-hint { font-size: 12px; color: #bbb; margin-top: 6px; }
+
+.writing-area { margin: 0.75rem 0; text-align: center; }
+.writing-area canvas { border: 0.5px solid #ddd; border-radius: 10px; touch-action: none; display: block; margin: 0 auto; cursor: crosshair; }
+.writing-hint-text { font-size: 12px; color: #bbb; margin-top: 4px; }
+
+.result-circle { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 1rem auto; }
+.result-circle.great { background: #EAF3E5; }
+.result-circle.ok { background: #FFF8E1; }
+.result-circle.low { background: #FDECEA; }
+.stat-row { display: flex; gap: 8px; margin: 1rem 0; }
+.stat-card { flex: 1; background: #f5f4f0; border-radius: 10px; padding: 0.75rem; text-align: center; }
+.stat-card .val { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+.stat-card .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+
+.header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.back-btn { background: none; border: none; cursor: pointer; font-size: 18px; color: #888; padding: 2px 6px; border-radius: 8px; font-family: inherit; }
+.back-btn:hover { background: #f0f0f0; }
+.screen-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+.qcount { font-size: 13px; color: #aaa; margin-left: auto; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- Home -->
+<div id="screen-home" class="screen active">
+  <p class="app-header">漢字れんしゅう</p>
+  <p class="app-sub">小学校の漢字を復習しよう</p>
+
+  <div class="section-label">学年を選ぼう <span style="font-size:11px;font-weight:400;color:#aaa;">（複数OK）</span></div>
+  <div class="grade-grid" id="grade-grid"></div>
+
+  <div class="section-label" style="margin-top:1rem;">出題形式</div>
+  <div class="tab-row" id="form-tabs">
+    <button class="tab-btn active" onclick="setForm('kanji', this)">一文字</button>
+    <button class="tab-btn" onclick="setForm('word', this)">単語</button>
+  </div>
+  <p id="form-desc" class="form-desc">漢字一文字の音読み・訓読みを学ぶ</p>
+
+  <div class="section-label">モードを選ぼう</div>
+  <div class="mode-grid">
+    <div class="mode-btn" onclick="startMode('quiz')">
+      <div class="icon">📝</div>
+      <div class="label">読み問題</div>
+      <div class="desc">読み方を4択で答えよう</div>
+    </div>
+    <div class="mode-btn" onclick="startMode('meaning')">
+      <div class="icon">💡</div>
+      <div class="label">意味問題</div>
+      <div class="desc">意味を4択で答えよう</div>
+    </div>
+    <div class="mode-btn" onclick="startMode('flashcard')">
+      <div class="icon">🃏</div>
+      <div class="label">フラッシュカード</div>
+      <div class="desc">タップして確認</div>
+    </div>
+    <div class="mode-btn" onclick="startMode('writing')">
+      <div class="icon">✏️</div>
+      <div class="label">書き取り</div>
+      <div class="desc">書いて覚えよう</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quiz -->
+<div id="screen-quiz" class="screen">
+  <div class="header-row">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <span class="screen-title" id="quiz-title">読み問題</span>
+    <span class="qcount" id="quiz-qcount">1 / 10</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="quiz-pb"></div></div>
+  <div class="kanji-card">
+    <div id="quiz-display"></div>
+    <div class="hint-text" id="quiz-hint"></div>
+    <div class="sub-text" id="quiz-sub"></div>
+  </div>
+  <div class="choices" id="quiz-choices"></div>
+  <div class="feedback-text" id="quiz-feedback"></div>
+  <div class="action-row" id="quiz-next-row" style="display:none;">
+    <button class="btn primary" onclick="nextQuestion()">次へ →</button>
+  </div>
+</div>
+
+<!-- Flashcard -->
+<div id="screen-flashcard" class="screen">
+  <div class="header-row">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <span class="screen-title">フラッシュカード</span>
+    <span class="qcount" id="fc-qcount">1 / 10</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="fc-pb"></div></div>
+  <div class="fc-card" onclick="revealCard()">
+    <div id="fc-display"></div>
+    <p class="tap-hint" id="fc-tap">タップして答えを見る</p>
+    <div class="reveal-divider" id="fc-reveal">
+      <div id="fc-answer-content"></div>
+    </div>
+  </div>
+  <div class="action-row" id="fc-actions" style="display:none;">
+    <button class="btn danger-soft" onclick="fcAnswer(false)">😓 もう一度</button>
+    <button class="btn success" onclick="fcAnswer(true)">😊 わかった！</button>
+  </div>
+</div>
+
+<!-- Writing -->
+<div id="screen-writing" class="screen">
+  <div class="header-row">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <span class="screen-title">書き取り</span>
+    <span class="qcount" id="wr-qcount">1 / 10</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="wr-pb"></div></div>
+  <div class="kanji-card">
+    <div id="wr-prompt"></div>
+  </div>
+  <div class="writing-area">
+    <canvas id="draw-canvas" width="200" height="200"></canvas>
+    <div class="writing-hint-text">なぞって書こう</div>
+  </div>
+  <div id="wr-answer-reveal" style="display:none;text-align:center;margin:0.5rem 0;">
+    <div id="wr-answer-display" style="font-size:64px;font-weight:600;color:#1a1a1a;"></div>
+  </div>
+  <div class="action-row">
+    <button class="btn" onclick="clearCanvas()">🗑 消す</button>
+    <button class="btn primary" id="wr-reveal-btn" onclick="wrToggleReveal()">答えを見る</button>
+  </div>
+  <div class="action-row" id="wr-next-row" style="display:none;">
+    <button class="btn danger-soft" onclick="wrNext(false)">もう一度</button>
+    <button class="btn success" onclick="wrNext(true)">わかった！</button>
+  </div>
+</div>
+
+<!-- Result -->
+<div id="screen-result" class="screen">
+  <p style="font-size:20px;font-weight:600;color:#1a1a1a;text-align:center;margin-top:1rem;">結果</p>
+  <div id="result-circle" class="result-circle great"></div>
+  <p style="text-align:center;font-size:16px;font-weight:600;color:#1a1a1a;" id="result-msg"></p>
+  <div class="stat-row">
+    <div class="stat-card"><div class="val" id="res-correct">0</div><div class="lbl">正解</div></div>
+    <div class="stat-card"><div class="val" id="res-total">0</div><div class="lbl">問題数</div></div>
+    <div class="stat-card"><div class="val" id="res-pct">0%</div><div class="lbl">正答率</div></div>
+  </div>
+  <div class="action-row" style="margin-top:1rem;">
+    <button class="btn" onclick="goHome()">ホームへ</button>
+    <button class="btn primary" onclick="retryMode()">もう一度</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+const KANJI = {
+  1: [
+    {k:'山',on:['サン'],kun:['やま'],m:'山・高い場所'},
+    {k:'川',on:['セン'],kun:['かわ'],m:'川・水の流れ'},
+    {k:'火',on:['カ'],kun:['ひ'],m:'火・炎'},
+    {k:'水',on:['スイ'],kun:['みず'],m:'水'},
+    {k:'木',on:['モク','ボク'],kun:['き','こ'],m:'木・樹木'},
+    {k:'金',on:['キン','コン'],kun:['かね','かな'],m:'金・お金・金属'},
+    {k:'土',on:['ド','ト'],kun:['つち'],m:'土・大地'},
+    {k:'日',on:['ニチ','ジツ'],kun:['ひ','か'],m:'太陽・日にち'},
+    {k:'月',on:['ゲツ','ガツ'],kun:['つき'],m:'月・一ヶ月'},
+    {k:'空',on:['クウ'],kun:['そら','あ','から'],m:'空・空中・空っぽ'},
+    {k:'花',on:['カ'],kun:['はな'],m:'花'},
+    {k:'草',on:['ソウ'],kun:['くさ'],m:'草・植物'},
+    {k:'犬',on:['ケン'],kun:['いぬ'],m:'犬'},
+    {k:'虫',on:['チュウ'],kun:['むし'],m:'虫・昆虫'},
+    {k:'石',on:['セキ','シャク'],kun:['いし'],m:'石'},
+    {k:'手',on:['シュ'],kun:['て','た'],m:'手'},
+    {k:'目',on:['モク','ボク'],kun:['め','ま'],m:'目・見る'},
+    {k:'耳',on:['ジ'],kun:['みみ'],m:'耳・聞く'},
+    {k:'林',on:['リン'],kun:['はやし'],m:'林・木が集まった所'},
+    {k:'森',on:['シン'],kun:['もり'],m:'森・大きな林'},
+  ],
+  2: [
+    {k:'東',on:['トウ'],kun:['ひがし'],m:'東の方向'},
+    {k:'西',on:['セイ','サイ'],kun:['にし'],m:'西の方向'},
+    {k:'南',on:['ナン'],kun:['みなみ'],m:'南の方向'},
+    {k:'北',on:['ホク'],kun:['きた'],m:'北の方向'},
+    {k:'春',on:['シュン'],kun:['はる'],m:'春・季節'},
+    {k:'夏',on:['カ','ゲ'],kun:['なつ'],m:'夏・季節'},
+    {k:'秋',on:['シュウ'],kun:['あき'],m:'秋・季節'},
+    {k:'冬',on:['トウ'],kun:['ふゆ'],m:'冬・季節'},
+    {k:'朝',on:['チョウ'],kun:['あさ'],m:'朝・午前中'},
+    {k:'夜',on:['ヤ'],kun:['よる','よ'],m:'夜・夜間'},
+    {k:'海',on:['カイ'],kun:['うみ'],m:'海・大海'},
+    {k:'星',on:['セイ','ショウ'],kun:['ほし'],m:'星・星座'},
+    {k:'鳥',on:['チョウ'],kun:['とり'],m:'鳥・翼を持つ動物'},
+    {k:'魚',on:['ギョ'],kun:['さかな','うお'],m:'魚'},
+    {k:'牛',on:['ギュウ'],kun:['うし'],m:'牛'},
+    {k:'馬',on:['バ'],kun:['うま','ま'],m:'馬'},
+    {k:'米',on:['ベイ','マイ'],kun:['こめ'],m:'お米・穀物'},
+    {k:'麦',on:['バク'],kun:['むぎ'],m:'麦・穀物'},
+    {k:'茶',on:['チャ','サ'],kun:[''],m:'お茶・茶色'},
+    {k:'岩',on:['ガン'],kun:['いわ'],m:'岩・大きな石'},
+  ],
+  3: [
+    {k:'旅',on:['リョ'],kun:['たび'],m:'旅・旅行'},
+    {k:'農',on:['ノウ'],kun:[''],m:'農業・田畑'},
+    {k:'族',on:['ゾク'],kun:[''],m:'家族・一族'},
+    {k:'医',on:['イ'],kun:[''],m:'医学・治療'},
+    {k:'薬',on:['ヤク'],kun:['くすり'],m:'薬・薬品'},
+    {k:'科',on:['カ'],kun:[''],m:'科目・科学'},
+    {k:'校',on:['コウ'],kun:[''],m:'学校・校舎'},
+    {k:'教',on:['キョウ'],kun:['おし','おそ'],m:'教える・教育'},
+    {k:'育',on:['イク'],kun:['そだ'],m:'育てる・成長'},
+    {k:'住',on:['ジュウ'],kun:['す','すみ'],m:'住む・住宅'},
+    {k:'助',on:['ジョ'],kun:['たす','すけ'],m:'助ける・助力'},
+    {k:'運',on:['ウン'],kun:['はこ'],m:'運ぶ・運動・運命'},
+    {k:'動',on:['ドウ'],kun:['うご'],m:'動く・運動'},
+    {k:'植',on:['ショク'],kun:['う'],m:'植える・植物'},
+    {k:'温',on:['オン'],kun:['あたた'],m:'温かい・温度'},
+    {k:'悲',on:['ヒ'],kun:['かな'],m:'悲しい・悲しみ'},
+    {k:'注',on:['チュウ'],kun:['そそ'],m:'注ぐ・注意'},
+    {k:'転',on:['テン'],kun:['ころ'],m:'転がる・転ぶ'},
+    {k:'路',on:['ロ'],kun:['じ'],m:'道・道路'},
+    {k:'集',on:['シュウ'],kun:['あつ'],m:'集まる・集める'},
+  ],
+  4: [
+    {k:'愛',on:['アイ'],kun:[''],m:'愛・愛情'},
+    {k:'案',on:['アン'],kun:[''],m:'案・提案・考え'},
+    {k:'塩',on:['エン'],kun:['しお'],m:'塩・塩分'},
+    {k:'加',on:['カ'],kun:['くわ'],m:'加える・加工'},
+    {k:'果',on:['カ'],kun:['はた','は'],m:'果物・結果・はたして'},
+    {k:'芽',on:['ガ'],kun:['め'],m:'芽・芽生える'},
+    {k:'街',on:['ガイ','カイ'],kun:['まち'],m:'街・商店街'},
+    {k:'覚',on:['カク'],kun:['おぼ','さ'],m:'覚える・目が覚める'},
+    {k:'管',on:['カン'],kun:['くだ'],m:'管・管理・パイプ'},
+    {k:'観',on:['カン'],kun:[''],m:'観察・観光・見る'},
+    {k:'希',on:['キ'],kun:['まれ'],m:'希望・まれ'},
+    {k:'季',on:['キ'],kun:[''],m:'季節'},
+    {k:'旗',on:['キ'],kun:['はた'],m:'旗・国旗'},
+    {k:'機',on:['キ'],kun:['はた'],m:'機械・飛行機・機会'},
+    {k:'議',on:['ギ'],kun:[''],m:'議論・会議'},
+    {k:'競',on:['キョウ','ケイ'],kun:['きそ','せ'],m:'競争・競う'},
+    {k:'泣',on:['キュウ'],kun:['な'],m:'泣く・泣き声'},
+    {k:'救',on:['キュウ'],kun:['すく'],m:'救う・救助'},
+    {k:'給',on:['キュウ'],kun:[''],m:'給食・給料'},
+    {k:'漁',on:['ギョ','リョウ'],kun:[''],m:'漁業・漁師'},
+  ],
+  5: [
+    {k:'圧',on:['アツ'],kun:[''],m:'圧力・気圧'},
+    {k:'移',on:['イ'],kun:['うつ'],m:'移動・移行・移る'},
+    {k:'因',on:['イン'],kun:['よ'],m:'原因・要因'},
+    {k:'永',on:['エイ'],kun:['なが'],m:'永遠・永続'},
+    {k:'液',on:['エキ'],kun:[''],m:'液体・液晶'},
+    {k:'益',on:['エキ','ヤク'],kun:[''],m:'利益・益す・役に立つ'},
+    {k:'応',on:['オウ'],kun:['こた'],m:'応える・反応・対応'},
+    {k:'可',on:['カ'],kun:[''],m:'可能・許可'},
+    {k:'価',on:['カ'],kun:['あたい'],m:'価値・価格'},
+    {k:'仮',on:['カ','ケ'],kun:['かり'],m:'仮定・仮説・仮の'},
+    {k:'幹',on:['カン'],kun:['みき'],m:'幹・樹幹・幹部'},
+    {k:'慣',on:['カン'],kun:['な'],m:'習慣・慣れる'},
+    {k:'基',on:['キ'],kun:['もと','もとい'],m:'基本・基礎'},
+    {k:'寄',on:['キ'],kun:['よ'],m:'寄付・寄る・近寄る'},
+    {k:'規',on:['キ'],kun:[''],m:'規則・規格'},
+    {k:'技',on:['ギ'],kun:['わざ'],m:'技術・技・わざ'},
+    {k:'境',on:['キョウ','ケイ'],kun:['さかい'],m:'境界・環境・境'},
+    {k:'興',on:['コウ','キョウ'],kun:['おこ'],m:'興味・興奮・興す'},
+    {k:'限',on:['ゲン'],kun:['かぎ'],m:'限る・限界・制限'},
+    {k:'現',on:['ゲン'],kun:['あらわ'],m:'現れる・現在・現実'},
+  ],
+  6: [
+    {k:'異',on:['イ'],kun:['こと'],m:'異なる・異常・差異'},
+    {k:'遺',on:['イ','ユイ'],kun:[''],m:'遺産・遺族・残す'},
+    {k:'域',on:['イキ'],kun:[''],m:'地域・領域・区域'},
+    {k:'映',on:['エイ'],kun:['うつ','は'],m:'映像・映画・映える'},
+    {k:'延',on:['エン'],kun:['の'],m:'延長・延期・延びる'},
+    {k:'沿',on:['エン'],kun:['そ'],m:'沿岸・川沿い・沿う'},
+    {k:'灰',on:['カイ'],kun:['はい'],m:'灰色・火の灰'},
+    {k:'拡',on:['カク'],kun:['ひろ'],m:'拡大・拡張'},
+    {k:'革',on:['カク'],kun:['かわ'],m:'革命・改革・皮革'},
+    {k:'割',on:['カツ'],kun:['わ','さ'],m:'割る・分割・割合'},
+    {k:'干',on:['カン'],kun:['ほ','か'],m:'干す・干潟・干渉'},
+    {k:'巻',on:['カン'],kun:['ま'],m:'巻く・巻物・一巻'},
+    {k:'看',on:['カン'],kun:['み'],m:'看護・看板・看る'},
+    {k:'危',on:['キ'],kun:['あぶ','あや'],m:'危険・危機・あぶない'},
+    {k:'机',on:['キ'],kun:['つくえ'],m:'机・勉強机'},
+    {k:'揮',on:['キ'],kun:['ふる'],m:'指揮・発揮'},
+    {k:'貴',on:['キ'],kun:['たっと','とうと'],m:'貴重・貴族・とうとい'},
+    {k:'疑',on:['ギ'],kun:['うたが'],m:'疑問・疑う・疑惑'},
+    {k:'吸',on:['キュウ'],kun:['す'],m:'吸う・吸収'},
+    {k:'供',on:['キョウ','ク'],kun:['とも'],m:'供える・供給・子供'},
+  ],
+};
+
+const WORDS = {
+  1: [
+    {w:'山道',r:'やまみち',k:'山',m:'山の中の道'},
+    {w:'川魚',r:'かわざかな',k:'川',m:'川に住む魚'},
+    {w:'火山',r:'かざん',k:'火',m:'噴火する山'},
+    {w:'水泳',r:'すいえい',k:'水',m:'水の中で泳ぐこと'},
+    {w:'木の葉',r:'このは',k:'木',m:'木についている葉'},
+    {w:'金魚',r:'きんぎょ',k:'金',m:'赤い観賞用の魚'},
+    {w:'土曜日',r:'どようび',k:'土',m:'週の六日目'},
+    {w:'日曜日',r:'にちようび',k:'日',m:'週の七日目・休日'},
+    {w:'月曜日',r:'げつようび',k:'月',m:'週の一日目'},
+    {w:'青空',r:'あおぞら',k:'空',m:'晴れた青い空'},
+    {w:'花火',r:'はなび',k:'花',m:'夜空に打ち上げる光'},
+    {w:'草原',r:'そうげん',k:'草',m:'草が広がる野原'},
+    {w:'犬小屋',r:'いぬごや',k:'犬',m:'犬が住む小さな家'},
+    {w:'虫歯',r:'むしば',k:'虫',m:'歯が溶ける病気'},
+    {w:'石橋',r:'いしばし',k:'石',m:'石でできた橋'},
+    {w:'手紙',r:'てがみ',k:'手',m:'書いて送る文章'},
+    {w:'目玉',r:'めだま',k:'目',m:'目の丸い部分'},
+    {w:'耳元',r:'みみもと',k:'耳',m:'耳のそば'},
+    {w:'竹林',r:'ちくりん',k:'竹',m:'竹が茂った林'},
+    {w:'貝殻',r:'かいがら',k:'貝',m:'貝の外側の硬い部分'},
+  ],
+  2: [
+    {w:'東口',r:'ひがしぐち',k:'東',m:'東側の出入口'},
+    {w:'西日',r:'にしび',k:'西',m:'夕方の西からの太陽'},
+    {w:'南国',r:'なんごく',k:'南',m:'南の温かい国'},
+    {w:'北風',r:'きたかぜ',k:'北',m:'北から吹いてくる風'},
+    {w:'春風',r:'はるかぜ',k:'春',m:'春に吹くおだやかな風'},
+    {w:'夏休み',r:'なつやすみ',k:'夏',m:'夏の長い休み'},
+    {w:'秋空',r:'あきぞら',k:'秋',m:'秋の澄んだ空'},
+    {w:'冬眠',r:'とうみん',k:'冬',m:'動物が冬に眠ること'},
+    {w:'朝食',r:'ちょうしょく',k:'朝',m:'朝ごはん'},
+    {w:'夜空',r:'よぞら',k:'夜',m:'夜の空'},
+    {w:'海水',r:'かいすい',k:'海',m:'海の水'},
+    {w:'流れ星',r:'ながれぼし',k:'星',m:'夜空を流れる光'},
+    {w:'小鳥',r:'ことり',k:'鳥',m:'小さな鳥'},
+    {w:'金魚鉢',r:'きんぎょばち',k:'魚',m:'金魚を飼う丸い入れ物'},
+    {w:'牛乳',r:'ぎゅうにゅう',k:'牛',m:'牛からとれる白い飲み物'},
+    {w:'馬力',r:'ばりき',k:'馬',m:'強い力の単位'},
+    {w:'白米',r:'はくまい',k:'米',m:'炊く前の白いお米'},
+    {w:'麦茶',r:'むぎちゃ',k:'麦',m:'麦で作ったお茶'},
+    {w:'お茶碗',r:'おちゃわん',k:'茶',m:'ご飯を盛る器'},
+    {w:'大岩',r:'おおいわ',k:'岩',m:'大きな岩'},
+  ],
+  3: [
+    {w:'旅行',r:'りょこう',k:'旅',m:'遠くへ出かけること'},
+    {w:'農業',r:'のうぎょう',k:'農',m:'作物を作る仕事'},
+    {w:'家族',r:'かぞく',k:'族',m:'同じ家に住む人々'},
+    {w:'医者',r:'いしゃ',k:'医',m:'病気を治す人'},
+    {w:'薬局',r:'やっきょく',k:'薬',m:'薬を売るお店'},
+    {w:'科学',r:'かがく',k:'科',m:'自然を研究する学問'},
+    {w:'学校',r:'がっこう',k:'校',m:'勉強をする場所'},
+    {w:'教室',r:'きょうしつ',k:'教',m:'授業をする部屋'},
+    {w:'教育',r:'きょういく',k:'育',m:'知識を教え育てること'},
+    {w:'住所',r:'じゅうしょ',k:'住',m:'住んでいる場所'},
+    {w:'助ける',r:'たすける',k:'助',m:'困っている人を救う'},
+    {w:'運動場',r:'うんどうじょう',k:'運',m:'外で運動する広い場所'},
+    {w:'動物',r:'どうぶつ',k:'動',m:'生きて動く生き物'},
+    {w:'植物',r:'しょくぶつ',k:'植',m:'根を張り育つ生き物'},
+    {w:'温度',r:'おんど',k:'温',m:'暑さ寒さの度合い'},
+    {w:'悲しい',r:'かなしい',k:'悲',m:'つらい気持ち'},
+    {w:'注意',r:'ちゅうい',k:'注',m:'気をつけること'},
+    {w:'転校',r:'てんこう',k:'転',m:'別の学校に移ること'},
+    {w:'道路',r:'どうろ',k:'路',m:'車や人が通る道'},
+    {w:'集合',r:'しゅうごう',k:'集',m:'みんなが集まること'},
+  ],
+  4: [
+    {w:'愛情',r:'あいじょう',k:'愛',m:'大切に思う気持ち'},
+    {w:'提案',r:'ていあん',k:'案',m:'アイデアを出すこと'},
+    {w:'塩分',r:'えんぶん',k:'塩',m:'食べ物に含まれる塩の量'},
+    {w:'加工',r:'かこう',k:'加',m:'材料に手を加えること'},
+    {w:'果物',r:'くだもの',k:'果',m:'木になる甘い食べ物'},
+    {w:'新芽',r:'しんめ',k:'芽',m:'植物の新しい芽'},
+    {w:'商店街',r:'しょうてんがい',k:'街',m:'お店が並んでいる通り'},
+    {w:'目覚まし',r:'めざまし',k:'覚',m:'決めた時刻に音が鳴る時計'},
+    {w:'水管',r:'すいかん',k:'管',m:'水を通すパイプ'},
+    {w:'観察',r:'かんさつ',k:'観',m:'じっくり見て調べること'},
+    {w:'希望',r:'きぼう',k:'希',m:'こうなってほしいという願い'},
+    {w:'四季',r:'しき',k:'季',m:'春夏秋冬の四つの季節'},
+    {w:'国旗',r:'こっき',k:'旗',m:'国のシンボルの旗'},
+    {w:'飛行機',r:'ひこうき',k:'機',m:'空を飛ぶ乗り物'},
+    {w:'会議',r:'かいぎ',k:'議',m:'みんなで話し合うこと'},
+    {w:'競争',r:'きょうそう',k:'競',m:'どちらが勝つか争うこと'},
+    {w:'泣き声',r:'なきごえ',k:'泣',m:'泣くときに出す声'},
+    {w:'救助',r:'きゅうじょ',k:'救',m:'助け出すこと'},
+    {w:'給食',r:'きゅうしょく',k:'給',m:'学校で出る昼ごはん'},
+    {w:'漁業',r:'ぎょぎょう',k:'漁',m:'魚をとる仕事'},
+  ],
+  5: [
+    {w:'気圧',r:'きあつ',k:'圧',m:'大気の押す力'},
+    {w:'移動',r:'いどう',k:'移',m:'場所を移ること'},
+    {w:'原因',r:'げんいん',k:'因',m:'物事が起こるもとになること'},
+    {w:'永遠',r:'えいえん',k:'永',m:'ずっと続くこと'},
+    {w:'液体',r:'えきたい',k:'液',m:'水のように流れる状態の物'},
+    {w:'利益',r:'りえき',k:'益',m:'得になること・もうけ'},
+    {w:'反応',r:'はんのう',k:'応',m:'刺激に対して変化すること'},
+    {w:'許可',r:'きょか',k:'可',m:'してもよいと認めること'},
+    {w:'価値',r:'かち',k:'価',m:'どれくらい大切かという度合い'},
+    {w:'仮定',r:'かてい',k:'仮',m:'とりあえずそうだと考えること'},
+    {w:'幹部',r:'かんぶ',k:'幹',m:'組織の中心になる人'},
+    {w:'習慣',r:'しゅうかん',k:'慣',m:'繰り返してきた行動のくせ'},
+    {w:'基本',r:'きほん',k:'基',m:'物事の土台になること'},
+    {w:'寄付',r:'きふ',k:'寄',m:'お金や物を差し出すこと'},
+    {w:'規則',r:'きそく',k:'規',m:'守るべききまり'},
+    {w:'技術',r:'ぎじゅつ',k:'技',m:'物を作る・使う能力'},
+    {w:'環境',r:'かんきょう',k:'境',m:'周りの状況・自然の状態'},
+    {w:'興味',r:'きょうみ',k:'興',m:'面白いと感じること'},
+    {w:'制限',r:'せいげん',k:'限',m:'範囲を決めて限ること'},
+    {w:'現実',r:'げんじつ',k:'現',m:'実際に起きていること'},
+  ],
+  6: [
+    {w:'異常',r:'いじょう',k:'異',m:'普通でないこと'},
+    {w:'遺産',r:'いさん',k:'遺',m:'亡くなった人が残した財産'},
+    {w:'地域',r:'ちいき',k:'域',m:'ある範囲の土地'},
+    {w:'映画',r:'えいが',k:'映',m:'スクリーンで見る動く映像'},
+    {w:'延長',r:'えんちょう',k:'延',m:'時間や長さを延ばすこと'},
+    {w:'川沿い',r:'かわぞい',k:'沿',m:'川のそばに沿った場所'},
+    {w:'灰色',r:'はいいろ',k:'灰',m:'白と黒の中間の色'},
+    {w:'拡大',r:'かくだい',k:'拡',m:'広げて大きくすること'},
+    {w:'革命',r:'かくめい',k:'革',m:'社会の仕組みを大きく変えること'},
+    {w:'分割',r:'ぶんかつ',k:'割',m:'いくつかに分けること'},
+    {w:'干す',r:'ほす',k:'干',m:'水分を飛ばして乾かすこと'},
+    {w:'干潟',r:'ひがた',k:'干',m:'潮が引いた時に現れる砂地'},
+    {w:'巻物',r:'まきもの',k:'巻',m:'巻いてある紙・書物'},
+    {w:'看護',r:'かんご',k:'看',m:'病人の世話をすること'},
+    {w:'危険',r:'きけん',k:'危',m:'あぶないこと'},
+    {w:'指揮',r:'しき',k:'揮',m:'みんなをまとめて動かすこと'},
+    {w:'貴重',r:'きちょう',k:'貴',m:'非常に大切なこと'},
+    {w:'疑問',r:'ぎもん',k:'疑',m:'不思議に思って問うこと'},
+    {w:'吸収',r:'きゅうしゅう',k:'吸',m:'液体や気体を吸い込むこと'},
+    {w:'子供',r:'こども',k:'供',m:'年齢が低い人・子ども'},
+  ],
+};
+
+let selectedGrades = [1];
+let currentForm = 'kanji';
+let currentMode = '';
+let questions = [];
+let currentQ = 0;
+let score = 0;
+let revealShown = false;
+let wrAnswerShown = false;
+let drawCtx, isDrawing = false, lastX = 0, lastY = 0;
+
+function shuffle(a) {
+  const b = [...a];
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
+
+function getPool() {
+  const data = currentForm === 'kanji' ? KANJI : WORDS;
+  let pool = [];
+  selectedGrades.forEach(g => { if (data[g]) pool = pool.concat(data[g]); });
+  return pool;
+}
+
+function initGrades() {
+  const grid = document.getElementById('grade-grid');
+  grid.innerHTML = '';
+  for (let g = 1; g <= 6; g++) {
+    const btn = document.createElement('div');
+    btn.className = 'grade-btn' + (selectedGrades.includes(g) ? ' selected' : '');
+    btn.innerHTML = `<div class="num">${g}年生</div><div class="sub">${g}年の漢字</div>`;
+    btn.onclick = () => toggleGrade(g, btn);
+    grid.appendChild(btn);
+  }
+}
+
+function toggleGrade(g, btn) {
+  if (selectedGrades.includes(g)) {
+    if (selectedGrades.length === 1) return;
+    selectedGrades = selectedGrades.filter(x => x !== g);
+    btn.classList.remove('selected');
+  } else {
+    selectedGrades.push(g);
+    btn.classList.add('selected');
+  }
+}
+
+function setForm(form, btn) {
+  currentForm = form;
+  document.querySelectorAll('#form-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('form-desc').textContent =
+    form === 'kanji' ? '漢字一文字の音読み・訓読みを学ぶ' : '単語の読み方や意味を学ぶ（読みが確定！）';
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+function goHome() { showScreen('home'); }
+
+function startMode(mode) {
+  const pool = getPool();
+  if (pool.length < 4) { alert('もっと学年を選んでください'); return; }
+  currentMode = mode;
+  questions = shuffle(pool).slice(0, Math.min(10, pool.length));
+  currentQ = 0; score = 0;
+  if (mode === 'quiz' || mode === 'meaning') startQuiz();
+  else if (mode === 'flashcard') startFlashcard();
+  else if (mode === 'writing') startWriting();
+}
+function retryMode() { startMode(currentMode); }
+
+function buildDisplay(q, showReading) {
+  if (currentForm === 'kanji') {
+    const onStr = q.on.join('・');
+    const kunStr = q.kun.filter(x => x).join('・');
+    let html = `<div class="kanji-display">${q.k}</div>`;
+    if (showReading) {
+      html += `<div class="reading-tags">`;
+      if (onStr) html += `<span class="rtag on">音：${onStr}</span>`;
+      if (kunStr) html += `<span class="rtag kun">訓：${kunStr}</span>`;
+      html += `</div>`;
+    }
+    return html;
+  } else {
+    let html = `<div class="word-display">${q.w}</div>`;
+    if (showReading) html += `<div class="reading-tags"><span class="rtag wr">${q.r}</span></div>`;
+    return html;
+  }
+}
+
+function getLabel(q, mode) {
+  if (mode === 'meaning') return q.m.split('・')[0];
+  if (currentForm === 'word') return q.r;
+  return q.on[0] || q.kun[0] || '';
+}
+
+function startQuiz() {
+  showScreen('quiz');
+  document.getElementById('quiz-title').textContent = currentMode === 'quiz' ? '読み問題' : '意味問題';
+  loadQuestion();
+}
+
+function loadQuestion() {
+  const q = questions[currentQ];
+  const total = questions.length;
+  document.getElementById('quiz-qcount').textContent = (currentQ + 1) + ' / ' + total;
+  document.getElementById('quiz-pb').style.width = Math.round((currentQ / total) * 100) + '%';
+  document.getElementById('quiz-display').innerHTML = buildDisplay(q, false);
+  document.getElementById('quiz-hint').textContent =
+    currentMode === 'quiz'
+      ? (currentForm === 'word' ? 'この単語の読み方は？' : 'この漢字の読み方は？')
+      : (currentForm === 'word' ? 'この単語の意味は？' : 'この漢字の意味は？');
+  document.getElementById('quiz-sub').textContent =
+    (currentMode === 'quiz' && currentForm === 'kanji') ? '（代表的な読みを選ぼう）' : '';
+  document.getElementById('quiz-feedback').textContent = '';
+  document.getElementById('quiz-next-row').style.display = 'none';
+
+  const pool = getPool();
+  const qKey = currentForm === 'kanji' ? q.k : q.w;
+  let opts = shuffle(pool).filter(x => (currentForm === 'kanji' ? x.k : x.w) !== qKey).slice(0, 3);
+  opts.push(q);
+  opts = shuffle(opts);
+
+  const choicesEl = document.getElementById('quiz-choices');
+  choicesEl.innerHTML = '';
+  opts.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = getLabel(opt, currentMode);
+    const isCorrect = (currentForm === 'kanji' ? opt.k : opt.w) === qKey;
+    btn.onclick = () => selectAnswer(btn, isCorrect, q);
+    choicesEl.appendChild(btn);
+  });
+}
+
+function selectAnswer(btn, correct, q) {
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+  const fb = document.getElementById('quiz-feedback');
+  if (correct) {
+    btn.classList.add('correct');
+    fb.textContent = '✓ 正解！'; fb.style.color = '#2E7D32';
+    score++;
+  } else {
+    btn.classList.add('wrong');
+    fb.textContent = '✗ 残念…'; fb.style.color = '#B71C1C';
+    const cl = getLabel(q, currentMode);
+    document.querySelectorAll('.choice-btn').forEach(b => { if (b.textContent === cl) b.classList.add('correct'); });
+  }
+  document.getElementById('quiz-display').innerHTML = buildDisplay(q, true);
+  document.getElementById('quiz-next-row').style.display = 'flex';
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) showResult();
+  else loadQuestion();
+}
+
+function startFlashcard() { showScreen('flashcard'); loadFlashcard(); }
+
+function loadFlashcard() {
+  revealShown = false;
+  const q = questions[currentQ];
+  const total = questions.length;
+  document.getElementById('fc-qcount').textContent = (currentQ + 1) + ' / ' + total;
+  document.getElementById('fc-pb').style.width = Math.round((currentQ / total) * 100) + '%';
+  document.getElementById('fc-display').innerHTML = buildDisplay(q, false);
+  document.getElementById('fc-tap').textContent = 'タップして答えを見る';
+  document.getElementById('fc-reveal').classList.remove('shown');
+  document.getElementById('fc-actions').style.display = 'none';
+
+  let html = '';
+  if (currentForm === 'kanji') {
+    const onStr = q.on.join('・');
+    const kunStr = q.kun.filter(x => x).join('・');
+    if (onStr) html += `<p style="margin:4px 0;"><span class="rtag on">音読み：${onStr}</span></p>`;
+    if (kunStr) html += `<p style="margin:4px 0;"><span class="rtag kun">訓読み：${kunStr}</span></p>`;
+  } else {
+    html += `<p style="font-size:17px;font-weight:600;color:#1a1a1a;margin:4px 0;">${q.r}</p>`;
+  }
+  html += `<p style="font-size:14px;color:#888;margin-top:6px;">${q.m}</p>`;
+  document.getElementById('fc-answer-content').innerHTML = html;
+}
+
+function revealCard() {
+  if (revealShown) return;
+  revealShown = true;
+  document.getElementById('fc-reveal').classList.add('shown');
+  document.getElementById('fc-tap').textContent = '';
+  document.getElementById('fc-actions').style.display = 'flex';
+}
+
+function fcAnswer(knew) {
+  if (knew) score++;
+  currentQ++;
+  if (currentQ >= questions.length) showResult();
+  else loadFlashcard();
+}
+
+function startWriting() { showScreen('writing'); setupCanvas(); loadWriting(); }
+
+function setupCanvas() {
+  const canvas = document.getElementById('draw-canvas');
+  drawCtx = canvas.getContext('2d');
+  clearCanvas();
+  const pos = e => {
+    const r = canvas.getBoundingClientRect();
+    const s = e.touches ? e.touches[0] : e;
+    return [s.clientX - r.left, s.clientY - r.top];
+  };
+  const start = e => { e.preventDefault(); isDrawing = true; [lastX, lastY] = pos(e); };
+  const draw = e => {
+    if (!isDrawing) return; e.preventDefault();
+    const [x, y] = pos(e);
+    drawCtx.beginPath(); drawCtx.moveTo(lastX, lastY); drawCtx.lineTo(x, y);
+    drawCtx.strokeStyle = '#378ADD'; drawCtx.lineWidth = 4; drawCtx.lineCap = 'round'; drawCtx.stroke();
+    [lastX, lastY] = [x, y];
+  };
+  const stop = () => isDrawing = false;
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stop);
+  canvas.addEventListener('touchstart', start, {passive: false});
+  canvas.addEventListener('touchmove', draw, {passive: false});
+  canvas.addEventListener('touchend', stop);
+}
+
+function clearCanvas() {
+  if (!drawCtx) return;
+  drawCtx.clearRect(0, 0, 200, 200);
+  drawCtx.strokeStyle = 'rgba(0,0,0,0.08)';
+  drawCtx.lineWidth = 1;
+  drawCtx.setLineDash([]);
+  drawCtx.beginPath(); drawCtx.moveTo(100,0); drawCtx.lineTo(100,200); drawCtx.stroke();
+  drawCtx.beginPath(); drawCtx.moveTo(0,100); drawCtx.lineTo(200,100); drawCtx.stroke();
+  drawCtx.setLineDash([4,4]);
+  [50,150].forEach(v => {
+    drawCtx.beginPath(); drawCtx.moveTo(v,0); drawCtx.lineTo(v,200); drawCtx.stroke();
+    drawCtx.beginPath(); drawCtx.moveTo(0,v); drawCtx.lineTo(200,v); drawCtx.stroke();
+  });
+  drawCtx.setLineDash([]);
+}
+
+function loadWriting() {
+  wrAnswerShown = false;
+  const q = questions[currentQ];
+  const total = questions.length;
+  document.getElementById('wr-qcount').textContent = (currentQ + 1) + ' / ' + total;
+  document.getElementById('wr-pb').style.width = Math.round((currentQ / total) * 100) + '%';
+  let html = '';
+  if (currentForm === 'kanji') {
+    const onStr = q.on.join('・');
+    const kunStr = q.kun.filter(x => x).join('・');
+    html = `<div style="font-size:13px;color:#888;margin-bottom:8px;">この漢字を書こう</div>`;
+    if (onStr) html += `<p><span class="rtag on">音読み：${onStr}</span></p>`;
+    if (kunStr) html += `<p style="margin-top:5px;"><span class="rtag kun">訓読み：${kunStr}</span></p>`;
+    html += `<p style="font-size:13px;color:#aaa;margin-top:6px;">${q.m}</p>`;
+    document.getElementById('wr-answer-display').textContent = q.k;
+  } else {
+    html = `<div style="font-size:13px;color:#888;margin-bottom:8px;">この単語を書こう</div>`;
+    html += `<p style="font-size:20px;font-weight:600;color:#1a1a1a;">${q.r}</p>`;
+    html += `<p style="font-size:13px;color:#aaa;margin-top:4px;">${q.m}</p>`;
+    document.getElementById('wr-answer-display').textContent = q.w;
+  }
+  document.getElementById('wr-prompt').innerHTML = html;
+  document.getElementById('wr-answer-reveal').style.display = 'none';
+  document.getElementById('wr-reveal-btn').textContent = '答えを見る';
+  document.getElementById('wr-next-row').style.display = 'none';
+  clearCanvas();
+}
+
+function wrToggleReveal() {
+  wrAnswerShown = !wrAnswerShown;
+  document.getElementById('wr-answer-reveal').style.display = wrAnswerShown ? 'block' : 'none';
+  document.getElementById('wr-reveal-btn').textContent = wrAnswerShown ? '答えを隠す' : '答えを見る';
+  document.getElementById('wr-next-row').style.display = wrAnswerShown ? 'flex' : 'none';
+}
+
+function wrNext(knew) {
+  if (knew) score++;
+  currentQ++;
+  if (currentQ >= questions.length) showResult();
+  else loadWriting();
+}
+
+function showResult() {
+  showScreen('result');
+  const total = questions.length;
+  const pct = Math.round((score / total) * 100);
+  document.getElementById('res-correct').textContent = score;
+  document.getElementById('res-total').textContent = total;
+  document.getElementById('res-pct').textContent = pct + '%';
+  const circle = document.getElementById('result-circle');
+  const msg = document.getElementById('result-msg');
+  circle.className = 'result-circle';
+  if (pct >= 80) { circle.classList.add('great'); circle.textContent = '🎉'; msg.textContent = 'すごい！よくできました！'; }
+  else if (pct >= 50) { circle.classList.add('ok'); circle.textContent = '😊'; msg.textContent = 'まあまあ！もう少し練習しよう'; }
+  else { circle.classList.add('low'); circle.textContent = '😓'; msg.textContent = 'もう一度がんばろう！'; }
+}
+
+initGrades();
+</script>
+</body>
+</html>

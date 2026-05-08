@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>おみせやさん けいさんゲーム</title>
+
+  <!-- iPhoneのホーム画面追加用 -->
+  <link rel="apple-touch-icon" href="img/shop.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="おみせ計算">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+      background: linear-gradient(180deg, #fff5d7 0%, #ffe6f0 100%);
+      color: #4a3b32;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    header {
+      text-align: center;
+      background: #ffffffcc;
+      border: 4px solid #ffbd59;
+      border-radius: 28px;
+      padding: 18px 14px;
+      box-shadow: 0 8px 0 #f4a942;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 7vw, 48px);
+      color: #ff7a00;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .panel {
+      background: #ffffffd9;
+      border-radius: 24px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 14px rgba(180, 120, 80, 0.18);
+      border: 3px solid #fff;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin: 0 0 12px;
+      color: #7b4b2a;
+    }
+
+    .difficulty-buttons,
+    .action-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      padding: 14px 12px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #fff;
+      box-shadow: 0 5px 0 rgba(0,0,0,0.15);
+      transition: transform 0.05s, box-shadow 0.05s, opacity 0.2s;
+    }
+
+    button:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .easy { background: #52c878; }
+    .normal { background: #4aa3ff; }
+    .hard { background: #ff6b8a; }
+    .main-btn { background: #ff8c1a; width: 100%; }
+    .select-btn { background: #22b8cf; width: 100%; }
+    .clear-btn { background: #adb5bd; width: 100%; }
+    .answer-btn { background: #8e6cff; width: 100%; }
+    .reset-btn { background: #999; width: 100%; }
+
+    .selected-level {
+      outline: 5px solid #ffe14d;
+      outline-offset: 2px;
+    }
+
+    .shop-grid,
+    .cart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+    }
+
+    .item-card {
+      background: #fff8ef;
+      border: 3px solid #ffd18a;
+      border-radius: 22px;
+      padding: 14px 10px;
+      text-align: center;
+      min-height: 130px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 5px 0 #f0b45c;
+      position: relative;
+      user-select: none;
+    }
+
+    .shop-item {
+      cursor: pointer;
+      transition: transform 0.08s, background 0.2s, border 0.2s;
+    }
+
+    .shop-item:active {
+      transform: scale(0.97);
+    }
+
+    .shop-item.selected {
+      background: #e7fff1;
+      border-color: #34c759;
+      box-shadow: 0 5px 0 #27a84a;
+    }
+
+    .shop-item.selected::after {
+      content: "えらんだよ！";
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: #34c759;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+
+    .item-emoji {
+      font-size: 42px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .item-name {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .item-price {
+      font-size: 20px;
+      color: #e85d04;
+      font-weight: bold;
+    }
+
+    .question-box {
+      background: #fff7c2;
+      border: 3px dashed #ffb703;
+      border-radius: 22px;
+      padding: 16px;
+      font-size: 22px;
+      font-weight: bold;
+      line-height: 1.6;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .answer-area {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      font-size: 28px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 4px solid #ffc6d9;
+      text-align: center;
+      font-weight: bold;
+      background: #fff;
+    }
+
+    .yen {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .message {
+      min-height: 52px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      padding: 12px;
+      border-radius: 18px;
+      margin-top: 12px;
+      background: #fff;
+    }
+
+    .message.correct {
+      background: #dbffd8;
+      color: #168a39;
+      border: 3px solid #67d86c;
+    }
+
+    .message.wrong {
+      background: #ffe1e8;
+      color: #d62839;
+      border: 3px solid #ff8fab;
+    }
+
+    .point-card {
+      background: #ffffff;
+      border: 4px solid #70d6ff;
+      border-radius: 22px;
+      padding: 14px;
+    }
+
+    .stars {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 34px;
+      margin: 10px 0;
+    }
+
+    .star.empty {
+      filter: grayscale(1);
+      opacity: 0.35;
+    }
+
+    .master-badge {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #ff006e;
+      background: #ffe5f1;
+      border-radius: 18px;
+      padding: 12px;
+      display: none;
+    }
+
+    .small-note {
+      font-size: 14px;
+      text-align: center;
+      color: #6d5b50;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .two-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 12px;
+      }
+
+      .difficulty-buttons,
+      .action-buttons,
+      .two-buttons {
+        grid-template-columns: 1fr;
+      }
+
+      .answer-area {
+        grid-template-columns: 1fr;
+      }
+
+      button {
+        font-size: 17px;
+      }
+
+      .question-box {
+        font-size: 19px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🛒 おみせやさん<br>けいさんゲーム</h1>
+      <div class="subtitle">すきな商品をえらんで、けいさんマスターになろう！</div>
+    </header>
+
+    <section class="panel">
+      <h2 class="section-title">① むずかしさをえらんでね</h2>
+      <div class="difficulty-buttons">
+        <button class="easy selected-level" id="easyBtn" onclick="setLevel('easy')">かんたん</button>
+        <button class="normal" id="normalBtn" onclick="setLevel('normal')">ふつう</button>
+        <button class="hard" id="hardBtn" onclick="setLevel('hard')">むずかしい</button>
+      </div>
+      <div class="small-note" id="levelNote">かんたん：10円〜100円の商品を2こまでえらべるよ</div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">② おみせの商品</h2>
+      <div class="shop-grid" id="shopGrid"></div>
+      <div class="small-note">商品をタップすると、自分でえらべるよ。もう一度タップすると、やめられるよ。</div>
+      <div class="two-buttons">
+        <button class="select-btn" onclick="makeQuestionFromSelected()">えらんだ商品でけいさん</button>
+        <button class="main-btn" onclick="makeRandomQuestion()">おすすめでえらぶ</button>
+      </div>
+      <div class="two-buttons">
+        <button class="clear-btn" onclick="clearSelectedOnly()">えらびなおす</button>
+        <button class="reset-btn" onclick="resetGame()">ポイントもリセット</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">③ きょうのおかいもの</h2>
+      <div class="question-box" id="questionText">商品をえらんで「けいさん」をおしてね</div>
+      <div class="cart-grid" id="cartGrid"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">④ こたえをいれてね</h2>
+      <div class="answer-area">
+        <input type="number" id="answerInput" placeholder="こたえ" inputmode="numeric" />
+        <div class="yen">円</div>
+      </div>
+      <button class="answer-btn" onclick="checkAnswer()">こたえる！</button>
+      <div class="message" id="message">ここにメッセージがでるよ</div>
+    </section>
+
+    <section class="panel point-card">
+      <h2 class="section-title">⭐ ポイントカード</h2>
+      <div class="stars" id="stars"></div>
+      <div class="master-badge" id="masterBadge">🎉 おかいものマスター！ 🎉</div>
+    </section>
+  </div>
+
+  <script>
+    // 商品のもとデータ：ここを増やすと、お店に出る商品の候補が増えます
+    // minPrice〜maxPriceの間で、毎回10円単位の値段になります
+    const itemPool = [
+      { name: "りんご", minPrice: 10, maxPrice: 100, emoji: "🍎" },
+      { name: "みかん", minPrice: 10, maxPrice: 100, emoji: "🍊" },
+      { name: "バナナ", minPrice: 10, maxPrice: 100, emoji: "🍌" },
+      { name: "いちご", minPrice: 20, maxPrice: 150, emoji: "🍓" },
+      { name: "ぶどう", minPrice: 30, maxPrice: 150, emoji: "🍇" },
+      { name: "メロン", minPrice: 80, maxPrice: 200, emoji: "🍈" },
+      { name: "パン", minPrice: 30, maxPrice: 150, emoji: "🥐" },
+      { name: "ドーナツ", minPrice: 40, maxPrice: 150, emoji: "🍩" },
+      { name: "クッキー", minPrice: 20, maxPrice: 120, emoji: "🍪" },
+      { name: "ケーキ", minPrice: 80, maxPrice: 200, emoji: "🍰" },
+      { name: "プリン", minPrice: 50, maxPrice: 150, emoji: "🍮" },
+      { name: "アイス", minPrice: 50, maxPrice: 150, emoji: "🍦" },
+      { name: "ジュース", minPrice: 40, maxPrice: 150, emoji: "🧃" },
+      { name: "ぎゅうにゅう", minPrice: 50, maxPrice: 150, emoji: "🥛" },
+      { name: "おちゃ", minPrice: 30, maxPrice: 120, emoji: "🍵" },
+      { name: "おにぎり", minPrice: 50, maxPrice: 150, emoji: "🍙" },
+      { name: "サンドイッチ", minPrice: 80, maxPrice: 200, emoji: "🥪" },
+      { name: "カレー", minPrice: 100, maxPrice: 200, emoji: "🍛" },
+      { name: "べんとう", minPrice: 120, maxPrice: 200, emoji: "🍱" },
+      { name: "ピザ", minPrice: 80, maxPrice: 200, emoji: "🍕" }
+    ];
+
+    // 実際に今日のお店に並ぶ商品。ゲーム中で作り直します。
+    let allItems = [];
+
+    let level = "easy";
+    let selectedItems = [];
+    let currentItems = [];
+    let correctAnswer = 0;
+    let questionType = "total";
+    let points = Number(localStorage.getItem("shopCalcPoints")) || 0;
+    let answeredCorrectly = false;
+    let currentSaleItem = null;
+
+    const levelSettings = {
+      easy: {
+        label: "かんたん：10円〜100円の商品を2こまでえらべるよ",
+        maxPrice: 100,
+        maxItemCount: 2,
+        allowChange: false,
+        allowSale: false
+      },
+      normal: {
+        label: "ふつう：150円までの商品を2こまでえらべるよ。たまに10円びき！",
+        maxPrice: 150,
+        maxItemCount: 2,
+        allowChange: false,
+        allowSale: true
+      },
+      hard: {
+        label: "むずかしい：200円までの商品を3こまでえらべるよ。おつりもあるよ！",
+        maxPrice: 200,
+        maxItemCount: 3,
+        allowChange: true,
+        allowSale: true
+      }
+    };
+
+    function setLevel(newLevel) {
+      level = newLevel;
+      selectedItems = [];
+      makeShopItems();
+      document.querySelectorAll(".difficulty-buttons button").forEach(btn => {
+        btn.classList.remove("selected-level");
+      });
+      document.getElementById(newLevel + "Btn").classList.add("selected-level");
+      document.getElementById("levelNote").textContent = levelSettings[level].label;
+      renderShop();
+      clearQuestion();
+    }
+
+    // 商品候補から、今日のお店に並ぶ商品をランダムに作ります
+    function makeShopItems() {
+      const setting = levelSettings[level];
+      const availablePool = itemPool.filter(item => item.minPrice <= setting.maxPrice);
+      const shuffledPool = shuffle([...availablePool]);
+      const shopItemCount = level === "easy" ? 6 : level === "normal" ? 8 : 10;
+
+      allItems = shuffledPool.slice(0, shopItemCount).map((item, index) => {
+        const limitedMaxPrice = Math.min(item.maxPrice, setting.maxPrice);
+        return {
+          id: index + 1,
+          name: item.name,
+          emoji: item.emoji,
+          price: randomPrice(item.minPrice, limitedMaxPrice)
+        };
+      });
+    }
+
+    // 10円単位のランダム価格を作ります
+    function randomPrice(min, max) {
+      const min10 = Math.ceil(min / 10);
+      const max10 = Math.floor(max / 10);
+      return randomInt(min10, max10) * 10;
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function renderShop() {
+      const setting = levelSettings[level];
+      const items = allItems.filter(item => item.price <= setting.maxPrice);
+      const shopGrid = document.getElementById("shopGrid");
+      shopGrid.innerHTML = "";
+
+      items.forEach(item => {
+        const isSelected = selectedItems.some(selected => selected.id === item.id);
+        const card = document.createElement("div");
+        card.className = "item-card shop-item" + (isSelected ? " selected" : "");
+        card.onclick = () => toggleItem(item.id);
+        card.innerHTML = `
+          <div class="item-emoji">${item.emoji}</div>
+          <div class="item-name">${item.name}</div>
+          <div class="item-price">${item.price}円</div>
+        `;
+        shopGrid.appendChild(card);
+      });
+    }
+
+    function toggleItem(itemId) {
+      const item = allItems.find(item => item.id === itemId);
+      const setting = levelSettings[level];
+      const alreadySelected = selectedItems.some(selected => selected.id === itemId);
+
+      if (alreadySelected) {
+        selectedItems = selectedItems.filter(selected => selected.id !== itemId);
+      } else {
+        if (selectedItems.length >= setting.maxItemCount) {
+          showMessage(`${setting.maxItemCount}こまでえらべるよ`, "wrong");
+          return;
+        }
+        selectedItems.push(item);
+      }
+
+      renderShop();
+      renderSelectedPreview();
+    }
+
+    function renderSelectedPreview() {
+      if (selectedItems.length === 0) {
+        document.getElementById("questionText").textContent = "商品をえらんで「けいさん」をおしてね";
+        document.getElementById("cartGrid").innerHTML = "";
+        return;
+      }
+
+      document.getElementById("questionText").textContent = "えらんだ商品はこちら！";
+      renderCart(selectedItems, null);
+    }
+
+    function makeQuestionFromSelected() {
+      if (selectedItems.length === 0) {
+        showMessage("商品を1こ以上えらんでね", "wrong");
+        return;
+      }
+      currentItems = [...selectedItems];
+      makeQuestionFromItems(currentItems);
+    }
+
+    function makeRandomQuestion() {
+      const setting = levelSettings[level];
+      const availableItems = allItems.filter(item => item.price <= setting.maxPrice);
+      const count = setting.maxItemCount;
+      currentItems = shuffle([...availableItems]).slice(0, count);
+      selectedItems = [...currentItems];
+      renderShop();
+      makeQuestionFromItems(currentItems);
+    }
+
+    function makeQuestionFromItems(items) {
+      const setting = levelSettings[level];
+      let total = items.reduce((sum, item) => sum + item.price, 0);
+      let questionText = "";
+      currentSaleItem = null;
+      answeredCorrectly = false;
+
+      // 問題タイプを決める
+      const random = Math.random();
+      if (setting.allowChange && random < 0.45) {
+        questionType = "change";
+      } else if (setting.allowSale && random < 0.75) {
+        questionType = "sale";
+      } else {
+        questionType = "total";
+      }
+
+      if (questionType === "sale") {
+        currentSaleItem = items[Math.floor(Math.random() * items.length)];
+        total -= 10;
+        correctAnswer = total;
+        questionText = `${currentSaleItem.name}が10円びき！<br>ぜんぶでいくらかな？`;
+      } else if (questionType === "change") {
+        const paidMoney = 500;
+        correctAnswer = paidMoney - total;
+        questionText = `ぜんぶで${total}円です。<br>${paidMoney}円をだしました。<br>おつりはいくらかな？`;
+      } else {
+        correctAnswer = total;
+        questionText = "ぜんぶでいくらかな？";
+      }
+
+      document.getElementById("questionText").innerHTML = questionText;
+      document.getElementById("answerInput").value = "";
+      document.getElementById("answerInput").focus();
+      document.getElementById("message").className = "message";
+      document.getElementById("message").textContent = "こたえをいれてね！";
+      renderCart(items, currentSaleItem);
+    }
+
+    function renderCart(items, saleItem = null) {
+      const cartGrid = document.getElementById("cartGrid");
+      cartGrid.innerHTML = "";
+
+      items.forEach(item => {
+        const isSale = saleItem && item.id === saleItem.id;
+        const card = document.createElement("div");
+        card.className = "item-card";
+        card.innerHTML = `
+          <div class="item-emoji">${item.emoji}</div>
+          <div class="item-name">${item.name}</div>
+          <div class="item-price">${isSale ? item.price + "円 → " + (item.price - 10) + "円" : item.price + "円"}</div>
+        `;
+        cartGrid.appendChild(card);
+      });
+    }
+
+    function checkAnswer() {
+      if (currentItems.length === 0) {
+        showMessage("さきに商品をえらんで、けいさんをはじめてね", "wrong");
+        return;
+      }
+
+      const answerInput = document.getElementById("answerInput");
+      const userAnswer = Number(answerInput.value);
+
+      if (!answerInput.value) {
+        showMessage("こたえをいれてね", "wrong");
+        return;
+      }
+
+      if (userAnswer === correctAnswer) {
+        if (!answeredCorrectly) {
+          points += 1;
+          if (points > 5) points = 5;
+          localStorage.setItem("shopCalcPoints", points);
+          answeredCorrectly = true;
+          renderPoints();
+        }
+        showMessage("せいかい！すごい！🎉", "correct");
+      } else {
+        showMessage("もういちど考えてみよう😊", "wrong");
+      }
+    }
+
+    function showMessage(text, type) {
+      const message = document.getElementById("message");
+      message.textContent = text;
+      message.className = "message " + type;
+    }
+
+    function renderPoints() {
+      const stars = document.getElementById("stars");
+      stars.innerHTML = "";
+
+      for (let i = 1; i <= 5; i++) {
+        const star = document.createElement("span");
+        star.className = i <= points ? "star" : "star empty";
+        star.textContent = "⭐";
+        stars.appendChild(star);
+      }
+
+      document.getElementById("masterBadge").style.display = points >= 5 ? "block" : "none";
+    }
+
+    function clearSelectedOnly() {
+      selectedItems = [];
+      currentItems = [];
+      correctAnswer = 0;
+      answeredCorrectly = false;
+      currentSaleItem = null;
+      renderShop();
+      clearQuestion();
+      showMessage("えらびなおせるよ", "correct");
+    }
+
+    function resetGame() {
+      points = 0;
+      localStorage.setItem("shopCalcPoints", points);
+      renderPoints();
+      clearSelectedOnly();
+      showMessage("ポイントをリセットしたよ", "correct");
+    }
+
+    function clearQuestion() {
+      currentItems = [];
+      correctAnswer = 0;
+      answeredCorrectly = false;
+      currentSaleItem = null;
+      document.getElementById("questionText").textContent = "商品をえらんで「けいさん」をおしてね";
+      document.getElementById("cartGrid").innerHTML = "";
+      document.getElementById("answerInput").value = "";
+      document.getElementById("message").className = "message";
+      document.getElementById("message").textContent = "ここにメッセージがでるよ";
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // Enterキーでも答えられるようにする
+    document.getElementById("answerInput").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        checkAnswer();
+      }
+    });
+
+    makeShopItems();
+    renderShop();
+    renderPoints();
+  </script>
+</body>
+</html>

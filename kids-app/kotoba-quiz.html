@@ -4,7 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ことばクイズ🌟</title>
+
+<link rel="apple-touch-icon" href="img/kotobaquiz.png">
+<link rel="icon" type="image/png" href="img/kotobaquiz.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ことばクイズ">
+<meta name="theme-color" content="#FFFBF0">
+
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+
 <style>
   :root {
     --yoji-color: #FF6B6B;
@@ -42,18 +51,23 @@
   .screen { display: none; }
   .screen.active { display: block; }
 
-  /* ===== TOP SCREEN ===== */
   .top-header {
     text-align: center;
     padding: 24px 0 20px;
   }
+
   .app-title {
     font-size: clamp(2rem, 8vw, 3rem);
     font-weight: 900;
     line-height: 1.2;
     margin-bottom: 8px;
   }
-  .app-title .star { display: inline-block; animation: spin 3s linear infinite; }
+
+  .app-title .star {
+    display: inline-block;
+    animation: spin 3s linear infinite;
+  }
+
   .app-subtitle {
     font-size: clamp(0.9rem, 3vw, 1.1rem);
     color: #777;
@@ -75,7 +89,6 @@
     letter-spacing: 0.05em;
   }
 
-  /* Mode Cards */
   .mode-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -98,23 +111,49 @@
     line-height: 1.4;
     position: relative;
   }
-  .mode-card:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,0.12); }
-  .mode-card .mode-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+  .mode-card:active {
+    transform: translateY(3px);
+    box-shadow: 0 3px 0 rgba(0,0,0,0.12);
+  }
+
+  .mode-card .mode-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 8px;
+  }
+
   .mode-card.yoji { background: var(--yoji-light); color: var(--yoji-dark); }
   .mode-card.kotowaza { background: var(--kotowaza-light); color: var(--kotowaza-dark); }
   .mode-card.kanyoku { background: var(--kanyoku-light); color: var(--kanyoku-dark); }
+
   .mode-card.selected::after {
     content: '✓';
     position: absolute;
-    top: 8px; right: 10px;
+    top: 8px;
+    right: 10px;
     font-size: 1.1rem;
     font-weight: 900;
   }
-  .mode-card.yoji.selected { background: var(--yoji-color); color: white; box-shadow: 0 6px 0 var(--yoji-dark); }
-  .mode-card.kotowaza.selected { background: var(--kotowaza-color); color: white; box-shadow: 0 6px 0 var(--kotowaza-dark); }
-  .mode-card.kanyoku.selected { background: var(--kanyoku-color); color: white; box-shadow: 0 6px 0 var(--kanyoku-dark); }
 
-  /* Quiz Type Cards */
+  .mode-card.yoji.selected {
+    background: var(--yoji-color);
+    color: white;
+    box-shadow: 0 6px 0 var(--yoji-dark);
+  }
+
+  .mode-card.kotowaza.selected {
+    background: var(--kotowaza-color);
+    color: white;
+    box-shadow: 0 6px 0 var(--kotowaza-dark);
+  }
+
+  .mode-card.kanyoku.selected {
+    background: var(--kanyoku-color);
+    color: white;
+    box-shadow: 0 6px 0 var(--kanyoku-dark);
+  }
+
   .quiz-type-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -122,6 +161,7 @@
     max-width: 500px;
     margin: 0 auto;
   }
+
   .quiz-type-card {
     border: 3px solid #E8E0D0;
     border-radius: var(--radius);
@@ -135,19 +175,28 @@
     transition: transform 0.15s, box-shadow 0.15s;
     line-height: 1.5;
   }
-  .quiz-type-card:active { transform: translateY(2px); }
-  .quiz-type-card .qt-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+  .quiz-type-card:active {
+    transform: translateY(2px);
+  }
+
+  .quiz-type-card .qt-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 8px;
+  }
+
   .quiz-type-card.selected {
     border-color: var(--active-color);
     background: var(--active-light);
     color: var(--active-color);
   }
 
-  /* Start Button */
   .start-btn-wrap {
     text-align: center;
     margin-top: 24px;
   }
+
   .start-btn {
     background: linear-gradient(135deg, #FF6B6B, #FF8E53);
     color: white;
@@ -162,10 +211,17 @@
     transition: transform 0.15s, box-shadow 0.15s;
     letter-spacing: 0.05em;
   }
-  .start-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #C0392B; }
-  .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* ===== QUIZ SCREEN ===== */
+  .start-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 3px 0 #C0392B;
+  }
+
+  .start-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   .quiz-header {
     display: flex;
     justify-content: space-between;
@@ -173,6 +229,7 @@
     max-width: 600px;
     margin: 0 auto 16px;
   }
+
   .back-btn {
     background: white;
     border: 2px solid #E0D8CC;
@@ -184,19 +241,26 @@
     cursor: pointer;
     color: #555;
   }
-  .progress-wrap { flex: 1; margin: 0 12px; }
+
+  .progress-wrap {
+    flex: 1;
+    margin: 0 12px;
+  }
+
   .progress-bar-bg {
     background: #E8E0D0;
     border-radius: 10px;
     height: 14px;
     overflow: hidden;
   }
+
   .progress-bar-fill {
     height: 100%;
     border-radius: 10px;
     transition: width 0.4s ease;
     background: linear-gradient(90deg, #FF6B6B, #FFD93D);
   }
+
   .progress-text {
     text-align: center;
     font-size: 0.8rem;
@@ -204,6 +268,7 @@
     margin-top: 4px;
     font-weight: 700;
   }
+
   .score-badge {
     background: white;
     border: 2px solid #E0D8CC;
@@ -250,6 +315,7 @@
     margin-bottom: 6px;
     color: #1A1A1A;
   }
+
   .question-reading {
     font-size: clamp(0.9rem, 3vw, 1.1rem);
     color: #888;
@@ -268,12 +334,12 @@
     color: #333;
   }
 
-  /* Choice Buttons */
   .choices {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
+
   .choice-btn {
     background: white;
     border: 3px solid #E8E0D0;
@@ -289,8 +355,17 @@
     box-shadow: 0 4px 0 #E0D8CC;
     position: relative;
   }
-  .choice-btn:not(:disabled):active { transform: translateY(2px); box-shadow: 0 2px 0 #E0D8CC; }
-  .choice-btn:not(:disabled):hover { border-color: var(--active-color); background: var(--active-light); }
+
+  .choice-btn:not(:disabled):active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #E0D8CC;
+  }
+
+  .choice-btn:not(:disabled):hover {
+    border-color: var(--active-color);
+    background: var(--active-light);
+  }
+
   .choice-btn .choice-num {
     display: inline-block;
     width: 24px;
@@ -305,21 +380,29 @@
     margin-right: 8px;
     flex-shrink: 0;
   }
+
   .choice-btn.correct {
     border-color: #2ECC71;
     background: #EAFAF1;
     box-shadow: 0 4px 0 #27AE60;
   }
-  .choice-btn.correct .choice-num { background: #2ECC71; color: white; }
+
+  .choice-btn.correct .choice-num {
+    background: #2ECC71;
+    color: white;
+  }
+
   .choice-btn.wrong {
     border-color: #E74C3C;
     background: #FDEDEC;
     box-shadow: 0 4px 0 #C0392B;
     opacity: 0.7;
   }
-  .choice-btn:disabled { cursor: default; }
 
-  /* Feedback */
+  .choice-btn:disabled {
+    cursor: default;
+  }
+
   .feedback {
     text-align: center;
     padding: 16px;
@@ -330,10 +413,31 @@
     display: none;
     animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
-  .feedback.correct { background: #EAFAF1; color: #1E8449; display: block; }
-  .feedback.wrong { background: #FDEDEC; color: #C0392B; display: block; }
-  .feedback-icon { font-size: 1.8rem; display: block; margin-bottom: 6px; }
-  .feedback-answer { font-size: 0.9rem; margin-top: 8px; color: #555; font-weight: 500; }
+
+  .feedback.correct {
+    background: #EAFAF1;
+    color: #1E8449;
+    display: block;
+  }
+
+  .feedback.wrong {
+    background: #FDEDEC;
+    color: #C0392B;
+    display: block;
+  }
+
+  .feedback-icon {
+    font-size: 1.8rem;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .feedback-answer {
+    font-size: 0.9rem;
+    margin-top: 8px;
+    color: #555;
+    font-weight: 500;
+  }
 
   @keyframes popIn {
     from { transform: scale(0.8); opacity: 0; }
@@ -341,7 +445,6 @@
   }
 
   .next-btn {
-    display: block;
     width: 100%;
     max-width: 600px;
     margin: 16px auto 0;
@@ -358,32 +461,42 @@
     transition: transform 0.15s, box-shadow 0.15s;
     display: none;
   }
-  .next-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1A9B93; }
-  .next-btn.visible { display: block; }
 
-  /* ===== RESULT SCREEN ===== */
+  .next-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 3px 0 #1A9B93;
+  }
+
+  .next-btn.visible {
+    display: block;
+  }
+
   .result-screen {
     text-align: center;
     max-width: 500px;
     margin: 0 auto;
     padding: 20px 0;
   }
+
   .result-emoji {
     font-size: 5rem;
     display: block;
     margin-bottom: 16px;
     animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
+
   @keyframes bounceIn {
     0% { transform: scale(0); }
     60% { transform: scale(1.2); }
     100% { transform: scale(1); }
   }
+
   .result-title {
     font-size: clamp(1.5rem, 6vw, 2rem);
     font-weight: 900;
     margin-bottom: 8px;
   }
+
   .result-score-big {
     font-size: clamp(3rem, 12vw, 4.5rem);
     font-weight: 900;
@@ -391,13 +504,20 @@
     line-height: 1;
     margin: 16px 0;
   }
-  .result-score-big span { font-size: 0.45em; color: #888; vertical-align: middle; }
+
+  .result-score-big span {
+    font-size: 0.45em;
+    color: #888;
+    vertical-align: middle;
+  }
+
   .result-message {
     font-size: clamp(1rem, 3.5vw, 1.15rem);
     font-weight: 700;
     color: #555;
     margin-bottom: 24px;
     line-height: 1.6;
+    white-space: pre-line;
   }
 
   .result-details {
@@ -408,6 +528,7 @@
     margin-bottom: 24px;
     text-align: left;
   }
+
   .result-details h3 {
     font-size: 1rem;
     color: #888;
@@ -415,6 +536,7 @@
     text-align: center;
     font-weight: 700;
   }
+
   .result-item {
     display: flex;
     align-items: flex-start;
@@ -424,16 +546,33 @@
     font-size: 0.9rem;
     line-height: 1.5;
   }
-  .result-item:last-child { border-bottom: none; }
-  .result-item-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
-  .result-item-word { font-weight: 700; color: #333; }
-  .result-item-meaning { color: #666; font-size: 0.85rem; }
+
+  .result-item:last-child {
+    border-bottom: none;
+  }
+
+  .result-item-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .result-item-word {
+    font-weight: 700;
+    color: #333;
+  }
+
+  .result-item-meaning {
+    color: #666;
+    font-size: 0.85rem;
+  }
 
   .result-btns {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
+
   .retry-btn {
     background: linear-gradient(135deg, #FF6B6B, #FF8E53);
     color: white;
@@ -447,7 +586,12 @@
     box-shadow: 0 6px 0 #C0392B;
     transition: transform 0.15s, box-shadow 0.15s;
   }
-  .retry-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #C0392B; }
+
+  .retry-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 3px 0 #C0392B;
+  }
+
   .home-btn {
     background: white;
     color: #555;
@@ -460,51 +604,63 @@
     cursor: pointer;
     transition: transform 0.15s;
   }
-  .home-btn:active { transform: translateY(2px); }
 
-  /* Stars animation on result */
+  .home-btn:active {
+    transform: translateY(2px);
+  }
+
   .stars-bg {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     pointer-events: none;
     overflow: hidden;
     z-index: -1;
   }
+
   .star-particle {
     position: absolute;
     font-size: 1.5rem;
     animation: floatStar 3s ease-in-out infinite;
     opacity: 0.6;
   }
+
   @keyframes floatStar {
     0%, 100% { transform: translateY(0) rotate(0deg); }
     50% { transform: translateY(-20px) rotate(180deg); }
   }
 
-  /* Responsive */
   @media (max-width: 400px) {
-    .choices { grid-template-columns: 1fr; }
-    .mode-grid { gap: 8px; }
+    .choices {
+      grid-template-columns: 1fr;
+    }
+
+    .mode-grid {
+      gap: 8px;
+    }
   }
 
-  /* Color themes per mode */
   body[data-mode="四字熟語"] {
     --active-color: var(--yoji-color);
     --active-light: var(--yoji-light);
   }
+
   body[data-mode="ことわざ"] {
     --active-color: var(--kotowaza-color);
     --active-light: var(--kotowaza-light);
   }
+
   body[data-mode="慣用句"] {
     --active-color: var(--kanyoku-color);
     --active-light: var(--kanyoku-light);
   }
 </style>
 </head>
+
 <body>
 
-<!-- TOP SCREEN -->
 <div id="screen-top" class="screen active">
   <div class="top-header">
     <div class="app-title">
@@ -519,10 +675,12 @@
       <span class="mode-icon">🎴</span>
       四字熟語
     </button>
+
     <button class="mode-card kotowaza" onclick="selectMode('ことわざ')">
       <span class="mode-icon">🌿</span>
       ことわざ
     </button>
+
     <button class="mode-card kanyoku" onclick="selectMode('慣用句')">
       <span class="mode-icon">💬</span>
       慣用句
@@ -531,11 +689,12 @@
 
   <div class="section-label">🎮 もんだいのかたちをえらぼう</div>
   <div class="quiz-type-grid">
-    <button class="quiz-type-card" onclick="selectQuizType('meaning')">
+    <button class="quiz-type-card" onclick="selectQuizType('meaning', this)">
       <span class="qt-icon">🔍</span>
       いみを<br>えらぶクイズ
     </button>
-    <button class="quiz-type-card" onclick="selectQuizType('word')">
+
+    <button class="quiz-type-card" onclick="selectQuizType('word', this)">
       <span class="qt-icon">✍️</span>
       ことばを<br>えらぶクイズ
     </button>
@@ -548,16 +707,17 @@
   </div>
 </div>
 
-<!-- QUIZ SCREEN -->
 <div id="screen-quiz" class="screen">
   <div class="quiz-header">
     <button class="back-btn" onclick="goHome()">← もどる</button>
+
     <div class="progress-wrap">
       <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
       </div>
       <div class="progress-text" id="progress-text">1 / 10</div>
     </div>
+
     <div class="score-badge">⭐ <span id="score-display">0</span>てん</div>
   </div>
 
@@ -568,29 +728,35 @@
     <div class="question-reading" id="question-reading"></div>
     <div class="question-body" id="question-body" style="display:none"></div>
     <div class="choices" id="choices"></div>
+
     <div class="feedback" id="feedback">
       <span class="feedback-icon" id="feedback-icon"></span>
       <span id="feedback-text"></span>
       <div class="feedback-answer" id="feedback-answer"></div>
     </div>
   </div>
+
   <button class="next-btn" id="next-btn" onclick="nextQuestion()">つぎの もんだいへ →</button>
 </div>
 
-<!-- RESULT SCREEN -->
 <div id="screen-result" class="screen">
   <div class="stars-bg" id="stars-bg"></div>
+
   <div class="result-screen">
     <span class="result-emoji" id="result-emoji">🎉</span>
     <div class="result-title" id="result-title">けっか発表！</div>
+
     <div class="result-score-big" id="result-score-big">
       10<span>/ 10もん せいかい</span>
     </div>
+
     <div class="result-message" id="result-message"></div>
+
     <div class="result-details" id="result-details">
       <h3>📝 まちがえた もんだい</h3>
       <div id="wrong-list"></div>
     </div>
+
     <div class="result-btns">
       <button class="retry-btn" onclick="startQuiz()">🔄 もう一度 あそぶ</button>
       <button class="home-btn" onclick="goHome()">🏠 トップに もどる</button>
@@ -598,51 +764,10 @@
   </div>
 </div>
 
+<!-- ここで外部データを読み込みます。kotoba-data.js は同じ場所に置いてください -->
+<script src="kotoba-data.js"></script>
+
 <script>
-// ============================================================
-// DATA - ここにデータを追加してください
-// ============================================================
-const DATA = [
-  // ===== 四字熟語 =====
-  { type: "四字熟語", word: "一生懸命", reading: "いっしょうけんめい", meaning: "ものごとに全力をつくすこと。" },
-  { type: "四字熟語", word: "七転八起", reading: "しちてんはっき", meaning: "何度たおれても、くじけずに立ちあがること。" },
-  { type: "四字熟語", word: "以心伝心", reading: "いしんでんしん", meaning: "ことばを使わなくても、気持ちや考えが通じあうこと。" },
-  { type: "四字熟語", word: "自業自得", reading: "じごうじとく", meaning: "自分がしたことの結果を、自分で受け取ること。" },
-  { type: "四字熟語", word: "四苦八苦", reading: "しくはっく", meaning: "とても苦しんで悩むこと。" },
-  { type: "四字熟語", word: "一石二鳥", reading: "いっせきにちょう", meaning: "一つの行動で、二つの利益を得ること。" },
-  { type: "四字熟語", word: "百発百中", reading: "ひゃっぱつひゃくちゅう", meaning: "ねらったものに必ず当たること。計画が必ずうまくいくこと。" },
-  { type: "四字熟語", word: "大器晩成", reading: "たいきばんせい", meaning: "大きな才能がある人は、おそく世に出るということ。" },
-  { type: "四字熟語", word: "無我夢中", reading: "むがむちゅう", meaning: "あることに熱中して、自分を忘れてしまうほどであること。" },
-  { type: "四字熟語", word: "温故知新", reading: "おんこちしん", meaning: "古いことを学び、そこから新しい考えや知識を見つけること。" },
-
-  // ===== ことわざ =====
-  { type: "ことわざ", word: "七転び八起き", reading: "ななころびやおき", meaning: "何度失敗しても、あきらめずに立ちあがること。" },
-  { type: "ことわざ", word: "案ずるより産むが易し", reading: "あんずるよりうむがやすし", meaning: "やる前に心配するより、実際にやってみると意外に簡単なこと。" },
-  { type: "ことわざ", word: "石の上にも三年", reading: "いしのうえにもさんねん", meaning: "つらくても、がまんして続ければ必ず成功できるということ。" },
-  { type: "ことわざ", word: "急がば回れ", reading: "いそがばまわれ", meaning: "急ぐときほど、安全で確かな方法をとった方がよいということ。" },
-  { type: "ことわざ", word: "猿も木から落ちる", reading: "さるもきからおちる", meaning: "どんな上手な人でも失敗することがあるということ。" },
-  { type: "ことわざ", word: "塵も積もれば山となる", reading: "ちりもつもればやまとなる", meaning: "小さいものでも、積み重なれば大きなものになるということ。" },
-  { type: "ことわざ", word: "百聞は一見にしかず", reading: "ひゃくぶんはいっけんにしかず", meaning: "何度聞くより、一度自分の目で見た方がよくわかること。" },
-  { type: "ことわざ", word: "笑う門には福来たる", reading: "わらうかどにはふくきたる", meaning: "いつも明るく笑っている家庭には、自然と幸せがやってくること。" },
-  { type: "ことわざ", word: "花より団子", reading: "はなよりだんご", meaning: "美しいものより、実際に役に立つものや食べ物を好むこと。" },
-  { type: "ことわざ", word: "三人寄れば文殊の知恵", reading: "さんにんよればもんじゅのちえ", meaning: "ふつうの人でも三人集まって考えれば、よい知恵が出るということ。" },
-
-  // ===== 慣用句 =====
-  { type: "慣用句", word: "頭が上がらない", reading: "あたまがあがらない", meaning: "相手が立派すぎて、対等に向き合えないこと。" },
-  { type: "慣用句", word: "腹を割る", reading: "はらをわる", meaning: "包み隠さず、本心で話し合うこと。" },
-  { type: "慣用句", word: "目から鱗", reading: "めからうろこ", meaning: "今まで気づかなかったことが、急によくわかるようになること。" },
-  { type: "慣用句", word: "足を引っ張る", reading: "あしをひっぱる", meaning: "人の邪魔をして、うまくいかないようにすること。" },
-  { type: "慣用句", word: "耳にたこができる", reading: "みみにたこができる", meaning: "同じことを何度も聞かされて、うんざりすること。" },
-  { type: "慣用句", word: "鼻が高い", reading: "はながたかい", meaning: "誇りに思って、得意になること。" },
-  { type: "慣用句", word: "口が軽い", reading: "くちがかるい", meaning: "秘密を守れず、なんでもしゃべってしまうこと。" },
-  { type: "慣用句", word: "手が早い", reading: "てがはやい", meaning: "仕事や作業をすばやくこなすこと。" },
-  { type: "慣用句", word: "骨が折れる", reading: "ほねがおれる", meaning: "とても苦労すること。大変な努力が必要なこと。" },
-  { type: "慣用句", word: "胸を張る", reading: "むねをはる", meaning: "自信を持って、堂々とした態度をとること。" },
-];
-
-// ============================================================
-// STATE
-// ============================================================
 let selectedMode = null;
 let selectedQuizType = null;
 let questions = [];
@@ -651,22 +776,32 @@ let score = 0;
 let wrongItems = [];
 let answered = false;
 
-// ============================================================
-// TOP SCREEN
-// ============================================================
 function selectMode(mode) {
   selectedMode = mode;
   document.body.setAttribute('data-mode', mode);
-  document.querySelectorAll('.mode-card').forEach(btn => btn.classList.remove('selected'));
-  const modeMap = { '四字熟語': 'yoji', 'ことわざ': 'kotowaza', '慣用句': 'kanyoku' };
+
+  document.querySelectorAll('.mode-card').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+
+  const modeMap = {
+    '四字熟語': 'yoji',
+    'ことわざ': 'kotowaza',
+    '慣用句': 'kanyoku'
+  };
+
   document.querySelector(`.mode-card.${modeMap[mode]}`).classList.add('selected');
   updateStartBtn();
 }
 
-function selectQuizType(type) {
+function selectQuizType(type, button) {
   selectedQuizType = type;
-  document.querySelectorAll('.quiz-type-card').forEach(btn => btn.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
+
+  document.querySelectorAll('.quiz-type-card').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+
+  button.classList.add('selected');
   updateStartBtn();
 }
 
@@ -674,47 +809,53 @@ function updateStartBtn() {
   document.getElementById('start-btn').disabled = !(selectedMode && selectedQuizType);
 }
 
-// ============================================================
-// QUIZ LOGIC
-// ============================================================
 function startQuiz() {
+  if (typeof DATA === 'undefined') {
+    alert('データファイル kotoba-data.js が読み込めていません。');
+    return;
+  }
+
   const pool = DATA.filter(d => d.type === selectedMode);
+
+  if (pool.length < 4) {
+    alert(selectedMode + ' のデータが4個以上必要です。kotoba-data.js を確認してください。');
+    return;
+  }
+
   questions = shuffle([...pool]).slice(0, Math.min(10, pool.length));
   currentIndex = 0;
   score = 0;
   wrongItems = [];
   answered = false;
+
   showScreen('quiz');
   loadQuestion();
 }
 
 function loadQuestion() {
   answered = false;
+
   const q = questions[currentIndex];
   const total = questions.length;
 
-  // Progress
   document.getElementById('progress-bar').style.width = `${(currentIndex / total) * 100}%`;
   document.getElementById('progress-text').textContent = `${currentIndex + 1} / ${total}`;
   document.getElementById('score-display').textContent = score;
 
-  // Badge & label
   document.getElementById('type-badge').textContent = q.type;
   document.getElementById('next-btn').classList.remove('visible');
 
-  // Feedback reset
   const fb = document.getElementById('feedback');
   fb.className = 'feedback';
 
   if (selectedQuizType === 'meaning') {
-    // Show word, ask meaning
     document.getElementById('question-label').textContent = 'つぎのことばの「いみ」はどれ？';
     document.getElementById('question-main').textContent = q.word;
     document.getElementById('question-reading').textContent = q.reading;
     document.getElementById('question-body').style.display = 'none';
+    document.getElementById('question-body').textContent = '';
     buildChoices(q, 'meaning');
   } else {
-    // Show meaning, ask word
     document.getElementById('question-label').textContent = 'つぎの「いみ」にあうことばはどれ？';
     document.getElementById('question-main').textContent = '';
     document.getElementById('question-reading').textContent = '';
@@ -735,10 +876,13 @@ function buildChoices(correct, type) {
   all.forEach((item, i) => {
     const btn = document.createElement('button');
     btn.className = 'choice-btn';
+
     const isCorrect = item.word === correct.word;
     const label = type === 'meaning' ? item.meaning : item.word;
+
     btn.innerHTML = `<span class="choice-num">${i + 1}</span>${label}`;
     btn.onclick = () => handleAnswer(btn, isCorrect, correct, type);
+
     container.appendChild(btn);
   });
 }
@@ -759,10 +903,13 @@ function handleAnswer(btn, isCorrect, correct, type) {
     showFeedback(true, '', correct);
   } else {
     btn.classList.add('wrong');
-    // Highlight correct
+
     allBtns.forEach(b => {
-      if (b.textContent.includes(correctAnswer)) b.classList.add('correct');
+      if (b.textContent.includes(correctAnswer)) {
+        b.classList.add('correct');
+      }
     });
+
     wrongItems.push(correct);
     showFeedback(false, correctAnswer, correct);
   }
@@ -791,6 +938,7 @@ function showFeedback(isCorrect, correctAnswer, item) {
 
 function nextQuestion() {
   currentIndex++;
+
   if (currentIndex >= questions.length) {
     showResult();
   } else {
@@ -798,27 +946,33 @@ function nextQuestion() {
   }
 }
 
-// ============================================================
-// RESULT
-// ============================================================
 function showResult() {
   const total = questions.length;
   showScreen('result');
 
-  document.getElementById('progress-bar').style.width = '100%';
-
   let emoji, title, msg;
   const pct = score / total;
+
   if (pct === 1) {
-    emoji = '🏆'; title = 'パーフェクト！！'; msg = 'ぜんもんせいかい！\nすばらしい！';
+    emoji = '🏆';
+    title = 'パーフェクト！！';
+    msg = 'ぜんもんせいかい！\nすばらしい！';
   } else if (pct >= 0.8) {
-    emoji = '🎉'; title = 'すごい！'; msg = 'とても上手にできました！\nもう少しで完璧！';
+    emoji = '🎉';
+    title = 'すごい！';
+    msg = 'とても上手にできました！\nもう少しで完璧！';
   } else if (pct >= 0.6) {
-    emoji = '😊'; title = 'よくできました！'; msg = 'なかなか良い成績です！\nもう一度やってみよう！';
+    emoji = '😊';
+    title = 'よくできました！';
+    msg = 'なかなか良い成績です！\nもう一度やってみよう！';
   } else if (pct >= 0.4) {
-    emoji = '💪'; title = 'がんばれ！'; msg = 'もう少し練習しよう！\nきっとできるよ！';
+    emoji = '💪';
+    title = 'がんばれ！';
+    msg = 'もう少し練習しよう！\nきっとできるよ！';
   } else {
-    emoji = '📖'; title = 'もう一度！'; msg = 'いっしょうけんめい練習して\nまたチャレンジしよう！';
+    emoji = '📖';
+    title = 'もう一度！';
+    msg = 'いっしょうけんめい練習して\nまたチャレンジしよう！';
   }
 
   document.getElementById('result-emoji').textContent = emoji;
@@ -833,6 +987,7 @@ function showResult() {
     details.style.display = 'none';
   } else {
     details.style.display = 'block';
+
     wrongList.innerHTML = wrongItems.map(item =>
       `<div class="result-item">
         <span class="result-item-icon">❌</span>
@@ -844,25 +999,27 @@ function showResult() {
     ).join('');
   }
 
-  // Stars
   if (pct >= 0.6) {
     const starsEl = document.getElementById('stars-bg');
     const emojis = ['⭐','🌟','✨','🎊','🎉'];
-    starsEl.innerHTML = Array.from({length: 12}, (_, i) => {
+
+    starsEl.innerHTML = Array.from({length: 12}, () => {
       const e = emojis[Math.floor(Math.random() * emojis.length)];
       const left = Math.random() * 100;
       const delay = Math.random() * 2;
       const dur = 2 + Math.random() * 2;
-      return `<div class="star-particle" style="left:${left}%;top:${10 + Math.random()*80}%;animation-delay:${delay}s;animation-duration:${dur}s">${e}</div>`;
+      const top = 10 + Math.random() * 80;
+
+      return `<div class="star-particle" style="left:${left}%;top:${top}%;animation-delay:${delay}s;animation-duration:${dur}s">${e}</div>`;
     }).join('');
   }
 }
 
-// ============================================================
-// NAVIGATION
-// ============================================================
 function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+  });
+
   document.getElementById(`screen-${name}`).classList.add('active');
   window.scrollTo(0, 0);
 }
@@ -872,17 +1029,17 @@ function goHome() {
   document.getElementById('stars-bg').innerHTML = '';
 }
 
-// ============================================================
-// UTILS
-// ============================================================
 function shuffle(arr) {
   const a = [...arr];
+
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
+
   return a;
 }
 </script>
+
 </body>
 </html>

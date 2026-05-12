@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>時計れんしゅう</title>
+
+<link rel="apple-touch-icon" href="img/tokei.png">
+<link rel="icon" type="image/png" href="img/tokei.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="時計れんしゅう">
+<meta name="theme-color" content="#fff7d6">
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #fff7d6 0%, #ffe6f0 48%, #e6f7ff 100%);
+  color: #333;
+  text-align: center;
+  padding: 18px;
+}
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+h1 {
+  font-size: clamp(30px, 8vw, 46px);
+  color: #ff8a00;
+  text-shadow: 2px 2px 0 #fff;
+  margin: 18px 0 8px;
+}
+
+.subtitle {
+  font-size: 17px;
+  color: #666;
+  margin-bottom: 22px;
+}
+
+.card {
+  max-width: 560px;
+  margin: 0 auto;
+  background: rgba(255,255,255,0.94);
+  border-radius: 28px;
+  padding: 22px 18px;
+  border: 4px solid #fff;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.mode-btn {
+  border: none;
+  border-radius: 24px;
+  padding: 20px 8px;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.16);
+  color: #fff;
+  line-height: 1.4;
+}
+
+.mode-btn.easy {
+  background: linear-gradient(135deg, #7fdc82, #32b768);
+}
+
+.mode-btn.normal {
+  background: linear-gradient(135deg, #6dd5ed, #2193b0);
+}
+
+.mode-btn.hard {
+  background: linear-gradient(135deg, #ffb347, #ff8a00);
+}
+
+.mode-btn.challenge {
+  background: linear-gradient(135deg, #ff9a9e, #ff6b6b);
+}
+
+.mode-btn:active,
+.choice-btn:active,
+.big-btn:active,
+.small-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.16);
+}
+
+.note {
+  margin-top: 18px;
+  font-size: 14px;
+  color: #777;
+  line-height: 1.6;
+}
+
+.top-bar {
+  max-width: 620px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.small-btn {
+  border: none;
+  border-radius: 18px;
+  background: #fff;
+  color: #555;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-weight: bold;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+  cursor: pointer;
+}
+
+.status {
+  flex: 1;
+  background: #fff;
+  border-radius: 18px;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #555;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.08);
+}
+
+.quiz-card {
+  max-width: 620px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 30px;
+  padding: 22px 14px 20px;
+  border: 4px solid #fff;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+}
+
+.mode-label {
+  display: inline-block;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: bold;
+  background: #fff3b0;
+  color: #8a6500;
+  margin-bottom: 12px;
+}
+
+.question-text {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 14px;
+  color: #555;
+}
+
+.clock-wrap {
+  width: min(78vw, 330px);
+  height: min(78vw, 330px);
+  margin: 0 auto 18px;
+  position: relative;
+}
+
+.clock {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fffaf0;
+  border: 8px solid #ffd36e;
+  box-shadow: inset 0 0 0 5px #fff, 0 8px 18px rgba(0,0,0,0.12);
+  position: relative;
+}
+
+.clock-number {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: clamp(18px, 5vw, 28px);
+  font-weight: bold;
+  color: #444;
+  transform: translate(-50%, -50%);
+}
+
+.tick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 10px;
+  background: #c9b27a;
+  transform-origin: 50% 0;
+}
+
+.tick.big {
+  width: 5px;
+  height: 16px;
+  background: #8a6500;
+}
+
+.hand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: 50% 100%;
+  border-radius: 999px;
+}
+
+.hour-hand {
+  width: 12px;
+  height: 28%;
+  background: #ff6b6b;
+  margin-left: -6px;
+  margin-top: -28%;
+  z-index: 4;
+}
+
+.minute-hand {
+  width: 8px;
+  height: 39%;
+  background: #2193b0;
+  margin-left: -4px;
+  margin-top: -39%;
+  z-index: 5;
+}
+
+.center-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  background: #333;
+  border: 5px solid #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+}
+
+.hand-guide {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #555;
+}
+
+.guide-item {
+  background: #f8f4ec;
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+
+.red {
+  color: #ff6b6b;
+}
+
+.blue {
+  color: #2193b0;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.choice-btn {
+  border: 3px solid #e8e0d0;
+  border-radius: 18px;
+  background: #fff;
+  padding: 16px 8px;
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #e0d8cc;
+  color: #333;
+}
+
+.choice-btn.correct {
+  border-color: #32b768;
+  background: #e8ffe8;
+  box-shadow: 0 5px 0 #279950;
+}
+
+.choice-btn.wrong {
+  border-color: #ff6b6b;
+  background: #fff0f0;
+  box-shadow: 0 5px 0 #d94848;
+}
+
+.choice-btn:disabled {
+  cursor: default;
+}
+
+.feedback {
+  min-height: 72px;
+  margin: 14px auto 10px;
+  padding: 14px;
+  max-width: 500px;
+  border-radius: 22px;
+  font-size: 22px;
+  font-weight: bold;
+  display: none;
+}
+
+.feedback.correct {
+  display: block;
+  background: #e8ffe8;
+  color: #1e8f3a;
+}
+
+.feedback.wrong {
+  display: block;
+  background: #fff0f0;
+  color: #d33;
+}
+
+.feedback .small {
+  display: block;
+  margin-top: 6px;
+  font-size: 15px;
+  color: #555;
+  font-weight: normal;
+}
+
+.big-btn {
+  width: 100%;
+  max-width: 420px;
+  border: none;
+  border-radius: 24px;
+  padding: 17px 18px;
+  font-size: 23px;
+  font-weight: bold;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.18);
+  margin: 10px auto 0;
+  display: block;
+}
+
+.next-btn {
+  background: linear-gradient(135deg, #7fdc82, #32b768);
+  display: none;
+}
+
+.next-btn.show {
+  display: block;
+}
+
+.result-emoji {
+  font-size: 72px;
+  margin-bottom: 12px;
+}
+
+.result-title {
+  font-size: 32px;
+  color: #ff8a00;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.result-score {
+  font-size: 48px;
+  font-weight: bold;
+  color: #ff6b6b;
+  margin: 10px 0;
+}
+
+.result-message {
+  font-size: 18px;
+  line-height: 1.7;
+  color: #555;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 420px) {
+  .mode-grid {
+    gap: 10px;
+  }
+
+  .mode-btn {
+    font-size: 18px;
+    padding: 18px 6px;
+  }
+
+  .choices {
+    grid-template-columns: 1fr;
+  }
+
+  .question-text {
+    font-size: 20px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="screen-top" class="screen active">
+  <h1>時計れんしゅう</h1>
+  <p class="subtitle">時計を見て、なんじなんぷんか答えよう！</p>
+
+  <div class="card">
+    <p style="font-size:20px; font-weight:bold;">むずかしさを えらんでね</p>
+
+    <div class="mode-grid">
+      <button class="mode-btn easy" onclick="startQuiz('easy')">
+        🌱 かんたん<br>
+        ちょうど
+      </button>
+
+      <button class="mode-btn normal" onclick="startQuiz('normal')">
+        🌼 ふつう<br>
+        30分
+      </button>
+
+      <button class="mode-btn hard" onclick="startQuiz('hard')">
+        ⭐ むずかしい<br>
+        5分きざみ
+      </button>
+
+      <button class="mode-btn challenge" onclick="startQuiz('challenge')">
+        🚀 チャレンジ<br>
+        ぜんぶ
+      </button>
+    </div>
+
+    <p class="note">
+      赤い針は「何時」<br>
+      青い針は「何分」を見るよ。
+    </p>
+  </div>
+</div>
+
+<div id="screen-quiz" class="screen">
+  <div class="top-bar">
+    <button class="small-btn" onclick="goHome()">← もどる</button>
+    <div class="status">
+      <span id="q-count">1 / 10</span>　⭐ <span id="score">0</span>てん
+    </div>
+  </div>
+
+  <div class="quiz-card">
+    <div class="mode-label" id="mode-label">かんたん</div>
+    <div class="question-text">この時計は なんじなんぷん？</div>
+
+    <div class="clock-wrap">
+      <div class="clock" id="clock">
+        <div class="hand hour-hand" id="hour-hand"></div>
+        <div class="hand minute-hand" id="minute-hand"></div>
+        <div class="center-dot"></div>
+      </div>
+    </div>
+
+    <div class="hand-guide">
+      <div class="guide-item"><span class="red">赤</span>：短い針</div>
+      <div class="guide-item"><span class="blue">青</span>：長い針</div>
+    </div>
+
+    <div class="choices" id="choices"></div>
+
+    <div id="feedback" class="feedback"></div>
+
+    <button id="next-btn" class="big-btn next-btn" onclick="nextQuestion()">つぎの もんだいへ</button>
+  </div>
+</div>
+
+<div id="screen-result" class="screen">
+  <h1>けっか</h1>
+
+  <div class="card">
+    <div class="result-emoji" id="result-emoji">🎉</div>
+    <div class="result-title" id="result-title">よくできました！</div>
+    <div class="result-score">
+      <span id="final-score">0</span> / 10
+    </div>
+    <div class="result-message" id="result-message"></div>
+
+    <button class="big-btn" style="background:linear-gradient(135deg,#ffb347,#ff8a00);" onclick="restartSameMode()">もう一度 あそぶ</button>
+    <button class="big-btn next-btn show" onclick="goHome()">トップに もどる</button>
+  </div>
+</div>
+
+<script>
+const TOTAL_QUESTIONS = 10;
+
+let mode = "easy";
+let currentQuestion = 0;
+let score = 0;
+let answered = false;
+
+let currentHour = 1;
+let currentMinute = 0;
+
+const modeNames = {
+  easy: "かんたん",
+  normal: "ふつう",
+  hard: "むずかしい",
+  challenge: "チャレンジ"
+};
+
+const clock = document.getElementById("clock");
+const hourHand = document.getElementById("hour-hand");
+const minuteHand = document.getElementById("minute-hand");
+
+setupClockFace();
+
+function setupClockFace() {
+  for (let i = 1; i <= 12; i++) {
+    const number = document.createElement("div");
+    number.className = "clock-number";
+    number.textContent = i;
+
+    const angle = (i * 30 - 90) * Math.PI / 180;
+    const radius = 39;
+
+    number.style.left = 50 + Math.cos(angle) * radius + "%";
+    number.style.top = 50 + Math.sin(angle) * radius + "%";
+
+    clock.appendChild(number);
+  }
+
+  for (let i = 0; i < 60; i++) {
+    const tick = document.createElement("div");
+    tick.className = i % 5 === 0 ? "tick big" : "tick";
+    tick.style.transform = "rotate(" + (i * 6) + "deg) translateY(-145px)";
+    clock.appendChild(tick);
+  }
+}
+
+function showScreen(name) {
+  document.querySelectorAll(".screen").forEach(screen => {
+    screen.classList.remove("active");
+  });
+
+  document.getElementById("screen-" + name).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+function startQuiz(selectedMode) {
+  mode = selectedMode;
+  currentQuestion = 0;
+  score = 0;
+
+  showScreen("quiz");
+  makeQuestion();
+}
+
+function restartSameMode() {
+  currentQuestion = 0;
+  score = 0;
+
+  showScreen("quiz");
+  makeQuestion();
+}
+
+function goHome() {
+  showScreen("top");
+}
+
+function makeQuestion() {
+  answered = false;
+  currentQuestion++;
+
+  document.getElementById("q-count").textContent = currentQuestion + " / " + TOTAL_QUESTIONS;
+  document.getElementById("score").textContent = score;
+  document.getElementById("mode-label").textContent = modeNames[mode];
+
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("feedback").innerHTML = "";
+
+  document.getElementById("next-btn").classList.remove("show");
+
+  const time = makeRandomTime();
+  currentHour = time.hour;
+  currentMinute = time.minute;
+
+  drawHands(currentHour, currentMinute);
+  makeChoices(currentHour, currentMinute);
+}
+
+function makeRandomTime() {
+  let hour = Math.floor(Math.random() * 12) + 1;
+  let minute = 0;
+
+  if (mode === "easy") {
+    minute = 0;
+  } else if (mode === "normal") {
+    minute = 30;
+  } else if (mode === "hard") {
+    minute = Math.floor(Math.random() * 12) * 5;
+  } else {
+    const types = ["easy", "normal", "hard"];
+    const picked = types[Math.floor(Math.random() * types.length)];
+
+    if (picked === "easy") {
+      minute = 0;
+    } else if (picked === "normal") {
+      minute = 30;
+    } else {
+      minute = Math.floor(Math.random() * 12) * 5;
+    }
+  }
+
+  return { hour, minute };
+}
+
+function drawHands(hour, minute) {
+  const minuteAngle = minute * 6;
+  const hourAngle = (hour % 12) * 30 + minute * 0.5;
+
+  minuteHand.style.transform = "rotate(" + minuteAngle + "deg)";
+  hourHand.style.transform = "rotate(" + hourAngle + "deg)";
+}
+
+function makeChoices(hour, minute) {
+  const correct = formatTime(hour, minute);
+  const choices = new Set();
+  choices.add(correct);
+
+  while (choices.size < 4) {
+    const wrong = makeWrongTime(hour, minute);
+    choices.add(formatTime(wrong.hour, wrong.minute));
+  }
+
+  const shuffled = shuffle([...choices]);
+  const container = document.getElementById("choices");
+  container.innerHTML = "";
+
+  shuffled.forEach(choice => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    btn.textContent = choice;
+    btn.onclick = () => checkAnswer(btn, choice, correct);
+    container.appendChild(btn);
+  });
+}
+
+function makeWrongTime(hour, minute) {
+  const patterns = [
+    { hour: hour + 1, minute: minute },
+    { hour: hour - 1, minute: minute },
+    { hour: hour, minute: minute + 5 },
+    { hour: hour, minute: minute - 5 },
+    { hour: hour, minute: minute + 30 },
+    { hour: hour + 1, minute: minute + 5 },
+    { hour: hour - 1, minute: minute + 5 }
+  ];
+
+  const picked = patterns[Math.floor(Math.random() * patterns.length)];
+
+  let h = picked.hour;
+  let m = picked.minute;
+
+  while (m < 0) {
+    m += 60;
+    h -= 1;
+  }
+
+  while (m >= 60) {
+    m -= 60;
+    h += 1;
+  }
+
+  while (h < 1) {
+    h += 12;
+  }
+
+  while (h > 12) {
+    h -= 12;
+  }
+
+  if (mode === "easy") {
+    m = 0;
+  } else if (mode === "normal") {
+    m = m < 30 ? 0 : 30;
+  } else {
+    m = Math.round(m / 5) * 5;
+    if (m === 60) {
+      m = 0;
+      h += 1;
+      if (h > 12) h = 1;
+    }
+  }
+
+  return { hour: h, minute: m };
+}
+
+function checkAnswer(button, selected, correct) {
+  if (answered) return;
+  answered = true;
+
+  const buttons = document.querySelectorAll(".choice-btn");
+  buttons.forEach(btn => {
+    btn.disabled = true;
+
+    if (btn.textContent === correct) {
+      btn.classList.add("correct");
+    }
+  });
+
+  if (selected === correct) {
+    score++;
+    document.getElementById("score").textContent = score;
+    button.classList.add("correct");
+    showFeedback("correct", "⭕ せいかい！すごい！");
+  } else {
+    button.classList.add("wrong");
+    showFeedback(
+      "wrong",
+      "❌ もういちど！<span class='small'>せいかいは " + correct + " だよ</span>"
+    );
+  }
+
+  if (currentQuestion >= TOTAL_QUESTIONS) {
+    document.getElementById("next-btn").textContent = "けっかをみる";
+  } else {
+    document.getElementById("next-btn").textContent = "つぎの もんだいへ";
+  }
+
+  document.getElementById("next-btn").classList.add("show");
+}
+
+function showFeedback(type, message) {
+  const feedback = document.getElementById("feedback");
+  feedback.className = "feedback " + type;
+  feedback.innerHTML = message;
+}
+
+function nextQuestion() {
+  if (currentQuestion >= TOTAL_QUESTIONS) {
+    showResult();
+  } else {
+    makeQuestion();
+  }
+}
+
+function showResult() {
+  showScreen("result");
+
+  document.getElementById("final-score").textContent = score;
+
+  const emoji = document.getElementById("result-emoji");
+  const title = document.getElementById("result-title");
+  const message = document.getElementById("result-message");
+
+  if (score === 10) {
+    emoji.textContent = "🏆";
+    title.textContent = "パーフェクト！";
+    message.innerHTML = "ぜんぶ せいかい！<br>時計マスターだね！";
+  } else if (score >= 8) {
+    emoji.textContent = "🎉";
+    title.textContent = "すごい！";
+    message.innerHTML = "とても よくできました！<br>もうすこしで パーフェクト！";
+  } else if (score >= 5) {
+    emoji.textContent = "😊";
+    title.textContent = "よくできたね！";
+    message.innerHTML = "半分以上できたよ！<br>もう一回やってみよう！";
+  } else {
+    emoji.textContent = "💪";
+    title.textContent = "もう一回！";
+    message.innerHTML = "れんしゅうすれば だいじょうぶ！<br>ゆっくり がんばろう！";
+  }
+}
+
+function formatTime(hour, minute) {
+  if (minute === 0) {
+    return hour + "時";
+  }
+
+  if (minute === 30) {
+    return hour + "時30分";
+  }
+
+  return hour + "時" + minute + "分";
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+
+  return a;
+}
+</script>
+
+</body>
+</html>

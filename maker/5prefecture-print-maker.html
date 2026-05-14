@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>都道府県プリントメーカー</title>
 
-  <!-- ホーム画面追加用：maker/img/prefecture-print.png を使います -->
   <link rel="apple-touch-icon" href="img/prefecture-print.png">
   <link rel="icon" type="image/png" href="img/prefecture-print.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -32,391 +31,88 @@
       color: var(--text);
     }
 
-    .app {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 18px;
-    }
+    .app { max-width: 1120px; margin: 0 auto; padding: 18px; }
+    header { text-align: center; margin: 12px 0 18px; }
+    h1 { margin: 0; font-size: clamp(28px, 5vw, 44px); letter-spacing: 0.04em; }
+    .subtitle { margin-top: 8px; font-size: 16px; color: #50697c; font-weight: 700; }
 
-    header {
-      text-align: center;
-      margin: 12px 0 18px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(28px, 5vw, 44px);
-      letter-spacing: 0.04em;
-    }
-
-    .subtitle {
-      margin-top: 8px;
-      font-size: 16px;
-      color: #50697c;
-      font-weight: 700;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 18px;
-      align-items: start;
-    }
-
-    .panel, .preview-wrap {
-      background: var(--card);
-      border-radius: 24px;
-      box-shadow: 0 8px 24px rgba(38, 80, 112, 0.16);
-      padding: 18px;
-    }
-
-    .panel h2, .preview-wrap h2 {
-      margin: 0 0 14px;
-      font-size: 22px;
-    }
-
-    label {
-      display: block;
-      font-weight: 900;
-      margin: 14px 0 6px;
-      font-size: 15px;
-    }
+    .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+    .panel, .preview-wrap { background: var(--card); border-radius: 24px; box-shadow: 0 8px 24px rgba(38, 80, 112, 0.16); padding: 18px; }
+    .panel h2, .preview-wrap h2 { margin: 0 0 14px; font-size: 22px; }
+    label { display: block; font-weight: 900; margin: 14px 0 6px; font-size: 15px; }
 
     select, input[type="text"] {
-      width: 100%;
-      padding: 12px 14px;
-      border: 2px solid #bddcf0;
-      border-radius: 14px;
-      font-size: 16px;
-      background: #fbfdff;
-      color: var(--text);
+      width: 100%; padding: 12px 14px; border: 2px solid #bddcf0; border-radius: 14px;
+      font-size: 16px; background: #fbfdff; color: var(--text);
     }
 
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-weight: 800; line-height: 1.4; }
+    .checkbox-row input { width: 22px; height: 22px; flex: 0 0 auto; }
+    .buttons { display: grid; gap: 10px; margin-top: 18px; }
 
-    .checkbox-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-      font-weight: 800;
-      line-height: 1.4;
-    }
-
-    .checkbox-row input {
-      width: 22px;
-      height: 22px;
-      flex: 0 0 auto;
-    }
-
-    .buttons {
-      display: grid;
-      gap: 10px;
-      margin-top: 18px;
-    }
-
-    button {
-      border: none;
-      border-radius: 18px;
-      padding: 14px 16px;
-      font-size: 17px;
-      font-weight: 900;
-      cursor: pointer;
-      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
-    }
-
-    button:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
-    }
-
+    button { border: none; border-radius: 18px; padding: 14px 16px; font-size: 17px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.15); }
+    button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
     .main-btn { background: var(--main); color: #0d3148; }
     .print-btn { background: #79dc8c; color: #123a1d; }
     .sub-btn { background: #fff1b8; color: #654200; }
 
-    .note {
-      margin-top: 14px;
-      padding: 12px;
-      background: #f4fbff;
-      border-left: 5px solid var(--main);
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.6;
-    }
+    .note { margin-top: 14px; padding: 12px; background: #f4fbff; border-left: 5px solid var(--main); border-radius: 12px; font-size: 14px; line-height: 1.6; }
+    .preview-area { overflow: auto; background: #dfeaf1; border-radius: 18px; padding: 16px; }
 
-    .preview-area {
-      overflow: auto;
-      background: #dfeaf1;
-      border-radius: 18px;
-      padding: 16px;
-    }
+    .paper { width: 210mm; min-height: 297mm; margin: 0 auto; background: white; color: #222; padding: 12mm 12mm; box-shadow: 0 0 16px rgba(0,0,0,0.2); position: relative; }
+    .title-row { display: flex; justify-content: center; align-items: center; gap: 10mm; margin-bottom: 7px; }
+    .print-title { text-align: center; font-size: 27px; font-weight: 900; letter-spacing: 0.06em; }
+    .title-stars { font-size: 20px; font-weight: 900; letter-spacing: 0.12em; white-space: nowrap; }
 
-    .paper {
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto;
-      background: white;
-      color: #222;
-      padding: 12mm 12mm;
-      box-shadow: 0 0 16px rgba(0,0,0,0.2);
-      position: relative;
-    }
+    .meta { display: grid; grid-template-columns: 1.2fr 1fr 0.8fr; gap: 8px; font-size: 15px; margin-bottom: 7mm; align-items: end; }
+    .meta-box { border-bottom: 1.8px solid #222; min-height: 26px; padding: 2px 4px; }
+    .sticker-box { display: inline-flex; align-items: center; justify-content: center; width: 24mm; height: 10mm; margin-left: 2mm; border: 1.8px solid #222; border-radius: 6px; font-size: 11px; color: #777; vertical-align: middle; }
 
-    .title-row {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10mm;
-      margin-bottom: 7px;
-    }
+    .problems { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5mm 7mm; }
+    .problem { min-height: 24mm; page-break-inside: avoid; border: 1.8px solid #222; border-radius: 8px; padding: 3mm 4mm; }
+    .problem-number { font-size: 13px; font-weight: 900; margin-bottom: 2mm; }
+    .question-line { font-size: 17px; line-height: 1.65; font-weight: 800; }
+    .answer-line { display: inline-block; width: 38mm; height: 8mm; border-bottom: 2px solid #222; vertical-align: bottom; }
 
-    .print-title {
-      text-align: center;
-      font-size: 27px;
-      font-weight: 900;
-      letter-spacing: 0.06em;
-    }
+    .connect-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 8mm; margin-top: 1mm; }
+    .connect-col { display: grid; gap: 3mm; font-size: 16px; font-weight: 800; }
+    .connect-item { display: flex; align-items: center; gap: 3mm; min-height: 8mm; }
+    .dot { display: inline-block; width: 3mm; height: 3mm; border: 1.6px solid #222; border-radius: 50%; flex: 0 0 auto; }
 
-    .title-stars {
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      white-space: nowrap;
-    }
+    .list-box { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3mm 8mm; margin-top: 2mm; font-size: 16px; font-weight: 800; }
+    .list-answer { display: inline-block; width: 42mm; height: 8mm; border-bottom: 2px solid #222; vertical-align: bottom; }
+    .answer-small { margin-top: 2mm; font-size: 12px; color: #666; text-align: right; }
 
-    .meta {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr 0.8fr;
-      gap: 8px;
-      font-size: 15px;
-      margin-bottom: 7mm;
-      align-items: end;
-    }
+    .paper.count-15 .problems { gap: 3mm 6mm; }
+    .paper.count-15 .problem { min-height: 20mm; padding: 2mm 3mm; }
+    .paper.count-15 .question-line { font-size: 15px; line-height: 1.45; }
+    .paper.count-15 .answer-line { width: 31mm; height: 7mm; }
 
-    .meta-box {
-      border-bottom: 1.8px solid #222;
-      min-height: 26px;
-      padding: 2px 4px;
-    }
+    .paper.count-20 .print-title { font-size: 23px; }
+    .paper.count-20 .title-stars { font-size: 16px; }
+    .paper.count-20 .title-row { gap: 6mm; margin-bottom: 4px; }
+    .paper.count-20 .meta { margin-bottom: 5mm; font-size: 13px; }
+    .paper.count-20 .problems { grid-template-columns: repeat(2, 1fr); gap: 2mm 5mm; }
+    .paper.count-20 .problem { min-height: 17mm; padding: 1.8mm 2.5mm; }
+    .paper.count-20 .problem-number { font-size: 11px; margin-bottom: 1mm; }
+    .paper.count-20 .question-line { font-size: 13px; line-height: 1.35; }
+    .paper.count-20 .answer-line { width: 24mm; height: 6mm; }
+    .paper.count-20 .sticker-box { width: 20mm; height: 8mm; font-size: 9px; }
 
-    .sticker-box {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 24mm;
-      height: 10mm;
-      margin-left: 2mm;
-      border: 1.8px solid #222;
-      border-radius: 6px;
-      font-size: 11px;
-      color: #777;
-      vertical-align: middle;
-    }
-
-    .problems {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 5mm 7mm;
-    }
-
-    .problem {
-      min-height: 24mm;
-      page-break-inside: avoid;
-      border: 1.8px solid #222;
-      border-radius: 8px;
-      padding: 3mm 4mm;
-    }
-
-    .problem-number {
-      font-size: 13px;
-      font-weight: 900;
-      margin-bottom: 2mm;
-    }
-
-    .question-line {
-      font-size: 17px;
-      line-height: 1.65;
-      font-weight: 800;
-    }
-
-    .answer-line {
-      display: inline-block;
-      width: 38mm;
-      height: 8mm;
-      border-bottom: 2px solid #222;
-      vertical-align: bottom;
-    }
-
-    .connect-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4mm 8mm;
-      margin-top: 1mm;
-    }
-
-    .connect-col {
-      display: grid;
-      gap: 3mm;
-      font-size: 16px;
-      font-weight: 800;
-    }
-
-    .connect-item {
-      display: flex;
-      align-items: center;
-      gap: 3mm;
-      min-height: 8mm;
-    }
-
-    .dot {
-      display: inline-block;
-      width: 3mm;
-      height: 3mm;
-      border: 1.6px solid #222;
-      border-radius: 50%;
-      flex: 0 0 auto;
-    }
-
-    .list-box {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 3mm 8mm;
-      margin-top: 2mm;
-      font-size: 16px;
-      font-weight: 800;
-    }
-
-    .list-answer {
-      display: inline-block;
-      width: 32mm;
-      height: 8mm;
-      border-bottom: 2px solid #222;
-      vertical-align: bottom;
-    }
-
-    .answer-small {
-      margin-top: 2mm;
-      font-size: 12px;
-      color: #666;
-      text-align: right;
-    }
-
-    .paper.count-15 .problems {
-      gap: 3mm 6mm;
-    }
-
-    .paper.count-15 .problem {
-      min-height: 20mm;
-      padding: 2mm 3mm;
-    }
-
-    .paper.count-15 .question-line {
-      font-size: 15px;
-      line-height: 1.45;
-    }
-
-    .paper.count-15 .answer-line {
-      width: 31mm;
-      height: 7mm;
-    }
-
-    .paper.count-20 .print-title {
-      font-size: 23px;
-    }
-
-    .paper.count-20 .title-stars {
-      font-size: 16px;
-    }
-
-    .paper.count-20 .title-row {
-      gap: 6mm;
-      margin-bottom: 4px;
-    }
-
-    .paper.count-20 .meta {
-      margin-bottom: 5mm;
-      font-size: 13px;
-    }
-
-    .paper.count-20 .problems {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 2mm 5mm;
-    }
-
-    .paper.count-20 .problem {
-      min-height: 17mm;
-      padding: 1.8mm 2.5mm;
-    }
-
-    .paper.count-20 .problem-number {
-      font-size: 11px;
-      margin-bottom: 1mm;
-    }
-
-    .paper.count-20 .question-line {
-      font-size: 13px;
-      line-height: 1.35;
-    }
-
-    .paper.count-20 .answer-line {
-      width: 24mm;
-      height: 6mm;
-    }
-
-    .paper.count-20 .sticker-box {
-      width: 20mm;
-      height: 8mm;
-      font-size: 9px;
-    }
-
-    .connect-paper .problem {
-      min-height: 78mm;
-    }
-
-    .connect-paper .problems {
-      grid-template-columns: 1fr;
-      gap: 6mm;
-    }
-
-    .connect-paper .question-line {
-      margin-bottom: 4mm;
-    }
-
-    .list-paper .problem {
-      min-height: 70mm;
-    }
-
-    .list-paper .problems {
-      grid-template-columns: 1fr;
-      gap: 6mm;
-    }
+    .connect-paper .problem { min-height: 78mm; }
+    .connect-paper .problems { grid-template-columns: 1fr; gap: 6mm; }
+    .connect-paper .question-line { margin-bottom: 4mm; }
+    .list-paper .problem { min-height: 70mm; }
+    .list-paper .problems { grid-template-columns: 1fr; gap: 6mm; }
 
     .answer-page { margin-top: 16px; }
-
-    .answers-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 7mm 5mm;
-      font-size: 17px;
-      margin-top: 10mm;
-    }
-
-    .answer-item {
-      border-bottom: 1px solid #999;
-      padding-bottom: 3mm;
-    }
+    .answers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7mm 5mm; font-size: 17px; margin-top: 10mm; }
+    .answer-item { border-bottom: 1px solid #999; padding-bottom: 3mm; }
 
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
-      .paper {
-        transform: scale(0.55);
-        transform-origin: top left;
-        margin: 0;
-      }
+      .paper { transform: scale(0.55); transform-origin: top left; margin: 0; }
       .preview-area { height: 720px; }
     }
 
@@ -428,16 +124,7 @@
       .layout { display: block; }
       .preview-wrap { box-shadow: none; padding: 0; border-radius: 0; }
       .preview-area { overflow: visible; padding: 0; background: white; border-radius: 0; }
-      .paper {
-        width: 210mm;
-        height: 297mm;
-        min-height: 297mm;
-        margin: 0;
-        box-shadow: none;
-        page-break-after: always;
-        transform: none !important;
-        transform-origin: initial !important;
-      }
+      .paper { width: 210mm; height: 297mm; min-height: 297mm; margin: 0; box-shadow: none; page-break-after: always; transform: none !important; transform-origin: initial !important; }
       .paper:last-child { page-break-after: auto; }
       .answer-page.hidden-print { display: none !important; }
     }
@@ -519,7 +206,7 @@
 
         <div class="note no-print">
           地図なしでも使える、県名・県庁所在地の練習プリントです。<br>
-          「線でつなぐ」「地方の県名を書く」は、A4に収まるように大きめ問題で作ります。
+          「地方の県名を書く」は、答えページも1つずつ番号で表示されます。
         </div>
       </section>
 
@@ -540,9 +227,7 @@
           </section>
 
           <section class="paper answer-page" id="answerPage">
-            <div class="title-row">
-              <div class="print-title">こたえ</div>
-            </div>
+            <div class="title-row"><div class="print-title">こたえ</div></div>
             <div class="meta">
               <div>なまえ：<span class="meta-box" id="answerName">　　　　　　　　</span></div>
               <div>ひづけ：<span class="meta-box" id="answerDate">　月　日</span></div>
@@ -624,9 +309,7 @@
       return `${d.getMonth() + 1}月${d.getDate()}日`;
     }
 
-    function rand(min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
     function shuffle(array) {
       const arr = [...array];
@@ -667,7 +350,6 @@
         html = `<div class="question-line">${item.pref} の県庁所在地は？<br><span class="answer-line"></span></div>`;
         answer = item.capital;
       }
-
       return {
         problemHtml: `
           <div class="problem-number">${index + 1}</div>
@@ -684,10 +366,8 @@
       const rightItems = shuffle(list);
       const right = rightItems.map(item => item.capital);
       const answer = list.map(item => `${item.pref} → ${item.capital}`).join(" ／ ");
-
       const leftHtml = left.map(text => `<div class="connect-item"><span>${text}</span><span class="dot"></span></div>`).join("");
       const rightHtml = right.map(text => `<div class="connect-item"><span class="dot"></span><span>${text}</span></div>`).join("");
-
       return {
         problemHtml: `
           <div class="problem-number">1</div>
@@ -705,10 +385,9 @@
     function makeListRegionProblem(pool, region, showAnswers) {
       const list = pool;
       const boxes = list.map((item, index) => `
-        <div>${index + 1}. <span class="list-answer"></span> 都・道・府・県</div>
+        <div>${index + 1}. <span class="list-answer"></span></div>
       `).join("");
-      const answer = list.map(item => item.pref).join("、");
-
+      const answers = list.map(item => item.pref);
       return {
         problemHtml: `
           <div class="problem-number">1</div>
@@ -716,7 +395,7 @@
           <div class="list-box">${boxes}</div>
           ${showAnswers ? `<div class="answer-small">こたえは答えページを見てね</div>` : ""}
         `,
-        answer
+        answers
       };
     }
 
@@ -729,8 +408,8 @@
       const dateText = document.getElementById("dateText").value.trim() || todayText();
       const showAnswers = document.getElementById("showAnswers").checked;
       const printAnswerPage = document.getElementById("printAnswerPage").checked;
-
       const pool = getPool(region);
+
       const worksheetPage = document.getElementById("worksheetPage");
       worksheetPage.classList.remove("count-10", "count-15", "count-20", "connect-paper", "list-paper");
       worksheetPage.classList.add(`count-${count}`);
@@ -762,7 +441,7 @@
         problem.className = "problem";
         problem.innerHTML = made.problemHtml;
         problemsEl.appendChild(problem);
-        currentAnswers.push(made.answer);
+        currentAnswers.push(...made.answers);
       } else {
         const selected = pickProblems(pool, count);
         selected.forEach((item, index) => {

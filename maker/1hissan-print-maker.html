@@ -182,12 +182,26 @@
       position: relative;
     }
 
+    .title-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10mm;
+      margin-bottom: 6px;
+    }
+
     .print-title {
       text-align: center;
       font-size: 26px;
       font-weight: 900;
-      margin-bottom: 8px;
       letter-spacing: 0.08em;
+    }
+
+    .title-stars {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      white-space: nowrap;
     }
 
     .meta {
@@ -264,37 +278,16 @@
       text-align: right;
     }
 
-    .footer-box {
-      position: absolute;
-      left: 12mm;
-      right: 12mm;
-      bottom: 10mm;
-      border: 2px dashed #aaa;
-      border-radius: 12px;
-      padding: 8px 12px;
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 10px;
-      font-size: 16px;
-      align-items: center;
-    }
-
-    .star-line {
-      letter-spacing: 0.12em;
-      font-size: 20px;
-      font-weight: 900;
-    }
-
-    .sticker-box {
+    .score-sticker-box {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 22mm;
-      height: 22mm;
-      margin-left: 4mm;
-      border: 2px solid #999;
-      border-radius: 8px;
-      font-size: 12px;
+      width: 24mm;
+      height: 10mm;
+      margin-left: 2mm;
+      border: 1.8px solid #222;
+      border-radius: 6px;
+      font-size: 11px;
       color: #777;
       vertical-align: middle;
     }
@@ -316,16 +309,20 @@
     }
 
     .paper.count-18 .answer-space {
-      height: 8mm;
-    }
-
-    .paper.count-18 .footer-box {
-      bottom: 7mm;
+      height: 11mm;
     }
 
     .paper.count-24 .print-title {
       font-size: 22px;
-      margin-bottom: 5px;
+    }
+
+    .paper.count-24 .title-stars {
+      font-size: 16px;
+    }
+
+    .paper.count-24 .title-row {
+      margin-bottom: 4px;
+      gap: 6mm;
     }
 
     .paper.count-24 .meta {
@@ -333,7 +330,7 @@
     }
 
     .paper.count-24 .problems {
-      gap: 3.5mm 7mm;
+      gap: 2.5mm 7mm;
     }
 
     .paper.count-24 .problem {
@@ -360,23 +357,13 @@
     }
 
     .paper.count-24 .answer-space {
-      height: 5mm;
+      height: 8mm;
     }
 
-    .paper.count-24 .footer-box {
-      bottom: 6mm;
-      font-size: 13px;
-      padding: 5px 8px;
-    }
-
-    .paper.count-24 .star-line {
-      font-size: 16px;
-    }
-
-    .paper.count-24 .sticker-box {
-      width: 17mm;
-      height: 17mm;
-      font-size: 10px;
+    .paper.count-24 .score-sticker-box {
+      width: 20mm;
+      height: 8mm;
+      font-size: 9px;
     }
 
     .answers-grid {
@@ -553,17 +540,17 @@
         <h2>プレビュー</h2>
         <div class="preview-area" id="previewArea">
           <section class="paper" id="worksheetPage">
-            <div class="print-title" id="paperTitle">ひっ算れんしゅうプリント</div>
+            <div class="title-row">
+              <div class="print-title" id="paperTitle">ひっ算れんしゅうプリント</div>
+              <div class="title-stars">☆☆☆☆☆</div>
+            </div>
             <div class="meta">
               <div>なまえ：<span class="meta-box" id="paperName">　　　　　　　　</span></div>
               <div>ひづけ：<span class="meta-box" id="paperDate">　月　日</span></div>
-              <div>てんすう：<span class="meta-box">　　　</span></div>
+              <div>シール：<span class="score-sticker-box">はる</span></div>
             </div>
             <div class="problems" id="problems"></div>
-            <div class="footer-box">
-              <div>今日のがんばり：<span class="star-line">☆☆☆☆☆</span></div>
-              <div>シール：<span class="sticker-box">ここに<br>はる</span></div>
-            </div>
+
           </section>
 
           <section class="paper answer-page" id="answerPage">

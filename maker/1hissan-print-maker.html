@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ひっ算プリントメーカー</title>
+
+  <!-- ホーム画面追加用：画像を用意したら href を変更してください -->
+  <link rel="apple-touch-icon" href="img/hissan-print.png">
+  <link rel="icon" type="image/png" href="img/hissan-print.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ひっ算プリント">
+  <meta name="theme-color" content="#fff4c2">
+
+  <style>
+    :root {
+      --bg: #fff8dc;
+      --card: #ffffff;
+      --main: #ffb84d;
+      --main-dark: #e58d00;
+      --accent: #79c7ff;
+      --text: #3b2f2f;
+      --line: #d7c7a3;
+      --soft: #fff0bf;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: linear-gradient(180deg, #fff8dc 0%, #fff1c7 100%);
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    header {
+      text-align: center;
+      margin: 12px 0 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 44px);
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      font-size: 16px;
+      color: #6b5b43;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel,
+    .preview-wrap {
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: 0 8px 24px rgba(123, 91, 31, 0.16);
+      padding: 18px;
+    }
+
+    .panel h2,
+    .preview-wrap h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 14px 0 6px;
+      font-size: 15px;
+    }
+
+    select,
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #ead8aa;
+      border-radius: 14px;
+      font-size: 16px;
+      background: #fffdf5;
+      color: var(--text);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-weight: 700;
+    }
+
+    .checkbox-row input {
+      width: 22px;
+      height: 22px;
+    }
+
+    .buttons {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      padding: 14px 16px;
+      font-size: 17px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .main-btn {
+      background: var(--main);
+      color: #442900;
+    }
+
+    .print-btn {
+      background: #75d98c;
+      color: #123a1d;
+    }
+
+    .sub-btn {
+      background: #e9f5ff;
+      color: #154a72;
+    }
+
+    .note {
+      margin-top: 14px;
+      padding: 12px;
+      background: #fff8e7;
+      border-left: 5px solid var(--main);
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .preview-area {
+      overflow: auto;
+      background: #f2ead8;
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .paper {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: white;
+      color: #222;
+      padding: 13mm 12mm;
+      box-shadow: 0 0 16px rgba(0,0,0,0.2);
+      position: relative;
+    }
+
+    .print-title {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      letter-spacing: 0.08em;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 0.8fr;
+      gap: 8px;
+      font-size: 15px;
+      margin-bottom: 10mm;
+      align-items: end;
+    }
+
+    .meta-box {
+      border-bottom: 1.8px solid #222;
+      min-height: 26px;
+      padding: 2px 4px;
+    }
+
+    .problems {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 11mm 8mm;
+    }
+
+    .problem {
+      min-height: 39mm;
+      page-break-inside: avoid;
+    }
+
+    .problem-number {
+      font-size: 14px;
+      font-weight: 900;
+      margin-bottom: 2mm;
+    }
+
+    .calc-box {
+      width: 42mm;
+      margin: 0 auto;
+      font-family: "Arial", "Helvetica", sans-serif;
+      font-size: 28px;
+      line-height: 1.15;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .num-line {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      min-height: 9mm;
+    }
+
+    .op-line {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      border-bottom: 2px solid #222;
+      padding-bottom: 1mm;
+      min-height: 10mm;
+    }
+
+    .op {
+      margin-right: 4mm;
+    }
+
+    .answer-space {
+      height: 12mm;
+      border-bottom: 1px solid #bbb;
+    }
+
+    .answer-small {
+      margin-top: 2mm;
+      font-size: 12px;
+      color: #666;
+      text-align: right;
+    }
+
+    .footer-box {
+      position: absolute;
+      left: 12mm;
+      right: 12mm;
+      bottom: 10mm;
+      border: 2px dashed #aaa;
+      border-radius: 10px;
+      padding: 6px 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .star-line {
+      letter-spacing: 0.15em;
+    }
+
+    .answer-page {
+      margin-top: 16px;
+    }
+
+    .answers-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 7mm 5mm;
+      font-size: 18px;
+      margin-top: 10mm;
+    }
+
+    .answer-item {
+      border-bottom: 1px solid #999;
+      padding-bottom: 3mm;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .paper {
+        transform: scale(0.55);
+        transform-origin: top left;
+        margin: 0;
+      }
+
+      .preview-area {
+        height: 720px;
+      }
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+
+      body {
+        background: white;
+      }
+
+      header,
+      .panel,
+      .preview-wrap > h2,
+      .note,
+      .no-print {
+        display: none !important;
+      }
+
+      .app {
+        max-width: none;
+        padding: 0;
+      }
+
+      .layout {
+        display: block;
+      }
+
+      .preview-wrap {
+        box-shadow: none;
+        padding: 0;
+        border-radius: 0;
+      }
+
+      .preview-area {
+        overflow: visible;
+        padding: 0;
+        background: white;
+        border-radius: 0;
+      }
+
+      .paper {
+        width: 210mm;
+        height: 297mm;
+        min-height: 297mm;
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+      }
+
+      .paper:last-child {
+        page-break-after: auto;
+      }
+
+      .answer-page.hidden-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>ひっ算プリントメーカー</h1>
+      <div class="subtitle">A4に印刷して、がんばりを紙で残そう！</div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>プリント設定</h2>
+
+        <label for="childName">なまえ</label>
+        <input id="childName" type="text" placeholder="れい：はる" />
+
+        <label for="titleText">プリント名</label>
+        <input id="titleText" type="text" value="ひっ算れんしゅうプリント" />
+
+        <div class="row">
+          <div>
+            <label for="mode">けいさん</label>
+            <select id="mode">
+              <option value="add">たし算</option>
+              <option value="sub">ひき算</option>
+              <option value="mix" selected>たし算・ひき算</option>
+            </select>
+          </div>
+          <div>
+            <label for="level">むずかしさ</label>
+            <select id="level">
+              <option value="easy">かんたん</option>
+              <option value="normal" selected>ふつう</option>
+              <option value="hard">むずかしい</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="count">問題数</label>
+            <select id="count">
+              <option value="12">12問</option>
+              <option value="18" selected>18問</option>
+              <option value="24">24問</option>
+            </select>
+          </div>
+          <div>
+            <label for="dateText">日付</label>
+            <input id="dateText" type="text" />
+          </div>
+        </div>
+
+        <label for="carry">くり上がり・くり下がり</label>
+        <select id="carry">
+          <option value="any" selected>あり・なし混ぜる</option>
+          <option value="avoid">なるべくなし</option>
+          <option value="force">なるべくあり</option>
+        </select>
+
+        <div class="checkbox-row">
+          <input id="showAnswers" type="checkbox" />
+          <span>問題ページに小さく答えを表示</span>
+        </div>
+
+        <div class="checkbox-row">
+          <input id="printAnswerPage" type="checkbox" checked />
+          <span>答えページも作る</span>
+        </div>
+
+        <div class="buttons">
+          <button class="main-btn" onclick="makeWorksheet()">問題をつくる</button>
+          <button class="print-btn" onclick="window.print()">A4で印刷する</button>
+          <button class="sub-btn" onclick="resetSettings()">設定をもどす</button>
+        </div>
+
+        <div class="note no-print">
+          印刷すると、設定画面は消えてプリントだけが出ます。<br>
+          iPhoneやiPadなら共有メニューから印刷、パソコンなら Ctrl + P でも印刷できます。
+        </div>
+      </section>
+
+      <section class="preview-wrap">
+        <h2>プレビュー</h2>
+        <div class="preview-area" id="previewArea">
+          <section class="paper" id="worksheetPage">
+            <div class="print-title" id="paperTitle">ひっ算れんしゅうプリント</div>
+            <div class="meta">
+              <div>なまえ：<span class="meta-box" id="paperName">　　　　　　　　</span></div>
+              <div>ひづけ：<span class="meta-box" id="paperDate">　月　日</span></div>
+              <div>てんすう：<span class="meta-box">　　　</span></div>
+            </div>
+            <div class="problems" id="problems"></div>
+            <div class="footer-box">
+              <div>今日のがんばり：<span class="star-line">☆☆☆☆☆</span></div>
+              <div>シールをはろう：□</div>
+            </div>
+          </section>
+
+          <section class="paper answer-page" id="answerPage">
+            <div class="print-title">こたえ</div>
+            <div class="meta">
+              <div>なまえ：<span class="meta-box" id="answerName">　　　　　　　　</span></div>
+              <div>ひづけ：<span class="meta-box" id="answerDate">　月　日</span></div>
+              <div></div>
+            </div>
+            <div class="answers-grid" id="answers"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let currentProblems = [];
+
+    function todayText() {
+      const d = new Date();
+      return `${d.getMonth() + 1}月${d.getDate()}日`;
+    }
+
+    function rand(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function hasCarry(a, b) {
+      const onesA = a % 10;
+      const onesB = b % 10;
+      return onesA + onesB >= 10;
+    }
+
+    function hasBorrow(a, b) {
+      const onesA = a % 10;
+      const onesB = b % 10;
+      return onesA < onesB;
+    }
+
+    function getRange(level) {
+      if (level === "easy") {
+        return { min: 10, max: 49 };
+      }
+      if (level === "normal") {
+        return { min: 20, max: 89 };
+      }
+      return { min: 100, max: 999 };
+    }
+
+    function pickOperator(mode) {
+      if (mode === "add") return "+";
+      if (mode === "sub") return "−";
+      return Math.random() < 0.5 ? "+" : "−";
+    }
+
+    function makeOneProblem(mode, level, carryMode) {
+      const op = pickOperator(mode);
+      const range = getRange(level);
+      let a, b, answer;
+      let guard = 0;
+
+      while (guard < 300) {
+        guard++;
+        a = rand(range.min, range.max);
+        b = rand(range.min, range.max);
+
+        if (op === "−" && b > a) {
+          const temp = a;
+          a = b;
+          b = temp;
+        }
+
+        if (op === "+") {
+          const c = hasCarry(a, b);
+          if (carryMode === "avoid" && c) continue;
+          if (carryMode === "force" && !c) continue;
+          answer = a + b;
+        } else {
+          const c = hasBorrow(a, b);
+          if (carryMode === "avoid" && c) continue;
+          if (carryMode === "force" && !c) continue;
+          answer = a - b;
+        }
+
+        return { a, b, op, answer };
+      }
+
+      if (op === "+") {
+        answer = a + b;
+      } else {
+        if (b > a) [a, b] = [b, a];
+        answer = a - b;
+      }
+      return { a, b, op, answer };
+    }
+
+    function makeWorksheet() {
+      const childName = document.getElementById("childName").value.trim();
+      const titleText = document.getElementById("titleText").value.trim() || "ひっ算れんしゅうプリント";
+      const mode = document.getElementById("mode").value;
+      const level = document.getElementById("level").value;
+      const count = Number(document.getElementById("count").value);
+      const dateText = document.getElementById("dateText").value.trim() || todayText();
+      const carryMode = document.getElementById("carry").value;
+      const showAnswers = document.getElementById("showAnswers").checked;
+      const printAnswerPage = document.getElementById("printAnswerPage").checked;
+
+      document.getElementById("paperTitle").textContent = titleText;
+      document.getElementById("paperName").textContent = childName || "　　　　　　　　";
+      document.getElementById("paperDate").textContent = dateText;
+      document.getElementById("answerName").textContent = childName || "　　　　　　　　";
+      document.getElementById("answerDate").textContent = dateText;
+
+      currentProblems = [];
+      for (let i = 0; i < count; i++) {
+        currentProblems.push(makeOneProblem(mode, level, carryMode));
+      }
+
+      const problemsEl = document.getElementById("problems");
+      const answersEl = document.getElementById("answers");
+      problemsEl.innerHTML = "";
+      answersEl.innerHTML = "";
+
+      currentProblems.forEach((p, index) => {
+        const problem = document.createElement("div");
+        problem.className = "problem";
+        problem.innerHTML = `
+          <div class="problem-number">${index + 1}</div>
+          <div class="calc-box">
+            <div class="num-line">${p.a}</div>
+            <div class="op-line"><span class="op">${p.op}</span><span>${p.b}</span></div>
+            <div class="answer-space"></div>
+            ${showAnswers ? `<div class="answer-small">こたえ：${p.answer}</div>` : ""}
+          </div>
+        `;
+        problemsEl.appendChild(problem);
+
+        const answer = document.createElement("div");
+        answer.className = "answer-item";
+        answer.textContent = `${index + 1}. ${p.answer}`;
+        answersEl.appendChild(answer);
+      });
+
+      const answerPage = document.getElementById("answerPage");
+      if (printAnswerPage) {
+        answerPage.classList.remove("hidden-print");
+        answerPage.style.display = "block";
+      } else {
+        answerPage.classList.add("hidden-print");
+        answerPage.style.display = "none";
+      }
+    }
+
+    function resetSettings() {
+      document.getElementById("childName").value = "";
+      document.getElementById("titleText").value = "ひっ算れんしゅうプリント";
+      document.getElementById("mode").value = "mix";
+      document.getElementById("level").value = "normal";
+      document.getElementById("count").value = "18";
+      document.getElementById("dateText").value = todayText();
+      document.getElementById("carry").value = "any";
+      document.getElementById("showAnswers").checked = false;
+      document.getElementById("printAnswerPage").checked = true;
+      makeWorksheet();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("dateText").value = todayText();
+      makeWorksheet();
+    });
+  </script>
+</body>
+</html>

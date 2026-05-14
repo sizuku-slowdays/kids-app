@@ -270,20 +270,113 @@
       right: 12mm;
       bottom: 10mm;
       border: 2px dashed #aaa;
-      border-radius: 10px;
-      padding: 6px 10px;
+      border-radius: 12px;
+      padding: 8px 12px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      font-size: 14px;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 10px;
+      font-size: 16px;
+      align-items: center;
     }
 
     .star-line {
-      letter-spacing: 0.15em;
+      letter-spacing: 0.12em;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .sticker-box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22mm;
+      height: 22mm;
+      margin-left: 4mm;
+      border: 2px solid #999;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #777;
+      vertical-align: middle;
     }
 
     .answer-page {
       margin-top: 16px;
+    }
+
+    .paper.count-18 .problems {
+      gap: 6mm 8mm;
+    }
+
+    .paper.count-18 .problem {
+      min-height: 31mm;
+    }
+
+    .paper.count-18 .calc-box {
+      font-size: 25px;
+    }
+
+    .paper.count-18 .answer-space {
+      height: 8mm;
+    }
+
+    .paper.count-18 .footer-box {
+      bottom: 7mm;
+    }
+
+    .paper.count-24 .print-title {
+      font-size: 22px;
+      margin-bottom: 5px;
+    }
+
+    .paper.count-24 .meta {
+      margin-bottom: 5mm;
+    }
+
+    .paper.count-24 .problems {
+      gap: 3.5mm 7mm;
+    }
+
+    .paper.count-24 .problem {
+      min-height: 25mm;
+    }
+
+    .paper.count-24 .problem-number {
+      font-size: 12px;
+      margin-bottom: 1mm;
+    }
+
+    .paper.count-24 .calc-box {
+      width: 38mm;
+      font-size: 22px;
+      line-height: 1.05;
+    }
+
+    .paper.count-24 .num-line {
+      min-height: 7mm;
+    }
+
+    .paper.count-24 .op-line {
+      min-height: 8mm;
+    }
+
+    .paper.count-24 .answer-space {
+      height: 5mm;
+    }
+
+    .paper.count-24 .footer-box {
+      bottom: 6mm;
+      font-size: 13px;
+      padding: 5px 8px;
+    }
+
+    .paper.count-24 .star-line {
+      font-size: 16px;
+    }
+
+    .paper.count-24 .sticker-box {
+      width: 17mm;
+      height: 17mm;
+      font-size: 10px;
     }
 
     .answers-grid {
@@ -469,7 +562,7 @@
             <div class="problems" id="problems"></div>
             <div class="footer-box">
               <div>今日のがんばり：<span class="star-line">☆☆☆☆☆</span></div>
-              <div>シールをはろう：□</div>
+              <div>シール：<span class="sticker-box">ここに<br>はる</span></div>
             </div>
           </section>
 
@@ -578,6 +671,10 @@
       const carryMode = document.getElementById("carry").value;
       const showAnswers = document.getElementById("showAnswers").checked;
       const printAnswerPage = document.getElementById("printAnswerPage").checked;
+
+      const worksheetPage = document.getElementById("worksheetPage");
+      worksheetPage.classList.remove("count-12", "count-18", "count-24");
+      worksheetPage.classList.add(`count-${count}`);
 
       document.getElementById("paperTitle").textContent = titleText;
       document.getElementById("paperName").textContent = childName || "　　　　　　　　";

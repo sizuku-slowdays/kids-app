@@ -1,1 +1,815 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>都道府県プリントメーカー</title>
 
+  <!-- ホーム画面追加用：maker/img/prefecture-print.png を使います -->
+  <link rel="apple-touch-icon" href="img/prefecture-print.png">
+  <link rel="icon" type="image/png" href="img/prefecture-print.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="都道府県プリント">
+  <meta name="theme-color" content="#eef8ff">
+
+  <style>
+    :root {
+      --bg: #eef8ff;
+      --card: #ffffff;
+      --main: #78c7ff;
+      --accent: #ffd36b;
+      --text: #243447;
+      --soft: #f7fbff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: linear-gradient(180deg, #eef8ff 0%, #fff4ce 100%);
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    header {
+      text-align: center;
+      margin: 12px 0 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 44px);
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      font-size: 16px;
+      color: #50697c;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel, .preview-wrap {
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: 0 8px 24px rgba(38, 80, 112, 0.16);
+      padding: 18px;
+    }
+
+    .panel h2, .preview-wrap h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+    }
+
+    label {
+      display: block;
+      font-weight: 900;
+      margin: 14px 0 6px;
+      font-size: 15px;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #bddcf0;
+      border-radius: 14px;
+      font-size: 16px;
+      background: #fbfdff;
+      color: var(--text);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-weight: 800;
+      line-height: 1.4;
+    }
+
+    .checkbox-row input {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+    }
+
+    .buttons {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      padding: 14px 16px;
+      font-size: 17px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .main-btn { background: var(--main); color: #0d3148; }
+    .print-btn { background: #79dc8c; color: #123a1d; }
+    .sub-btn { background: #fff1b8; color: #654200; }
+
+    .note {
+      margin-top: 14px;
+      padding: 12px;
+      background: #f4fbff;
+      border-left: 5px solid var(--main);
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .preview-area {
+      overflow: auto;
+      background: #dfeaf1;
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .paper {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: white;
+      color: #222;
+      padding: 12mm 12mm;
+      box-shadow: 0 0 16px rgba(0,0,0,0.2);
+      position: relative;
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10mm;
+      margin-bottom: 7px;
+    }
+
+    .print-title {
+      text-align: center;
+      font-size: 27px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+    }
+
+    .title-stars {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      white-space: nowrap;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 0.8fr;
+      gap: 8px;
+      font-size: 15px;
+      margin-bottom: 7mm;
+      align-items: end;
+    }
+
+    .meta-box {
+      border-bottom: 1.8px solid #222;
+      min-height: 26px;
+      padding: 2px 4px;
+    }
+
+    .sticker-box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24mm;
+      height: 10mm;
+      margin-left: 2mm;
+      border: 1.8px solid #222;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #777;
+      vertical-align: middle;
+    }
+
+    .problems {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5mm 7mm;
+    }
+
+    .problem {
+      min-height: 24mm;
+      page-break-inside: avoid;
+      border: 1.8px solid #222;
+      border-radius: 8px;
+      padding: 3mm 4mm;
+    }
+
+    .problem-number {
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 2mm;
+    }
+
+    .question-line {
+      font-size: 17px;
+      line-height: 1.65;
+      font-weight: 800;
+    }
+
+    .answer-line {
+      display: inline-block;
+      width: 38mm;
+      height: 8mm;
+      border-bottom: 2px solid #222;
+      vertical-align: bottom;
+    }
+
+    .connect-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4mm 8mm;
+      margin-top: 1mm;
+    }
+
+    .connect-col {
+      display: grid;
+      gap: 3mm;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .connect-item {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      min-height: 8mm;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 3mm;
+      height: 3mm;
+      border: 1.6px solid #222;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .list-box {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3mm 8mm;
+      margin-top: 2mm;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .list-answer {
+      display: inline-block;
+      width: 32mm;
+      height: 8mm;
+      border-bottom: 2px solid #222;
+      vertical-align: bottom;
+    }
+
+    .answer-small {
+      margin-top: 2mm;
+      font-size: 12px;
+      color: #666;
+      text-align: right;
+    }
+
+    .paper.count-15 .problems {
+      gap: 3mm 6mm;
+    }
+
+    .paper.count-15 .problem {
+      min-height: 20mm;
+      padding: 2mm 3mm;
+    }
+
+    .paper.count-15 .question-line {
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .paper.count-15 .answer-line {
+      width: 31mm;
+      height: 7mm;
+    }
+
+    .paper.count-20 .print-title {
+      font-size: 23px;
+    }
+
+    .paper.count-20 .title-stars {
+      font-size: 16px;
+    }
+
+    .paper.count-20 .title-row {
+      gap: 6mm;
+      margin-bottom: 4px;
+    }
+
+    .paper.count-20 .meta {
+      margin-bottom: 5mm;
+      font-size: 13px;
+    }
+
+    .paper.count-20 .problems {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2mm 5mm;
+    }
+
+    .paper.count-20 .problem {
+      min-height: 17mm;
+      padding: 1.8mm 2.5mm;
+    }
+
+    .paper.count-20 .problem-number {
+      font-size: 11px;
+      margin-bottom: 1mm;
+    }
+
+    .paper.count-20 .question-line {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .paper.count-20 .answer-line {
+      width: 24mm;
+      height: 6mm;
+    }
+
+    .paper.count-20 .sticker-box {
+      width: 20mm;
+      height: 8mm;
+      font-size: 9px;
+    }
+
+    .connect-paper .problem {
+      min-height: 78mm;
+    }
+
+    .connect-paper .problems {
+      grid-template-columns: 1fr;
+      gap: 6mm;
+    }
+
+    .connect-paper .question-line {
+      margin-bottom: 4mm;
+    }
+
+    .list-paper .problem {
+      min-height: 70mm;
+    }
+
+    .list-paper .problems {
+      grid-template-columns: 1fr;
+      gap: 6mm;
+    }
+
+    .answer-page { margin-top: 16px; }
+
+    .answers-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7mm 5mm;
+      font-size: 17px;
+      margin-top: 10mm;
+    }
+
+    .answer-item {
+      border-bottom: 1px solid #999;
+      padding-bottom: 3mm;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .paper {
+        transform: scale(0.55);
+        transform-origin: top left;
+        margin: 0;
+      }
+      .preview-area { height: 720px; }
+    }
+
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body { background: white; }
+      header, .panel, .preview-wrap > h2, .note, .no-print { display: none !important; }
+      .app { max-width: none; padding: 0; }
+      .layout { display: block; }
+      .preview-wrap { box-shadow: none; padding: 0; border-radius: 0; }
+      .preview-area { overflow: visible; padding: 0; background: white; border-radius: 0; }
+      .paper {
+        width: 210mm;
+        height: 297mm;
+        min-height: 297mm;
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        transform: none !important;
+        transform-origin: initial !important;
+      }
+      .paper:last-child { page-break-after: auto; }
+      .answer-page.hidden-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>都道府県プリントメーカー</h1>
+      <div class="subtitle">都道府県名・県庁所在地・地方別の練習プリントをA4で作れます</div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>プリント設定</h2>
+
+        <label for="childName">なまえ</label>
+        <input id="childName" type="text" placeholder="れい：はる" />
+
+        <label for="titleText">プリント名</label>
+        <input id="titleText" type="text" value="都道府県れんしゅうプリント" />
+
+        <div class="row">
+          <div>
+            <label for="questionType">問題タイプ</label>
+            <select id="questionType">
+              <option value="prefToCapital" selected>県名 → 県庁所在地</option>
+              <option value="capitalToPref">県庁所在地 → 県名</option>
+              <option value="connect">線でつなぐ</option>
+              <option value="listRegion">地方の県名を書く</option>
+              <option value="mix">ミックス</option>
+            </select>
+          </div>
+          <div>
+            <label for="region">地方</label>
+            <select id="region">
+              <option value="all" selected>全国</option>
+              <option value="hokkaidoTohoku">北海道・東北</option>
+              <option value="kanto">関東</option>
+              <option value="chubu">中部</option>
+              <option value="kinki">近畿</option>
+              <option value="chugoku">中国</option>
+              <option value="shikoku">四国</option>
+              <option value="kyushu">九州・沖縄</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="count">問題数</label>
+            <select id="count">
+              <option value="10" selected>10問</option>
+              <option value="15">15問</option>
+              <option value="20">20問</option>
+            </select>
+          </div>
+          <div>
+            <label for="dateText">日付</label>
+            <input id="dateText" type="text" />
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input id="showAnswers" type="checkbox" />
+          <span>問題ページに小さく答えを表示</span>
+        </div>
+
+        <div class="checkbox-row">
+          <input id="printAnswerPage" type="checkbox" checked />
+          <span>答えページも作る</span>
+        </div>
+
+        <div class="buttons">
+          <button class="main-btn" onclick="makeWorksheet()">問題をつくる</button>
+          <button class="print-btn" onclick="window.print()">A4で印刷する</button>
+          <button class="sub-btn" onclick="resetSettings()">設定をもどす</button>
+        </div>
+
+        <div class="note no-print">
+          地図なしでも使える、県名・県庁所在地の練習プリントです。<br>
+          「線でつなぐ」「地方の県名を書く」は、A4に収まるように大きめ問題で作ります。
+        </div>
+      </section>
+
+      <section class="preview-wrap">
+        <h2>プレビュー</h2>
+        <div class="preview-area" id="previewArea">
+          <section class="paper" id="worksheetPage">
+            <div class="title-row">
+              <div class="print-title" id="paperTitle">都道府県れんしゅうプリント</div>
+              <div class="title-stars">☆☆☆☆☆</div>
+            </div>
+            <div class="meta">
+              <div>なまえ：<span class="meta-box" id="paperName">　　　　　　　　</span></div>
+              <div>ひづけ：<span class="meta-box" id="paperDate">　月　日</span></div>
+              <div>シール：<span class="sticker-box">はる</span></div>
+            </div>
+            <div class="problems" id="problems"></div>
+          </section>
+
+          <section class="paper answer-page" id="answerPage">
+            <div class="title-row">
+              <div class="print-title">こたえ</div>
+            </div>
+            <div class="meta">
+              <div>なまえ：<span class="meta-box" id="answerName">　　　　　　　　</span></div>
+              <div>ひづけ：<span class="meta-box" id="answerDate">　月　日</span></div>
+              <div></div>
+            </div>
+            <div class="answers-grid" id="answers"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const PREFS = [
+      { pref: "北海道", capital: "札幌市", region: "hokkaidoTohoku" },
+      { pref: "青森県", capital: "青森市", region: "hokkaidoTohoku" },
+      { pref: "岩手県", capital: "盛岡市", region: "hokkaidoTohoku" },
+      { pref: "宮城県", capital: "仙台市", region: "hokkaidoTohoku" },
+      { pref: "秋田県", capital: "秋田市", region: "hokkaidoTohoku" },
+      { pref: "山形県", capital: "山形市", region: "hokkaidoTohoku" },
+      { pref: "福島県", capital: "福島市", region: "hokkaidoTohoku" },
+      { pref: "茨城県", capital: "水戸市", region: "kanto" },
+      { pref: "栃木県", capital: "宇都宮市", region: "kanto" },
+      { pref: "群馬県", capital: "前橋市", region: "kanto" },
+      { pref: "埼玉県", capital: "さいたま市", region: "kanto" },
+      { pref: "千葉県", capital: "千葉市", region: "kanto" },
+      { pref: "東京都", capital: "新宿区", region: "kanto" },
+      { pref: "神奈川県", capital: "横浜市", region: "kanto" },
+      { pref: "新潟県", capital: "新潟市", region: "chubu" },
+      { pref: "富山県", capital: "富山市", region: "chubu" },
+      { pref: "石川県", capital: "金沢市", region: "chubu" },
+      { pref: "福井県", capital: "福井市", region: "chubu" },
+      { pref: "山梨県", capital: "甲府市", region: "chubu" },
+      { pref: "長野県", capital: "長野市", region: "chubu" },
+      { pref: "岐阜県", capital: "岐阜市", region: "chubu" },
+      { pref: "静岡県", capital: "静岡市", region: "chubu" },
+      { pref: "愛知県", capital: "名古屋市", region: "chubu" },
+      { pref: "三重県", capital: "津市", region: "kinki" },
+      { pref: "滋賀県", capital: "大津市", region: "kinki" },
+      { pref: "京都府", capital: "京都市", region: "kinki" },
+      { pref: "大阪府", capital: "大阪市", region: "kinki" },
+      { pref: "兵庫県", capital: "神戸市", region: "kinki" },
+      { pref: "奈良県", capital: "奈良市", region: "kinki" },
+      { pref: "和歌山県", capital: "和歌山市", region: "kinki" },
+      { pref: "鳥取県", capital: "鳥取市", region: "chugoku" },
+      { pref: "島根県", capital: "松江市", region: "chugoku" },
+      { pref: "岡山県", capital: "岡山市", region: "chugoku" },
+      { pref: "広島県", capital: "広島市", region: "chugoku" },
+      { pref: "山口県", capital: "山口市", region: "chugoku" },
+      { pref: "徳島県", capital: "徳島市", region: "shikoku" },
+      { pref: "香川県", capital: "高松市", region: "shikoku" },
+      { pref: "愛媛県", capital: "松山市", region: "shikoku" },
+      { pref: "高知県", capital: "高知市", region: "shikoku" },
+      { pref: "福岡県", capital: "福岡市", region: "kyushu" },
+      { pref: "佐賀県", capital: "佐賀市", region: "kyushu" },
+      { pref: "長崎県", capital: "長崎市", region: "kyushu" },
+      { pref: "熊本県", capital: "熊本市", region: "kyushu" },
+      { pref: "大分県", capital: "大分市", region: "kyushu" },
+      { pref: "宮崎県", capital: "宮崎市", region: "kyushu" },
+      { pref: "鹿児島県", capital: "鹿児島市", region: "kyushu" },
+      { pref: "沖縄県", capital: "那覇市", region: "kyushu" }
+    ];
+
+    const REGION_NAMES = {
+      all: "全国",
+      hokkaidoTohoku: "北海道・東北地方",
+      kanto: "関東地方",
+      chubu: "中部地方",
+      kinki: "近畿地方",
+      chugoku: "中国地方",
+      shikoku: "四国地方",
+      kyushu: "九州・沖縄地方"
+    };
+
+    let currentAnswers = [];
+
+    function todayText() {
+      const d = new Date();
+      return `${d.getMonth() + 1}月${d.getDate()}日`;
+    }
+
+    function rand(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = rand(0, i);
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function getPool(region) {
+      if (region === "all") return [...PREFS];
+      return PREFS.filter(item => item.region === region);
+    }
+
+    function pickProblems(pool, count) {
+      let list = shuffle(pool);
+      const result = [];
+      let index = 0;
+      while (result.length < count) {
+        if (index >= list.length) {
+          list = shuffle(pool);
+          index = 0;
+        }
+        result.push(list[index]);
+        index++;
+      }
+      return result;
+    }
+
+    function makeNormalProblem(item, index, type, showAnswers) {
+      let html = "";
+      let answer = "";
+      if (type === "capitalToPref") {
+        html = `<div class="question-line">${item.capital} がある都道府県は？<br><span class="answer-line"></span></div>`;
+        answer = item.pref;
+      } else {
+        html = `<div class="question-line">${item.pref} の県庁所在地は？<br><span class="answer-line"></span></div>`;
+        answer = item.capital;
+      }
+
+      return {
+        problemHtml: `
+          <div class="problem-number">${index + 1}</div>
+          ${html}
+          ${showAnswers ? `<div class="answer-small">こたえ：${answer}</div>` : ""}
+        `,
+        answer
+      };
+    }
+
+    function makeConnectProblem(pool, showAnswers) {
+      const list = shuffle(pool).slice(0, Math.min(8, pool.length));
+      const left = list.map(item => item.pref);
+      const rightItems = shuffle(list);
+      const right = rightItems.map(item => item.capital);
+      const answer = list.map(item => `${item.pref} → ${item.capital}`).join(" ／ ");
+
+      const leftHtml = left.map(text => `<div class="connect-item"><span>${text}</span><span class="dot"></span></div>`).join("");
+      const rightHtml = right.map(text => `<div class="connect-item"><span class="dot"></span><span>${text}</span></div>`).join("");
+
+      return {
+        problemHtml: `
+          <div class="problem-number">1</div>
+          <div class="question-line">都道府県と県庁所在地を線でつなぎましょう。</div>
+          <div class="connect-layout">
+            <div class="connect-col">${leftHtml}</div>
+            <div class="connect-col">${rightHtml}</div>
+          </div>
+          ${showAnswers ? `<div class="answer-small">こたえは答えページを見てね</div>` : ""}
+        `,
+        answer
+      };
+    }
+
+    function makeListRegionProblem(pool, region, showAnswers) {
+      const list = pool;
+      const boxes = list.map((item, index) => `
+        <div>${index + 1}. <span class="list-answer"></span> 都・道・府・県</div>
+      `).join("");
+      const answer = list.map(item => item.pref).join("、");
+
+      return {
+        problemHtml: `
+          <div class="problem-number">1</div>
+          <div class="question-line">${REGION_NAMES[region]}の都道府県名を書きましょう。</div>
+          <div class="list-box">${boxes}</div>
+          ${showAnswers ? `<div class="answer-small">こたえは答えページを見てね</div>` : ""}
+        `,
+        answer
+      };
+    }
+
+    function makeWorksheet() {
+      const childName = document.getElementById("childName").value.trim();
+      const titleText = document.getElementById("titleText").value.trim() || "都道府県れんしゅうプリント";
+      const questionType = document.getElementById("questionType").value;
+      const region = document.getElementById("region").value;
+      const count = Number(document.getElementById("count").value);
+      const dateText = document.getElementById("dateText").value.trim() || todayText();
+      const showAnswers = document.getElementById("showAnswers").checked;
+      const printAnswerPage = document.getElementById("printAnswerPage").checked;
+
+      const pool = getPool(region);
+      const worksheetPage = document.getElementById("worksheetPage");
+      worksheetPage.classList.remove("count-10", "count-15", "count-20", "connect-paper", "list-paper");
+      worksheetPage.classList.add(`count-${count}`);
+      if (questionType === "connect") worksheetPage.classList.add("connect-paper");
+      if (questionType === "listRegion") worksheetPage.classList.add("list-paper");
+
+      document.getElementById("paperTitle").textContent = titleText;
+      document.getElementById("paperName").textContent = childName || "　　　　　　　　";
+      document.getElementById("paperDate").textContent = dateText;
+      document.getElementById("answerName").textContent = childName || "　　　　　　　　";
+      document.getElementById("answerDate").textContent = dateText;
+
+      const problemsEl = document.getElementById("problems");
+      const answersEl = document.getElementById("answers");
+      problemsEl.innerHTML = "";
+      answersEl.innerHTML = "";
+      currentAnswers = [];
+
+      if (questionType === "connect") {
+        const made = makeConnectProblem(pool, showAnswers);
+        const problem = document.createElement("div");
+        problem.className = "problem";
+        problem.innerHTML = made.problemHtml;
+        problemsEl.appendChild(problem);
+        currentAnswers.push(made.answer);
+      } else if (questionType === "listRegion") {
+        const made = makeListRegionProblem(pool, region, showAnswers);
+        const problem = document.createElement("div");
+        problem.className = "problem";
+        problem.innerHTML = made.problemHtml;
+        problemsEl.appendChild(problem);
+        currentAnswers.push(made.answer);
+      } else {
+        const selected = pickProblems(pool, count);
+        selected.forEach((item, index) => {
+          let type = questionType;
+          if (questionType === "mix") type = Math.random() < 0.5 ? "prefToCapital" : "capitalToPref";
+          const made = makeNormalProblem(item, index, type, showAnswers);
+          const problem = document.createElement("div");
+          problem.className = "problem";
+          problem.innerHTML = made.problemHtml;
+          problemsEl.appendChild(problem);
+          currentAnswers.push(made.answer);
+        });
+      }
+
+      currentAnswers.forEach((answer, index) => {
+        const answerEl = document.createElement("div");
+        answerEl.className = "answer-item";
+        answerEl.textContent = `${index + 1}. ${answer}`;
+        answersEl.appendChild(answerEl);
+      });
+
+      const answerPage = document.getElementById("answerPage");
+      if (printAnswerPage) {
+        answerPage.classList.remove("hidden-print");
+        answerPage.style.display = "block";
+      } else {
+        answerPage.classList.add("hidden-print");
+        answerPage.style.display = "none";
+      }
+    }
+
+    function resetSettings() {
+      document.getElementById("childName").value = "";
+      document.getElementById("titleText").value = "都道府県れんしゅうプリント";
+      document.getElementById("questionType").value = "prefToCapital";
+      document.getElementById("region").value = "all";
+      document.getElementById("count").value = "10";
+      document.getElementById("dateText").value = todayText();
+      document.getElementById("showAnswers").checked = false;
+      document.getElementById("printAnswerPage").checked = true;
+      makeWorksheet();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("dateText").value = todayText();
+      makeWorksheet();
+    });
+  </script>
+</body>
+</html>

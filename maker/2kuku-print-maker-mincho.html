@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>九九プリントメーカー 明朝体版</title>
+
+  <link rel="apple-touch-icon" href="img/kuku-print.png">
+  <link rel="icon" type="image/png" href="img/kuku-print.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="九九プリント">
+  <meta name="theme-color" content="#e9f7ff">
+
+  <style>
+    :root {
+      --bg: #e9f7ff;
+      --card: #ffffff;
+      --main: #78c7ff;
+      --main-dark: #2179b8;
+      --accent: #ffd36b;
+      --text: #253544;
+      --line: #aacfe8;
+      --soft: #f3fbff;
+      --school-font: "Yu Mincho", "Hiragino Mincho ProN", "BIZ UDPMincho", "MS Mincho", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--school-font);
+      background: linear-gradient(180deg, #e9f7ff 0%, #fff4cf 100%);
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    header {
+      text-align: center;
+      margin: 12px 0 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 44px);
+      letter-spacing: 0.04em;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      font-size: 16px;
+      color: #4e6575;
+      font-weight: 600;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel,
+    .preview-wrap {
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: 0 8px 24px rgba(39, 83, 110, 0.16);
+      padding: 18px;
+    }
+
+    .panel h2,
+    .preview-wrap h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 14px 0 6px;
+      font-size: 15px;
+    }
+
+    select,
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #b8dcf2;
+      border-radius: 14px;
+      font-size: 16px;
+      background: #fbfdff;
+      color: var(--text);
+      font-family: var(--school-font);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .dan-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .dan-check { position: relative; }
+
+    .dan-check input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .dan-check span {
+      display: block;
+      text-align: center;
+      padding: 10px 4px;
+      border-radius: 14px;
+      border: 2px solid #b8dcf2;
+      background: #f7fcff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .dan-check input:checked + span {
+      background: var(--accent);
+      border-color: #f0ad22;
+      color: #4a3100;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .checkbox-row input {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+    }
+
+    .buttons {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      padding: 14px 16px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+      font-family: var(--school-font);
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .main-btn { background: var(--main); color: #0c3147; }
+    .print-btn { background: #77dd8a; color: #123a1d; }
+    .sub-btn { background: #fff1b8; color: #654200; }
+
+    .note {
+      margin-top: 14px;
+      padding: 12px;
+      background: #f4fbff;
+      border-left: 5px solid var(--main);
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .preview-area {
+      overflow: auto;
+      background: #dfeaf1;
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .paper {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: white;
+      color: #222;
+      padding: 12mm 12mm;
+      box-shadow: 0 0 16px rgba(0,0,0,0.2);
+      position: relative;
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10mm;
+      margin-bottom: 7px;
+    }
+
+    .print-title {
+      text-align: center;
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .title-stars {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      white-space: nowrap;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 0.8fr;
+      gap: 8px;
+      font-size: 15px;
+      margin-bottom: 8mm;
+      align-items: end;
+    }
+
+    .meta-box {
+      border-bottom: 1.8px solid #222;
+      min-height: 26px;
+      padding: 2px 4px;
+    }
+
+    .sticker-box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24mm;
+      height: 10mm;
+      margin-left: 2mm;
+      border: 1.8px solid #222;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #777;
+      vertical-align: middle;
+    }
+
+    .problems {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8mm 7mm;
+    }
+
+    .problem {
+      min-height: 30mm;
+      page-break-inside: avoid;
+      position: relative;
+    }
+
+    .problem-number {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 1.5mm;
+    }
+
+    .formula {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3mm;
+      font-family: var(--school-font);
+      font-size: 26px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .answer-line {
+      display: inline-block;
+      width: 20mm;
+      height: 9mm;
+      border-bottom: 2px solid #222;
+      vertical-align: bottom;
+    }
+
+    .blank-box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 15mm;
+      height: 10mm;
+      border: 2px solid #222;
+      border-radius: 4px;
+      vertical-align: middle;
+      background: #fff;
+    }
+
+    .answer-small {
+      margin-top: 3mm;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+    }
+
+    .paper.blank-mode.count-20 .problems {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9mm 7mm;
+    }
+
+    .paper.blank-mode.count-20 .problem { min-height: 30mm; }
+
+    .paper.blank-mode.count-20 .formula {
+      font-size: 25px;
+      justify-content: flex-start;
+      padding-left: 6mm;
+      gap: 2.5mm;
+    }
+
+    .paper.blank-mode.count-20 .blank-box {
+      width: 14mm;
+      height: 9mm;
+    }
+
+    .paper.count-30 .problems { gap: 6mm 6mm; }
+    .paper.count-30 .problem { min-height: 25mm; }
+    .paper.count-30 .formula { font-size: 24px; }
+    .paper.count-30 .answer-line { width: 18mm; height: 8mm; }
+    .paper.count-30 .blank-box { width: 14mm; height: 9mm; }
+
+    .paper.blank-mode.count-30 .problems {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5mm 7mm;
+    }
+
+    .paper.blank-mode.count-30 .problem { min-height: 23mm; }
+
+    .paper.blank-mode.count-30 .formula {
+      font-size: 22px;
+      justify-content: flex-start;
+      padding-left: 5mm;
+      gap: 2mm;
+    }
+
+    .paper.blank-mode.count-30 .blank-box {
+      width: 13mm;
+      height: 8mm;
+    }
+
+    .paper.count-40 .print-title { font-size: 23px; }
+    .paper.count-40 .title-stars { font-size: 16px; }
+    .paper.count-40 .title-row { gap: 6mm; margin-bottom: 4px; }
+    .paper.count-40 .meta { margin-bottom: 5mm; font-size: 13px; }
+    .paper.count-40 .problems { grid-template-columns: repeat(4, 1fr); gap: 3.5mm 6mm; }
+    .paper.count-40 .problem { min-height: 21mm; }
+    .paper.count-40 .problem-number { font-size: 11px; margin-bottom: 1mm; }
+    .paper.count-40 .formula { font-size: 21px; gap: 2mm; }
+    .paper.count-40 .answer-line { width: 16mm; height: 7mm; }
+    .paper.count-40 .blank-box { width: 13mm; height: 8mm; }
+    .paper.count-40 .sticker-box { width: 20mm; height: 8mm; font-size: 9px; }
+
+    .paper.blank-mode.count-40 .formula {
+      font-size: 17px;
+      gap: 1mm;
+    }
+
+    .paper.blank-mode.count-40 .blank-box {
+      width: 10mm;
+      height: 7mm;
+    }
+
+    .answer-page { margin-top: 16px; }
+
+    .answers-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 7mm 5mm;
+      font-size: 18px;
+      margin-top: 10mm;
+      font-family: var(--school-font);
+      font-weight: 600;
+    }
+
+    .answer-item {
+      border-bottom: 1px solid #999;
+      padding-bottom: 3mm;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .paper {
+        transform: scale(0.55);
+        transform-origin: top left;
+        margin: 0;
+      }
+      .preview-area { height: 720px; }
+    }
+
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body { background: white; }
+      header, .panel, .preview-wrap > h2, .note, .no-print { display: none !important; }
+      .app { max-width: none; padding: 0; }
+      .layout { display: block; }
+      .preview-wrap { box-shadow: none; padding: 0; border-radius: 0; }
+      .preview-area { overflow: visible; padding: 0; background: white; border-radius: 0; }
+      .paper {
+        width: 210mm;
+        height: 297mm;
+        min-height: 297mm;
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        transform: none !important;
+        transform-origin: initial !important;
+      }
+      .paper:last-child { page-break-after: auto; }
+      .answer-page.hidden-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>九九プリントメーカー</h1>
+      <div class="subtitle">九九の問題をA4に印刷して、がんばりを残そう！</div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>プリント設定</h2>
+
+        <label for="childName">なまえ</label>
+        <input id="childName" type="text" placeholder="れい：はる" />
+
+        <label for="titleText">プリント名</label>
+        <input id="titleText" type="text" value="九九れんしゅうプリント" />
+
+        <div class="row">
+          <div>
+            <label for="questionType">問題タイプ</label>
+            <select id="questionType">
+              <option value="normal" selected>式を見て答えを書く</option>
+              <option value="blankLeft">□ × 数 = 答え</option>
+              <option value="blankRight">数 × □ = 答え</option>
+              <option value="mixBlank">穴あきミックス</option>
+            </select>
+          </div>
+          <div>
+            <label for="count">問題数</label>
+            <select id="count">
+              <option value="20" selected>20問</option>
+              <option value="30">30問</option>
+              <option value="40">40問</option>
+            </select>
+          </div>
+        </div>
+
+        <label>出す段</label>
+        <div class="dan-buttons" id="danButtons">
+          <label class="dan-check"><input type="checkbox" value="2" checked><span>2</span></label>
+          <label class="dan-check"><input type="checkbox" value="3" checked><span>3</span></label>
+          <label class="dan-check"><input type="checkbox" value="4" checked><span>4</span></label>
+          <label class="dan-check"><input type="checkbox" value="5" checked><span>5</span></label>
+          <label class="dan-check"><input type="checkbox" value="6" checked><span>6</span></label>
+          <label class="dan-check"><input type="checkbox" value="7" checked><span>7</span></label>
+          <label class="dan-check"><input type="checkbox" value="8" checked><span>8</span></label>
+          <label class="dan-check"><input type="checkbox" value="9" checked><span>9</span></label>
+        </div>
+
+        <div class="row">
+          <button class="sub-btn" type="button" onclick="selectAllDan()">全部えらぶ</button>
+          <button class="sub-btn" type="button" onclick="clearDan()">全部はずす</button>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="orderMode">出し方</label>
+            <select id="orderMode">
+              <option value="random" selected>ランダム</option>
+              <option value="inOrder">段ごとに順番</option>
+            </select>
+          </div>
+          <div>
+            <label for="dateText">日付</label>
+            <input id="dateText" type="text" />
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input id="showAnswers" type="checkbox" />
+          <span>問題ページに小さく答えを表示</span>
+        </div>
+
+        <div class="checkbox-row">
+          <input id="printAnswerPage" type="checkbox" checked />
+          <span>答えページも作る</span>
+        </div>
+
+        <div class="buttons">
+          <button class="main-btn" onclick="makeWorksheet()">問題をつくる</button>
+          <button class="print-btn" onclick="window.print()">A4で印刷する</button>
+          <button class="sub-btn" onclick="resetSettings()">設定をもどす</button>
+        </div>
+
+        <div class="note no-print">
+          まずは2〜9の段を選んで「問題をつくる」を押します。<br>
+          印刷すると、設定画面は消えてプリントだけが出ます。
+        </div>
+      </section>
+
+      <section class="preview-wrap">
+        <h2>プレビュー</h2>
+        <div class="preview-area" id="previewArea">
+          <section class="paper" id="worksheetPage">
+            <div class="title-row">
+              <div class="print-title" id="paperTitle">九九れんしゅうプリント</div>
+              <div class="title-stars">☆☆☆☆☆</div>
+            </div>
+            <div class="meta">
+              <div>なまえ：<span class="meta-box" id="paperName">　　　　　　　　</span></div>
+              <div>ひづけ：<span class="meta-box" id="paperDate">　月　日</span></div>
+              <div>シール：<span class="sticker-box">はる</span></div>
+            </div>
+            <div class="problems" id="problems"></div>
+          </section>
+
+          <section class="paper answer-page" id="answerPage">
+            <div class="title-row">
+              <div class="print-title">こたえ</div>
+            </div>
+            <div class="meta">
+              <div>なまえ：<span class="meta-box" id="answerName">　　　　　　　　</span></div>
+              <div>ひづけ：<span class="meta-box" id="answerDate">　月　日</span></div>
+              <div></div>
+            </div>
+            <div class="answers-grid" id="answers"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let currentProblems = [];
+
+    function todayText() {
+      const d = new Date();
+      return `${d.getMonth() + 1}月${d.getDate()}日`;
+    }
+
+    function rand(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = rand(0, i);
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function getSelectedDan() {
+      const checked = [...document.querySelectorAll('#danButtons input:checked')];
+      return checked.map(input => Number(input.value));
+    }
+
+    function selectAllDan() {
+      document.querySelectorAll('#danButtons input').forEach(input => input.checked = true);
+      makeWorksheet();
+    }
+
+    function clearDan() {
+      document.querySelectorAll('#danButtons input').forEach(input => input.checked = false);
+    }
+
+    function makeBaseList(dans) {
+      const list = [];
+      dans.forEach(dan => {
+        for (let i = 1; i <= 9; i++) list.push({ left: dan, right: i, answer: dan * i });
+      });
+      return list;
+    }
+
+    function makeProblemText(problem, type) {
+      const { left, right, answer } = problem;
+      let blankType = type;
+      if (type === "mixBlank") blankType = Math.random() < 0.5 ? "blankLeft" : "blankRight";
+
+      if (blankType === "blankLeft") {
+        return { html: `<span class="blank-box"></span><span>×</span><span>${right}</span><span>=</span><span>${answer}</span>`, answer: left };
+      }
+
+      if (blankType === "blankRight") {
+        return { html: `<span>${left}</span><span>×</span><span class="blank-box"></span><span>=</span><span>${answer}</span>`, answer: right };
+      }
+
+      return { html: `<span>${left}</span><span>×</span><span>${right}</span><span>=</span><span class="answer-line"></span>`, answer };
+    }
+
+    function makeWorksheet() {
+      let dans = getSelectedDan();
+      if (dans.length === 0) {
+        alert("出す段を1つ以上えらんでね");
+        return;
+      }
+
+      const childName = document.getElementById("childName").value.trim();
+      const titleText = document.getElementById("titleText").value.trim() || "九九れんしゅうプリント";
+      const questionType = document.getElementById("questionType").value;
+      const count = Number(document.getElementById("count").value);
+      const orderMode = document.getElementById("orderMode").value;
+      const dateText = document.getElementById("dateText").value.trim() || todayText();
+      const showAnswers = document.getElementById("showAnswers").checked;
+      const printAnswerPage = document.getElementById("printAnswerPage").checked;
+
+      const worksheetPage = document.getElementById("worksheetPage");
+      worksheetPage.classList.remove("count-20", "count-30", "count-40", "blank-mode");
+      worksheetPage.classList.add(`count-${count}`);
+      if (questionType !== "normal") worksheetPage.classList.add("blank-mode");
+
+      document.getElementById("paperTitle").textContent = titleText;
+      document.getElementById("paperName").textContent = childName || "　　　　　　　　";
+      document.getElementById("paperDate").textContent = dateText;
+      document.getElementById("answerName").textContent = childName || "　　　　　　　　";
+      document.getElementById("answerDate").textContent = dateText;
+
+      let baseList = makeBaseList(dans);
+      if (orderMode === "random") baseList = shuffle(baseList);
+
+      currentProblems = [];
+      let index = 0;
+      while (currentProblems.length < count) {
+        if (index >= baseList.length) {
+          baseList = orderMode === "random" ? shuffle(makeBaseList(dans)) : makeBaseList(dans);
+          index = 0;
+        }
+        currentProblems.push(baseList[index]);
+        index++;
+      }
+
+      const problemsEl = document.getElementById("problems");
+      const answersEl = document.getElementById("answers");
+      problemsEl.innerHTML = "";
+      answersEl.innerHTML = "";
+
+      currentProblems.forEach((p, index) => {
+        const made = makeProblemText(p, questionType);
+        const problem = document.createElement("div");
+        problem.className = "problem";
+        problem.innerHTML = `
+          <div class="problem-number">${index + 1}</div>
+          <div class="formula">${made.html}</div>
+          ${showAnswers ? `<div class="answer-small">こたえ：${made.answer}</div>` : ""}
+        `;
+        problemsEl.appendChild(problem);
+
+        const answer = document.createElement("div");
+        answer.className = "answer-item";
+        answer.textContent = `${index + 1}. ${made.answer}`;
+        answersEl.appendChild(answer);
+      });
+
+      const answerPage = document.getElementById("answerPage");
+      if (printAnswerPage) {
+        answerPage.classList.remove("hidden-print");
+        answerPage.style.display = "block";
+      } else {
+        answerPage.classList.add("hidden-print");
+        answerPage.style.display = "none";
+      }
+    }
+
+    function resetSettings() {
+      document.getElementById("childName").value = "";
+      document.getElementById("titleText").value = "九九れんしゅうプリント";
+      document.getElementById("questionType").value = "normal";
+      document.getElementById("count").value = "20";
+      document.getElementById("orderMode").value = "random";
+      document.getElementById("dateText").value = todayText();
+      document.getElementById("showAnswers").checked = false;
+      document.getElementById("printAnswerPage").checked = true;
+      document.querySelectorAll('#danButtons input').forEach(input => input.checked = true);
+      makeWorksheet();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("dateText").value = todayText();
+      makeWorksheet();
+    });
+  </script>
+</body>
+</html>

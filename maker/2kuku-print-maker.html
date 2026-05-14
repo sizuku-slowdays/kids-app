@@ -325,6 +325,27 @@
       text-align: center;
     }
 
+    .paper.blank-mode.count-20 .problems {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9mm 7mm;
+    }
+
+    .paper.blank-mode.count-20 .problem {
+      min-height: 30mm;
+    }
+
+    .paper.blank-mode.count-20 .formula {
+      font-size: 24px;
+      justify-content: flex-start;
+      padding-left: 6mm;
+      gap: 2.5mm;
+    }
+
+    .paper.blank-mode.count-20 .blank-box {
+      width: 14mm;
+      height: 9mm;
+    }
+
     .paper.count-30 .problems {
       gap: 6mm 6mm;
     }
@@ -345,6 +366,27 @@
     .paper.count-30 .blank-box {
       width: 14mm;
       height: 9mm;
+    }
+
+    .paper.blank-mode.count-30 .problems {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5mm 7mm;
+    }
+
+    .paper.blank-mode.count-30 .problem {
+      min-height: 23mm;
+    }
+
+    .paper.blank-mode.count-30 .formula {
+      font-size: 21px;
+      justify-content: flex-start;
+      padding-left: 5mm;
+      gap: 2mm;
+    }
+
+    .paper.blank-mode.count-30 .blank-box {
+      width: 13mm;
+      height: 8mm;
     }
 
     .paper.count-40 .print-title {
@@ -398,6 +440,16 @@
       width: 20mm;
       height: 8mm;
       font-size: 9px;
+    }
+
+    .paper.blank-mode.count-40 .formula {
+      font-size: 17px;
+      gap: 1mm;
+    }
+
+    .paper.blank-mode.count-40 .blank-box {
+      width: 10mm;
+      height: 7mm;
     }
 
     .answer-page {
@@ -696,8 +748,11 @@
       const printAnswerPage = document.getElementById("printAnswerPage").checked;
 
       const worksheetPage = document.getElementById("worksheetPage");
-      worksheetPage.classList.remove("count-20", "count-30", "count-40");
+      worksheetPage.classList.remove("count-20", "count-30", "count-40", "blank-mode");
       worksheetPage.classList.add(`count-${count}`);
+      if (questionType !== "normal") {
+        worksheetPage.classList.add("blank-mode");
+      }
 
       document.getElementById("paperTitle").textContent = titleText;
       document.getElementById("paperName").textContent = childName || "　　　　　　　　";

@@ -306,6 +306,18 @@
       vertical-align: bottom;
     }
 
+    .blank-box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 15mm;
+      height: 10mm;
+      border: 2px solid #222;
+      border-radius: 4px;
+      vertical-align: middle;
+      background: #fff;
+    }
+
     .answer-small {
       margin-top: 3mm;
       font-size: 12px;
@@ -328,6 +340,11 @@
     .paper.count-30 .answer-line {
       width: 18mm;
       height: 8mm;
+    }
+
+    .paper.count-30 .blank-box {
+      width: 14mm;
+      height: 9mm;
     }
 
     .paper.count-40 .print-title {
@@ -370,6 +387,11 @@
     .paper.count-40 .answer-line {
       width: 16mm;
       height: 7mm;
+    }
+
+    .paper.count-40 .blank-box {
+      width: 13mm;
+      height: 8mm;
     }
 
     .paper.count-40 .sticker-box {
@@ -647,11 +669,11 @@
       }
 
       if (blankType === "blankLeft") {
-        return { html: `<span class="answer-line"></span><span>×</span><span>${right}</span><span>=</span><span>${answer}</span>`, answer: left };
+        return { html: `<span class="blank-box"></span><span>×</span><span>${right}</span><span>=</span><span>${answer}</span>`, answer: left };
       }
 
       if (blankType === "blankRight") {
-        return { html: `<span>${left}</span><span>×</span><span class="answer-line"></span><span>=</span><span>${answer}</span>`, answer: right };
+        return { html: `<span>${left}</span><span>×</span><span class="blank-box"></span><span>=</span><span>${answer}</span>`, answer: right };
       }
 
       return { html: `<span>${left}</span><span>×</span><span>${right}</span><span>=</span><span class="answer-line"></span>`, answer };

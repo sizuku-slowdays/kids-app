@@ -6,8 +6,8 @@
   <title>プリントメーカー</title>
 
   <!-- ホーム画面追加用 -->
-  <link rel="apple-touch-icon" href="img/printmaker.png">
-  <link rel="icon" type="image/png" href="img/printmaker.png">
+  <link rel="apple-touch-icon" href="img/hissan-print.png">
+  <link rel="icon" type="image/png" href="img/hissan-print.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="プリントメーカー">
@@ -27,9 +27,9 @@
     }
 
     .page {
-      max-width: 960px;
+      max-width: 1040px;
       margin: 0 auto;
-      padding: 22px 16px 40px;
+      padding: 22px 16px 44px;
     }
 
     header {
@@ -59,18 +59,44 @@
 
     .lead {
       margin: 12px auto 0;
-      max-width: 640px;
+      max-width: 680px;
       font-size: clamp(16px, 3.6vw, 19px);
       line-height: 1.7;
       color: #6b5530;
       font-weight: 700;
     }
 
+    .section-title {
+      margin: 28px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 22px;
+      font-weight: 900;
+      color: #4b3211;
+    }
+
+    .section-title::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 28px;
+      border-radius: 999px;
+      background: #ffbd59;
+    }
+
+    .section-note {
+      margin: -4px 0 14px;
+      color: #765b30;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 18px;
-      margin-top: 18px;
     }
 
     .app-card {
@@ -84,7 +110,8 @@
       box-shadow: 0 8px 0 rgba(171, 113, 13, 0.16), 0 12px 24px rgba(122, 78, 10, 0.12);
       transition: transform 0.12s ease, box-shadow 0.12s ease;
       text-align: center;
-      min-height: 235px;
+      min-height: 255px;
+      position: relative;
     }
 
     .app-card:active {
@@ -116,6 +143,30 @@
       font-weight: 700;
     }
 
+    .font-label {
+      display: inline-block;
+      margin-top: 10px;
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .label-seto {
+      background: #fff1b8;
+      color: #7a4d00;
+    }
+
+    .label-mincho {
+      background: #eef4ff;
+      color: #315a8a;
+    }
+
+    .label-standard {
+      background: #eaf8ef;
+      color: #1d6b35;
+    }
+
     .coming-soon {
       opacity: 0.72;
       cursor: default;
@@ -137,7 +188,7 @@
     }
 
     .note {
-      margin-top: 24px;
+      margin-top: 28px;
       background: rgba(255, 255, 255, 0.78);
       border: 2px dashed #ffc85c;
       border-radius: 22px;
@@ -185,44 +236,79 @@
     </header>
 
     <main>
-      <section class="cards" aria-label="プリントメーカー一覧">
-        <a class="app-card" href="1hissan-print-maker.html">
-          <img src="img/hissan-print.png" alt="ひっ算プリント">
-          <div class="app-name">ひっ算プリント</div>
-          <div class="app-desc">
-            たし算・ひき算のひっ算問題をA4で作れます。
+      <section aria-label="かわいい瀬戸フォント版">
+        <h2 class="section-title">かわいい瀬戸フォント版</h2>
+        <p class="section-note">やわらかくて、子ども向けの雰囲気にしたプリントです。</p>
+
+        <div class="cards">
+          <a class="app-card" href="1hissan-print-maker.html">
+            <img src="img/hissan-print.png" alt="ひっ算プリント">
+            <div class="app-name">ひっ算プリント</div>
+            <div class="app-desc">たし算・ひき算のひっ算問題をA4で作れます。</div>
+            <span class="font-label label-seto">瀬戸フォント</span>
+          </a>
+
+          <a class="app-card" href="2kuku-print-maker.html">
+            <img src="img/kuku-print.png" alt="九九プリント">
+            <div class="app-name">九九プリント</div>
+            <div class="app-desc">九九の練習プリントをA4で作れます。</div>
+            <span class="font-label label-seto">瀬戸フォント</span>
+          </a>
+        </div>
+      </section>
+
+      <section aria-label="明朝体版">
+        <h2 class="section-title">すっきり明朝体版</h2>
+        <p class="section-note">教科書っぽく、落ち着いた文字で印刷したいとき用です。</p>
+
+        <div class="cards">
+          <a class="app-card" href="1hissan-print-maker-mincho.html">
+            <img src="img/hissan-print.png" alt="ひっ算プリント 明朝体">
+            <div class="app-name">ひっ算プリント<br>明朝体</div>
+            <div class="app-desc">ひっ算プリントを、すっきりした明朝体で作れます。</div>
+            <span class="font-label label-mincho">明朝体</span>
+          </a>
+
+          <a class="app-card" href="2kuku-print-maker-mincho.html">
+            <img src="img/kuku-print.png" alt="九九プリント 明朝体">
+            <div class="app-name">九九プリント<br>明朝体</div>
+            <div class="app-desc">九九プリントを、すっきりした明朝体で作れます。</div>
+            <span class="font-label label-mincho">明朝体</span>
+          </a>
+        </div>
+      </section>
+
+      <section aria-label="そのほかのプリント">
+        <h2 class="section-title">そのほかのプリント</h2>
+        <p class="section-note">時計は見やすさ優先で、標準フォントのままにしています。</p>
+
+        <div class="cards">
+          <a class="app-card" href="3clock-print-maker.html">
+            <img src="img/clock-print.png" alt="時計プリント">
+            <div class="app-name">時計プリント</div>
+            <div class="app-desc">時計の読み方や、針を書くプリントをA4で作れます。</div>
+            <span class="font-label label-standard">見やすさ優先</span>
+          </a>
+
+          <div class="app-card coming-soon" aria-disabled="true">
+            <img src="img/hissan-print.png" alt="準備中">
+            <div class="app-name">お金プリント</div>
+            <div class="app-desc">お買い物計算や、おつりのプリントを作る予定です。</div>
+            <span class="soon-label">準備中</span>
           </div>
-        </a>
 
-<a class="app-card" href="2kuku-print-maker.html">
-  <img src="img/kuku-print.png" alt="九九プリント">
-  <div class="app-name">九九プリント</div>
-  <div class="app-desc">
-    九九の練習プリントをA4で作れます。
-  </div>
-</a>
-
-<a class="app-card" href="3clock-print-maker.html">
-  <img src="img/clock-print.png" alt="時計プリント">
-  <div class="app-name">時計プリント</div>
-  <div class="app-desc">
-    時計の読み方や針を書くプリントをA4で作れます。
-  </div>
-</a>
-
-        <div class="app-card coming-soon" aria-disabled="true">
-          <img src="img/hissan-print.png" alt="準備中">
-          <div class="app-name">ことばプリント</div>
-          <div class="app-desc">
-            ことば・反対語・仲間分けのプリント予定です。
+          <div class="app-card coming-soon" aria-disabled="true">
+            <img src="img/hissan-print.png" alt="準備中">
+            <div class="app-name">ことばプリント</div>
+            <div class="app-desc">ことば・反対語・仲間分けのプリント予定です。</div>
+            <span class="soon-label">準備中</span>
           </div>
-          <span class="soon-label">準備中</span>
         </div>
       </section>
 
       <section class="note">
-        ホーム画面に追加するときは、このページを開いて追加してOKです。<br>
-        今後プリントメーカーが増えたら、このページにカードを追加していきます。
+        瀬戸フォント版を使うには、<strong>maker/fonts/setofont.ttf</strong> が必要です。<br>
+        明朝体版と時計プリントは、追加フォントなしで使えます。
       </section>
 
       <div class="footer-link">

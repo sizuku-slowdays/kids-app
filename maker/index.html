@@ -1,1 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>プリントメーカー</title>
 
+  <!-- ホーム画面追加用 -->
+  <link rel="apple-touch-icon" href="img/hissan-print.png">
+  <link rel="icon" type="image/png" href="img/hissan-print.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="プリントメーカー">
+  <meta name="theme-color" content="#fff7d6">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: linear-gradient(180deg, #fff7d6 0%, #ffe9b8 100%);
+      color: #3b2f2f;
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 22px 16px 40px;
+    }
+
+    header {
+      text-align: center;
+      padding: 18px 8px 22px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #ffffff;
+      border: 2px solid #ffd27a;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #8a5a00;
+      margin-bottom: 12px;
+      box-shadow: 0 3px 0 rgba(120, 80, 0, 0.12);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 8vw, 52px);
+      letter-spacing: 0.06em;
+      color: #493314;
+    }
+
+    .lead {
+      margin: 12px auto 0;
+      max-width: 640px;
+      font-size: clamp(16px, 3.6vw, 19px);
+      line-height: 1.7;
+      color: #6b5530;
+      font-weight: 700;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .app-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #ffffff;
+      border: 3px solid #ffe0a3;
+      border-radius: 28px;
+      padding: 20px 16px;
+      box-shadow: 0 8px 0 rgba(171, 113, 13, 0.16), 0 12px 24px rgba(122, 78, 10, 0.12);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      text-align: center;
+      min-height: 235px;
+    }
+
+    .app-card:active {
+      transform: translateY(4px);
+      box-shadow: 0 4px 0 rgba(171, 113, 13, 0.16), 0 8px 18px rgba(122, 78, 10, 0.12);
+    }
+
+    .app-card img {
+      width: 112px;
+      height: 112px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 12px;
+      border-radius: 24px;
+    }
+
+    .app-name {
+      font-size: 21px;
+      font-weight: 900;
+      line-height: 1.35;
+      color: #3d2c14;
+    }
+
+    .app-desc {
+      margin-top: 8px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #7a6540;
+      font-weight: 700;
+    }
+
+    .coming-soon {
+      opacity: 0.72;
+      cursor: default;
+    }
+
+    .coming-soon img {
+      filter: grayscale(0.15);
+    }
+
+    .soon-label {
+      display: inline-block;
+      margin-top: 10px;
+      background: #eef7ff;
+      color: #236089;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .note {
+      margin-top: 24px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 2px dashed #ffc85c;
+      border-radius: 22px;
+      padding: 15px 16px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #654a20;
+      font-weight: 700;
+    }
+
+    .footer-link {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .footer-link a {
+      display: inline-block;
+      color: #755018;
+      background: #fff;
+      border: 2px solid #ffd27a;
+      border-radius: 999px;
+      padding: 10px 16px;
+      text-decoration: none;
+      font-weight: 900;
+      box-shadow: 0 3px 0 rgba(120, 80, 0, 0.12);
+    }
+
+    @media (min-width: 700px) {
+      .app-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 11px 0 rgba(171, 113, 13, 0.16), 0 16px 28px rgba(122, 78, 10, 0.14);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="badge">A4印刷用</div>
+      <h1>プリントメーカー</h1>
+      <p class="lead">
+        えらんで、つくって、A4に印刷。<br>
+        がんばったプリントをファイルに残そう！
+      </p>
+    </header>
+
+    <main>
+      <section class="cards" aria-label="プリントメーカー一覧">
+        <a class="app-card" href="1hissan-print-maker.html">
+          <img src="img/hissan-print.png" alt="ひっ算プリント">
+          <div class="app-name">ひっ算プリント</div>
+          <div class="app-desc">
+            たし算・ひき算のひっ算問題をA4で作れます。
+          </div>
+        </a>
+
+        <div class="app-card coming-soon" aria-disabled="true">
+          <img src="img/hissan-print.png" alt="準備中">
+          <div class="app-name">九九プリント</div>
+          <div class="app-desc">
+            九九の練習プリントを作る予定です。
+          </div>
+          <span class="soon-label">準備中</span>
+        </div>
+
+        <div class="app-card coming-soon" aria-disabled="true">
+          <img src="img/hissan-print.png" alt="準備中">
+          <div class="app-name">時計プリント</div>
+          <div class="app-desc">
+            時計の読み方プリントを作る予定です。
+          </div>
+          <span class="soon-label">準備中</span>
+        </div>
+
+        <div class="app-card coming-soon" aria-disabled="true">
+          <img src="img/hissan-print.png" alt="準備中">
+          <div class="app-name">ことばプリント</div>
+          <div class="app-desc">
+            ことば・反対語・仲間分けのプリント予定です。
+          </div>
+          <span class="soon-label">準備中</span>
+        </div>
+      </section>
+
+      <section class="note">
+        ホーム画面に追加するときは、このページを開いて追加してOKです。<br>
+        今後プリントメーカーが増えたら、このページにカードを追加していきます。
+      </section>
+
+      <div class="footer-link">
+        <a href="../kids-app/">ふつうのキッズアプリへ</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

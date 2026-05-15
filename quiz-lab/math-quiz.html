@@ -98,6 +98,11 @@
       transform: scale(0.98);
     }
 
+    .level-btn.selected {
+      outline: 4px solid #93c5fd;
+      background: #dbeafe;
+    }
+
     .main-btn {
       width: 100%;
       background: #2563eb;
@@ -112,11 +117,6 @@
       background: #f1f5f9;
       color: #334155;
       margin-top: 12px;
-    }
-
-    .danger-btn {
-      background: #fee2e2;
-      color: #991b1b;
     }
 
     .option-btn {
@@ -166,15 +166,27 @@
       white-space: pre-line;
     }
 
-    .formula {
-      display: inline-block;
-      background: #f8fafc;
+    #figureArea {
+      margin: 14px 0 18px;
+      text-align: center;
+    }
+
+    .quiz-figure {
+      width: 100%;
+      max-width: 360px;
+      height: auto;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 10px;
       border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 8px 12px;
-      margin-top: 8px;
-      font-family: "Consolas", "Menlo", monospace;
-      font-size: 24px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    }
+
+    .figure-note {
+      font-size: 14px;
+      color: #64748b;
+      margin-top: 6px;
+      text-align: center;
     }
 
     .feedback {
@@ -226,6 +238,17 @@
       margin-bottom: 10px;
     }
 
+    .error-box {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      border-radius: 16px;
+      padding: 14px;
+      line-height: 1.7;
+      font-size: 15px;
+      margin-top: 16px;
+    }
+
     @media (max-width: 520px) {
       .page {
         padding: 18px 12px 36px;
@@ -247,16 +270,16 @@
         font-size: 22px;
       }
 
-      .formula {
-        font-size: 22px;
-      }
-
       button {
         font-size: 17px;
       }
 
       .option-btn {
         font-size: 18px;
+      }
+
+      .quiz-figure {
+        max-width: 330px;
       }
     }
   </style>
@@ -277,10 +300,10 @@
       <p class="section-title">難易度を選んでください</p>
 
       <div class="button-grid">
-        <button onclick="selectLevel('easy')">やさしい</button>
-        <button onclick="selectLevel('normal')">ふつう</button>
-        <button onclick="selectLevel('hard')">むずかしい</button>
-        <button onclick="selectLevel('challenge')">挑戦</button>
+        <button class="level-btn" data-level="easy" onclick="selectLevel('easy')">やさしい</button>
+        <button class="level-btn selected" data-level="normal" onclick="selectLevel('normal')">ふつう</button>
+        <button class="level-btn" data-level="hard" onclick="selectLevel('hard')">むずかしい</button>
+        <button class="level-btn" data-level="challenge" onclick="selectLevel('challenge')">挑戦</button>
       </div>
 
       <button class="main-btn" onclick="startQuiz()">10問チャレンジを始める</button>
@@ -288,6 +311,11 @@
       <p class="lead" style="text-align:center; margin-top:18px;">
         ※ 難易度を選ばない場合は「ふつう」で始まります。
       </p>
+
+      <div id="dataError" class="error-box hidden">
+        問題データが読み込めていないようです。<br>
+        <strong>data/math-quiz-data.js</strong> の場所とファイル名を確認してください。
+      </div>
     </section>
 
     <section id="quizScreen" class="card hidden">
@@ -300,6 +328,8 @@
       <div id="genreLabel" class="pill">計算</div>
 
       <div id="questionText" class="question"></div>
+
+      <div id="figureArea"></div>
 
       <div id="optionsArea"></div>
 
@@ -318,7 +348,10 @@
       <button class="sub-btn" onclick="backToStart()">難易度を選びなおす</button>
     </section>
   </div>
-<script src="data/math-quiz-data.js"></script>
+
+  <!-- 問題データを先に読み込む -->
+  <script src="data/math-quiz-data.js"></script>
+
   <script>
     const QUESTION_COUNT = 10;
 
@@ -335,25 +368,47 @@
       challenge: "挑戦"
     };
 
+    window.addEventListener("DOMContentLoaded", () => {
+      checkQuestionData();
+    });
+
+    function checkQuestionData() {
+      const errorBox = document.getElementById("dataError");
+
+      if (typeof questions === "undefined" || !Array.isArray(questions)) {
+        errorBox.classList.remove("hidden");
+      } else {
+        errorBox.classList.add("hidden");
+      }
+    }
 
     function selectLevel(level) {
       selectedLevel = level;
-      const buttons = document.querySelectorAll("#startScreen button");
-      buttons.forEach(btn => btn.style.outline = "none");
 
-      event.target.style.outline = "4px solid #93c5fd";
+      const buttons = document.querySelectorAll(".level-btn");
+      buttons.forEach(btn => {
+        btn.classList.remove("selected");
+
+        if (btn.dataset.level === level) {
+          btn.classList.add("selected");
+        }
+      });
     }
 
     function startQuiz() {
-      const pool = questions.filter(q => q.level === selectedLevel);
-
-      currentQuestions = shuffleArray(pool).slice(0, QUESTION_COUNT);
-
-      while (currentQuestions.length < QUESTION_COUNT) {
-        currentQuestions = currentQuestions.concat(shuffleArray(pool));
+      if (typeof questions === "undefined" || !Array.isArray(questions)) {
+        document.getElementById("dataError").classList.remove("hidden");
+        return;
       }
 
-      currentQuestions = currentQuestions.slice(0, QUESTION_COUNT);
+      const pool = questions.filter(q => q.level === selectedLevel);
+
+      if (pool.length === 0) {
+        alert("この難易度の問題がまだ登録されていません。");
+        return;
+      }
+
+      currentQuestions = makeQuestionSet(pool, QUESTION_COUNT);
 
       currentIndex = 0;
       score = 0;
@@ -366,6 +421,16 @@
       showQuestion();
     }
 
+    function makeQuestionSet(pool, count) {
+      let result = shuffleArray(pool).slice(0, count);
+
+      while (result.length < count) {
+        result = result.concat(shuffleArray(pool));
+      }
+
+      return result.slice(0, count);
+    }
+
     function showQuestion() {
       answered = false;
 
@@ -374,8 +439,10 @@
       document.getElementById("levelLabel").textContent = "難易度：" + levelNames[selectedLevel];
       document.getElementById("progressLabel").textContent = (currentIndex + 1) + " / " + QUESTION_COUNT + "問";
       document.getElementById("scoreLabel").textContent = "正解：" + score;
-      document.getElementById("genreLabel").textContent = q.genre;
+      document.getElementById("genreLabel").textContent = q.genre || "数学";
       document.getElementById("questionText").textContent = q.question;
+
+      showFigure(q);
 
       const optionsArea = document.getElementById("optionsArea");
       optionsArea.innerHTML = "";
@@ -391,6 +458,16 @@
       document.getElementById("feedback").classList.remove("show");
       document.getElementById("feedback").innerHTML = "";
       document.getElementById("nextBtn").classList.add("hidden");
+    }
+
+    function showFigure(q) {
+      const figureArea = document.getElementById("figureArea");
+
+      if (q.figure) {
+        figureArea.innerHTML = q.figure;
+      } else {
+        figureArea.innerHTML = "";
+      }
     }
 
     function checkAnswer(button, selected, question) {
@@ -415,7 +492,11 @@
         feedback.innerHTML = "<strong>正解！</strong><br>" + question.explanation;
       } else {
         button.classList.add("wrong");
-        feedback.innerHTML = "<strong>おしい！</strong><br>正解は「" + question.answer + "」です。<br>" + question.explanation;
+        feedback.innerHTML =
+          "<strong>おしい！</strong><br>正解は「" +
+          question.answer +
+          "」です。<br>" +
+          question.explanation;
       }
 
       document.getElementById("scoreLabel").textContent = "正解：" + score;

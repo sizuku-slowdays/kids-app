@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ひっ算プリントメーカー</title>
 
-  <!-- ホーム画面追加用：画像を用意したら href を変更してください -->
   <link rel="apple-touch-icon" href="img/hissan-print.png">
   <link rel="icon" type="image/png" href="img/hissan-print.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,24 +14,21 @@
 
   <style>
     @font-face {
-  font-family: "SetoFont";
-  src: url("fonts/setofont.ttf") format("truetype");
-  font-display: swap;
-}
+      font-family: "SetoFont";
+      src: url("fonts/setofont.ttf") format("truetype");
+      font-display: swap;
+    }
+
     :root {
       --bg: #fff8dc;
       --card: #ffffff;
       --main: #ffb84d;
-      --main-dark: #e58d00;
       --accent: #79c7ff;
       --text: #3b2f2f;
       --line: #d7c7a3;
-      --soft: #fff0bf;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -41,425 +37,113 @@
       color: var(--text);
     }
 
-    .app {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 18px;
+    .app { max-width: 1100px; margin: 0 auto; padding: 18px; }
+    header { text-align: center; margin: 12px 0 18px; }
+    h1 { margin: 0; font-size: clamp(28px, 5vw, 44px); letter-spacing: 0.04em; }
+    .subtitle { margin-top: 8px; font-size: 16px; color: #6b5b43; font-weight: 700; }
+
+    .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+    .panel, .preview-wrap { background: var(--card); border-radius: 24px; box-shadow: 0 8px 24px rgba(123,91,31,.16); padding: 18px; }
+    .panel h2, .preview-wrap h2 { margin: 0 0 14px; font-size: 22px; }
+    label { display: block; font-weight: 800; margin: 14px 0 6px; font-size: 15px; }
+
+    select, input[type="text"] {
+      width: 100%; padding: 12px 14px; border: 2px solid #ead8aa; border-radius: 14px;
+      font-size: 16px; background: #fffdf5; color: var(--text); font-family: inherit;
     }
 
-    header {
-      text-align: center;
-      margin: 12px 0 18px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(28px, 5vw, 44px);
-      letter-spacing: 0.04em;
-    }
-
-    .subtitle {
-      margin-top: 8px;
-      font-size: 16px;
-      color: #6b5b43;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 18px;
-      align-items: start;
-    }
-
-    .panel,
-    .preview-wrap {
-      background: var(--card);
-      border-radius: 24px;
-      box-shadow: 0 8px 24px rgba(123, 91, 31, 0.16);
-      padding: 18px;
-    }
-
-    .panel h2,
-    .preview-wrap h2 {
-      margin: 0 0 14px;
-      font-size: 22px;
-    }
-
-    label {
-      display: block;
-      font-weight: 700;
-      margin: 14px 0 6px;
-      font-size: 15px;
-    }
-
-    select,
-    input[type="text"],
-    input[type="number"] {
-      width: 100%;
-      padding: 12px 14px;
-      border: 2px solid #ead8aa;
-      border-radius: 14px;
-      font-size: 16px;
-      background: #fffdf5;
-      color: var(--text);
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .checkbox-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-      font-weight: 700;
-    }
-
-    .checkbox-row input {
-      width: 22px;
-      height: 22px;
-    }
-
-    .buttons {
-      display: grid;
-      gap: 10px;
-      margin-top: 18px;
-    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-weight: 700; line-height: 1.4; }
+    .checkbox-row input { width: 22px; height: 22px; flex: 0 0 auto; }
+    .buttons { display: grid; gap: 10px; margin-top: 18px; }
 
     button {
-      border: none;
-      border-radius: 18px;
-      padding: 14px 16px;
-      font-size: 17px;
-      font-weight: 800;
-      cursor: pointer;
-      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+      border: none; border-radius: 18px; padding: 14px 16px; font-size: 17px; font-weight: 800;
+      cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.15); font-family: inherit;
     }
+    button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+    .main-btn { background: var(--main); color: #442900; }
+    .print-btn { background: #75d98c; color: #123a1d; }
+    .sub-btn { background: #e9f5ff; color: #154a72; }
 
-    button:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
-    }
-
-    .main-btn {
-      background: var(--main);
-      color: #442900;
-    }
-
-    .print-btn {
-      background: #75d98c;
-      color: #123a1d;
-    }
-
-    .sub-btn {
-      background: #e9f5ff;
-      color: #154a72;
-    }
-
-    .note {
-      margin-top: 14px;
-      padding: 12px;
-      background: #fff8e7;
-      border-left: 5px solid var(--main);
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    .preview-area {
-      overflow: auto;
-      background: #f2ead8;
-      border-radius: 18px;
-      padding: 16px;
-    }
+    .note { margin-top: 14px; padding: 12px; background: #fff8e7; border-left: 5px solid var(--main); border-radius: 12px; font-size: 14px; line-height: 1.6; }
+    .preview-area { overflow: auto; background: #f2ead8; border-radius: 18px; padding: 16px; }
 
     .paper {
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto;
-      background: white;
-      color: #222;
-      padding: 13mm 12mm;
-      box-shadow: 0 0 16px rgba(0,0,0,0.2);
-      position: relative;
+      width: 210mm; min-height: 297mm; margin: 0 auto; background: white; color: #222;
+      padding: 13mm 12mm; box-shadow: 0 0 16px rgba(0,0,0,.2); position: relative;
     }
 
-    .title-row {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10mm;
-      margin-bottom: 6px;
-    }
+    .title-row { display: flex; justify-content: center; align-items: center; gap: 10mm; margin-bottom: 6px; }
+    .print-title { text-align: center; font-size: 26px; font-weight: 900; letter-spacing: .08em; }
+    .title-stars { font-size: 20px; font-weight: 900; letter-spacing: .12em; white-space: nowrap; }
 
-    .print-title {
-      text-align: center;
-      font-size: 26px;
-      font-weight: 900;
-      letter-spacing: 0.08em;
-    }
+    .meta { display: grid; grid-template-columns: 1.2fr 1fr .8fr; gap: 8px; font-size: 15px; margin-bottom: 10mm; align-items: end; }
+    .meta-box { border-bottom: 1.8px solid #222; min-height: 26px; padding: 2px 4px; }
+    .score-sticker-box { display: inline-flex; align-items: center; justify-content: center; width: 24mm; height: 10mm; margin-left: 2mm; border: 1.8px solid #222; border-radius: 6px; font-size: 11px; color: #777; vertical-align: middle; }
 
-    .title-stars {
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      white-space: nowrap;
-    }
+    .problems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11mm 8mm; }
+    .problem { min-height: 39mm; page-break-inside: avoid; }
+    .problem-number { font-size: 14px; font-weight: 900; margin-bottom: 2mm; }
 
-    .meta {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr 0.8fr;
-      gap: 8px;
-      font-size: 15px;
-      margin-bottom: 10mm;
-      align-items: end;
-    }
+    .calc-box { width: 42mm; margin: 0 auto; font-size: 28px; line-height: 1.15; font-weight: 500; letter-spacing: .03em; }
+    .num-line { display: flex; justify-content: flex-end; align-items: center; min-height: 9mm; }
+    .op-line { display: flex; justify-content: flex-end; align-items: center; border-bottom: 2px solid #222; padding-bottom: 1mm; min-height: 10mm; }
+    .op { margin-right: 4mm; }
+    .answer-space { height: 12mm; border-bottom: 1px solid #bbb; }
 
-    .meta-box {
-      border-bottom: 1.8px solid #222;
-      min-height: 26px;
-      padding: 2px 4px;
-    }
+    .yoko-box { width: 48mm; margin: 0 auto; font-size: 26px; font-weight: 500; text-align: center; }
+    .yoko-question { min-height: 14mm; display: flex; align-items: center; justify-content: center; gap: 2mm; white-space: nowrap; }
+    .yoko-answer { height: 12mm; border-bottom: 1px solid #bbb; }
 
-    .problems {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 11mm 8mm;
-    }
+    .division-box { width: 48mm; margin: 0 auto; font-size: 26px; font-weight: 500; text-align: center; }
+    .division-question { min-height: 15mm; display: flex; align-items: center; justify-content: center; gap: 2mm; white-space: nowrap; }
+    .division-answer { height: 12mm; border-bottom: 1px solid #bbb; }
+    .amari-text { font-size: 15px; margin-left: 2mm; }
 
-    .problem {
-      min-height: 39mm;
-      page-break-inside: avoid;
-    }
+    .answer-small { margin-top: 2mm; font-size: 12px; color: #666; text-align: right; line-height: 1.35; }
+    .yoko-box .answer-small, .division-box .answer-small { text-align: center; }
 
-    .problem-number {
-      font-size: 15px;
-      font-weight: 900;
-      margin-bottom: 2mm;
-    }
+    .paper.count-18 .problems { gap: 6mm 8mm; }
+    .paper.count-18 .problem { min-height: 31mm; }
+    .paper.count-18 .calc-box { font-size: 25px; }
+    .paper.count-18 .answer-space, .paper.count-18 .yoko-answer, .paper.count-18 .division-answer { height: 11mm; }
 
-    .calc-box {
-      width: 42mm;
-      margin: 0 auto;
-      font-family: "SetoFont", "Hiragino Maru Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
-      font-size: 28px;
-      line-height: 1.15;
-      font-weight: 500;
-      letter-spacing: 0.03em;
-    }
+    .paper.count-24 .print-title { font-size: 22px; }
+    .paper.count-24 .title-stars { font-size: 16px; }
+    .paper.count-24 .title-row { margin-bottom: 4px; gap: 6mm; }
+    .paper.count-24 .meta { margin-bottom: 5mm; }
+    .paper.count-24 .problems { gap: 2.5mm 7mm; }
+    .paper.count-24 .problem { min-height: 25mm; }
+    .paper.count-24 .problem-number { font-size: 12px; margin-bottom: 1mm; }
+    .paper.count-24 .calc-box { width: 38mm; font-size: 22px; line-height: 1.05; }
+    .paper.count-24 .num-line { min-height: 7mm; }
+    .paper.count-24 .op-line { min-height: 8mm; }
+    .paper.count-24 .answer-space, .paper.count-24 .yoko-answer, .paper.count-24 .division-answer { height: 8mm; }
+    .paper.count-24 .yoko-box, .paper.count-24 .division-box { width: 42mm; font-size: 21px; }
+    .paper.count-24 .score-sticker-box { width: 20mm; height: 8mm; font-size: 9px; }
 
-    .num-line {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      min-height: 9mm;
-    }
-
-    .op-line {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      border-bottom: 2px solid #222;
-      padding-bottom: 1mm;
-      min-height: 10mm;
-    }
-
-    .op {
-      margin-right: 4mm;
-    }
-
-    .answer-space {
-      height: 12mm;
-      border-bottom: 1px solid #bbb;
-    }
-
-    .answer-small {
-      margin-top: 2mm;
-      font-size: 12px;
-      color: #666;
-      text-align: right;
-    }
-
-    .score-sticker-box {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 24mm;
-      height: 10mm;
-      margin-left: 2mm;
-      border: 1.8px solid #222;
-      border-radius: 6px;
-      font-size: 11px;
-      color: #777;
-      vertical-align: middle;
-    }
-
-    .answer-page {
-      margin-top: 16px;
-    }
-
-    .paper.count-18 .problems {
-      gap: 6mm 8mm;
-    }
-
-    .paper.count-18 .problem {
-      min-height: 31mm;
-    }
-
-    .paper.count-18 .calc-box {
-      font-size: 25px;
-    }
-
-    .paper.count-18 .answer-space {
-      height: 11mm;
-    }
-
-    .paper.count-24 .print-title {
-      font-size: 22px;
-    }
-
-    .paper.count-24 .title-stars {
-      font-size: 16px;
-    }
-
-    .paper.count-24 .title-row {
-      margin-bottom: 4px;
-      gap: 6mm;
-    }
-
-    .paper.count-24 .meta {
-      margin-bottom: 5mm;
-    }
-
-    .paper.count-24 .problems {
-      gap: 2.5mm 7mm;
-    }
-
-    .paper.count-24 .problem {
-      min-height: 25mm;
-    }
-
-    .paper.count-24 .problem-number {
-      font-size: 12px;
-      margin-bottom: 1mm;
-    }
-
-    .paper.count-24 .calc-box {
-      width: 38mm;
-      font-size: 22px;
-      line-height: 1.05;
-    }
-
-    .paper.count-24 .num-line {
-      min-height: 7mm;
-    }
-
-    .paper.count-24 .op-line {
-      min-height: 8mm;
-    }
-
-    .paper.count-24 .answer-space {
-      height: 8mm;
-    }
-
-    .paper.count-24 .score-sticker-box {
-      width: 20mm;
-      height: 8mm;
-      font-size: 9px;
-    }
-
-    .answers-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 7mm 5mm;
-      font-size: 18px;
-      margin-top: 10mm;
-      font-family: "SetoFont", "Hiragino Maru Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
-      font-weight: 500;
-    }
-
-    .answer-item {
-      border-bottom: 1px solid #999;
-      padding-bottom: 3mm;
-    }
+    .answer-page { margin-top: 16px; }
+    .answers-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7mm 5mm; font-size: 18px; margin-top: 10mm; font-weight: 500; }
+    .answer-item { border-bottom: 1px solid #999; padding-bottom: 3mm; line-height: 1.35; }
 
     @media (max-width: 900px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .paper {
-        transform: scale(0.55);
-        transform-origin: top left;
-        margin: 0;
-      }
-
-      .preview-area {
-        height: 720px;
-      }
+      .layout { grid-template-columns: 1fr; }
+      .paper { transform: scale(.55); transform-origin: top left; margin: 0; }
+      .preview-area { height: 720px; }
     }
 
     @media print {
-      @page {
-        size: A4 portrait;
-        margin: 0;
-      }
-
-      body {
-        background: white;
-      }
-
-      header,
-      .panel,
-      .preview-wrap > h2,
-      .note,
-      .no-print {
-        display: none !important;
-      }
-
-      .app {
-        max-width: none;
-        padding: 0;
-      }
-
-      .layout {
-        display: block;
-      }
-
-      .preview-wrap {
-        box-shadow: none;
-        padding: 0;
-        border-radius: 0;
-      }
-
-      .preview-area {
-        overflow: visible;
-        padding: 0;
-        background: white;
-        border-radius: 0;
-      }
-
-      .paper {
-        width: 210mm;
-        height: 297mm;
-        min-height: 297mm;
-        margin: 0;
-        box-shadow: none;
-        page-break-after: always;
-        transform: none !important;
-        transform-origin: initial !important;
-      }
-
-      .paper:last-child {
-        page-break-after: auto;
-      }
-
-      .answer-page.hidden-print {
-        display: none !important;
-      }
+      @page { size: A4 portrait; margin: 0; }
+      body { background: white; }
+      header, .panel, .preview-wrap > h2, .note, .no-print { display: none !important; }
+      .app { max-width: none; padding: 0; }
+      .layout { display: block; }
+      .preview-wrap { box-shadow: none; padding: 0; border-radius: 0; }
+      .preview-area { overflow: visible; padding: 0; background: white; border-radius: 0; }
+      .paper { width: 210mm; height: 297mm; min-height: 297mm; margin: 0; box-shadow: none; page-break-after: always; transform: none !important; transform-origin: initial !important; }
+      .paper:last-child { page-break-after: auto; }
+      .answer-page.hidden-print { display: none !important; }
     }
   </style>
 </head>
@@ -467,7 +151,7 @@
   <div class="app">
     <header>
       <h1>ひっ算プリントメーカー</h1>
-      <div class="subtitle">A4に印刷して、がんばりを紙で残そう！</div>
+      <div class="subtitle">たし算・ひき算・かけ算・わり算をA4に印刷できます</div>
     </header>
 
     <main class="layout">
@@ -486,12 +170,16 @@
             <select id="mode">
               <option value="add">たし算</option>
               <option value="sub">ひき算</option>
-              <option value="mix" selected>たし算・ひき算</option>
+              <option value="mixAddSub" selected>たし算・ひき算</option>
+              <option value="mul">かけ算</option>
+              <option value="div">わり算</option>
+              <option value="mixAll">ぜんぶミックス</option>
             </select>
           </div>
           <div>
             <label for="level">むずかしさ</label>
             <select id="level">
+              <option value="superEasy">もっとやさしい</option>
               <option value="easy">かんたん</option>
               <option value="normal" selected>ふつう</option>
               <option value="hard">むずかしい</option>
@@ -521,6 +209,12 @@
           <option value="force">なるべくあり</option>
         </select>
 
+        <label for="divisionRemainder">わり算のあまり</label>
+        <select id="divisionRemainder">
+          <option value="none" selected>あまりなし</option>
+          <option value="small">あまりありも混ぜる</option>
+        </select>
+
         <div class="checkbox-row">
           <input id="showAnswers" type="checkbox" />
           <span>問題ページに小さく答えを表示</span>
@@ -538,8 +232,8 @@
         </div>
 
         <div class="note no-print">
-          印刷すると、設定画面は消えてプリントだけが出ます。<br>
-          iPhoneやiPadなら共有メニューから印刷、パソコンなら Ctrl + P でも印刷できます。
+          「もっとやさしい」は、次女ちゃん向けに <strong>10までのたし算・ひき算</strong> が中心です。<br>
+          かけ算・わり算は、はじめは「かんたん」からがおすすめです。
         </div>
       </section>
 
@@ -557,7 +251,6 @@
               <div>シール：<span class="score-sticker-box">はる</span></div>
             </div>
             <div class="problems" id="problems"></div>
-
           </section>
 
           <section class="paper answer-page" id="answerPage">
@@ -582,54 +275,49 @@
       return `${d.getMonth() + 1}月${d.getDate()}日`;
     }
 
-    function rand(min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-    function hasCarry(a, b) {
-      const onesA = a % 10;
-      const onesB = b % 10;
-      return onesA + onesB >= 10;
-    }
-
-    function hasBorrow(a, b) {
-      const onesA = a % 10;
-      const onesB = b % 10;
-      return onesA < onesB;
-    }
-
-    function getRange(level) {
-      if (level === "easy") {
-        return { min: 10, max: 49 };
-      }
-      if (level === "normal") {
-        return { min: 20, max: 89 };
-      }
-      return { min: 100, max: 999 };
-    }
+    function hasCarry(a, b) { return (a % 10) + (b % 10) >= 10; }
+    function hasBorrow(a, b) { return (a % 10) < (b % 10); }
 
     function pickOperator(mode) {
       if (mode === "add") return "+";
       if (mode === "sub") return "−";
+      if (mode === "mul") return "×";
+      if (mode === "div") return "÷";
+      if (mode === "mixAll") {
+        const ops = ["+", "−", "×", "÷"];
+        return ops[rand(0, ops.length - 1)];
+      }
       return Math.random() < 0.5 ? "+" : "−";
     }
 
-    function makeOneProblem(mode, level, carryMode) {
-      const op = pickOperator(mode);
-      const range = getRange(level);
+    function getAddSubRange(level) {
+      if (level === "superEasy") return { min: 1, max: 9, answerMax: 10 };
+      if (level === "easy") return { min: 10, max: 49, answerMax: 99 };
+      if (level === "normal") return { min: 20, max: 89, answerMax: 150 };
+      return { min: 100, max: 999, answerMax: 1998 };
+    }
+
+    function makeAddSubProblem(op, level, carryMode) {
+      const range = getAddSubRange(level);
       let a, b, answer;
       let guard = 0;
 
-      while (guard < 300) {
+      while (guard < 500) {
         guard++;
         a = rand(range.min, range.max);
         b = rand(range.min, range.max);
 
-        if (op === "−" && b > a) {
-          const temp = a;
-          a = b;
-          b = temp;
+        if (level === "superEasy") {
+          if (op === "+") {
+            if (a + b > range.answerMax) continue;
+          } else {
+            if (b > a) [a, b] = [b, a];
+          }
         }
+
+        if (op === "−" && b > a) [a, b] = [b, a];
 
         if (op === "+") {
           const c = hasCarry(a, b);
@@ -642,17 +330,79 @@
           if (carryMode === "force" && !c) continue;
           answer = a - b;
         }
-
-        return { a, b, op, answer };
+        return { kind: "vertical", a, b, op, answer, answerText: String(answer) };
       }
 
-      if (op === "+") {
-        answer = a + b;
+      if (op === "+") answer = a + b;
+      else { if (b > a) [a, b] = [b, a]; answer = a - b; }
+      return { kind: "vertical", a, b, op, answer, answerText: String(answer) };
+    }
+
+    function makeMulProblem(level) {
+      let a, b;
+      if (level === "superEasy") {
+        a = rand(2, 5); b = rand(1, 5);
+      } else if (level === "easy") {
+        a = rand(2, 9); b = rand(1, 9);
+      } else if (level === "normal") {
+        a = rand(10, 99); b = rand(2, 9);
       } else {
-        if (b > a) [a, b] = [b, a];
-        answer = a - b;
+        a = rand(100, 999); b = rand(2, 9);
       }
-      return { a, b, op, answer };
+      const answer = a * b;
+      return { kind: "vertical", a, b, op: "×", answer, answerText: String(answer) };
+    }
+
+    function makeDivProblem(level, remainderMode) {
+      let divisor, quotient, remainder = 0;
+      if (level === "superEasy") {
+        divisor = rand(2, 5); quotient = rand(1, 5);
+      } else if (level === "easy") {
+        divisor = rand(2, 9); quotient = rand(1, 9);
+      } else if (level === "normal") {
+        divisor = rand(2, 9); quotient = rand(10, 30);
+      } else {
+        divisor = rand(2, 9); quotient = rand(20, 99);
+      }
+
+      if (remainderMode === "small" && level !== "superEasy" && Math.random() < 0.45) {
+        remainder = rand(1, divisor - 1);
+      }
+
+      const dividend = divisor * quotient + remainder;
+      const answerText = remainder > 0 ? `${quotient} あまり ${remainder}` : String(quotient);
+      return { kind: "division", dividend, divisor, quotient, remainder, answerText };
+    }
+
+    function makeOneProblem(mode, level, carryMode, remainderMode) {
+      const op = pickOperator(mode);
+      if (op === "×") return makeMulProblem(level);
+      if (op === "÷") return makeDivProblem(level, remainderMode);
+      return makeAddSubProblem(op, level, carryMode);
+    }
+
+    function makeProblemHtml(p, index, showAnswers) {
+      if (p.kind === "division") {
+        return `
+          <div class="problem-number">${index + 1}</div>
+          <div class="division-box">
+            <div class="division-question">${p.dividend} ÷ ${p.divisor} =</div>
+            <div class="division-answer"></div>
+            ${p.remainder > 0 ? `<div class="amari-text">あまりも書こう</div>` : ""}
+            ${showAnswers ? `<div class="answer-small">こたえ：${p.answerText}</div>` : ""}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="problem-number">${index + 1}</div>
+        <div class="calc-box">
+          <div class="num-line">${p.a}</div>
+          <div class="op-line"><span class="op">${p.op}</span><span>${p.b}</span></div>
+          <div class="answer-space"></div>
+          ${showAnswers ? `<div class="answer-small">こたえ：${p.answerText}</div>` : ""}
+        </div>
+      `;
     }
 
     function makeWorksheet() {
@@ -663,6 +413,7 @@
       const count = Number(document.getElementById("count").value);
       const dateText = document.getElementById("dateText").value.trim() || todayText();
       const carryMode = document.getElementById("carry").value;
+      const remainderMode = document.getElementById("divisionRemainder").value;
       const showAnswers = document.getElementById("showAnswers").checked;
       const printAnswerPage = document.getElementById("printAnswerPage").checked;
 
@@ -677,9 +428,7 @@
       document.getElementById("answerDate").textContent = dateText;
 
       currentProblems = [];
-      for (let i = 0; i < count; i++) {
-        currentProblems.push(makeOneProblem(mode, level, carryMode));
-      }
+      for (let i = 0; i < count; i++) currentProblems.push(makeOneProblem(mode, level, carryMode, remainderMode));
 
       const problemsEl = document.getElementById("problems");
       const answersEl = document.getElementById("answers");
@@ -689,20 +438,12 @@
       currentProblems.forEach((p, index) => {
         const problem = document.createElement("div");
         problem.className = "problem";
-        problem.innerHTML = `
-          <div class="problem-number">${index + 1}</div>
-          <div class="calc-box">
-            <div class="num-line">${p.a}</div>
-            <div class="op-line"><span class="op">${p.op}</span><span>${p.b}</span></div>
-            <div class="answer-space"></div>
-            ${showAnswers ? `<div class="answer-small">こたえ：${p.answer}</div>` : ""}
-          </div>
-        `;
+        problem.innerHTML = makeProblemHtml(p, index, showAnswers);
         problemsEl.appendChild(problem);
 
         const answer = document.createElement("div");
         answer.className = "answer-item";
-        answer.textContent = `${index + 1}. ${p.answer}`;
+        answer.textContent = `${index + 1}. ${p.answerText}`;
         answersEl.appendChild(answer);
       });
 
@@ -719,11 +460,12 @@
     function resetSettings() {
       document.getElementById("childName").value = "";
       document.getElementById("titleText").value = "ひっ算れんしゅうプリント";
-      document.getElementById("mode").value = "mix";
+      document.getElementById("mode").value = "mixAddSub";
       document.getElementById("level").value = "normal";
       document.getElementById("count").value = "18";
       document.getElementById("dateText").value = todayText();
       document.getElementById("carry").value = "any";
+      document.getElementById("divisionRemainder").value = "none";
       document.getElementById("showAnswers").checked = false;
       document.getElementById("printAnswerPage").checked = true;
       makeWorksheet();

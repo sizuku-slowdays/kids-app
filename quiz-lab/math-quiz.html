@@ -98,9 +98,20 @@
       transform: scale(0.98);
     }
 
-    .level-btn.selected {
+    .level-btn.selected,
+    .mode-btn.selected {
       outline: 4px solid #93c5fd;
       background: #dbeafe;
+    }
+
+    .mode-btn {
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    .mode-btn.selected {
+      background: #e0f2fe;
+      color: #075985;
     }
 
     .main-btn {
@@ -173,20 +184,13 @@
 
     .quiz-figure {
       width: 100%;
-      max-width: 360px;
+      max-width: 380px;
       height: auto;
       background: #ffffff;
       border-radius: 18px;
       padding: 10px;
       border: 1px solid #e5e7eb;
       box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-    }
-
-    .figure-note {
-      font-size: 14px;
-      color: #64748b;
-      margin-top: 6px;
-      text-align: center;
     }
 
     .feedback {
@@ -238,6 +242,17 @@
       margin-bottom: 10px;
     }
 
+    .note-box {
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 14px;
+      line-height: 1.7;
+      font-size: 15px;
+      margin-top: 16px;
+    }
+
     .error-box {
       background: #fef2f2;
       color: #991b1b;
@@ -279,7 +294,7 @@
       }
 
       .quiz-figure {
-        max-width: 330px;
+        max-width: 340px;
       }
     }
   </style>
@@ -306,6 +321,18 @@
         <button class="level-btn" data-level="challenge" onclick="selectLevel('challenge')">挑戦</button>
       </div>
 
+      <p class="section-title" style="margin-top:24px;">出題モードを選んでください</p>
+
+      <div class="button-grid">
+        <button class="mode-btn selected" data-mode="all" onclick="selectMode('all')">ぜんぶ</button>
+        <button class="mode-btn" data-mode="figure" onclick="selectMode('figure')">図形だけ</button>
+      </div>
+
+      <div class="note-box">
+        <strong>図形だけ</strong>は、問題データに <strong>figure</strong> が入っている問題だけを出します。<br>
+        三角形・円・三平方の定理など、図を見て答える問題用です。
+      </div>
+
       <button class="main-btn" onclick="startQuiz()">10問チャレンジを始める</button>
 
       <p class="lead" style="text-align:center; margin-top:18px;">
@@ -316,11 +343,17 @@
         問題データが読み込めていないようです。<br>
         <strong>data/math-quiz-data.js</strong> の場所とファイル名を確認してください。
       </div>
+
+      <div id="modeError" class="error-box hidden">
+        この条件に合う問題がまだ登録されていません。<br>
+        「図形だけ」を使うには、問題データに <strong>figure:</strong> が入った問題を追加してください。
+      </div>
     </section>
 
     <section id="quizScreen" class="card hidden">
       <div class="status">
         <div id="levelLabel">難易度：ふつう</div>
+        <div id="modeLabel">モード：ぜんぶ</div>
         <div id="progressLabel">1 / 10問</div>
         <div id="scoreLabel">正解：0</div>
       </div>
@@ -349,13 +382,13 @@
     </section>
   </div>
 
-  <!-- 問題データを先に読み込む -->
   <script src="data/math-quiz-data.js"></script>
 
   <script>
     const QUESTION_COUNT = 10;
 
     let selectedLevel = "normal";
+    let selectedMode = "all";
     let currentQuestions = [];
     let currentIndex = 0;
     let score = 0;
@@ -366,6 +399,11 @@
       normal: "ふつう",
       hard: "むずかしい",
       challenge: "挑戦"
+    };
+
+    const modeNames = {
+      all: "ぜんぶ",
+      figure: "図形だけ"
     };
 
     window.addEventListener("DOMContentLoaded", () => {
@@ -384,6 +422,7 @@
 
     function selectLevel(level) {
       selectedLevel = level;
+      document.getElementById("modeError").classList.add("hidden");
 
       const buttons = document.querySelectorAll(".level-btn");
       buttons.forEach(btn => {
@@ -395,16 +434,36 @@
       });
     }
 
+    function selectMode(mode) {
+      selectedMode = mode;
+      document.getElementById("modeError").classList.add("hidden");
+
+      const buttons = document.querySelectorAll(".mode-btn");
+      buttons.forEach(btn => {
+        btn.classList.remove("selected");
+
+        if (btn.dataset.mode === mode) {
+          btn.classList.add("selected");
+        }
+      });
+    }
+
     function startQuiz() {
+      document.getElementById("modeError").classList.add("hidden");
+
       if (typeof questions === "undefined" || !Array.isArray(questions)) {
         document.getElementById("dataError").classList.remove("hidden");
         return;
       }
 
-      const pool = questions.filter(q => q.level === selectedLevel);
+      let pool = questions.filter(q => q.level === selectedLevel);
+
+      if (selectedMode === "figure") {
+        pool = pool.filter(q => q.figure);
+      }
 
       if (pool.length === 0) {
-        alert("この難易度の問題がまだ登録されていません。");
+        document.getElementById("modeError").classList.remove("hidden");
         return;
       }
 
@@ -437,6 +496,7 @@
       const q = currentQuestions[currentIndex];
 
       document.getElementById("levelLabel").textContent = "難易度：" + levelNames[selectedLevel];
+      document.getElementById("modeLabel").textContent = "モード：" + modeNames[selectedMode];
       document.getElementById("progressLabel").textContent = (currentIndex + 1) + " / " + QUESTION_COUNT + "問";
       document.getElementById("scoreLabel").textContent = "正解：" + score;
       document.getElementById("genreLabel").textContent = q.genre || "数学";

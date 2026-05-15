@@ -1,1 +1,653 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
+  <title>大人の数学チャレンジ</title>
+
+  <link rel="apple-touch-icon" href="img/math-quiz.png">
+  <link rel="icon" type="image/png" href="img/math-quiz.png">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="数学チャレンジ">
+  <meta name="theme-color" content="#eef2ff">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 45%, #ecfeff 100%);
+      color: #1f2937;
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 22px 16px 44px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .top-link {
+      display: inline-block;
+      margin-bottom: 14px;
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0.03em;
+    }
+
+    .lead {
+      margin: 10px 0 0;
+      color: #4b5563;
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      margin-top: 18px;
+    }
+
+    .section-title {
+      font-size: 19px;
+      font-weight: bold;
+      margin: 0 0 14px;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    button {
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      border-radius: 16px;
+      padding: 15px 14px;
+      font-size: 17px;
+      font-weight: bold;
+      background: #e0e7ff;
+      color: #1e3a8a;
+      transition: transform 0.1s ease, opacity 0.1s ease;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .main-btn {
+      width: 100%;
+      background: #2563eb;
+      color: white;
+      font-size: 19px;
+      padding: 17px;
+      margin-top: 16px;
+    }
+
+    .sub-btn {
+      width: 100%;
+      background: #f1f5f9;
+      color: #334155;
+      margin-top: 12px;
+    }
+
+    .danger-btn {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .option-btn {
+      width: 100%;
+      text-align: left;
+      background: #f8fafc;
+      color: #111827;
+      border: 2px solid #e5e7eb;
+      margin-top: 10px;
+      font-size: 19px;
+      line-height: 1.5;
+    }
+
+    .option-btn.correct {
+      background: #dcfce7;
+      border-color: #22c55e;
+      color: #166534;
+    }
+
+    .option-btn.wrong {
+      background: #fee2e2;
+      border-color: #ef4444;
+      color: #991b1b;
+    }
+
+    .option-btn:disabled {
+      cursor: default;
+      opacity: 1;
+    }
+
+    .status {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 15px;
+      color: #475569;
+      margin-bottom: 14px;
+      font-weight: bold;
+    }
+
+    .question {
+      font-size: 25px;
+      font-weight: bold;
+      line-height: 1.6;
+      margin: 10px 0 16px;
+      white-space: pre-line;
+    }
+
+    .formula {
+      display: inline-block;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 8px 12px;
+      margin-top: 8px;
+      font-family: "Consolas", "Menlo", monospace;
+      font-size: 24px;
+    }
+
+    .feedback {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      line-height: 1.7;
+      font-size: 16px;
+      display: none;
+    }
+
+    .feedback.show {
+      display: block;
+    }
+
+    .feedback strong {
+      font-size: 18px;
+    }
+
+    .result-score {
+      text-align: center;
+      font-size: 34px;
+      font-weight: bold;
+      margin: 16px 0;
+      color: #2563eb;
+    }
+
+    .result-message {
+      text-align: center;
+      font-size: 18px;
+      line-height: 1.8;
+      color: #374151;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .pill {
+      display: inline-block;
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 520px) {
+      .page {
+        padding: 18px 12px 36px;
+      }
+
+      h1 {
+        font-size: 27px;
+      }
+
+      .card {
+        padding: 18px 14px;
+      }
+
+      .button-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .question {
+        font-size: 22px;
+      }
+
+      .formula {
+        font-size: 22px;
+      }
+
+      button {
+        font-size: 17px;
+      }
+
+      .option-btn {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <header>
+      <a class="top-link" href="index.html">← クイズラボにもどる</a>
+      <h1>大人の数学チャレンジ</h1>
+      <p class="lead">
+        広告なしで楽しめる数学クイズ。<br>
+        計算・方程式・図形・三角比に挑戦！
+      </p>
+    </header>
+
+    <section id="startScreen" class="card">
+      <p class="section-title">難易度を選んでください</p>
+
+      <div class="button-grid">
+        <button onclick="selectLevel('easy')">やさしい</button>
+        <button onclick="selectLevel('normal')">ふつう</button>
+        <button onclick="selectLevel('hard')">むずかしい</button>
+        <button onclick="selectLevel('challenge')">挑戦</button>
+      </div>
+
+      <button class="main-btn" onclick="startQuiz()">10問チャレンジを始める</button>
+
+      <p class="lead" style="text-align:center; margin-top:18px;">
+        ※ 難易度を選ばない場合は「ふつう」で始まります。
+      </p>
+    </section>
+
+    <section id="quizScreen" class="card hidden">
+      <div class="status">
+        <div id="levelLabel">難易度：ふつう</div>
+        <div id="progressLabel">1 / 10問</div>
+        <div id="scoreLabel">正解：0</div>
+      </div>
+
+      <div id="genreLabel" class="pill">計算</div>
+
+      <div id="questionText" class="question"></div>
+
+      <div id="optionsArea"></div>
+
+      <div id="feedback" class="feedback"></div>
+
+      <button id="nextBtn" class="main-btn hidden" onclick="nextQuestion()">次の問題へ</button>
+      <button class="sub-btn" onclick="backToStart()">最初にもどる</button>
+    </section>
+
+    <section id="resultScreen" class="card hidden">
+      <p class="section-title" style="text-align:center;">結果</p>
+      <div id="resultScore" class="result-score"></div>
+      <div id="resultMessage" class="result-message"></div>
+
+      <button class="main-btn" onclick="startQuiz()">もう一度チャレンジ</button>
+      <button class="sub-btn" onclick="backToStart()">難易度を選びなおす</button>
+    </section>
+  </div>
+
+  <script>
+    const QUESTION_COUNT = 10;
+
+    let selectedLevel = "normal";
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let answered = false;
+
+    const levelNames = {
+      easy: "やさしい",
+      normal: "ふつう",
+      hard: "むずかしい",
+      challenge: "挑戦"
+    };
+
+    const questions = [
+      // やさしい
+      {
+        level: "easy",
+        genre: "計算",
+        question: "25 × 4 = ?",
+        options: ["50", "75", "100", "125"],
+        answer: "100",
+        explanation: "25を4つ集めると100です。25×4=100。"
+      },
+      {
+        level: "easy",
+        genre: "計算",
+        question: "120 ÷ 6 = ?",
+        options: ["12", "18", "20", "24"],
+        answer: "20",
+        explanation: "6×20=120なので、120÷6=20です。"
+      },
+      {
+        level: "easy",
+        genre: "割合",
+        question: "1000円の10%はいくら？",
+        options: ["10円", "50円", "100円", "200円"],
+        answer: "100円",
+        explanation: "10%は10分の1です。1000円の10分の1は100円です。"
+      },
+      {
+        level: "easy",
+        genre: "単位",
+        question: "1時間30分は何分？",
+        options: ["60分", "75分", "90分", "120分"],
+        answer: "90分",
+        explanation: "1時間は60分。60分+30分=90分です。"
+      },
+      {
+        level: "easy",
+        genre: "計算",
+        question: "15 + 27 = ?",
+        options: ["32", "42", "52", "62"],
+        answer: "42",
+        explanation: "15+27=42です。"
+      },
+
+      // ふつう
+      {
+        level: "normal",
+        genre: "方程式",
+        question: "3x + 5 = 20 のとき、x は？",
+        options: ["3", "4", "5", "6"],
+        answer: "5",
+        explanation: "3x+5=20 → 3x=15 → x=5です。"
+      },
+      {
+        level: "normal",
+        genre: "平方根",
+        question: "√49 の値は？",
+        options: ["6", "7", "8", "9"],
+        answer: "7",
+        explanation: "7×7=49なので、√49=7です。"
+      },
+      {
+        level: "normal",
+        genre: "図形",
+        question: "三角形の内角の和は？",
+        options: ["90°", "120°", "180°", "360°"],
+        answer: "180°",
+        explanation: "どんな三角形でも、内角の和は180°です。"
+      },
+      {
+        level: "normal",
+        genre: "計算",
+        question: "18 × 5 = ?",
+        options: ["80", "85", "90", "95"],
+        answer: "90",
+        explanation: "18×5=90です。10×5=50、8×5=40、合わせて90。"
+      },
+      {
+        level: "normal",
+        genre: "関数",
+        question: "y = 2x + 3 で、x = 4 のとき y は？",
+        options: ["8", "9", "10", "11"],
+        answer: "11",
+        explanation: "y=2×4+3=8+3=11です。"
+      },
+      {
+        level: "normal",
+        genre: "因数分解",
+        question: "x² + 5x + 6 を因数分解すると？",
+        options: ["(x+1)(x+6)", "(x+2)(x+3)", "(x+2)(x+4)", "(x+3)(x+3)"],
+        answer: "(x+2)(x+3)",
+        explanation: "足して5、かけて6になる数は2と3です。"
+      },
+
+      // むずかしい
+      {
+        level: "hard",
+        genre: "三平方",
+        question: "直角三角形で、斜辺が13、一辺が5のとき、もう一辺は？",
+        options: ["8", "10", "12", "14"],
+        answer: "12",
+        explanation: "13²-5²=169-25=144。√144=12です。"
+      },
+      {
+        level: "hard",
+        genre: "図形",
+        question: "半径3cmの円の面積は？",
+        options: ["3π cm²", "6π cm²", "9π cm²", "12π cm²"],
+        answer: "9π cm²",
+        explanation: "円の面積はπr²。半径3なので、π×3²=9π cm²です。"
+      },
+      {
+        level: "hard",
+        genre: "連立方程式",
+        question: "x + y = 10、x - y = 2 のとき、x は？",
+        options: ["4", "5", "6", "8"],
+        answer: "6",
+        explanation: "2つの式を足すと2x=12。よってx=6です。"
+      },
+      {
+        level: "hard",
+        genre: "二次方程式",
+        question: "x² - 9 = 0 の解は？",
+        options: ["x=3のみ", "x=-3のみ", "x=±3", "x=9"],
+        answer: "x=±3",
+        explanation: "x²=9なので、x=3またはx=-3です。"
+      },
+      {
+        level: "hard",
+        genre: "割合",
+        question: "ある数の20%が36です。ある数はいくつ？",
+        options: ["120", "160", "180", "200"],
+        answer: "180",
+        explanation: "20%は5分の1です。36×5=180です。"
+      },
+
+      // 挑戦
+      {
+        level: "challenge",
+        genre: "三角比",
+        question: "sin30° の値は？",
+        options: ["1/2", "√2/2", "√3/2", "1"],
+        answer: "1/2",
+        explanation: "sin30°=1/2です。基本の三角比としてよく出ます。"
+      },
+      {
+        level: "challenge",
+        genre: "三角比",
+        question: "cos60° の値は？",
+        options: ["1/2", "√2/2", "√3/2", "1"],
+        answer: "1/2",
+        explanation: "cos60°=1/2です。sin30°と同じ値になります。"
+      },
+      {
+        level: "challenge",
+        genre: "三角比",
+        question: "tan45° の値は？",
+        options: ["0", "1/2", "1", "√3"],
+        answer: "1",
+        explanation: "tan45°=1です。45°の直角二等辺三角形を考えると分かりやすいです。"
+      },
+      {
+        level: "challenge",
+        genre: "関数",
+        question: "二次関数 y = x² で、x = -3 のとき y は？",
+        options: ["-9", "-6", "6", "9"],
+        answer: "9",
+        explanation: "(-3)²=9です。マイナス同士をかけるとプラスになります。"
+      },
+      {
+        level: "challenge",
+        genre: "ひらめき計算",
+        question: "125 × 8 = ?",
+        options: ["800", "900", "1000", "1200"],
+        answer: "1000",
+        explanation: "125×8=1000です。よく使う暗算パターンです。"
+      }
+    ];
+
+    function selectLevel(level) {
+      selectedLevel = level;
+      const buttons = document.querySelectorAll("#startScreen button");
+      buttons.forEach(btn => btn.style.outline = "none");
+
+      event.target.style.outline = "4px solid #93c5fd";
+    }
+
+    function startQuiz() {
+      const pool = questions.filter(q => q.level === selectedLevel);
+
+      currentQuestions = shuffleArray(pool).slice(0, QUESTION_COUNT);
+
+      while (currentQuestions.length < QUESTION_COUNT) {
+        currentQuestions = currentQuestions.concat(shuffleArray(pool));
+      }
+
+      currentQuestions = currentQuestions.slice(0, QUESTION_COUNT);
+
+      currentIndex = 0;
+      score = 0;
+      answered = false;
+
+      document.getElementById("startScreen").classList.add("hidden");
+      document.getElementById("resultScreen").classList.add("hidden");
+      document.getElementById("quizScreen").classList.remove("hidden");
+
+      showQuestion();
+    }
+
+    function showQuestion() {
+      answered = false;
+
+      const q = currentQuestions[currentIndex];
+
+      document.getElementById("levelLabel").textContent = "難易度：" + levelNames[selectedLevel];
+      document.getElementById("progressLabel").textContent = (currentIndex + 1) + " / " + QUESTION_COUNT + "問";
+      document.getElementById("scoreLabel").textContent = "正解：" + score;
+      document.getElementById("genreLabel").textContent = q.genre;
+      document.getElementById("questionText").textContent = q.question;
+
+      const optionsArea = document.getElementById("optionsArea");
+      optionsArea.innerHTML = "";
+
+      shuffleArray(q.options).forEach(option => {
+        const btn = document.createElement("button");
+        btn.className = "option-btn";
+        btn.textContent = option;
+        btn.onclick = () => checkAnswer(btn, option, q);
+        optionsArea.appendChild(btn);
+      });
+
+      document.getElementById("feedback").classList.remove("show");
+      document.getElementById("feedback").innerHTML = "";
+      document.getElementById("nextBtn").classList.add("hidden");
+    }
+
+    function checkAnswer(button, selected, question) {
+      if (answered) return;
+      answered = true;
+
+      const optionButtons = document.querySelectorAll(".option-btn");
+
+      optionButtons.forEach(btn => {
+        btn.disabled = true;
+
+        if (btn.textContent === question.answer) {
+          btn.classList.add("correct");
+        }
+      });
+
+      const feedback = document.getElementById("feedback");
+
+      if (selected === question.answer) {
+        score++;
+        button.classList.add("correct");
+        feedback.innerHTML = "<strong>正解！</strong><br>" + question.explanation;
+      } else {
+        button.classList.add("wrong");
+        feedback.innerHTML = "<strong>おしい！</strong><br>正解は「" + question.answer + "」です。<br>" + question.explanation;
+      }
+
+      document.getElementById("scoreLabel").textContent = "正解：" + score;
+      feedback.classList.add("show");
+      document.getElementById("nextBtn").classList.remove("hidden");
+    }
+
+    function nextQuestion() {
+      currentIndex++;
+
+      if (currentIndex >= QUESTION_COUNT) {
+        showResult();
+      } else {
+        showQuestion();
+      }
+    }
+
+    function showResult() {
+      document.getElementById("quizScreen").classList.add("hidden");
+      document.getElementById("resultScreen").classList.remove("hidden");
+
+      document.getElementById("resultScore").textContent = score + " / " + QUESTION_COUNT + "問 正解";
+
+      let message = "";
+
+      if (score === QUESTION_COUNT) {
+        message = "満点です！すごい集中力です。";
+      } else if (score >= 8) {
+        message = "かなり良い成績です。数学の感覚がしっかりしています。";
+      } else if (score >= 5) {
+        message = "いい感じです。解説を見ながら続けるとさらに伸びます。";
+      } else {
+        message = "おつかれさまでした。少しずつ慣れていきましょう。";
+      }
+
+      document.getElementById("resultMessage").innerHTML =
+        message + "<br>広告なしで、いつでも何度でも挑戦できます。";
+    }
+
+    function backToStart() {
+      document.getElementById("quizScreen").classList.add("hidden");
+      document.getElementById("resultScreen").classList.add("hidden");
+      document.getElementById("startScreen").classList.remove("hidden");
+    }
+
+    function shuffleArray(array) {
+      const newArray = [...array];
+
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+
+      return newArray;
+    }
+  </script>
+</body>
+</html>

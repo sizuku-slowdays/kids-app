@@ -21,15 +21,30 @@
       --accent: #8bdc9b;
       --text: #2f3328;
       --soft: #fffaf0;
+      --ud-font:
+        "BIZ UDPGothic",
+        "BIZ UDGothic",
+        "Yu Gothic UI",
+        "Yu Gothic",
+        "Hiragino Sans",
+        "Meiryo",
+        sans-serif;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      font-family: var(--ud-font);
       background: linear-gradient(180deg, #fff7df 0%, #eaf8ef 100%);
       color: var(--text);
+    }
+
+    button,
+    select,
+    input,
+    textarea {
+      font-family: var(--ud-font);
     }
 
     .app {

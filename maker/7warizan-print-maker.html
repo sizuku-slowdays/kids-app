@@ -13,27 +13,36 @@
   <meta name="theme-color" content="#eef8ff">
 
   <style>
-    @font-face {
-      font-family: "SetoFont";
-      src: url("fonts/setofont.ttf") format("truetype");
-      font-display: swap;
-    }
-
     :root {
       --bg: #eef8ff;
       --card: #ffffff;
       --main: #7cc7ff;
       --accent: #ffd76a;
       --text: #233447;
+      --ud-font:
+        "BIZ UDPGothic",
+        "BIZ UDGothic",
+        "Yu Gothic UI",
+        "Yu Gothic",
+        "Hiragino Sans",
+        "Meiryo",
+        sans-serif;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: "SetoFont", "Hiragino Maru Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+      font-family: var(--ud-font);
       background: linear-gradient(180deg, #eef8ff 0%, #fff4ce 100%);
       color: var(--text);
+    }
+
+    button,
+    select,
+    input,
+    textarea {
+      font-family: var(--ud-font);
     }
 
     .app {
@@ -94,7 +103,6 @@
       font-size: 16px;
       background: #fbfdff;
       color: var(--text);
-      font-family: inherit;
     }
 
     .row {
@@ -132,7 +140,6 @@
       font-weight: 900;
       cursor: pointer;
       box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
-      font-family: inherit;
     }
 
     button:active {
@@ -602,7 +609,7 @@
       return `
         <div class="problem-number">${index + 1}</div>
         <div class="warizan-box">
-          <div class="quotient-row">こたえ</div>
+          <div class="quotient-row"></div>
           <div class="division-row">
             <div class="divisor">${problem.divisor}</div>
             <div class="dividend">${problem.dividend}</div>

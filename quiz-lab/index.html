@@ -1,1 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
+  <title>クイズラボ</title>
+
+  <!-- ホーム画面追加用：画像を作ったら img/quiz-lab.png に置く -->
+  <link rel="apple-touch-icon" href="img/quiz-lab.png">
+  <link rel="icon" type="image/png" href="img/quiz-lab.png">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="クイズラボ">
+  <meta name="theme-color" content="#eef2ff">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 50%, #ecfeff 100%);
+      color: #1f2937;
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 18px 50px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #ffffffcc;
+      border: 1px solid #dbeafe;
+      color: #2563eb;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      letter-spacing: 0.04em;
+    }
+
+    .lead {
+      margin: 12px 0 0;
+      font-size: 17px;
+      color: #4b5563;
+      line-height: 1.7;
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 18px;
+      margin-top: 26px;
+    }
+
+    .app-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 22px 18px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.10);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .app-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+    }
+
+    .icon-wrap {
+      width: 86px;
+      height: 86px;
+      border-radius: 24px;
+      background: #eef2ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 42px;
+    }
+
+    .app-card img {
+      width: 86px;
+      height: 86px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 16px;
+      border-radius: 22px;
+    }
+
+    .app-name {
+      font-size: 21px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .app-desc {
+      font-size: 15px;
+      color: #6b7280;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .coming-soon {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .footer-note {
+      margin-top: 32px;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 520px) {
+      .page {
+        padding: 24px 14px 42px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .lead {
+        font-size: 16px;
+      }
+
+      .app-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .app-card {
+        padding: 22px 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <header>
+      <div class="badge">広告なしクイズ置き場</div>
+      <h1>クイズラボ</h1>
+      <p class="lead">
+        数学・雑学・ことばのクイズをまとめたページです。<br>
+        まずは数学クイズからスタート！
+      </p>
+    </header>
+
+    <main class="app-grid">
+      <a class="app-card" href="math-quiz.html">
+        <!-- 画像をまだ作っていない場合は、この絵文字アイコンでOK -->
+        <div class="icon-wrap">π</div>
+        <div class="app-name">大人の数学チャレンジ</div>
+        <div class="app-desc">
+          計算・方程式・図形・三角比などを楽しむ数学クイズ
+        </div>
+      </a>
+
+      <div class="app-card coming-soon">
+        <div class="icon-wrap">?</div>
+        <div class="app-name">雑学クイズ</div>
+        <div class="app-desc">
+          いろいろな知識を楽しむクイズ。今後追加予定。
+        </div>
+      </div>
+
+      <div class="app-card coming-soon">
+        <div class="icon-wrap">言</div>
+        <div class="app-name">ことばクイズ</div>
+        <div class="app-desc">
+          ことわざ・慣用句・四字熟語など。今後追加予定。
+        </div>
+      </div>
+    </main>
+
+    <p class="footer-note">
+      家族で使いやすい、広告なしのクイズページです。
+    </p>
+  </div>
+</body>
+</html>

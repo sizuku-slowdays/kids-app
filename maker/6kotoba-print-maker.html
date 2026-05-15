@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ことばプリントメーカー</title>
+
+  <!-- ホーム画面追加用：maker/img/kotoba-print.png を使います -->
+  <link rel="apple-touch-icon" href="img/kotoba-print.png">
+  <link rel="icon" type="image/png" href="img/kotoba-print.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ことばプリント">
+  <meta name="theme-color" content="#fff1d6">
+
+  <style>
+    :root {
+      --bg: #fff7df;
+      --card: #ffffff;
+      --main: #ffb86b;
+      --accent: #8bdc9b;
+      --text: #333024;
+      --soft: #fffaf0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: linear-gradient(180deg, #fff7df 0%, #eef8ff 100%);
+      color: var(--text);
+    }
+
+    .app { max-width: 1120px; margin: 0 auto; padding: 18px; }
+    header { text-align: center; margin: 12px 0 18px; }
+    h1 { margin: 0; font-size: clamp(28px, 5vw, 44px); letter-spacing: 0.04em; }
+    .subtitle { margin-top: 8px; font-size: 16px; color: #6f6242; font-weight: 700; }
+
+    .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+    .panel, .preview-wrap { background: var(--card); border-radius: 24px; box-shadow: 0 8px 24px rgba(95,76,31,.16); padding: 18px; }
+    .panel h2, .preview-wrap h2 { margin: 0 0 14px; font-size: 22px; }
+    label { display: block; font-weight: 900; margin: 14px 0 6px; font-size: 15px; }
+
+    select, input[type="text"] {
+      width: 100%; padding: 12px 14px; border: 2px solid #e8d6a9; border-radius: 14px;
+      font-size: 16px; background: #fffdf7; color: var(--text);
+    }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-weight: 800; line-height: 1.4; }
+    .checkbox-row input { width: 22px; height: 22px; flex: 0 0 auto; }
+    .buttons { display: grid; gap: 10px; margin-top: 18px; }
+
+    button { border: none; border-radius: 18px; padding: 14px 16px; font-size: 17px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.15); }
+    button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+    .main-btn { background: var(--main); color: #4a2e00; }
+    .print-btn { background: #79dc8c; color: #123a1d; }
+    .sub-btn { background: #eaf5ff; color: #154a72; }
+
+    .note { margin-top: 14px; padding: 12px; background: #fffaf0; border-left: 5px solid var(--main); border-radius: 12px; font-size: 14px; line-height: 1.6; }
+    .preview-area { overflow: auto; background: #ece5d6; border-radius: 18px; padding: 16px; }
+
+    .paper { width: 210mm; min-height: 297mm; margin: 0 auto; background: white; color: #222; padding: 12mm 12mm; box-shadow: 0 0 16px rgba(0,0,0,.2); position: relative; }
+    .title-row { display: flex; justify-content: center; align-items: center; gap: 10mm; margin-bottom: 7px; }
+    .print-title { text-align: center; font-size: 27px; font-weight: 900; letter-spacing: .06em; }
+    .title-stars { font-size: 20px; font-weight: 900; letter-spacing: .12em; white-space: nowrap; }
+
+    .meta { display: grid; grid-template-columns: 1.2fr 1fr .8fr; gap: 8px; font-size: 15px; margin-bottom: 7mm; align-items: end; }
+    .meta-box { border-bottom: 1.8px solid #222; min-height: 26px; padding: 2px 4px; }
+    .sticker-box { display: inline-flex; align-items: center; justify-content: center; width: 24mm; height: 10mm; margin-left: 2mm; border: 1.8px solid #222; border-radius: 6px; font-size: 11px; color: #777; vertical-align: middle; }
+
+    .problems { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5mm 7mm; }
+    .problem { min-height: 28mm; page-break-inside: avoid; border: 1.8px solid #222; border-radius: 8px; padding: 3mm 4mm; }
+    .problem-number { font-size: 13px; font-weight: 900; margin-bottom: 2mm; }
+    .question-text { font-size: 17px; line-height: 1.6; font-weight: 800; }
+    .word-big { font-size: 21px; font-weight: 900; display: inline-block; margin: 0 1mm; }
+    .answer-row { margin-top: 2mm; display: flex; align-items: center; justify-content: flex-end; gap: 2mm; font-size: 16px; font-weight: 900; }
+    .answer-line { display: inline-block; width: 36mm; height: 9mm; border-bottom: 2px solid #222; }
+
+    .choice-row { margin-top: 3mm; display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm 5mm; font-size: 15px; font-weight: 800; }
+    .choice { border: 1.2px solid #aaa; border-radius: 7px; padding: 1.5mm 2mm; min-height: 8mm; }
+
+    .connect-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 8mm; margin-top: 2mm; }
+    .connect-col { display: grid; gap: 3mm; font-size: 16px; font-weight: 800; }
+    .connect-item { display: flex; align-items: center; gap: 3mm; min-height: 8mm; }
+    .dot { display: inline-block; width: 3mm; height: 3mm; border: 1.6px solid #222; border-radius: 50%; flex: 0 0 auto; }
+
+    .answer-small { margin-top: 2mm; font-size: 12px; color: #666; text-align: right; }
+
+    .paper.count-12 .problems { gap: 3.5mm 6mm; }
+    .paper.count-12 .problem { min-height: 23mm; padding: 2.5mm 3mm; }
+    .paper.count-12 .question-text { font-size: 15px; line-height: 1.45; }
+    .paper.count-12 .word-big { font-size: 18px; }
+    .paper.count-12 .answer-line { width: 30mm; height: 7mm; }
+    .paper.count-12 .choice-row { font-size: 13px; gap: 1.5mm 3mm; }
+
+    .paper.count-16 .print-title { font-size: 23px; }
+    .paper.count-16 .title-stars { font-size: 16px; }
+    .paper.count-16 .title-row { gap: 6mm; margin-bottom: 4px; }
+    .paper.count-16 .meta { margin-bottom: 5mm; font-size: 13px; }
+    .paper.count-16 .problems { gap: 2mm 5mm; }
+    .paper.count-16 .problem { min-height: 19mm; padding: 1.8mm 2.5mm; }
+    .paper.count-16 .problem-number { font-size: 11px; margin-bottom: 1mm; }
+    .paper.count-16 .question-text { font-size: 12.5px; line-height: 1.35; }
+    .paper.count-16 .word-big { font-size: 15px; }
+    .paper.count-16 .answer-row { font-size: 12px; margin-top: 1mm; }
+    .paper.count-16 .answer-line { width: 22mm; height: 6mm; }
+    .paper.count-16 .choice-row { font-size: 11px; gap: 1mm 2mm; margin-top: 1mm; }
+    .paper.count-16 .sticker-box { width: 20mm; height: 8mm; font-size: 9px; }
+
+    .connect-paper .problem { min-height: 82mm; }
+    .connect-paper .problems { grid-template-columns: 1fr; gap: 6mm; }
+    .connect-paper .question-text { margin-bottom: 4mm; }
+
+    .answer-page { margin-top: 16px; }
+    .answers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7mm 5mm; font-size: 17px; margin-top: 10mm; }
+    .answer-item { border-bottom: 1px solid #999; padding-bottom: 3mm; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .paper { transform: scale(.55); transform-origin: top left; margin: 0; }
+      .preview-area { height: 720px; }
+    }
+
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body { background: white; }
+      header, .panel, .preview-wrap > h2, .note, .no-print { display: none !important; }
+      .app { max-width: none; padding: 0; }
+      .layout { display: block; }
+      .preview-wrap { box-shadow: none; padding: 0; border-radius: 0; }
+      .preview-area { overflow: visible; padding: 0; background: white; border-radius: 0; }
+      .paper { width: 210mm; height: 297mm; min-height: 297mm; margin: 0; box-shadow: none; page-break-after: always; transform: none !important; transform-origin: initial !important; }
+      .paper:last-child { page-break-after: auto; }
+      .answer-page.hidden-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>ことばプリントメーカー</h1>
+      <div class="subtitle">反対語・仲間分け・ことばの意味をA4プリントで練習できます</div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>プリント設定</h2>
+
+        <label for="childName">なまえ</label>
+        <input id="childName" type="text" placeholder="れい：はる" />
+
+        <label for="titleText">プリント名</label>
+        <input id="titleText" type="text" value="ことばれんしゅうプリント" />
+
+        <div class="row">
+          <div>
+            <label for="questionType">問題タイプ</label>
+            <select id="questionType">
+              <option value="opposite" selected>反対語を書く</option>
+              <option value="meaning">意味を選ぶ</option>
+              <option value="category">仲間はずれ</option>
+              <option value="connect">線でつなぐ</option>
+              <option value="mix">ミックス</option>
+            </select>
+          </div>
+          <div>
+            <label for="level">むずかしさ</label>
+            <select id="level">
+              <option value="easy" selected>かんたん</option>
+              <option value="normal">ふつう</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="count">問題数</label>
+            <select id="count">
+              <option value="8" selected>8問</option>
+              <option value="12">12問</option>
+              <option value="16">16問</option>
+            </select>
+          </div>
+          <div>
+            <label for="dateText">日付</label>
+            <input id="dateText" type="text" />
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input id="showAnswers" type="checkbox" />
+          <span>問題ページに小さく答えを表示</span>
+        </div>
+
+        <div class="checkbox-row">
+          <input id="printAnswerPage" type="checkbox" checked />
+          <span>答えページも作る</span>
+        </div>
+
+        <div class="buttons">
+          <button class="main-btn" onclick="makeWorksheet()">問題をつくる</button>
+          <button class="print-btn" onclick="window.print()">A4で印刷する</button>
+          <button class="sub-btn" onclick="resetSettings()">設定をもどす</button>
+        </div>
+
+        <div class="note no-print">
+          最初は「反対語を書く」か「仲間はずれ」がおすすめです。<br>
+          「線でつなぐ」はA4に収まるように大きめ問題で作ります。
+        </div>
+      </section>
+
+      <section class="preview-wrap">
+        <h2>プレビュー</h2>
+        <div class="preview-area" id="previewArea">
+          <section class="paper" id="worksheetPage">
+            <div class="title-row">
+              <div class="print-title" id="paperTitle">ことばれんしゅうプリント</div>
+              <div class="title-stars">☆☆☆☆☆</div>
+            </div>
+            <div class="meta">
+              <div>なまえ：<span class="meta-box" id="paperName">　　　　　　　　</span></div>
+              <div>ひづけ：<span class="meta-box" id="paperDate">　月　日</span></div>
+              <div>シール：<span class="sticker-box">はる</span></div>
+            </div>
+            <div class="problems" id="problems"></div>
+          </section>
+
+          <section class="paper answer-page" id="answerPage">
+            <div class="title-row"><div class="print-title">こたえ</div></div>
+            <div class="meta">
+              <div>なまえ：<span class="meta-box" id="answerName">　　　　　　　　</span></div>
+              <div>ひづけ：<span class="meta-box" id="answerDate">　月　日</span></div>
+              <div></div>
+            </div>
+            <div class="answers-grid" id="answers"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const OPPOSITES = [
+      { q: "大きい", a: "小さい", level: "easy" },
+      { q: "長い", a: "短い", level: "easy" },
+      { q: "高い", a: "低い", level: "easy" },
+      { q: "上", a: "下", level: "easy" },
+      { q: "前", a: "後ろ", level: "easy" },
+      { q: "右", a: "左", level: "easy" },
+      { q: "明るい", a: "暗い", level: "easy" },
+      { q: "あつい", a: "さむい", level: "easy" },
+      { q: "新しい", a: "古い", level: "easy" },
+      { q: "多い", a: "少ない", level: "easy" },
+      { q: "近い", a: "遠い", level: "normal" },
+      { q: "強い", a: "弱い", level: "normal" },
+      { q: "早い", a: "おそい", level: "normal" },
+      { q: "入る", a: "出る", level: "normal" },
+      { q: "始まる", a: "終わる", level: "normal" },
+      { q: "開ける", a: "閉める", level: "normal" },
+      { q: "勝つ", a: "負ける", level: "normal" },
+      { q: "安全", a: "危険", level: "normal" }
+    ];
+
+    const MEANINGS = [
+      { word: "ていねい", answer: "心をこめてきちんとすること", choices: ["心をこめてきちんとすること", "とても急ぐこと", "大きな声を出すこと", "走って行くこと"], level: "easy" },
+      { word: "しんせつ", answer: "人にやさしくすること", choices: ["人にやさしくすること", "すぐにねむること", "水を飲むこと", "絵をかくこと"], level: "easy" },
+      { word: "ゆっくり", answer: "いそがずにすること", choices: ["いそがずにすること", "とても高いこと", "赤い色のこと", "手を洗うこと"], level: "easy" },
+      { word: "りゆう", answer: "どうしてそうなったかのわけ", choices: ["どうしてそうなったかのわけ", "魚の名前", "明日の天気", "音楽の速さ"], level: "normal" },
+      { word: "よそう", answer: "これからどうなるか考えること", choices: ["これからどうなるか考えること", "ものを食べること", "字を消すこと", "服をたたむこと"], level: "normal" },
+      { word: "くらべる", answer: "二つ以上を見てちがいを考えること", choices: ["二つ以上を見てちがいを考えること", "大きな声で読むこと", "水に入れること", "紙を切ること"], level: "normal" }
+    ];
+
+    const CATEGORIES = [
+      { items: ["りんご", "みかん", "バナナ", "にんじん"], answer: "にんじん", reason: "くだものではない", level: "easy" },
+      { items: ["いぬ", "ねこ", "うさぎ", "さくら"], answer: "さくら", reason: "どうぶつではない", level: "easy" },
+      { items: ["赤", "青", "黄色", "つくえ"], answer: "つくえ", reason: "色ではない", level: "easy" },
+      { items: ["月曜日", "火曜日", "日曜日", "一月"], answer: "一月", reason: "曜日ではない", level: "normal" },
+      { items: ["春", "夏", "秋", "朝"], answer: "朝", reason: "季節ではない", level: "normal" },
+      { items: ["足し算", "引き算", "かけ算", "音読"], answer: "音読", reason: "算数ではない", level: "normal" }
+    ];
+
+    let currentAnswers = [];
+
+    function todayText() {
+      const d = new Date();
+      return `${d.getMonth() + 1}月${d.getDate()}日`;
+    }
+
+    function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = rand(0, i);
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function filterByLevel(list, level) {
+      if (level === "normal") return list;
+      return list.filter(item => item.level === "easy");
+    }
+
+    function pickFrom(list, count) {
+      let source = shuffle(list);
+      const result = [];
+      let index = 0;
+      while (result.length < count) {
+        if (index >= source.length) {
+          source = shuffle(list);
+          index = 0;
+        }
+        result.push(source[index]);
+        index++;
+      }
+      return result;
+    }
+
+    function makeOppositeProblem(item, index, showAnswers) {
+      return {
+        html: `
+          <div class="problem-number">${index + 1}</div>
+          <div class="question-text">「<span class="word-big">${item.q}</span>」の反対のことばを書きましょう。</div>
+          <div class="answer-row"><span>答え</span><span class="answer-line"></span></div>
+          ${showAnswers ? `<div class="answer-small">こたえ：${item.a}</div>` : ""}
+        `,
+        answer: item.a
+      };
+    }
+
+    function makeMeaningProblem(item, index, showAnswers) {
+      const choices = shuffle(item.choices);
+      return {
+        html: `
+          <div class="problem-number">${index + 1}</div>
+          <div class="question-text">「<span class="word-big">${item.word}</span>」の意味を選びましょう。</div>
+          <div class="choice-row">${choices.map(c => `<div class="choice">□ ${c}</div>`).join("")}</div>
+          ${showAnswers ? `<div class="answer-small">こたえ：${item.answer}</div>` : ""}
+        `,
+        answer: item.answer
+      };
+    }
+
+    function makeCategoryProblem(item, index, showAnswers) {
+      return {
+        html: `
+          <div class="problem-number">${index + 1}</div>
+          <div class="question-text">仲間はずれを選びましょう。</div>
+          <div class="choice-row">${item.items.map(c => `<div class="choice">□ ${c}</div>`).join("")}</div>
+          <div class="answer-row"><span>答え</span><span class="answer-line"></span></div>
+          ${showAnswers ? `<div class="answer-small">こたえ：${item.answer}（${item.reason}）</div>` : ""}
+        `,
+        answer: `${item.answer}（${item.reason}）`
+      };
+    }
+
+    function makeConnectProblem(level, showAnswers) {
+      const list = shuffle(filterByLevel(OPPOSITES, level)).slice(0, 8);
+      const left = list.map(item => item.q);
+      const right = shuffle(list).map(item => item.a);
+      const leftHtml = left.map(text => `<div class="connect-item"><span>${text}</span><span class="dot"></span></div>`).join("");
+      const rightHtml = right.map(text => `<div class="connect-item"><span class="dot"></span><span>${text}</span></div>`).join("");
+      return {
+        html: `
+          <div class="problem-number">1</div>
+          <div class="question-text">反対のことばを線でつなぎましょう。</div>
+          <div class="connect-layout">
+            <div class="connect-col">${leftHtml}</div>
+            <div class="connect-col">${rightHtml}</div>
+          </div>
+          ${showAnswers ? `<div class="answer-small">こたえは答えページを見てね</div>` : ""}
+        `,
+        answers: list.map(item => `${item.q} → ${item.a}`)
+      };
+    }
+
+    function makeOneProblem(type, level, index, showAnswers) {
+      let qType = type;
+      if (type === "mix") {
+        const types = ["opposite", "meaning", "category"];
+        qType = types[rand(0, types.length - 1)];
+      }
+      if (qType === "meaning") return makeMeaningProblem(pickFrom(filterByLevel(MEANINGS, level), 1)[0], index, showAnswers);
+      if (qType === "category") return makeCategoryProblem(pickFrom(filterByLevel(CATEGORIES, level), 1)[0], index, showAnswers);
+      return makeOppositeProblem(pickFrom(filterByLevel(OPPOSITES, level), 1)[0], index, showAnswers);
+    }
+
+    function makeWorksheet() {
+      const childName = document.getElementById("childName").value.trim();
+      const titleText = document.getElementById("titleText").value.trim() || "ことばれんしゅうプリント";
+      const questionType = document.getElementById("questionType").value;
+      const level = document.getElementById("level").value;
+      const count = Number(document.getElementById("count").value);
+      const dateText = document.getElementById("dateText").value.trim() || todayText();
+      const showAnswers = document.getElementById("showAnswers").checked;
+      const printAnswerPage = document.getElementById("printAnswerPage").checked;
+
+      const worksheetPage = document.getElementById("worksheetPage");
+      worksheetPage.classList.remove("count-8", "count-12", "count-16", "connect-paper");
+      worksheetPage.classList.add(`count-${count}`);
+      if (questionType === "connect") worksheetPage.classList.add("connect-paper");
+
+      document.getElementById("paperTitle").textContent = titleText;
+      document.getElementById("paperName").textContent = childName || "　　　　　　　　";
+      document.getElementById("paperDate").textContent = dateText;
+      document.getElementById("answerName").textContent = childName || "　　　　　　　　";
+      document.getElementById("answerDate").textContent = dateText;
+
+      const problemsEl = document.getElementById("problems");
+      const answersEl = document.getElementById("answers");
+      problemsEl.innerHTML = "";
+      answersEl.innerHTML = "";
+      currentAnswers = [];
+
+      if (questionType === "connect") {
+        const made = makeConnectProblem(level, showAnswers);
+        const problem = document.createElement("div");
+        problem.className = "problem";
+        problem.innerHTML = made.html;
+        problemsEl.appendChild(problem);
+        currentAnswers.push(...made.answers);
+      } else {
+        for (let i = 0; i < count; i++) {
+          const made = makeOneProblem(questionType, level, i, showAnswers);
+          const problem = document.createElement("div");
+          problem.className = "problem";
+          problem.innerHTML = made.html;
+          problemsEl.appendChild(problem);
+          currentAnswers.push(made.answer);
+        }
+      }
+
+      currentAnswers.forEach((answer, index) => {
+        const answerEl = document.createElement("div");
+        answerEl.className = "answer-item";
+        answerEl.textContent = `${index + 1}. ${answer}`;
+        answersEl.appendChild(answerEl);
+      });
+
+      const answerPage = document.getElementById("answerPage");
+      if (printAnswerPage) {
+        answerPage.classList.remove("hidden-print");
+        answerPage.style.display = "block";
+      } else {
+        answerPage.classList.add("hidden-print");
+        answerPage.style.display = "none";
+      }
+    }
+
+    function resetSettings() {
+      document.getElementById("childName").value = "";
+      document.getElementById("titleText").value = "ことばれんしゅうプリント";
+      document.getElementById("questionType").value = "opposite";
+      document.getElementById("level").value = "easy";
+      document.getElementById("count").value = "8";
+      document.getElementById("dateText").value = todayText();
+      document.getElementById("showAnswers").checked = false;
+      document.getElementById("printAnswerPage").checked = true;
+      makeWorksheet();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("dateText").value = todayText();
+      makeWorksheet();
+    });
+  </script>
+</body>
+</html>

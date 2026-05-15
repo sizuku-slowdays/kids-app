@@ -819,6 +819,518 @@ const questions = [
   options: ["3π cm²", "6π cm²", "9π cm²", "12π cm²"],
   answer: "9π cm²",
   explanation: "円の面積は π×半径×半径 です。π×3×3=9π cm²です。"
+},
+
+// =========================
+// 図形だけモード用：やさしい 10問
+// =========================
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の三角形で、？の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="55,180 245,180 150,55" fill="#eef2ff" stroke="#2563eb" stroke-width="4"/>
+      <text x="65" y="170" font-size="24">60°</text>
+      <text x="205" y="170" font-size="24">60°</text>
+      <text x="140" y="82" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["40°", "50°", "60°", "90°"],
+  answer: "60°",
+  explanation: "三角形の内角の和は180°です。180-60-60=60°です。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の三角形で、？の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="50,180 250,180 150,45" fill="#ecfeff" stroke="#0891b2" stroke-width="4"/>
+      <text x="60" y="170" font-size="24">50°</text>
+      <text x="205" y="170" font-size="24">50°</text>
+      <text x="140" y="78" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["70°", "80°", "90°", "100°"],
+  answer: "80°",
+  explanation: "180-50-50=80°です。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の直角三角形で、？の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="65,180 240,180 65,60" fill="#f0fdf4" stroke="#16a34a" stroke-width="4"/>
+      <polyline points="65,160 85,160 85,180" fill="none" stroke="#16a34a" stroke-width="3"/>
+      <text x="88" y="170" font-size="22">90°</text>
+      <text x="190" y="170" font-size="24">30°</text>
+      <text x="75" y="88" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["30°", "45°", "60°", "90°"],
+  answer: "60°",
+  explanation: "直角三角形では、90°以外の2つの角の和は90°です。90-30=60°です。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の長方形の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <rect x="65" y="70" width="170" height="90" fill="#fefce8" stroke="#ca8a04" stroke-width="4"/>
+      <text x="130" y="190" font-size="24">6cm</text>
+      <text x="20" y="122" font-size="24">4cm</text>
+    </svg>
+  `,
+  options: ["10cm²", "20cm²", "24cm²", "30cm²"],
+  answer: "24cm²",
+  explanation: "長方形の面積は、たて×横です。4×6=24cm²です。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の正方形の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <rect x="90" y="55" width="120" height="120" fill="#fdf2f8" stroke="#db2777" stroke-width="4"/>
+      <text x="125" y="205" font-size="24">5cm</text>
+    </svg>
+  `,
+  options: ["10cm²", "20cm²", "25cm²", "30cm²"],
+  answer: "25cm²",
+  explanation: "正方形の面積は、一辺×一辺です。5×5=25cm²です。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の三角形の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="60,175 240,175 150,65" fill="#eef2ff" stroke="#2563eb" stroke-width="4"/>
+      <line x1="150" y1="65" x2="150" y2="175" stroke="#64748b" stroke-width="3" stroke-dasharray="6 5"/>
+      <text x="125" y="205" font-size="24">8cm</text>
+      <text x="160" y="125" font-size="24">5cm</text>
+    </svg>
+  `,
+  options: ["20cm²", "30cm²", "40cm²", "80cm²"],
+  answer: "20cm²",
+  explanation: "三角形の面積は、底辺×高さ÷2です。8×5÷2=20cm²です。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の円の直径は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <circle cx="150" cy="110" r="60" fill="#ecfeff" stroke="#0891b2" stroke-width="4"/>
+      <line x1="150" y1="110" x2="210" y2="110" stroke="#0891b2" stroke-width="4"/>
+      <circle cx="150" cy="110" r="4" fill="#0891b2"/>
+      <text x="162" y="100" font-size="24">5cm</text>
+    </svg>
+  `,
+  options: ["5cm", "10cm", "15cm", "25cm"],
+  answer: "10cm",
+  explanation: "直径は半径の2倍です。5×2=10cmです。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <line x1="80" y1="170" x2="220" y2="170" stroke="#16a34a" stroke-width="5"/>
+      <line x1="80" y1="170" x2="80" y2="60" stroke="#16a34a" stroke-width="5"/>
+      <polyline points="80,145 105,145 105,170" fill="none" stroke="#16a34a" stroke-width="3"/>
+      <text x="115" y="150" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["45°", "60°", "90°", "180°"],
+  answer: "90°",
+  explanation: "まっすぐ立った線と横の線でできる角は直角、つまり90°です。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の平行四辺形の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="80,165 235,165 205,80 50,80" fill="#fefce8" stroke="#ca8a04" stroke-width="4"/>
+      <line x1="205" y1="80" x2="205" y2="165" stroke="#64748b" stroke-width="3" stroke-dasharray="6 5"/>
+      <text x="125" y="195" font-size="24">7cm</text>
+      <text x="215" y="125" font-size="24">4cm</text>
+    </svg>
+  `,
+  options: ["11cm²", "14cm²", "28cm²", "56cm²"],
+  answer: "28cm²",
+  explanation: "平行四辺形の面積は、底辺×高さです。7×4=28cm²です。"
+},
+{
+  level: "easy",
+  genre: "図形",
+  question: "下の三角形で、？の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="55,180 245,180 150,50" fill="#fdf2f8" stroke="#db2777" stroke-width="4"/>
+      <text x="65" y="170" font-size="24">45°</text>
+      <text x="205" y="170" font-size="24">45°</text>
+      <text x="140" y="80" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["45°", "60°", "90°", "100°"],
+  answer: "90°",
+  explanation: "180-45-45=90°です。"
+},
+
+// =========================
+// 図形だけモード用：むずかしい 10問
+// =========================
+{
+  level: "hard",
+  genre: "三平方",
+  question: "下の直角三角形で、？の長さは？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="60,175 240,175 60,70" fill="#eef2ff" stroke="#2563eb" stroke-width="4"/>
+      <polyline points="60,155 80,155 80,175" fill="none" stroke="#2563eb" stroke-width="3"/>
+      <text x="125" y="195" font-size="24">12</text>
+      <text x="25" y="130" font-size="24">5</text>
+      <text x="145" y="120" font-size="28">?</text>
+    </svg>
+  `,
+  options: ["12", "13", "14", "15"],
+  answer: "13",
+  explanation: "5²+12²=25+144=169。√169=13です。"
+},
+{
+  level: "hard",
+  genre: "三平方",
+  question: "下の直角三角形で、？の長さは？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="60,175 245,175 60,65" fill="#ecfeff" stroke="#0891b2" stroke-width="4"/>
+      <polyline points="60,155 80,155 80,175" fill="none" stroke="#0891b2" stroke-width="3"/>
+      <text x="130" y="198" font-size="24">8</text>
+      <text x="145" y="115" font-size="24">17</text>
+      <text x="25" y="130" font-size="28">?</text>
+    </svg>
+  `,
+  options: ["9", "12", "15", "16"],
+  answer: "15",
+  explanation: "斜辺17、一辺8です。17²-8²=289-64=225。√225=15です。"
+},
+{
+  level: "hard",
+  genre: "図形",
+  question: "下の円の円周の長さは？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <circle cx="150" cy="110" r="65" fill="#f0fdf4" stroke="#16a34a" stroke-width="4"/>
+      <line x1="150" y1="110" x2="215" y2="110" stroke="#16a34a" stroke-width="4"/>
+      <circle cx="150" cy="110" r="4" fill="#16a34a"/>
+      <text x="165" y="100" font-size="24">6cm</text>
+    </svg>
+  `,
+  options: ["6π cm", "12π cm", "18π cm", "36π cm"],
+  answer: "12π cm",
+  explanation: "円周は2πrです。2×π×6=12π cmです。"
+},
+{
+  level: "hard",
+  genre: "図形",
+  question: "下の円の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <circle cx="150" cy="110" r="65" fill="#fefce8" stroke="#ca8a04" stroke-width="4"/>
+      <line x1="150" y1="110" x2="215" y2="110" stroke="#ca8a04" stroke-width="4"/>
+      <circle cx="150" cy="110" r="4" fill="#ca8a04"/>
+      <text x="165" y="100" font-size="24">5cm</text>
+    </svg>
+  `,
+  options: ["10π cm²", "20π cm²", "25π cm²", "50π cm²"],
+  answer: "25π cm²",
+  explanation: "円の面積はπr²です。π×5²=25π cm²です。"
+},
+{
+  level: "hard",
+  genre: "図形",
+  question: "下の台形の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="75,165 225,165 195,75 105,75" fill="#fdf2f8" stroke="#db2777" stroke-width="4"/>
+      <line x1="195" y1="75" x2="195" y2="165" stroke="#64748b" stroke-width="3" stroke-dasharray="6 5"/>
+      <text x="130" y="67" font-size="24">8cm</text>
+      <text x="125" y="195" font-size="24">14cm</text>
+      <text x="205" y="125" font-size="24">6cm</text>
+    </svg>
+  `,
+  options: ["48cm²", "54cm²", "60cm²", "66cm²"],
+  answer: "66cm²",
+  explanation: "台形の面積は、(上底+下底)×高さ÷2です。(8+14)×6÷2=66cm²です。"
+},
+{
+  level: "hard",
+  genre: "図形",
+  question: "下の正方形の対角線の長さは？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <rect x="85" y="55" width="130" height="130" fill="#eef2ff" stroke="#2563eb" stroke-width="4"/>
+      <line x1="85" y1="185" x2="215" y2="55" stroke="#ef4444" stroke-width="4"/>
+      <text x="125" y="212" font-size="24">6cm</text>
+      <text x="145" y="120" font-size="28">?</text>
+    </svg>
+  `,
+  options: ["6cm", "6√2 cm", "12cm", "12√2 cm"],
+  answer: "6√2 cm",
+  explanation: "正方形の対角線は一辺×√2です。6√2 cmです。"
+},
+{
+  level: "hard",
+  genre: "角度",
+  question: "下の平行線で、？の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <line x1="45" y1="80" x2="255" y2="80" stroke="#0891b2" stroke-width="4"/>
+      <line x1="45" y1="155" x2="255" y2="155" stroke="#0891b2" stroke-width="4"/>
+      <line x1="100" y1="190" x2="210" y2="45" stroke="#0f172a" stroke-width="4"/>
+      <text x="175" y="72" font-size="24">65°</text>
+      <text x="105" y="150" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["55°", "65°", "115°", "125°"],
+  answer: "65°",
+  explanation: "平行線の同位角は等しいので、？も65°です。"
+},
+{
+  level: "hard",
+  genre: "角度",
+  question: "下の直線上で、？の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <line x1="45" y1="160" x2="255" y2="160" stroke="#16a34a" stroke-width="5"/>
+      <line x1="150" y1="160" x2="215" y2="70" stroke="#16a34a" stroke-width="5"/>
+      <text x="172" y="145" font-size="24">120°</text>
+      <text x="95" y="145" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["40°", "50°", "60°", "70°"],
+  answer: "60°",
+  explanation: "直線上の角度の和は180°です。180-120=60°です。"
+},
+{
+  level: "hard",
+  genre: "図形",
+  question: "下の三角形の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="50,175 250,175 190,55" fill="#fefce8" stroke="#ca8a04" stroke-width="4"/>
+      <line x1="190" y1="55" x2="190" y2="175" stroke="#64748b" stroke-width="3" stroke-dasharray="6 5"/>
+      <text x="125" y="205" font-size="24">15cm</text>
+      <text x="200" y="120" font-size="24">8cm</text>
+    </svg>
+  `,
+  options: ["40cm²", "50cm²", "60cm²", "120cm²"],
+  answer: "60cm²",
+  explanation: "三角形の面積は底辺×高さ÷2です。15×8÷2=60cm²です。"
+},
+{
+  level: "hard",
+  genre: "図形",
+  question: "下の直方体の体積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="80,80 190,80 230,115 120,115" fill="#e0f2fe" stroke="#2563eb" stroke-width="3"/>
+      <polygon points="120,115 230,115 230,175 120,175" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+      <polygon points="80,80 120,115 120,175 80,140" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+      <line x1="80" y1="140" x2="190" y2="140" stroke="#2563eb" stroke-width="3"/>
+      <line x1="190" y1="80" x2="230" y2="115" stroke="#2563eb" stroke-width="3"/>
+      <line x1="190" y1="80" x2="190" y2="140" stroke="#2563eb" stroke-width="3"/>
+      <text x="145" y="202" font-size="22">6cm</text>
+      <text x="235" y="150" font-size="22">4cm</text>
+      <text x="72" y="110" font-size="22">5cm</text>
+    </svg>
+  `,
+  options: ["60cm³", "80cm³", "100cm³", "120cm³"],
+  answer: "120cm³",
+  explanation: "直方体の体積は、たて×横×高さです。6×4×5=120cm³です。"
+},
+
+// =========================
+// 図形だけモード用：挑戦 10問
+// =========================
+{
+  level: "challenge",
+  genre: "三角比",
+  question: "下の直角三角形で、sinθ は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="60,175 240,175 60,70" fill="#eef2ff" stroke="#2563eb" stroke-width="4"/>
+      <polyline points="60,155 80,155 80,175" fill="none" stroke="#2563eb" stroke-width="3"/>
+      <text x="135" y="198" font-size="22">4</text>
+      <text x="28" y="130" font-size="22">3</text>
+      <text x="145" y="115" font-size="22">5</text>
+      <text x="210" y="160" font-size="28">θ</text>
+    </svg>
+  `,
+  options: ["3/5", "4/5", "3/4", "4/3"],
+  answer: "3/5",
+  explanation: "sinθは、向かい側の辺÷斜辺です。θの向かい側は3、斜辺は5なので3/5です。"
+},
+{
+  level: "challenge",
+  genre: "三角比",
+  question: "下の直角三角形で、cosθ は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="60,175 240,175 60,70" fill="#ecfeff" stroke="#0891b2" stroke-width="4"/>
+      <polyline points="60,155 80,155 80,175" fill="none" stroke="#0891b2" stroke-width="3"/>
+      <text x="135" y="198" font-size="22">4</text>
+      <text x="28" y="130" font-size="22">3</text>
+      <text x="145" y="115" font-size="22">5</text>
+      <text x="210" y="160" font-size="28">θ</text>
+    </svg>
+  `,
+  options: ["3/5", "4/5", "3/4", "5/4"],
+  answer: "4/5",
+  explanation: "cosθは、となりの辺÷斜辺です。θのとなりの辺は4、斜辺は5なので4/5です。"
+},
+{
+  level: "challenge",
+  genre: "三角比",
+  question: "下の直角三角形で、tanθ は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="60,175 240,175 60,70" fill="#f0fdf4" stroke="#16a34a" stroke-width="4"/>
+      <polyline points="60,155 80,155 80,175" fill="none" stroke="#16a34a" stroke-width="3"/>
+      <text x="135" y="198" font-size="22">4</text>
+      <text x="28" y="130" font-size="22">3</text>
+      <text x="145" y="115" font-size="22">5</text>
+      <text x="210" y="160" font-size="28">θ</text>
+    </svg>
+  `,
+  options: ["3/4", "4/3", "3/5", "4/5"],
+  answer: "3/4",
+  explanation: "tanθは、向かい側の辺÷となりの辺です。3÷4=3/4です。"
+},
+{
+  level: "challenge",
+  genre: "相似",
+  question: "下の2つの三角形は相似です。？の長さは？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="35,165 120,165 35,85" fill="#fefce8" stroke="#ca8a04" stroke-width="4"/>
+      <polygon points="170,165 285,165 170,55" fill="#fefce8" stroke="#ca8a04" stroke-width="4"/>
+      <text x="67" y="190" font-size="22">4</text>
+      <text x="10" y="125" font-size="22">3</text>
+      <text x="220" y="190" font-size="22">8</text>
+      <text x="145" y="120" font-size="28">?</text>
+    </svg>
+  `,
+  options: ["4", "5", "6", "7"],
+  answer: "6",
+  explanation: "横の長さが4から8で2倍になっています。縦も3×2=6です。"
+},
+{
+  level: "challenge",
+  genre: "円周角",
+  question: "同じ弧に対する中心角が100°のとき、円周角？は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <circle cx="150" cy="110" r="75" fill="#fdf2f8" stroke="#db2777" stroke-width="4"/>
+      <circle cx="150" cy="110" r="4" fill="#db2777"/>
+      <line x1="150" y1="110" x2="92" y2="65" stroke="#db2777" stroke-width="3"/>
+      <line x1="150" y1="110" x2="208" y2="65" stroke="#db2777" stroke-width="3"/>
+      <line x1="92" y1="65" x2="150" y2="185" stroke="#0f172a" stroke-width="3"/>
+      <line x1="208" y1="65" x2="150" y2="185" stroke="#0f172a" stroke-width="3"/>
+      <text x="130" y="88" font-size="22">100°</text>
+      <text x="140" y="165" font-size="28">?</text>
+    </svg>
+  `,
+  options: ["40°", "50°", "80°", "100°"],
+  answer: "50°",
+  explanation: "同じ弧に対する円周角は中心角の半分です。100÷2=50°です。"
+},
+{
+  level: "challenge",
+  genre: "角度",
+  question: "下の二等辺三角形で、？の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="60,175 240,175 150,50" fill="#eef2ff" stroke="#2563eb" stroke-width="4"/>
+      <text x="136" y="80" font-size="24">40°</text>
+      <text x="70" y="165" font-size="30">?</text>
+      <text x="200" y="165" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["60°", "65°", "70°", "80°"],
+  answer: "70°",
+  explanation: "二等辺三角形なので底角は等しいです。(180-40)÷2=70°です。"
+},
+{
+  level: "challenge",
+  genre: "面積比",
+  question: "下の長方形で、ぬられた部分の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <rect x="55" y="55" width="190" height="120" fill="#ffffff" stroke="#16a34a" stroke-width="4"/>
+      <polygon points="55,55 245,55 55,175" fill="#dcfce7" stroke="#16a34a" stroke-width="3"/>
+      <text x="125" y="205" font-size="24">10cm</text>
+      <text x="10" y="120" font-size="24">6cm</text>
+    </svg>
+  `,
+  options: ["20cm²", "30cm²", "40cm²", "60cm²"],
+  answer: "30cm²",
+  explanation: "長方形の半分がぬられています。長方形は10×6=60cm²。半分は30cm²です。"
+},
+{
+  level: "challenge",
+  genre: "三平方",
+  question: "下の図で、正方形の対角線が10cmのとき、一辺は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <rect x="85" y="55" width="130" height="130" fill="#ecfeff" stroke="#0891b2" stroke-width="4"/>
+      <line x1="85" y1="185" x2="215" y2="55" stroke="#ef4444" stroke-width="4"/>
+      <text x="135" y="120" font-size="24">10cm</text>
+      <text x="125" y="212" font-size="28">?</text>
+    </svg>
+  `,
+  options: ["5cm", "5√2 cm", "10√2 cm", "20cm"],
+  answer: "5√2 cm",
+  explanation: "正方形の対角線は一辺×√2です。一辺=10÷√2=5√2 cmです。"
+},
+{
+  level: "challenge",
+  genre: "円",
+  question: "半径3cmの円を半分にした図形の面積は？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <path d="M85 120 A65 65 0 0 1 215 120 Z" fill="#fefce8" stroke="#ca8a04" stroke-width="4"/>
+      <line x1="150" y1="120" x2="215" y2="120" stroke="#ca8a04" stroke-width="4"/>
+      <circle cx="150" cy="120" r="4" fill="#ca8a04"/>
+      <text x="165" y="110" font-size="24">3cm</text>
+    </svg>
+  `,
+  options: ["3π cm²", "4.5π cm²", "6π cm²", "9π cm²"],
+  answer: "4.5π cm²",
+  explanation: "円の面積は9π cm²です。その半分なので4.5π cm²です。"
+},
+{
+  level: "challenge",
+  genre: "角度",
+  question: "下の外角が120°のとき、？の角度は何度？",
+  figure: `
+    <svg viewBox="0 0 300 220" class="quiz-figure">
+      <polygon points="70,175 210,175 135,70" fill="#fdf2f8" stroke="#db2777" stroke-width="4"/>
+      <line x1="210" y1="175" x2="260" y2="175" stroke="#db2777" stroke-width="4"/>
+      <text x="218" y="160" font-size="24">120°</text>
+      <text x="82" y="165" font-size="24">50°</text>
+      <text x="128" y="98" font-size="30">?</text>
+    </svg>
+  `,
+  options: ["50°", "60°", "70°", "80°"],
+  answer: "70°",
+  explanation: "外角は、離れた2つの内角の和です。120=50+? なので、？=70°です。"
 }
 
 ];

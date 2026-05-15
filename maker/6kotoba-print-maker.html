@@ -71,29 +71,32 @@
     .sticker-box { display: inline-flex; align-items: center; justify-content: center; width: 24mm; height: 10mm; margin-left: 2mm; border: 1.8px solid #222; border-radius: 6px; font-size: 11px; color: #777; vertical-align: middle; }
 
     .problems { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5mm 7mm; }
-    .problem { min-height: 28mm; page-break-inside: avoid; border: 1.8px solid #222; border-radius: 8px; padding: 3mm 4mm; }
+    .problem { min-height: 30mm; page-break-inside: avoid; border: 1.8px solid #222; border-radius: 8px; padding: 3mm 4mm; }
     .problem-number { font-size: 13px; font-weight: 900; margin-bottom: 2mm; }
-    .question-text { font-size: 17px; line-height: 1.6; font-weight: 800; }
-    .word-big { font-size: 21px; font-weight: 900; display: inline-block; margin: 0 1mm; }
+    .question-text { font-size: 16px; line-height: 1.55; font-weight: 800; }
+    .word-big { font-size: 20px; font-weight: 900; display: inline-block; margin: 0 1mm; }
+    .reading { font-size: 12px; color: #666; font-weight: 700; }
     .answer-row { margin-top: 2mm; display: flex; align-items: center; justify-content: flex-end; gap: 2mm; font-size: 16px; font-weight: 900; }
-    .answer-line { display: inline-block; width: 36mm; height: 9mm; border-bottom: 2px solid #222; }
+    .answer-line { display: inline-block; width: 40mm; height: 9mm; border-bottom: 2px solid #222; }
+    .long-answer-line { width: 62mm; }
 
-    .choice-row { margin-top: 3mm; display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm 5mm; font-size: 15px; font-weight: 800; }
-    .choice { border: 1.2px solid #aaa; border-radius: 7px; padding: 1.5mm 2mm; min-height: 8mm; }
+    .choice-row { margin-top: 3mm; display: grid; grid-template-columns: 1fr; gap: 1.7mm; font-size: 13px; font-weight: 800; }
+    .choice { border: 1.2px solid #aaa; border-radius: 7px; padding: 1.3mm 2mm; min-height: 7mm; line-height: 1.35; }
 
-    .connect-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 8mm; margin-top: 2mm; }
-    .connect-col { display: grid; gap: 3mm; font-size: 16px; font-weight: 800; }
-    .connect-item { display: flex; align-items: center; gap: 3mm; min-height: 8mm; }
+    .connect-layout { display: grid; grid-template-columns: .85fr 1.15fr; gap: 4mm 8mm; margin-top: 2mm; }
+    .connect-col { display: grid; gap: 3mm; font-size: 14px; font-weight: 800; }
+    .connect-item { display: flex; align-items: center; gap: 3mm; min-height: 8mm; line-height: 1.3; }
     .dot { display: inline-block; width: 3mm; height: 3mm; border: 1.6px solid #222; border-radius: 50%; flex: 0 0 auto; }
 
-    .answer-small { margin-top: 2mm; font-size: 12px; color: #666; text-align: right; }
+    .answer-small { margin-top: 2mm; font-size: 11px; color: #666; text-align: right; line-height: 1.35; }
 
     .paper.count-12 .problems { gap: 3.5mm 6mm; }
-    .paper.count-12 .problem { min-height: 23mm; padding: 2.5mm 3mm; }
-    .paper.count-12 .question-text { font-size: 15px; line-height: 1.45; }
-    .paper.count-12 .word-big { font-size: 18px; }
-    .paper.count-12 .answer-line { width: 30mm; height: 7mm; }
-    .paper.count-12 .choice-row { font-size: 13px; gap: 1.5mm 3mm; }
+    .paper.count-12 .problem { min-height: 24mm; padding: 2.3mm 3mm; }
+    .paper.count-12 .question-text { font-size: 14px; line-height: 1.4; }
+    .paper.count-12 .word-big { font-size: 17px; }
+    .paper.count-12 .answer-line { width: 31mm; height: 7mm; }
+    .paper.count-12 .long-answer-line { width: 48mm; }
+    .paper.count-12 .choice-row { font-size: 11px; gap: 1.2mm; }
 
     .paper.count-16 .print-title { font-size: 23px; }
     .paper.count-16 .title-stars { font-size: 16px; }
@@ -102,20 +105,21 @@
     .paper.count-16 .problems { gap: 2mm 5mm; }
     .paper.count-16 .problem { min-height: 19mm; padding: 1.8mm 2.5mm; }
     .paper.count-16 .problem-number { font-size: 11px; margin-bottom: 1mm; }
-    .paper.count-16 .question-text { font-size: 12.5px; line-height: 1.35; }
-    .paper.count-16 .word-big { font-size: 15px; }
+    .paper.count-16 .question-text { font-size: 12px; line-height: 1.32; }
+    .paper.count-16 .word-big { font-size: 14px; }
     .paper.count-16 .answer-row { font-size: 12px; margin-top: 1mm; }
     .paper.count-16 .answer-line { width: 22mm; height: 6mm; }
-    .paper.count-16 .choice-row { font-size: 11px; gap: 1mm 2mm; margin-top: 1mm; }
+    .paper.count-16 .long-answer-line { width: 38mm; }
+    .paper.count-16 .choice-row { font-size: 9.5px; gap: .8mm; margin-top: 1mm; }
     .paper.count-16 .sticker-box { width: 20mm; height: 8mm; font-size: 9px; }
 
-    .connect-paper .problem { min-height: 82mm; }
+    .connect-paper .problem { min-height: 90mm; }
     .connect-paper .problems { grid-template-columns: 1fr; gap: 6mm; }
     .connect-paper .question-text { margin-bottom: 4mm; }
 
     .answer-page { margin-top: 16px; }
-    .answers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7mm 5mm; font-size: 17px; margin-top: 10mm; }
-    .answer-item { border-bottom: 1px solid #999; padding-bottom: 3mm; }
+    .answers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7mm 5mm; font-size: 14px; margin-top: 10mm; }
+    .answer-item { border-bottom: 1px solid #999; padding-bottom: 3mm; line-height: 1.35; }
 
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
@@ -141,7 +145,7 @@
   <div class="app">
     <header>
       <h1>ことばプリントメーカー</h1>
-      <div class="subtitle">反対語・仲間分け・ことばの意味をA4プリントで練習できます</div>
+      <div class="subtitle">反対語・仲間分け・ことわざ・慣用句・四字熟語をA4プリントで練習できます</div>
     </header>
 
     <main class="layout">
@@ -154,19 +158,29 @@
         <label for="titleText">プリント名</label>
         <input id="titleText" type="text" value="ことばれんしゅうプリント" />
 
+        <label for="questionType">問題タイプ</label>
+        <select id="questionType">
+          <option value="opposite" selected>反対語を書く</option>
+          <option value="category">仲間はずれ</option>
+          <option value="phraseMeaning">ことわざ・慣用句・四字熟語：意味を選ぶ</option>
+          <option value="phraseWord">意味を見てことばを書く</option>
+          <option value="phraseConnect">ことばと意味を線でつなぐ</option>
+          <option value="phraseMix">ことわざ・慣用句・四字熟語ミックス</option>
+          <option value="mix">ぜんぶミックス</option>
+        </select>
+
         <div class="row">
           <div>
-            <label for="questionType">問題タイプ</label>
-            <select id="questionType">
-              <option value="opposite" selected>反対語を書く</option>
-              <option value="meaning">意味を選ぶ</option>
-              <option value="category">仲間はずれ</option>
-              <option value="connect">線でつなぐ</option>
-              <option value="mix">ミックス</option>
+            <label for="phraseType">ことばの種類</label>
+            <select id="phraseType">
+              <option value="all" selected>全部</option>
+              <option value="ことわざ">ことわざ</option>
+              <option value="慣用句">慣用句</option>
+              <option value="四字熟語">四字熟語</option>
             </select>
           </div>
           <div>
-            <label for="level">むずかしさ</label>
+            <label for="level">反対語・仲間分け</label>
             <select id="level">
               <option value="easy" selected>かんたん</option>
               <option value="normal">ふつう</option>
@@ -190,6 +204,11 @@
         </div>
 
         <div class="checkbox-row">
+          <input id="showReading" type="checkbox" checked />
+          <span>読みがなを表示する</span>
+        </div>
+
+        <div class="checkbox-row">
           <input id="showAnswers" type="checkbox" />
           <span>問題ページに小さく答えを表示</span>
         </div>
@@ -206,8 +225,8 @@
         </div>
 
         <div class="note no-print">
-          最初は「反対語を書く」か「仲間はずれ」がおすすめです。<br>
-          「線でつなぐ」はA4に収まるように大きめ問題で作ります。
+          ことわざ・慣用句・四字熟語のデータは <strong>data/kotoba-data.js</strong> から読み込みます。<br>
+          GitHubでは <strong>maker/data/kotoba-data.js</strong> に置いてください。
         </div>
       </section>
 
@@ -241,6 +260,8 @@
     </main>
   </div>
 
+  <script src="data/kotoba-data.js"></script>
+
   <script>
     const OPPOSITES = [
       { q: "大きい", a: "小さい", level: "easy" },
@@ -263,15 +284,6 @@
       { q: "安全", a: "危険", level: "normal" }
     ];
 
-    const MEANINGS = [
-      { word: "ていねい", answer: "心をこめてきちんとすること", choices: ["心をこめてきちんとすること", "とても急ぐこと", "大きな声を出すこと", "走って行くこと"], level: "easy" },
-      { word: "しんせつ", answer: "人にやさしくすること", choices: ["人にやさしくすること", "すぐにねむること", "水を飲むこと", "絵をかくこと"], level: "easy" },
-      { word: "ゆっくり", answer: "いそがずにすること", choices: ["いそがずにすること", "とても高いこと", "赤い色のこと", "手を洗うこと"], level: "easy" },
-      { word: "りゆう", answer: "どうしてそうなったかのわけ", choices: ["どうしてそうなったかのわけ", "魚の名前", "明日の天気", "音楽の速さ"], level: "normal" },
-      { word: "よそう", answer: "これからどうなるか考えること", choices: ["これからどうなるか考えること", "ものを食べること", "字を消すこと", "服をたたむこと"], level: "normal" },
-      { word: "くらべる", answer: "二つ以上を見てちがいを考えること", choices: ["二つ以上を見てちがいを考えること", "大きな声で読むこと", "水に入れること", "紙を切ること"], level: "normal" }
-    ];
-
     const CATEGORIES = [
       { items: ["りんご", "みかん", "バナナ", "にんじん"], answer: "にんじん", reason: "くだものではない", level: "easy" },
       { items: ["いぬ", "ねこ", "うさぎ", "さくら"], answer: "さくら", reason: "どうぶつではない", level: "easy" },
@@ -282,6 +294,11 @@
     ];
 
     let currentAnswers = [];
+
+    function getData() {
+      if (typeof DATA === "undefined" || !Array.isArray(DATA)) return [];
+      return DATA.filter(item => item && item.word && item.meaning && item.type);
+    }
 
     function todayText() {
       const d = new Date();
@@ -304,7 +321,14 @@
       return list.filter(item => item.level === "easy");
     }
 
+    function getPhrasePool(phraseType) {
+      const data = getData();
+      if (phraseType === "all") return data;
+      return data.filter(item => item.type === phraseType);
+    }
+
     function pickFrom(list, count) {
+      if (!list.length) return [];
       let source = shuffle(list);
       const result = [];
       let index = 0;
@@ -319,28 +343,29 @@
       return result;
     }
 
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
+    }
+
+    function shortMeaning(text) {
+      const t = String(text || "");
+      return t.length > 45 ? t.slice(0, 45) + "…" : t;
+    }
+
+    function readingHtml(item, showReading) {
+      if (!showReading || !item.reading) return "";
+      return `<div class="reading">${escapeHtml(item.reading)}</div>`;
+    }
+
     function makeOppositeProblem(item, index, showAnswers) {
       return {
         html: `
           <div class="problem-number">${index + 1}</div>
-          <div class="question-text">「<span class="word-big">${item.q}</span>」の反対のことばを書きましょう。</div>
+          <div class="question-text">「<span class="word-big">${escapeHtml(item.q)}</span>」の反対のことばを書きましょう。</div>
           <div class="answer-row"><span>答え</span><span class="answer-line"></span></div>
-          ${showAnswers ? `<div class="answer-small">こたえ：${item.a}</div>` : ""}
+          ${showAnswers ? `<div class="answer-small">こたえ：${escapeHtml(item.a)}</div>` : ""}
         `,
         answer: item.a
-      };
-    }
-
-    function makeMeaningProblem(item, index, showAnswers) {
-      const choices = shuffle(item.choices);
-      return {
-        html: `
-          <div class="problem-number">${index + 1}</div>
-          <div class="question-text">「<span class="word-big">${item.word}</span>」の意味を選びましょう。</div>
-          <div class="choice-row">${choices.map(c => `<div class="choice">□ ${c}</div>`).join("")}</div>
-          ${showAnswers ? `<div class="answer-small">こたえ：${item.answer}</div>` : ""}
-        `,
-        answer: item.answer
       };
     }
 
@@ -349,59 +374,108 @@
         html: `
           <div class="problem-number">${index + 1}</div>
           <div class="question-text">仲間はずれを選びましょう。</div>
-          <div class="choice-row">${item.items.map(c => `<div class="choice">□ ${c}</div>`).join("")}</div>
+          <div class="choice-row two-col">${item.items.map(c => `<div class="choice">□ ${escapeHtml(c)}</div>`).join("")}</div>
           <div class="answer-row"><span>答え</span><span class="answer-line"></span></div>
-          ${showAnswers ? `<div class="answer-small">こたえ：${item.answer}（${item.reason}）</div>` : ""}
+          ${showAnswers ? `<div class="answer-small">こたえ：${escapeHtml(item.answer)}（${escapeHtml(item.reason)}）</div>` : ""}
         `,
         answer: `${item.answer}（${item.reason}）`
       };
     }
 
-    function makeConnectProblem(level, showAnswers) {
-      const list = shuffle(filterByLevel(OPPOSITES, level)).slice(0, 8);
-      const left = list.map(item => item.q);
-      const right = shuffle(list).map(item => item.a);
-      const leftHtml = left.map(text => `<div class="connect-item"><span>${text}</span><span class="dot"></span></div>`).join("");
-      const rightHtml = right.map(text => `<div class="connect-item"><span class="dot"></span><span>${text}</span></div>`).join("");
+    function makePhraseMeaningProblem(item, index, pool, showReading, showAnswers) {
+      const wrongs = shuffle(pool.filter(x => x.word !== item.word)).slice(0, 3).map(x => x.meaning);
+      const choices = shuffle([item.meaning, ...wrongs]);
       return {
         html: `
-          <div class="problem-number">1</div>
-          <div class="question-text">反対のことばを線でつなぎましょう。</div>
+          <div class="problem-number">${index + 1}　${escapeHtml(item.type)}</div>
+          <div class="question-text">「<span class="word-big">${escapeHtml(item.word)}</span>」の意味を選びましょう。${readingHtml(item, showReading)}</div>
+          <div class="choice-row">${choices.map(c => `<div class="choice">□ ${escapeHtml(shortMeaning(c))}</div>`).join("")}</div>
+          ${showAnswers ? `<div class="answer-small">こたえ：${escapeHtml(item.meaning)}</div>` : ""}
+        `,
+        answer: `${item.word}：${item.meaning}`
+      };
+    }
+
+    function makePhraseWordProblem(item, index, showReading, showAnswers) {
+      return {
+        html: `
+          <div class="problem-number">${index + 1}　${escapeHtml(item.type)}</div>
+          <div class="question-text">この意味に合うことばを書きましょう。<br>${escapeHtml(shortMeaning(item.meaning))}</div>
+          <div class="answer-row"><span>答え</span><span class="answer-line long-answer-line"></span></div>
+          ${showAnswers ? `<div class="answer-small">こたえ：${escapeHtml(item.word)} ${showReading && item.reading ? `（${escapeHtml(item.reading)}）` : ""}</div>` : ""}
+        `,
+        answer: `${item.word}${item.reading ? `（${item.reading}）` : ""}`
+      };
+    }
+
+    function makePhraseConnectProblem(pool, phraseType, showReading, showAnswers) {
+      const list = shuffle(pool).slice(0, Math.min(8, pool.length));
+      const left = list.map(item => item.word);
+      const right = shuffle(list).map(item => shortMeaning(item.meaning));
+      const leftHtml = left.map(text => `<div class="connect-item"><span>${escapeHtml(text)}</span><span class="dot"></span></div>`).join("");
+      const rightHtml = right.map(text => `<div class="connect-item"><span class="dot"></span><span>${escapeHtml(text)}</span></div>`).join("");
+      return {
+        html: `
+          <div class="problem-number">1　${phraseType === "all" ? "ことば" : escapeHtml(phraseType)}</div>
+          <div class="question-text">ことばと意味を線でつなぎましょう。</div>
           <div class="connect-layout">
             <div class="connect-col">${leftHtml}</div>
             <div class="connect-col">${rightHtml}</div>
           </div>
           ${showAnswers ? `<div class="answer-small">こたえは答えページを見てね</div>` : ""}
         `,
-        answers: list.map(item => `${item.q} → ${item.a}`)
+        answers: list.map(item => `${item.word} → ${item.meaning}`)
       };
     }
 
-    function makeOneProblem(type, level, index, showAnswers) {
+    function makeOneProblem(type, level, phraseType, index, showReading, showAnswers) {
       let qType = type;
+      const phrasePool = getPhrasePool(phraseType);
+
       if (type === "mix") {
-        const types = ["opposite", "meaning", "category"];
+        const types = ["opposite", "category", "phraseMeaning", "phraseWord"];
         qType = types[rand(0, types.length - 1)];
       }
-      if (qType === "meaning") return makeMeaningProblem(pickFrom(filterByLevel(MEANINGS, level), 1)[0], index, showAnswers);
+      if (type === "phraseMix") {
+        const types = ["phraseMeaning", "phraseWord"];
+        qType = types[rand(0, types.length - 1)];
+      }
+
       if (qType === "category") return makeCategoryProblem(pickFrom(filterByLevel(CATEGORIES, level), 1)[0], index, showAnswers);
+      if (qType === "phraseMeaning") {
+        const item = pickFrom(phrasePool, 1)[0];
+        return makePhraseMeaningProblem(item, index, phrasePool, showReading, showAnswers);
+      }
+      if (qType === "phraseWord") {
+        const item = pickFrom(phrasePool, 1)[0];
+        return makePhraseWordProblem(item, index, showReading, showAnswers);
+      }
       return makeOppositeProblem(pickFrom(filterByLevel(OPPOSITES, level), 1)[0], index, showAnswers);
     }
 
     function makeWorksheet() {
+      const data = getData();
+      const questionType = document.getElementById("questionType").value;
+      const phraseType = document.getElementById("phraseType").value;
+      const needsExternalData = ["phraseMeaning", "phraseWord", "phraseConnect", "phraseMix", "mix"].includes(questionType);
+      if (needsExternalData && data.length === 0) {
+        alert("kotoba-data.js が読み込めていません。maker/data/kotoba-data.js に置いてください。");
+        return;
+      }
+
       const childName = document.getElementById("childName").value.trim();
       const titleText = document.getElementById("titleText").value.trim() || "ことばれんしゅうプリント";
-      const questionType = document.getElementById("questionType").value;
       const level = document.getElementById("level").value;
       const count = Number(document.getElementById("count").value);
       const dateText = document.getElementById("dateText").value.trim() || todayText();
+      const showReading = document.getElementById("showReading").checked;
       const showAnswers = document.getElementById("showAnswers").checked;
       const printAnswerPage = document.getElementById("printAnswerPage").checked;
 
       const worksheetPage = document.getElementById("worksheetPage");
       worksheetPage.classList.remove("count-8", "count-12", "count-16", "connect-paper");
       worksheetPage.classList.add(`count-${count}`);
-      if (questionType === "connect") worksheetPage.classList.add("connect-paper");
+      if (questionType === "phraseConnect") worksheetPage.classList.add("connect-paper");
 
       document.getElementById("paperTitle").textContent = titleText;
       document.getElementById("paperName").textContent = childName || "　　　　　　　　";
@@ -415,8 +489,8 @@
       answersEl.innerHTML = "";
       currentAnswers = [];
 
-      if (questionType === "connect") {
-        const made = makeConnectProblem(level, showAnswers);
+      if (questionType === "phraseConnect") {
+        const made = makePhraseConnectProblem(getPhrasePool(phraseType), phraseType, showReading, showAnswers);
         const problem = document.createElement("div");
         problem.className = "problem";
         problem.innerHTML = made.html;
@@ -424,7 +498,7 @@
         currentAnswers.push(...made.answers);
       } else {
         for (let i = 0; i < count; i++) {
-          const made = makeOneProblem(questionType, level, i, showAnswers);
+          const made = makeOneProblem(questionType, level, phraseType, i, showReading, showAnswers);
           const problem = document.createElement("div");
           problem.className = "problem";
           problem.innerHTML = made.html;
@@ -454,9 +528,11 @@
       document.getElementById("childName").value = "";
       document.getElementById("titleText").value = "ことばれんしゅうプリント";
       document.getElementById("questionType").value = "opposite";
+      document.getElementById("phraseType").value = "all";
       document.getElementById("level").value = "easy";
       document.getElementById("count").value = "8";
       document.getElementById("dateText").value = todayText();
+      document.getElementById("showReading").checked = true;
       document.getElementById("showAnswers").checked = false;
       document.getElementById("printAnswerPage").checked = true;
       makeWorksheet();

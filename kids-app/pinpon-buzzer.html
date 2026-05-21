@@ -312,26 +312,34 @@ function playPinpon() {
   const ctx = getAudioCtx();
   const now = ctx.currentTime;
 
-  function tone(freq, start, duration, volume) {
+  function tone(freq, start, duration, volume, type = 'sine') {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = 'triangle';
+    osc.type = type;
     osc.frequency.setValueAtTime(freq, now + start);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     gain.gain.setValueAtTime(0.0001, now + start);
-    gain.gain.exponentialRampToValueAtTime(volume, now + start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(volume, now + start + 0.025);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
 
     osc.start(now + start);
     osc.stop(now + start + duration + 0.05);
   }
 
-  tone(1046.5, 0.00, 0.18, 0.55); // ド
-  tone(1568.0, 0.18, 0.45, 0.6);  // ソ
+  // ピン！
+  tone(1046.5, 0.00, 0.20, 0.55);
+  tone(1318.5, 0.00, 0.20, 0.18);
+
+  // ポーーン！
+  tone(784.0, 0.20, 0.75, 0.65);
+  tone(1174.7, 0.20, 0.75, 0.16);
+
+  // ほんの少し金属っぽさ
+  tone(1568.0, 0.22, 0.45, 0.08, 'triangle');
 }
 
   function createRipple(x, y) {

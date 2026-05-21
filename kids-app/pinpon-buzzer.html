@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ピンポンブザー</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen Maru Gothic:wght@700;900&display=swap');
+
+  :root {
+    --red: #e8211a;
+    --red-dark: #b51610;
+    --red-light: #ff4a42;
+    --white: #ffffff;
+    --bg: #1a1a2e;
+    --panel: #16213e;
+    --gold: #ffd700;
+    --shadow-red: rgba(232, 33, 26, 0.6);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic Pro', 'ヒラギノ丸ゴ ProN', sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* stars background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 20%, rgba(255,255,255,0.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.25) 0%, transparent 100%),
+      radial-gradient(1px 1px at 10% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(2px 2px at 70% 40%, rgba(255,255,255,0.15) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .title {
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    font-weight: 900;
+    color: var(--white);
+    text-shadow: 0 0 20px rgba(255,255,255,0.3);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2em;
+    text-align: center;
+  }
+  .title span {
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(255,215,0,0.6);
+  }
+
+  .subtitle {
+    font-size: clamp(0.8rem, 3vw, 1rem);
+    color: rgba(255,255,255,0.5);
+    margin-bottom: clamp(2rem, 8vw, 4rem);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── ブザーボタン ── */
+  .buzzer-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: clamp(2rem, 8vw, 3rem);
+  }
+
+  /* 外側の発光リング */
+  .glow-ring {
+    position: absolute;
+    width: clamp(220px, 60vw, 320px);
+    height: clamp(220px, 60vw, 320px);
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--shadow-red) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.1s;
+    pointer-events: none;
+  }
+
+  .buzzer-outer {
+    width: clamp(160px, 45vw, 240px);
+    height: clamp(160px, 45vw, 240px);
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #c41810, #e8211a, #ff4a42, #e8211a, #c41810);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 8px 32px var(--shadow-red),
+      0 2px 8px rgba(0,0,0,0.5),
+      inset 0 -4px 12px rgba(0,0,0,0.3),
+      inset 0 4px 12px rgba(255,100,100,0.4);
+    cursor: pointer;
+    transition: transform 0.08s, box-shadow 0.08s;
+    position: relative;
+    z-index: 1;
+  }
+
+  .buzzer-outer::before {
+    content: '';
+    position: absolute;
+    top: 8%;
+    left: 15%;
+    width: 35%;
+    height: 25%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.5) 0%, transparent 80%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .buzzer-inner {
+    width: 55%;
+    height: 55%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ff6b6b, #cc1810);
+    box-shadow:
+      inset 0 4px 8px rgba(255,150,150,0.4),
+      inset 0 -4px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .buzzer-text {
+    font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    line-height: 1.2;
+    text-align: center;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+  }
+
+  /* 押したとき */
+  .buzzer-outer:active,
+  .buzzer-outer.pressed {
+    transform: scale(0.92) translateY(4px);
+    box-shadow:
+      0 2px 12px var(--shadow-red),
+      0 1px 4px rgba(0,0,0,0.5),
+      inset 0 4px 12px rgba(0,0,0,0.4),
+      inset 0 -2px 8px rgba(255,100,100,0.2);
+  }
+
+  .buzzer-outer.pressed ~ .glow-ring,
+  .glow-ring.active {
+    opacity: 1;
+  }
+
+  /* ── 結果表示 ── */
+  .result-display {
+    height: clamp(60px, 18vw, 90px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: clamp(1.5rem, 5vw, 2.5rem);
+  }
+
+  .pinpon-text {
+    font-size: clamp(2.5rem, 12vw, 5rem);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow:
+      0 0 20px var(--gold),
+      0 0 40px rgba(255,215,0,0.5),
+      2px 2px 0 rgba(0,0,0,0.5);
+    letter-spacing: 0.05em;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+  }
+
+  .pinpon-text.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* ── リセットカウントダウン ── */
+  .reset-bar-wrap {
+    width: clamp(180px, 50vw, 280px);
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .reset-bar-wrap.show {
+    opacity: 1;
+  }
+
+  .reset-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--red-light));
+    border-radius: 3px;
+    width: 100%;
+    transform-origin: left;
+    transition: transform linear;
+  }
+
+  /* ── 波紋エフェクト ── */
+  .ripple {
+    position: fixed;
+    border-radius: 50%;
+    background: rgba(255, 100, 50, 0.35);
+    transform: scale(0);
+    animation: ripple-anim 0.6s ease-out forwards;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  @keyframes ripple-anim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* ── 星パーティクル ── */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    font-size: 1.5rem;
+    animation: particle-fly 0.9s ease-out forwards;
+    z-index: 998;
+  }
+
+  @keyframes particle-fly {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3); }
+  }
+
+  /* ── フラッシュ ── */
+  .flash {
+    position: fixed;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 997;
+    animation: flash-anim 0.3s ease-out forwards;
+  }
+
+  @keyframes flash-anim {
+    0% { opacity: 0.4; }
+    100% { opacity: 0; }
+  }
+
+  .hint {
+    position: fixed;
+    bottom: clamp(1rem, 4vw, 2rem);
+    font-size: clamp(0.65rem, 2.5vw, 0.8rem);
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<div class="title">ピン<span>ポン</span>ブザー</div>
+<div class="subtitle">早押しクイズ！</div>
+
+<div class="result-display">
+  <div class="pinpon-text" id="pinponText">ピンポーン！</div>
+</div>
+
+<div class="buzzer-wrap">
+  <div class="glow-ring" id="glowRing"></div>
+  <div class="buzzer-outer" id="buzzer">
+    <div class="buzzer-inner">
+      <div class="buzzer-text">押せ！</div>
+    </div>
+  </div>
+</div>
+
+<div class="reset-bar-wrap" id="resetBarWrap">
+  <div class="reset-bar" id="resetBar"></div>
+</div>
+
+<div class="hint">押したら自動リセット</div>
+
+<script>
+  const buzzer = document.getElementById('buzzer');
+  const pinponText = document.getElementById('pinponText');
+  const glowRing = document.getElementById('glowRing');
+  const resetBarWrap = document.getElementById('resetBarWrap');
+  const resetBar = document.getElementById('resetBar');
+
+  let audioCtx = null;
+  let resetTimer = null;
+  let isPressed = false;
+  const RESET_MS = 2000;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playPinpon() {
+    const ctx = getAudioCtx();
+
+    // ピン（高音）
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(1200, ctx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(1050, ctx.currentTime + 0.15);
+    gain1.gain.setValueAtTime(0.6, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.3);
+
+    // ポン（低音）
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(800, ctx.currentTime + 0.25);
+    osc2.frequency.exponentialRampToValueAtTime(680, ctx.currentTime + 0.45);
+    gain2.gain.setValueAtTime(0.0001, ctx.currentTime + 0.25);
+    gain2.gain.exponentialRampToValueAtTime(0.55, ctx.currentTime + 0.28);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+    osc2.start(ctx.currentTime + 0.25);
+    osc2.stop(ctx.currentTime + 0.55);
+
+    // 少しのバイブラート感
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.connect(gain3);
+    gain3.connect(ctx.destination);
+    osc3.type = 'triangle';
+    osc3.frequency.setValueAtTime(1210, ctx.currentTime);
+    osc3.frequency.exponentialRampToValueAtTime(1055, ctx.currentTime + 0.15);
+    gain3.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain3.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc3.start(ctx.currentTime);
+    osc3.stop(ctx.currentTime + 0.3);
+  }
+
+  function createRipple(x, y) {
+    const size = Math.max(window.innerWidth, window.innerHeight) * 0.8;
+    const el = document.createElement('div');
+    el.className = 'ripple';
+    el.style.cssText = `
+      width: ${size}px; height: ${size}px;
+      left: ${x - size/2}px; top: ${y - size/2}px;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 700);
+  }
+
+  function createParticles(x, y) {
+    const emojis = ['⭐','✨','🌟','💫','🎉'];
+    for (let i = 0; i < 8; i++) {
+      const el = document.createElement('div');
+      el.className = 'particle';
+      el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      const angle = (i / 8) * Math.PI * 2;
+      const dist = 80 + Math.random() * 80;
+      el.style.cssText = `
+        left: ${x}px; top: ${y}px;
+        --tx: ${Math.cos(angle) * dist}px;
+        --ty: ${Math.sin(angle) * dist}px;
+        animation-delay: ${Math.random() * 0.1}s;
+      `;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1000);
+    }
+  }
+
+  function createFlash() {
+    const el = document.createElement('div');
+    el.className = 'flash';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 400);
+  }
+
+  function startReset() {
+    resetBarWrap.classList.add('show');
+    resetBar.style.transition = 'none';
+    resetBar.style.transform = 'scaleX(1)';
+
+    // 少し待ってからアニメ開始
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resetBar.style.transition = `transform ${RESET_MS}ms linear`;
+        resetBar.style.transform = 'scaleX(0)';
+      });
+    });
+
+    resetTimer = setTimeout(resetBuzzer, RESET_MS);
+  }
+
+  function resetBuzzer() {
+    isPressed = false;
+    pinponText.classList.remove('show');
+    glowRing.classList.remove('active');
+    buzzer.classList.remove('pressed');
+    resetBarWrap.classList.remove('show');
+    resetBar.style.transition = 'none';
+    resetBar.style.transform = 'scaleX(1)';
+  }
+
+  function onPress(e) {
+    if (isPressed) return;
+    isPressed = true;
+
+    const rect = buzzer.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    // 視覚
+    buzzer.classList.add('pressed');
+    glowRing.classList.add('active');
+    pinponText.classList.add('show');
+    createFlash();
+    createRipple(cx, cy);
+    createParticles(cx, cy);
+
+    // 音
+    playPinpon();
+
+    // バイブレーション（対応デバイス）
+    if (navigator.vibrate) navigator.vibrate([60, 30, 40]);
+
+    // 少し後にボタンを戻す（見た目）
+    setTimeout(() => {
+      buzzer.classList.remove('pressed');
+      glowRing.classList.remove('active');
+    }, 200);
+
+    // リセットバー
+    if (resetTimer) clearTimeout(resetTimer);
+    startReset();
+  }
+
+  buzzer.addEventListener('pointerdown', onPress);
+  buzzer.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+
+  // スペースキーでも押せる
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault();
+      const rect = buzzer.getBoundingClientRect();
+      onPress();
+    }
+  });
+</script>
+</body>
+</html>

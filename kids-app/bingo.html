@@ -184,7 +184,7 @@
 <body>
 <div class="wrap">
   <div class="title">🎱 BINGO!</div>
-  <div class="subtitle">1〜100 ランダム抽選</div>
+  <div class="subtitle">1〜75 ランダム抽選</div>
 
   <div class="machine" id="machineWrap" onclick="nextNumber()" title="クリックで次の数字">
     <svg width="190" height="190" viewBox="0 0 190 180" xmlns="http://www.w3.org/2000/svg">
@@ -233,7 +233,7 @@
 
   <div class="prog-wrap">
     <div class="prog-bg"><div class="prog-fill" id="bar" style="width:0%"></div></div>
-    <div class="prog-label" id="progLabel">0 / 100</div>
+    <div class="prog-label" id="progLabel">0 / 75</div>
   </div>
 
   <div class="hist-wrap" id="histWrap" style="display:none">
@@ -415,7 +415,7 @@ function stopSpin(cb) {
 
 // ── Game logic ─────────────────────────────────────────
 function init() {
-  pool = Array.from({length:100},(_,i)=>i+1).sort(()=>Math.random()-.5);
+  pool = Array.from({length:75},(_,i)=>i+1).sort(()=>Math.random()-.5);
   called = [];
   sg.style.animation = 'none';
   sg.style.transform = '';
@@ -425,7 +425,7 @@ function init() {
   document.getElementById('prevBalls').innerHTML = '';
   document.getElementById('calledText').textContent = 'まだ番号が引かれていません';
   document.getElementById('bar').style.width = '0%';
-  document.getElementById('progLabel').textContent = '0 / 100';
+  document.getElementById('progLabel').textContent = '0 / 75';
   document.getElementById('histGrid').innerHTML = '';
   document.getElementById('histWrap').style.display = 'none';
   document.getElementById('nextBtn').disabled = false;
@@ -461,8 +461,8 @@ function nextNumber() {
       });
 
       document.getElementById('calledText').textContent = `${called.length}番目: ${n}`;
-      document.getElementById('bar').style.width = `${called.length}%`;
-      document.getElementById('progLabel').textContent = `${called.length} / 100`;
+      document.getElementById('bar').style.width = `${called.length/75*100}%`;
+      document.getElementById('progLabel').textContent = `${called.length} / 75`;
       document.getElementById('histWrap').style.display = 'block';
 
       const grid = document.getElementById('histGrid');
@@ -477,7 +477,7 @@ function nextNumber() {
       });
 
       if (!pool.length) {
-        document.getElementById('calledText').textContent = '🎉 全100番号を引き終えました！';
+        document.getElementById('calledText').textContent = '🎉 全75番号を引き終えました！';
       } else {
         document.getElementById('nextBtn').disabled = false;
       }

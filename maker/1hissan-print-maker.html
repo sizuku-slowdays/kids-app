@@ -411,7 +411,7 @@
       const mode = document.getElementById("mode").value;
       const level = document.getElementById("level").value;
       const count = Number(document.getElementById("count").value);
-      const dateText = document.getElementById("dateText").value.trim() || todayText();
+      const dateText = document.getElementById("dateText").value.trim();
       const carryMode = document.getElementById("carry").value;
       const remainderMode = document.getElementById("divisionRemainder").value;
       const showAnswers = document.getElementById("showAnswers").checked;
@@ -463,7 +463,7 @@
       document.getElementById("mode").value = "mixAddSub";
       document.getElementById("level").value = "normal";
       document.getElementById("count").value = "18";
-      document.getElementById("dateText").value = todayText();
+      document.getElementById("dateText").value = "";
       document.getElementById("carry").value = "any";
       document.getElementById("divisionRemainder").value = "none";
       document.getElementById("showAnswers").checked = false;
@@ -472,7 +472,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("dateText").value = todayText();
+      document.getElementById("dateText").value = "";
       makeWorksheet();
     });
   </script>

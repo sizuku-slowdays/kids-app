@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ピンポンブザー</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Zen Maru Gothic:wght@700;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&display=swap');
 
   :root {
     --red: #e8211a;
@@ -16,6 +16,12 @@
     --panel: #16213e;
     --gold: #ffd700;
     --shadow-red: rgba(232, 33, 26, 0.6);
+
+    /* モードカラー */
+    --quiz-color:    #00c8ff;
+    --correct-color: #44dd88;
+    --wrong-color:   #ff4a42;
+    --timeup-color:  #ffaa22;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -30,6 +36,7 @@
     font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic Pro', 'ヒラギノ丸ゴ ProN', sans-serif;
     overflow: hidden;
     user-select: none;
+    gap: 0;
   }
 
   /* stars background */
@@ -47,26 +54,121 @@
     pointer-events: none;
   }
 
+  /* ── タイトル ── */
   .title {
-    font-size: clamp(2rem, 8vw, 3.5rem);
+    font-size: clamp(1.8rem, 7vw, 3rem);
     font-weight: 900;
     color: var(--white);
     text-shadow: 0 0 20px rgba(255,255,255,0.3);
     letter-spacing: 0.05em;
-    margin-bottom: 0.2em;
+    margin-bottom: 0.15em;
     text-align: center;
   }
-  .title span {
-    color: var(--gold);
-    text-shadow: 0 0 20px rgba(255,215,0,0.6);
-  }
+  .title span { color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.6); }
 
   .subtitle {
-    font-size: clamp(0.8rem, 3vw, 1rem);
+    font-size: clamp(0.75rem, 2.8vw, 0.95rem);
     color: rgba(255,255,255,0.5);
-    margin-bottom: clamp(2rem, 8vw, 4rem);
+    margin-bottom: clamp(1rem, 4vw, 2rem);
     letter-spacing: 0.1em;
   }
+
+  /* ── 音モード選択ボタン群 ── */
+  .mode-panel {
+    display: flex;
+    gap: clamp(6px, 2vw, 12px);
+    margin-bottom: clamp(1.2rem, 4vw, 2.2rem);
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 1rem;
+  }
+
+  .mode-btn {
+    position: relative;
+    padding: clamp(8px, 2.5vw, 12px) clamp(12px, 3.5vw, 22px);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.55);
+    font-family: inherit;
+    font-size: clamp(0.78rem, 2.8vw, 1rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    outline: none;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mode-btn:active {
+    transform: scale(0.94);
+  }
+
+  /* 各モードの選択済みスタイル */
+  .mode-btn[data-mode="quiz"].active {
+    background: rgba(0, 200, 255, 0.18);
+    border-color: var(--quiz-color);
+    color: var(--quiz-color);
+    box-shadow: 0 0 14px rgba(0,200,255,0.4), inset 0 0 8px rgba(0,200,255,0.1);
+  }
+  .mode-btn[data-mode="correct"].active {
+    background: rgba(68, 221, 136, 0.18);
+    border-color: var(--correct-color);
+    color: var(--correct-color);
+    box-shadow: 0 0 14px rgba(68,221,136,0.4), inset 0 0 8px rgba(68,221,136,0.1);
+  }
+  .mode-btn[data-mode="wrong"].active {
+    background: rgba(255, 74, 66, 0.18);
+    border-color: var(--wrong-color);
+    color: var(--wrong-color);
+    box-shadow: 0 0 14px rgba(255,74,66,0.4), inset 0 0 8px rgba(255,74,66,0.1);
+  }
+  .mode-btn[data-mode="timeup"].active {
+    background: rgba(255, 170, 34, 0.18);
+    border-color: var(--timeup-color);
+    color: var(--timeup-color);
+    box-shadow: 0 0 14px rgba(255,170,34,0.4), inset 0 0 8px rgba(255,170,34,0.1);
+  }
+
+  /* モードアイコン */
+  .mode-btn .mode-icon { margin-right: 4px; }
+
+  /* ── 結果表示 ── */
+  .result-display {
+    height: clamp(56px, 16vw, 82px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: clamp(0.8rem, 3vw, 1.5rem);
+  }
+
+  .pinpon-text {
+    font-size: clamp(2.2rem, 10vw, 4.5rem);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow:
+      0 0 20px var(--gold),
+      0 0 40px rgba(255,215,0,0.5),
+      2px 2px 0 rgba(0,0,0,0.5);
+    letter-spacing: 0.05em;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+  }
+
+  .pinpon-text.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* モード別の結果テキストカラー */
+  .pinpon-text.mode-quiz    { color: var(--quiz-color);    text-shadow: 0 0 20px var(--quiz-color),    0 0 40px rgba(0,200,255,0.5),    2px 2px 0 rgba(0,0,0,0.5); }
+  .pinpon-text.mode-correct { color: var(--correct-color); text-shadow: 0 0 20px var(--correct-color), 0 0 40px rgba(68,221,136,0.5),  2px 2px 0 rgba(0,0,0,0.5); }
+  .pinpon-text.mode-wrong   { color: var(--wrong-color);   text-shadow: 0 0 20px var(--wrong-color),   0 0 40px rgba(255,74,66,0.5),    2px 2px 0 rgba(0,0,0,0.5); }
+  .pinpon-text.mode-timeup  { color: var(--timeup-color);  text-shadow: 0 0 20px var(--timeup-color),  0 0 40px rgba(255,170,34,0.5),   2px 2px 0 rgba(0,0,0,0.5); }
 
   /* ── ブザーボタン ── */
   .buzzer-wrap {
@@ -74,10 +176,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: clamp(2rem, 8vw, 3rem);
+    margin-bottom: clamp(1.2rem, 4vw, 2rem);
   }
 
-  /* 外側の発光リング */
   .glow-ring {
     position: absolute;
     width: clamp(220px, 60vw, 320px);
@@ -90,8 +191,8 @@
   }
 
   .buzzer-outer {
-    width: clamp(160px, 45vw, 240px);
-    height: clamp(160px, 45vw, 240px);
+    width: clamp(150px, 42vw, 230px);
+    height: clamp(150px, 42vw, 230px);
     border-radius: 50%;
     background: conic-gradient(from 0deg, #c41810, #e8211a, #ff4a42, #e8211a, #c41810);
     display: flex;
@@ -134,7 +235,7 @@
   }
 
   .buzzer-text {
-    font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+    font-size: clamp(0.85rem, 3.2vw, 1.2rem);
     font-weight: 900;
     color: white;
     text-shadow: 0 1px 3px rgba(0,0,0,0.6);
@@ -142,9 +243,9 @@
     text-align: center;
     pointer-events: none;
     letter-spacing: 0.02em;
+    transition: opacity 0.12s;
   }
 
-  /* 押したとき */
   .buzzer-outer:active,
   .buzzer-outer.pressed {
     transform: scale(0.92) translateY(4px);
@@ -155,65 +256,9 @@
       inset 0 -2px 8px rgba(255,100,100,0.2);
   }
 
-  .buzzer-outer.pressed ~ .glow-ring,
-  .glow-ring.active {
-    opacity: 1;
-  }
+  .glow-ring.active { opacity: 1; }
 
-  /* ── 結果表示 ── */
-  .result-display {
-    height: clamp(60px, 18vw, 90px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: clamp(1.5rem, 5vw, 2.5rem);
-  }
-
-  .pinpon-text {
-    font-size: clamp(2.5rem, 12vw, 5rem);
-    font-weight: 900;
-    color: var(--gold);
-    text-shadow:
-      0 0 20px var(--gold),
-      0 0 40px rgba(255,215,0,0.5),
-      2px 2px 0 rgba(0,0,0,0.5);
-    letter-spacing: 0.05em;
-    opacity: 0;
-    transform: scale(0.5);
-    transition: opacity 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-    white-space: nowrap;
-  }
-
-  .pinpon-text.show {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  /* ── リセットカウントダウン ── */
-  .reset-bar-wrap {
-    width: clamp(180px, 50vw, 280px);
-    height: 6px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 3px;
-    overflow: hidden;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  .reset-bar-wrap.show {
-    opacity: 1;
-  }
-
-  .reset-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--gold), var(--red-light));
-    border-radius: 3px;
-    width: 100%;
-    transform-origin: left;
-    transition: transform linear;
-  }
-
-  /* ── 波紋エフェクト ── */
+  /* ── エフェクト ── */
   .ripple {
     position: fixed;
     border-radius: 50%;
@@ -223,12 +268,8 @@
     pointer-events: none;
     z-index: 999;
   }
+  @keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
 
-  @keyframes ripple-anim {
-    to { transform: scale(4); opacity: 0; }
-  }
-
-  /* ── 星パーティクル ── */
   .particle {
     position: fixed;
     pointer-events: none;
@@ -236,13 +277,11 @@
     animation: particle-fly 0.9s ease-out forwards;
     z-index: 998;
   }
-
   @keyframes particle-fly {
-    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    0%   { opacity: 1; transform: translate(0,0) scale(1); }
     100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3); }
   }
 
-  /* ── フラッシュ ── */
   .flash {
     position: fixed;
     inset: 0;
@@ -252,16 +291,15 @@
     z-index: 997;
     animation: flash-anim 0.3s ease-out forwards;
   }
-
   @keyframes flash-anim {
-    0% { opacity: 0.4; }
+    0%   { opacity: 0.4; }
     100% { opacity: 0; }
   }
 
   .hint {
     position: fixed;
-    bottom: clamp(1rem, 4vw, 2rem);
-    font-size: clamp(0.65rem, 2.5vw, 0.8rem);
+    bottom: clamp(0.8rem, 3vw, 1.5rem);
+    font-size: clamp(0.6rem, 2.3vw, 0.75rem);
     color: rgba(255,255,255,0.3);
     letter-spacing: 0.1em;
   }
@@ -272,104 +310,228 @@
 <div class="title">ピン<span>ポン</span>ブザー</div>
 <div class="subtitle">早押しクイズ！</div>
 
-<div class="result-display">
-  <div class="pinpon-text" id="pinponText">ピンポーン！</div>
+<!-- 音モード選択 -->
+<div class="mode-panel" id="modePanel">
+  <button class="mode-btn active" data-mode="quiz"    data-label="ピポン！">
+    <span class="mode-icon">🔵</span>早押し
+  </button>
+  <button class="mode-btn"        data-mode="correct" data-label="ピンポーン！">
+    <span class="mode-icon">🟢</span>正解
+  </button>
+  <button class="mode-btn"        data-mode="wrong"   data-label="ブーー！">
+    <span class="mode-icon">🔴</span>不正解
+  </button>
+  <button class="mode-btn"        data-mode="timeup"  data-label="時間切れ！">
+    <span class="mode-icon">🟠</span>時間切れ
+  </button>
 </div>
 
+<!-- 結果表示 -->
+<div class="result-display">
+  <div class="pinpon-text" id="pinponText">ピポン！</div>
+</div>
+
+<!-- メインブザー -->
 <div class="buzzer-wrap">
   <div class="glow-ring" id="glowRing"></div>
   <div class="buzzer-outer" id="buzzer">
     <div class="buzzer-inner">
-      <div class="buzzer-text">押せ！</div>
+      <div class="buzzer-text" id="buzzerText">押せ！</div>
     </div>
   </div>
 </div>
 
-<div class="reset-bar-wrap" id="resetBarWrap">
-  <div class="reset-bar" id="resetBar"></div>
-</div>
-
-<div class="hint">押したら自動リセット</div>
+<div class="hint">押したらすぐリセット</div>
 
 <script>
-  const buzzer = document.getElementById('buzzer');
-  const pinponText = document.getElementById('pinponText');
-  const glowRing = document.getElementById('glowRing');
-  const resetBarWrap = document.getElementById('resetBarWrap');
-  const resetBar = document.getElementById('resetBar');
+  /* ───── 要素取得 ───── */
+  const buzzer       = document.getElementById('buzzer');
+  const buzzerText   = document.getElementById('buzzerText');
+  const pinponText   = document.getElementById('pinponText');
+  const glowRing     = document.getElementById('glowRing');
+  const resetBarWrap = null; // 未使用
+  const resetBar     = null; // 未使用
+  const modePanel    = document.getElementById('modePanel');
 
-  let audioCtx = null;
+  /* ───── 状態 ───── */
+  let audioCtx  = null;
   let resetTimer = null;
-  let isPressed = false;
-  const RESET_MS = 2000;
+  let isPressed  = false;
 
-  function getAudioCtx() {
+  // モード定義
+  const MODES = {
+    quiz:    { label: 'ピポン！',    resultClass: 'mode-quiz',    vibrate: [60, 30, 40] },
+    correct: { label: 'ピンポーン！', resultClass: 'mode-correct', vibrate: [80, 20, 80] },
+    wrong:   { label: 'ブーー！',    resultClass: 'mode-wrong',   vibrate: [200] },
+    timeup:  { label: '時間切れ！',   resultClass: 'mode-timeup',  vibrate: [50,30,50,30,50,30,50] },
+  };
+
+  let currentMode = 'quiz';
+
+  /* ───── AudioContext ───── */
+  async function getAudioCtx() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
     return audioCtx;
   }
 
-function playPinpon() {
-  const ctx = getAudioCtx();
-  const now = ctx.currentTime;
+  /* ────────────────────────────────
+   *  音関数
+   * ──────────────────────────────── */
 
-  const osc1 = ctx.createOscillator();
-  const gain1 = ctx.createGain();
+  /** 早押し：ピポン！（ピ↑ポ↓ 短め） */
+  async function playQuiz() {
+    const ctx = await getAudioCtx();
+    const now = ctx.currentTime;
 
-  osc1.type = 'square';
-  osc1.frequency.value = 1200;
+    // ピ
+    const o1 = ctx.createOscillator(); const g1 = ctx.createGain();
+    o1.type = 'sine'; o1.frequency.value = 1400;
+    o1.connect(g1); g1.connect(ctx.destination);
+    g1.gain.setValueAtTime(0.45, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    o1.start(now); o1.stop(now + 0.09);
 
-  osc1.connect(gain1);
-  gain1.connect(ctx.destination);
+    // ポ
+    const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+    o2.type = 'sine'; o2.frequency.value = 1050;
+    o2.connect(g2); g2.connect(ctx.destination);
+    g2.gain.setValueAtTime(0.001, now + 0.08);
+    g2.gain.linearRampToValueAtTime(0.38, now + 0.10);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+    o2.start(now + 0.08); o2.stop(now + 0.2);
+  }
 
-  gain1.gain.setValueAtTime(0.4, now);
-  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  /** 正解：ピンポーン！（明るい2音＋余韻） */
+  async function playCorrect() {
+    const ctx = await getAudioCtx();
+    const now = ctx.currentTime;
 
-  osc1.start(now);
-  osc1.stop(now + 0.08);
+    // ピン（高め）
+    const o1 = ctx.createOscillator(); const g1 = ctx.createGain();
+    o1.type = 'sine'; o1.frequency.value = 1600;
+    o1.connect(g1); g1.connect(ctx.destination);
+    g1.gain.setValueAtTime(0.5, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    o1.start(now); o1.stop(now + 0.13);
 
-  const osc2 = ctx.createOscillator();
-  const gain2 = ctx.createGain();
+    // ポーン（低め・長め）
+    const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+    o2.type = 'sine'; o2.frequency.value = 950;
+    o2.connect(g2); g2.connect(ctx.destination);
+    g2.gain.setValueAtTime(0.001, now + 0.10);
+    g2.gain.linearRampToValueAtTime(0.45, now + 0.13);
+    g2.gain.setValueAtTime(0.45, now + 0.18);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    o2.start(now + 0.10); o2.stop(now + 0.56);
 
-  osc2.type = 'square';
-  osc2.frequency.value = 900;
+    // ハーモニー（薄い）
+    const o3 = ctx.createOscillator(); const g3 = ctx.createGain();
+    o3.type = 'sine'; o3.frequency.value = 1900;
+    o3.connect(g3); g3.connect(ctx.destination);
+    g3.gain.setValueAtTime(0.12, now);
+    g3.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    o3.start(now); o3.stop(now + 0.09);
+  }
 
-  osc2.connect(gain2);
-  gain2.connect(ctx.destination);
+  /** 不正解：ブーー！（低い矩形波＋ノイズ感） */
+  async function playWrong() {
+    const ctx = await getAudioCtx();
+    const now = ctx.currentTime;
 
-  gain2.gain.setValueAtTime(0.001, now + 0.06);
-  gain2.gain.exponentialRampToValueAtTime(0.35, now + 0.07);
-  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    const o1 = ctx.createOscillator(); const g1 = ctx.createGain();
+    o1.type = 'sawtooth'; o1.frequency.value = 180;
+    o1.connect(g1); g1.connect(ctx.destination);
+    g1.gain.setValueAtTime(0.55, now);
+    g1.gain.setValueAtTime(0.55, now + 0.30);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    o1.start(now); o1.stop(now + 0.56);
 
-  osc2.start(now + 0.06);
-  osc2.stop(now + 0.14);
-}
+    // 低いうなり感
+    const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+    o2.type = 'square'; o2.frequency.value = 120;
+    o2.connect(g2); g2.connect(ctx.destination);
+    g2.gain.setValueAtTime(0.25, now);
+    g2.gain.setValueAtTime(0.25, now + 0.30);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    o2.start(now); o2.stop(now + 0.56);
+  }
 
+  /** 時間切れ：ピピピピピ！（短い電子音連打） */
+  async function playTimeup() {
+    const ctx = await getAudioCtx();
+    const now = ctx.currentTime;
+    const count  = 5;
+    const onTime = 0.07;
+    const gap    = 0.05;
+    const period = onTime + gap;
+
+    for (let i = 0; i < count; i++) {
+      const t = now + i * period;
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'square'; o.frequency.value = 1800 - i * 60;
+      o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.38, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + onTime);
+      o.start(t); o.stop(t + onTime + 0.01);
+    }
+  }
+
+  /* ───── 音の振り分け ───── */
+  async function playSound(mode) {
+    switch (mode) {
+      case 'quiz':    await playQuiz();    break;
+      case 'correct': await playCorrect(); break;
+      case 'wrong':   await playWrong();   break;
+      case 'timeup':  await playTimeup();  break;
+    }
+  }
+
+  /* ───── モード切替 ───── */
+  function setMode(mode) {
+    currentMode = mode;
+    // ボタンのactive切替
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    // ブザー内テキストは常に「押せ！」のまま
+    // 結果テキストはリセット
+    pinponText.className = 'pinpon-text'; // show消す
+    pinponText.textContent = MODES[mode].label;
+  }
+
+  modePanel.addEventListener('click', e => {
+    const btn = e.target.closest('.mode-btn');
+    if (!btn) return;
+    if (resetTimer) { clearTimeout(resetTimer); resetBuzzer(); }
+    setMode(btn.dataset.mode);
+  });
+
+  /* ───── エフェクト ───── */
   function createRipple(x, y) {
     const size = Math.max(window.innerWidth, window.innerHeight) * 0.8;
     const el = document.createElement('div');
     el.className = 'ripple';
-    el.style.cssText = `
-      width: ${size}px; height: ${size}px;
-      left: ${x - size/2}px; top: ${y - size/2}px;
-    `;
+    el.style.cssText = `width:${size}px;height:${size}px;left:${x-size/2}px;top:${y-size/2}px;`;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 700);
   }
 
-  function createParticles(x, y) {
-    const emojis = ['⭐','✨','🌟','💫','🎉'];
+  function createParticles(x, y, mode) {
+    const emojiMap = {
+      quiz:    ['⭐','✨','🌟','💫','🎉'],
+      correct: ['🎊','✨','🌟','💛','🎉'],
+      wrong:   ['💥','❌','😱','🔴','💢'],
+      timeup:  ['⏰','💨','🔥','⚡','💫'],
+    };
+    const emojis = emojiMap[mode] || emojiMap.quiz;
     for (let i = 0; i < 8; i++) {
       const el = document.createElement('div');
       el.className = 'particle';
       el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
       const angle = (i / 8) * Math.PI * 2;
       const dist = 80 + Math.random() * 80;
-      el.style.cssText = `
-        left: ${x}px; top: ${y}px;
-        --tx: ${Math.cos(angle) * dist}px;
-        --ty: ${Math.sin(angle) * dist}px;
-        animation-delay: ${Math.random() * 0.1}s;
-      `;
+      el.style.cssText = `left:${x}px;top:${y}px;--tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist}px;animation-delay:${Math.random()*0.1}s;`;
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 1000);
     }
@@ -382,20 +544,10 @@ function playPinpon() {
     setTimeout(() => el.remove(), 400);
   }
 
+  /* ───── リセット（押した直後に即リセット） ───── */
   function startReset() {
-    resetBarWrap.classList.add('show');
-    resetBar.style.transition = 'none';
-    resetBar.style.transform = 'scaleX(1)';
-
-    // 少し待ってからアニメ開始
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resetBar.style.transition = `transform ${RESET_MS}ms linear`;
-        resetBar.style.transform = 'scaleX(0)';
-      });
-    });
-
-    resetTimer = setTimeout(resetBuzzer, RESET_MS);
+    // 音が終わる最短時間（〜600ms）後に即リセット
+    resetTimer = setTimeout(resetBuzzer, 650);
   }
 
   function resetBuzzer() {
@@ -403,55 +555,59 @@ function playPinpon() {
     pinponText.classList.remove('show');
     glowRing.classList.remove('active');
     buzzer.classList.remove('pressed');
-    resetBarWrap.classList.remove('show');
-    resetBar.style.transition = 'none';
-    resetBar.style.transform = 'scaleX(1)';
+    pinponText.textContent = MODES[currentMode].label;
+    pinponText.className = 'pinpon-text';
   }
 
-  function onPress(e) {
+  /* ───── メイン押下処理 ───── */
+  async function onPress() {
     if (isPressed) return;
     isPressed = true;
 
     const rect = buzzer.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
+    const cy = rect.top  + rect.height / 2;
 
-    // 視覚
+    const mode = currentMode;
+    const modeData = MODES[mode];
+
+    // ブザーのリセットモードクラスを全除去してから付与
+    pinponText.className = 'pinpon-text show ' + modeData.resultClass;
+    pinponText.textContent = modeData.label;
+
     buzzer.classList.add('pressed');
     glowRing.classList.add('active');
-    pinponText.classList.add('show');
+
     createFlash();
     createRipple(cx, cy);
-    createParticles(cx, cy);
+    createParticles(cx, cy, mode);
 
-    // 音
-    playPinpon();
+    await playSound(mode);
 
-    // バイブレーション（対応デバイス）
-    if (navigator.vibrate) navigator.vibrate([60, 30, 40]);
+    if (navigator.vibrate) navigator.vibrate(modeData.vibrate);
 
-    // 少し後にボタンを戻す（見た目）
     setTimeout(() => {
       buzzer.classList.remove('pressed');
       glowRing.classList.remove('active');
     }, 200);
 
-    // リセットバー
     if (resetTimer) clearTimeout(resetTimer);
     startReset();
   }
 
+  /* ───── イベントリスナー ───── */
   buzzer.addEventListener('pointerdown', onPress);
   buzzer.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
 
-  // スペースキーでも押せる
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault();
-      const rect = buzzer.getBoundingClientRect();
       onPress();
     }
   });
+
+  /* ───── 初期化 ───── */
+  setMode('quiz');
 </script>
 </body>
 </html>

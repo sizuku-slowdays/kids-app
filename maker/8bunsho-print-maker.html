@@ -384,16 +384,29 @@
 
     .answers-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 7mm 5mm;
-      font-size: 15px;
-      margin-top: 10mm;
+      grid-template-columns: 1fr;
+      gap: 4mm;
+      font-size: 13px;
+      margin-top: 8mm;
     }
 
     .answer-item {
-      border-bottom: 1px solid #999;
-      padding-bottom: 3mm;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      padding: 3mm;
       line-height: 1.45;
+      page-break-inside: avoid;
+    }
+
+    .answer-question {
+      font-weight: 800;
+      margin-bottom: 2mm;
+    }
+
+    .answer-result {
+      font-weight: 900;
+      border-top: 1px dashed #aaa;
+      padding-top: 2mm;
     }
 
     @media (max-width: 900px) {
@@ -480,7 +493,7 @@
           </div>
           <div>
             <label for="dateText">日付</label>
-            <input id="dateText" type="text" />
+            <input id="dateText" type="text" placeholder="空欄でもOK" />
           </div>
         </div>
 
@@ -507,7 +520,7 @@
 
         <div class="note no-print">
           手書きしやすいように、<strong>式</strong> と <strong>答え</strong> の欄を大きめにしています。<br>
-          次女ちゃん用は「ふりがなあり」、長女ちゃん用は「ふりがななし」でも使えます。
+          日付は空欄のままでも印刷できます。答えページには問題文・式・答えを表示します。
         </div>
       </section>
 
@@ -521,7 +534,7 @@
             </div>
             <div class="meta">
               <div>なまえ：<span class="meta-box" id="paperName">　　　　　　　　</span></div>
-              <div>ひづけ：<span class="meta-box" id="paperDate">　月　日</span></div>
+              <div>ひづけ：<span class="meta-box" id="paperDate">　　　　　</span></div>
               <div>シール：<span class="sticker-box">はる</span></div>
             </div>
             <div class="problems" id="problems"></div>
@@ -533,7 +546,7 @@
             </div>
             <div class="meta">
               <div>なまえ：<span class="meta-box" id="answerName">　　　　　　　　</span></div>
-              <div>ひづけ：<span class="meta-box" id="answerDate">　月　日</span></div>
+              <div>ひづけ：<span class="meta-box" id="answerDate">　　　　　</span></div>
               <div></div>
             </div>
             <div class="answers-grid" id="answers"></div>
@@ -564,8 +577,14 @@
       return arr[rand(0, arr.length - 1)];
     }
 
-    function yen(n) {
-      return `${n}円`;
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, ch => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[ch]));
     }
 
     function rangeFor(level) {
@@ -575,11 +594,10 @@
     }
 
     function withRuby(text, showFurigana) {
-      if (!showFurigana) return text;
+      if (!showFurigana) return escapeHtml(text);
       const map = {
         "文章": "ぶんしょう",
         "問題": "もんだい",
-        "何": "なん",
         "何こ": "なんこ",
         "何本": "なんぼん",
         "何円": "なんえん",
@@ -595,14 +613,16 @@
         "答え": "こたえ",
         "円": "えん",
         "人": "にん",
-        "本": "ほん"
+        "本": "ほん",
+        "何": "なん"
       };
 
-      let result = text;
+      let result = escapeHtml(text);
       const keys = Object.keys(map).sort((a, b) => b.length - a.length);
       keys.forEach(key => {
-        const ruby = `<ruby>${key}<rt>${map[key]}</rt></ruby>`;
-        result = result.split(key).join(ruby);
+        const safeKey = escapeHtml(key);
+        const ruby = `<ruby>${safeKey}<rt>${map[key]}</rt></ruby>`;
+        result = result.split(safeKey).join(ruby);
       });
       return result;
     }
@@ -670,7 +690,7 @@
       const r = rangeFor(level);
       const item = pick(SHOP_ITEMS);
       const shop = pick(SHOPS);
-      const priceUnit = level === "easy" ? 10 : 10;
+      const priceUnit = 10;
       const priceMax = r.moneyMax;
       let price = rand(1, Math.floor(priceMax / priceUnit)) * priceUnit;
       if (level === "easy") price = rand(1, 9) * 10;
@@ -705,7 +725,7 @@
           <div class="write-row"><span>${withRuby("式", showFurigana)}</span><span class="big-line"></span></div>
           <div class="write-row"><span>${withRuby("答え", showFurigana)}</span><span class="big-line"></span></div>
         </div>
-        ${showAnswers ? `<div class="answer-small">しき：${problem.formula}　こたえ：${problem.answer}</div>` : ""}
+        ${showAnswers ? `<div class="answer-small">しき：${escapeHtml(problem.formula)}　こたえ：${escapeHtml(problem.answer)}</div>` : ""}
       `;
     }
 
@@ -715,7 +735,7 @@
       const questionType = document.getElementById("questionType").value;
       const level = document.getElementById("level").value;
       const count = Number(document.getElementById("count").value);
-      const dateText = document.getElementById("dateText").value.trim() || todayText();
+      const dateText = document.getElementById("dateText").value.trim();
       const showFurigana = document.getElementById("showFurigana").checked;
       const showAnswers = document.getElementById("showAnswers").checked;
       const printAnswerPage = document.getElementById("printAnswerPage").checked;
@@ -726,9 +746,9 @@
 
       document.getElementById("paperTitle").textContent = titleText;
       document.getElementById("paperName").textContent = childName || "　　　　　　　　";
-      document.getElementById("paperDate").textContent = dateText;
+      document.getElementById("paperDate").textContent = dateText || "　　　　　";
       document.getElementById("answerName").textContent = childName || "　　　　　　　　";
-      document.getElementById("answerDate").textContent = dateText;
+      document.getElementById("answerDate").textContent = dateText || "　　　　　";
 
       currentProblems = [];
       for (let i = 0; i < count; i++) {
@@ -748,7 +768,14 @@
 
         const answer = document.createElement("div");
         answer.className = "answer-item";
-        answer.textContent = `${index + 1}. 式：${p.formula}　答え：${p.answer}`;
+        answer.innerHTML = `
+          <div class="answer-question">
+            ${index + 1}. ${escapeHtml(p.text)}
+          </div>
+          <div class="answer-result">
+            式：${escapeHtml(p.formula)}　　答え：${escapeHtml(p.answer)}
+          </div>
+        `;
         answersEl.appendChild(answer);
       });
 
@@ -768,7 +795,7 @@
       document.getElementById("questionType").value = "add";
       document.getElementById("level").value = "easy";
       document.getElementById("count").value = "6";
-      document.getElementById("dateText").value = todayText();
+      document.getElementById("dateText").value = "";
       document.getElementById("showFurigana").checked = true;
       document.getElementById("showAnswers").checked = false;
       document.getElementById("printAnswerPage").checked = true;
@@ -776,7 +803,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("dateText").value = todayText();
+      document.getElementById("dateText").value = "";
       makeWorksheet();
     });
   </script>

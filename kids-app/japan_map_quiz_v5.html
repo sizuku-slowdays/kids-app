@@ -378,7 +378,91 @@
       font-weight: 800;
       cursor: pointer;
     }
+.list-action {
+  margin: -4px 0 12px;
+  text-align: center;
+}
 
+.list-btn {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+}
+
+.capital-list-screen {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+}
+
+.capital-list-screen h2 {
+  color: var(--blue);
+  font-size: 22px;
+  font-weight: 900;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.capital-list-screen .list-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.region-title {
+  margin: 18px 0 8px;
+  padding: 8px 10px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 900;
+  text-align: left;
+}
+
+.capital-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.capital-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 9px 8px;
+  text-align: left;
+}
+
+.capital-pref {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.capital-name {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--blue);
+  margin-top: 3px;
+}
+
+@media (max-width: 520px) {
+  .capital-grid {
+    grid-template-columns: 1fr;
+  }
+}
     @media (max-width: 520px) {
       body {
         padding-left: 8px;
@@ -425,7 +509,9 @@
     <button class="tab-btn" id="tab-map" onclick="setMode('map')">地図タップ</button>
     <button class="tab-btn" id="tab-capital" onclick="setMode('capital')">県庁所在地</button>
   </div>
-
+<div class="list-action">
+  <button class="list-btn" onclick="renderCapitalList()">県庁所在地 一覧を見る</button>
+</div>
   <div id="game-area" class="loading">地図を読み込み中...</div>
 
   <div class="credit">
@@ -591,7 +677,49 @@ function nextQuestion() {
   else if (mode === "map") renderMapQ();
   else renderCapital();
 }
+function renderCapitalList() {
+  const regions = [
+    "北海道",
+    "東北",
+    "関東",
+    "中部",
+    "近畿",
+    "中国",
+    "四国",
+    "九州",
+    "沖縄"
+  ];
 
+  document.getElementById("game-area").innerHTML = `
+    <div class="capital-list-screen">
+      <h2>県庁所在地 一覧</h2>
+      <div class="list-note">
+        都道府県と県庁所在地をまとめて見られるよ。<br>
+        クイズの前に確認してね。
+      </div>
+
+      ${regions.map(region => {
+        const items = PREFS.filter(p => p.region === region);
+
+        if (!items.length) return "";
+
+        return `
+          <div class="region-title">${escapeHtml(region)}</div>
+          <div class="capital-grid">
+            ${items.map(p => `
+              <div class="capital-card">
+                <div class="capital-pref">${escapeHtml(p.name)}</div>
+                <div class="capital-name">${escapeHtml(p.capital)}</div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+      }).join("")}
+
+      <button class="restart-btn" onclick="setMode('${mode}')">クイズにもどる</button>
+    </div>
+  `;
+}
 function scoreBar() {
   return `
     <div class="score-bar">

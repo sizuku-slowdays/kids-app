@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>世界の国と首都クイズ</title>
+
+  <!-- ホーム画面追加用 -->
+  <link rel="apple-touch-icon" href="img/sekai-quiz.png">
+  <link rel="icon" type="image/png" href="img/sekai-quiz.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="世界クイズ">
+  <meta name="theme-color" content="#eaf7ff">
+
+  <style>
+    :root {
+      --bg1: #eaf7ff;
+      --bg2: #fff3d9;
+      --card: #ffffff;
+      --main: #3b82f6;
+      --main-dark: #2563eb;
+      --pink: #ff8fb3;
+      --yellow: #ffd166;
+      --green: #34c759;
+      --red: #ff5c5c;
+      --text: #263238;
+      --muted: #607d8b;
+      --shadow: 0 14px 35px rgba(59, 130, 246, 0.18);
+      --radius: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family:
+        "Hiragino Maru Gothic ProN",
+        "Hiragino Kaku Gothic ProN",
+        "Yu Gothic",
+        "Meiryo",
+        sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 10%, #ffffff 0 0.6rem, transparent 0.65rem),
+        radial-gradient(circle at 90% 20%, #ffffff 0 0.75rem, transparent 0.8rem),
+        radial-gradient(circle at 20% 80%, #ffffff 0 0.5rem, transparent 0.55rem),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      background-size: 120px 120px, 160px 160px, 130px 130px, auto;
+      padding: 18px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      width: min(920px, 100%);
+      margin: 0 auto;
+      padding-bottom: 24px;
+    }
+
+    .top-decoration {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      font-size: 34px;
+      margin: 8px 0 2px;
+      animation: floaty 3s ease-in-out infinite;
+    }
+
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.93);
+      border: 4px solid rgba(255, 255, 255, 0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin: 16px auto;
+    }
+
+    .title {
+      font-size: clamp(30px, 7vw, 52px);
+      text-align: center;
+      line-height: 1.15;
+      margin: 8px 0;
+      color: #1d4ed8;
+      letter-spacing: 0.03em;
+    }
+
+    .subtitle {
+      font-size: clamp(18px, 4.2vw, 26px);
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 10px 0 20px;
+      font-weight: 700;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    @media (min-width: 720px) {
+      .mode-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    button {
+      font-family: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.08s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .mode-btn {
+      width: 100%;
+      min-height: 92px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #ffffff, #f4fbff);
+      border: 4px solid #d6edff;
+      color: #174ea6;
+      padding: 18px;
+      font-size: clamp(20px, 5vw, 28px);
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 8px 18px rgba(29, 78, 216, 0.10);
+    }
+
+    .mode-btn .icon {
+      font-size: 36px;
+      flex: 0 0 auto;
+    }
+
+    .mode-btn.challenge {
+      background: linear-gradient(135deg, #fff7d6, #ffe8f0);
+      border-color: #ffd166;
+      color: #b45309;
+    }
+
+    .small-note {
+      font-size: 15px;
+      color: #607d8b;
+      line-height: 1.6;
+      text-align: center;
+      margin-top: 18px;
+      font-weight: 700;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .quiz-header {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: stretch;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      background: #ffffff;
+      border: 3px solid #d6edff;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: clamp(16px, 4vw, 21px);
+      font-weight: 900;
+      color: #1d4ed8;
+      box-shadow: 0 5px 12px rgba(59, 130, 246, 0.08);
+    }
+
+    .question-card {
+      background: linear-gradient(180deg, #ffffff, #f9fcff);
+      border-radius: 28px;
+      border: 4px solid #ffffff;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .region {
+      display: inline-block;
+      background: #fff3bf;
+      color: #8a5a00;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: clamp(15px, 4vw, 20px);
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .question {
+      font-size: clamp(25px, 6vw, 42px);
+      line-height: 1.35;
+      margin: 8px 0 20px;
+      font-weight: 900;
+      color: #17324d;
+    }
+
+    .choices {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    @media (min-width: 640px) {
+      .choices {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .choice-btn {
+      min-height: 76px;
+      border-radius: 22px;
+      background: #ffffff;
+      border: 4px solid #d6edff;
+      color: #17324d;
+      font-size: clamp(21px, 5vw, 30px);
+      padding: 16px;
+      line-height: 1.25;
+      box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+    }
+
+    .choice-btn:hover {
+      box-shadow: 0 12px 22px rgba(15, 23, 42, 0.11);
+    }
+
+    .choice-btn.correct {
+      background: #e8ffe9;
+      border-color: var(--green);
+      color: #117a28;
+    }
+
+    .choice-btn.wrong {
+      background: #fff0f0;
+      border-color: var(--red);
+      color: #b42318;
+    }
+
+    .choice-btn:disabled {
+      cursor: default;
+      opacity: 0.92;
+    }
+
+    .feedback {
+      display: none;
+      margin-top: 18px;
+      border-radius: 24px;
+      padding: 18px;
+      font-size: clamp(18px, 4.5vw, 25px);
+      line-height: 1.55;
+      font-weight: 800;
+    }
+
+    .feedback.show {
+      display: block;
+    }
+
+    .feedback.good {
+      background: #e8ffe9;
+      border: 4px solid var(--green);
+      color: #117a28;
+    }
+
+    .feedback.bad {
+      background: #fff0f0;
+      border: 4px solid var(--red);
+      color: #b42318;
+    }
+
+    .explain {
+      display: block;
+      margin-top: 8px;
+      color: #374151;
+      font-weight: 800;
+    }
+
+    .next-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 18px;
+    }
+
+    .main-btn,
+    .sub-btn {
+      min-height: 58px;
+      border-radius: 999px;
+      padding: 14px 24px;
+      font-size: clamp(18px, 4.5vw, 24px);
+      box-shadow: 0 8px 18px rgba(29, 78, 216, 0.15);
+    }
+
+    .main-btn {
+      background: linear-gradient(135deg, var(--main), var(--main-dark));
+      color: white;
+    }
+
+    .sub-btn {
+      background: #ffffff;
+      color: #1d4ed8;
+      border: 3px solid #bfdbfe;
+    }
+
+    .result-score {
+      text-align: center;
+      font-size: clamp(44px, 14vw, 84px);
+      color: #1d4ed8;
+      font-weight: 1000;
+      margin: 10px 0;
+      line-height: 1;
+    }
+
+    .result-message {
+      text-align: center;
+      font-size: clamp(22px, 5.5vw, 34px);
+      color: #17324d;
+      font-weight: 900;
+      line-height: 1.5;
+      margin: 14px 0 20px;
+    }
+
+    .star-line {
+      text-align: center;
+      font-size: clamp(30px, 8vw, 58px);
+      margin: 12px 0;
+      letter-spacing: 0.08em;
+    }
+
+    .review-list {
+      margin-top: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .review-item {
+      background: #f8fbff;
+      border: 3px solid #dbeafe;
+      border-radius: 18px;
+      padding: 14px;
+      font-size: clamp(15px, 4vw, 19px);
+      line-height: 1.5;
+      font-weight: 750;
+    }
+
+    ruby rt {
+      font-size: 0.55em;
+      color: #6b7280;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      text-align: center;
+      color: #78909c;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 18px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <section id="topScreen" class="screen active">
+      <div class="top-decoration">🌏 ✈️ 🗺️ ⭐</div>
+      <div class="card">
+        <h1 class="title">世界の国と首都クイズ</h1>
+        <p class="subtitle">国・首都・有名な都市をおぼえよう！</p>
+
+        <div class="mode-grid">
+          <button class="mode-btn" onclick="startQuiz('countryToCapital')">
+            <span class="icon">🏳️</span>
+            <span>国から<br>首都をあてる</span>
+          </button>
+
+          <button class="mode-btn" onclick="startQuiz('capitalToCountry')">
+            <span class="icon">🏙️</span>
+            <span>首都から<br>国をあてる</span>
+          </button>
+
+          <button class="mode-btn" onclick="startQuiz('cityToCountry')">
+            <span class="icon">🌉</span>
+            <span>有名な都市から<br>国をあてる</span>
+          </button>
+
+          <button class="mode-btn challenge" onclick="startQuiz('challenge')">
+            <span class="icon">🎯</span>
+            <span>チャレンジ<br>いろいろ10問</span>
+          </button>
+        </div>
+
+        <p class="small-note">
+          4つの中からえらんでね。<br>
+          10問おわると、結果が出るよ！
+        </p>
+      </div>
+      <p class="footer-note">GitHub Pagesでそのまま使える1ファイル版</p>
+    </section>
+
+    <section id="quizScreen" class="screen">
+      <div class="quiz-header">
+        <div id="modeBadge" class="badge">モード</div>
+        <div id="progressBadge" class="badge">1 / 10</div>
+        <div id="scoreBadge" class="badge">せいかい 0</div>
+      </div>
+
+      <div class="question-card">
+        <div id="regionLabel" class="region">ヨーロッパ</div>
+        <div id="questionText" class="question">問題文</div>
+        <div id="choices" class="choices"></div>
+
+        <div id="feedback" class="feedback"></div>
+
+        <div class="next-row">
+          <button id="nextBtn" class="main-btn" onclick="nextQuestion()" style="display:none;">つぎへ</button>
+          <button class="sub-btn" onclick="goTop()">トップへ</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen">
+      <div class="card">
+        <div class="top-decoration">🎉 🌏 🎉</div>
+        <h2 class="title">結果発表！</h2>
+        <div id="starLine" class="star-line">⭐⭐⭐</div>
+        <div id="resultScore" class="result-score">0 / 10</div>
+        <div id="resultMessage" class="result-message">よくがんばったね！</div>
+
+        <div class="next-row">
+          <button class="main-btn" onclick="restartSameMode()">もういちど</button>
+          <button class="sub-btn" onclick="goTop()">トップへ</button>
+        </div>
+
+        <div id="reviewList" class="review-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const WORLD_DATA = [
+      {
+        country: "日本",
+        capital: "東京",
+        region: "アジア",
+        famousCities: [
+          { city: "東京", reason: "日本の首都で、スカイツリーやたくさんの電車で有名。", displayCity: "東京" },
+          { city: "京都", reason: "古いお寺や神社が多く、日本の歴史を感じられる都市。", displayCity: "京都" },
+          { city: "大阪", reason: "たこ焼きやお笑い、にぎやかな街で有名。", displayCity: "大阪" }
+        ]
+      },
+      {
+        country: "韓国",
+        capital: "ソウル",
+        region: "アジア",
+        famousCities: [
+          { city: "ソウル", reason: "韓国の首都で、K-POPや大きな市場で有名。", displayCity: "ソウル" },
+          { city: "釜山", reason: "韓国の大きな港町で、海や魚市場で有名。", displayCity: "<ruby>釜山<rt>プサン</rt></ruby>" }
+        ]
+      },
+      {
+        country: "中国",
+        capital: "北京",
+        region: "アジア",
+        famousCities: [
+          { city: "北京", reason: "中国の首都で、万里の長城に近いことで知られる。", displayCity: "<ruby>北京<rt>ペキン</rt></ruby>" },
+          { city: "上海", reason: "高いビルがならぶ、中国の大きな都市。", displayCity: "<ruby>上海<rt>シャンハイ</rt></ruby>" }
+        ]
+      },
+      {
+        country: "インド",
+        capital: "ニューデリー",
+        region: "アジア",
+        famousCities: [
+          { city: "ニューデリー", reason: "インドの首都。政府の建物が多い都市。", displayCity: "ニューデリー" },
+          { city: "ムンバイ", reason: "インドの大きな都市で、映画産業でも有名。", displayCity: "ムンバイ" }
+        ]
+      },
+      {
+        country: "タイ",
+        capital: "バンコク",
+        region: "アジア",
+        famousCities: [
+          { city: "バンコク", reason: "タイの首都で、お寺や水上マーケットで有名。", displayCity: "バンコク" },
+          { city: "チェンマイ", reason: "山に近く、古いお寺が多いタイ北部の都市。", displayCity: "チェンマイ" }
+        ]
+      },
+      {
+        country: "ベトナム",
+        capital: "ハノイ",
+        region: "アジア",
+        famousCities: [
+          { city: "ハノイ", reason: "ベトナムの首都で、湖や古い街なみで有名。", displayCity: "ハノイ" },
+          { city: "ホーチミン", reason: "ベトナム南部の大きな都市。にぎやかな街で有名。", displayCity: "ホーチミン" }
+        ]
+      },
+      {
+        country: "シンガポール",
+        capital: "シンガポール",
+        region: "アジア",
+        famousCities: [
+          { city: "シンガポール", reason: "マーライオンや近代的なビルで有名な都市国家。", displayCity: "シンガポール" }
+        ]
+      },
+      {
+        country: "インドネシア",
+        capital: "ジャカルタ",
+        region: "アジア",
+        famousCities: [
+          { city: "ジャカルタ", reason: "インドネシアの首都で、とても人口が多い都市。", displayCity: "ジャカルタ" },
+          { city: "バリ", reason: "美しい海や寺院で有名な観光地。", displayCity: "バリ" }
+        ]
+      },
+      {
+        country: "マレーシア",
+        capital: "クアラルンプール",
+        region: "アジア",
+        famousCities: [
+          { city: "クアラルンプール", reason: "ツインタワーで有名なマレーシアの首都。", displayCity: "クアラルンプール" }
+        ]
+      },
+      {
+        country: "フィリピン",
+        capital: "マニラ",
+        region: "アジア",
+        famousCities: [
+          { city: "マニラ", reason: "フィリピンの首都で、海に近い大きな都市。", displayCity: "マニラ" },
+          { city: "セブ", reason: "美しい海とリゾートで有名な島の都市。", displayCity: "セブ" }
+        ]
+      },
+      {
+        country: "モンゴル",
+        capital: "ウランバートル",
+        region: "アジア",
+        famousCities: [
+          { city: "ウランバートル", reason: "モンゴルの首都。草原の国の中心都市。", displayCity: "ウランバートル" }
+        ]
+      },
+      {
+        country: "トルコ",
+        capital: "アンカラ",
+        region: "アジア・ヨーロッパ",
+        famousCities: [
+          { city: "アンカラ", reason: "トルコの首都。国の政治の中心地。", displayCity: "アンカラ" },
+          { city: "イスタンブール", reason: "アジアとヨーロッパをつなぐ歴史ある大都市。", displayCity: "イスタンブール" }
+        ]
+      },
+      {
+        country: "アラブ首長国連邦",
+        capital: "アブダビ",
+        region: "中東",
+        famousCities: [
+          { city: "アブダビ", reason: "アラブ首長国連邦の首都。大きなモスクで有名。", displayCity: "アブダビ" },
+          { city: "ドバイ", reason: "とても高いビルや大きなショッピングモールで有名。", displayCity: "ドバイ" }
+        ]
+      },
+      {
+        country: "サウジアラビア",
+        capital: "リヤド",
+        region: "中東",
+        famousCities: [
+          { city: "リヤド", reason: "サウジアラビアの首都。砂漠の国の大きな都市。", displayCity: "リヤド" },
+          { city: "メッカ", reason: "イスラム教でとても大切な場所として知られる都市。", displayCity: "メッカ" }
+        ]
+      },
+      {
+        country: "フランス",
+        capital: "パリ",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "パリ", reason: "フランスの首都で、エッフェル塔やルーブル美術館で有名。", displayCity: "パリ" },
+          { city: "リヨン", reason: "フランスの大きな都市で、食べ物がおいしい街として有名。", displayCity: "リヨン" }
+        ]
+      },
+      {
+        country: "イタリア",
+        capital: "ローマ",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ローマ", reason: "イタリアの首都で、コロッセオなど古い建物で有名。", displayCity: "ローマ" },
+          { city: "ベネチア", reason: "水の上をゴンドラで進む街として有名。", displayCity: "ベネチア" },
+          { city: "ミラノ", reason: "ファッションや大きな教会で有名な都市。", displayCity: "ミラノ" }
+        ]
+      },
+      {
+        country: "ドイツ",
+        capital: "ベルリン",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ベルリン", reason: "ドイツの首都で、歴史のある建物が多い都市。", displayCity: "ベルリン" },
+          { city: "ミュンヘン", reason: "サッカーやお祭りで有名なドイツ南部の都市。", displayCity: "ミュンヘン" }
+        ]
+      },
+      {
+        country: "スペイン",
+        capital: "マドリード",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "マドリード", reason: "スペインの首都で、美術館や広場で有名。", displayCity: "マドリード" },
+          { city: "バルセロナ", reason: "サグラダ・ファミリアで有名な海に近い都市。", displayCity: "バルセロナ" }
+        ]
+      },
+      {
+        country: "イギリス",
+        capital: "ロンドン",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ロンドン", reason: "イギリスの首都で、ビッグベンや赤いバスで有名。", displayCity: "ロンドン" },
+          { city: "マンチェスター", reason: "サッカーで有名なイギリスの都市。", displayCity: "マンチェスター" }
+        ]
+      },
+      {
+        country: "オランダ",
+        capital: "アムステルダム",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "アムステルダム", reason: "オランダの首都で、運河や自転車の多い街で有名。", displayCity: "アムステルダム" },
+          { city: "ロッテルダム", reason: "大きな港があるオランダの都市。", displayCity: "ロッテルダム" }
+        ]
+      },
+      {
+        country: "ベルギー",
+        capital: "ブリュッセル",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ブリュッセル", reason: "ベルギーの首都で、チョコレートやワッフルでも有名。", displayCity: "ブリュッセル" }
+        ]
+      },
+      {
+        country: "スイス",
+        capital: "ベルン",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ベルン", reason: "スイスの首都。古い街なみが美しい都市。", displayCity: "ベルン" },
+          { city: "ジュネーブ", reason: "国際的な会議や湖で有名な都市。", displayCity: "ジュネーブ" }
+        ]
+      },
+      {
+        country: "オーストリア",
+        capital: "ウィーン",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ウィーン", reason: "オーストリアの首都で、音楽の都として有名。", displayCity: "ウィーン" },
+          { city: "ザルツブルク", reason: "モーツァルトが生まれた街として知られる。", displayCity: "ザルツブルク" }
+        ]
+      },
+      {
+        country: "ギリシャ",
+        capital: "アテネ",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "アテネ", reason: "ギリシャの首都で、パルテノン神殿で有名。", displayCity: "アテネ" }
+        ]
+      },
+      {
+        country: "ポルトガル",
+        capital: "リスボン",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "リスボン", reason: "ポルトガルの首都。坂道や路面電車で有名。", displayCity: "リスボン" },
+          { city: "ポルト", reason: "古い街なみとワインで有名な都市。", displayCity: "ポルト" }
+        ]
+      },
+      {
+        country: "スウェーデン",
+        capital: "ストックホルム",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ストックホルム", reason: "スウェーデンの首都で、島がたくさんある都市。", displayCity: "ストックホルム" }
+        ]
+      },
+      {
+        country: "ノルウェー",
+        capital: "オスロ",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "オスロ", reason: "ノルウェーの首都。フィヨルドの国の中心都市。", displayCity: "オスロ" },
+          { city: "ベルゲン", reason: "美しい港町で、フィヨルド観光でも有名。", displayCity: "ベルゲン" }
+        ]
+      },
+      {
+        country: "デンマーク",
+        capital: "コペンハーゲン",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "コペンハーゲン", reason: "デンマークの首都で、人魚姫の像で有名。", displayCity: "コペンハーゲン" }
+        ]
+      },
+      {
+        country: "フィンランド",
+        capital: "ヘルシンキ",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ヘルシンキ", reason: "フィンランドの首都。北ヨーロッパの港町。", displayCity: "ヘルシンキ" }
+        ]
+      },
+      {
+        country: "ポーランド",
+        capital: "ワルシャワ",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ワルシャワ", reason: "ポーランドの首都。歴史のある広場で有名。", displayCity: "ワルシャワ" },
+          { city: "クラクフ", reason: "古い街なみが残るポーランドの有名な都市。", displayCity: "クラクフ" }
+        ]
+      },
+      {
+        country: "チェコ",
+        capital: "プラハ",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "プラハ", reason: "チェコの首都で、お城や古い橋で有名。", displayCity: "プラハ" }
+        ]
+      },
+      {
+        country: "ハンガリー",
+        capital: "ブダペスト",
+        region: "ヨーロッパ",
+        famousCities: [
+          { city: "ブダペスト", reason: "ハンガリーの首都で、ドナウ川の景色が美しい都市。", displayCity: "ブダペスト" }
+        ]
+      },
+      {
+        country: "エジプト",
+        capital: "カイロ",
+        region: "アフリカ",
+        famousCities: [
+          { city: "カイロ", reason: "エジプトの首都で、ピラミッドに近い大きな都市。", displayCity: "カイロ" },
+          { city: "ギザ", reason: "ピラミッドやスフィンクスでとても有名な場所。", displayCity: "ギザ" }
+        ]
+      },
+      {
+        country: "モロッコ",
+        capital: "ラバト",
+        region: "アフリカ",
+        famousCities: [
+          { city: "ラバト", reason: "モロッコの首都。大西洋に近い都市。", displayCity: "ラバト" },
+          { city: "マラケシュ", reason: "市場や赤い街なみで有名な観光都市。", displayCity: "マラケシュ" }
+        ]
+      },
+      {
+        country: "ケニア",
+        capital: "ナイロビ",
+        region: "アフリカ",
+        famousCities: [
+          { city: "ナイロビ", reason: "ケニアの首都。近くに国立公園がある都市。", displayCity: "ナイロビ" }
+        ]
+      },
+      {
+        country: "南アフリカ",
+        capital: "プレトリア",
+        region: "アフリカ",
+        famousCities: [
+          { city: "プレトリア", reason: "南アフリカの首都のひとつで、政治の中心地。", displayCity: "プレトリア" },
+          { city: "ケープタウン", reason: "テーブルマウンテンや美しい海で有名な都市。", displayCity: "ケープタウン" },
+          { city: "ヨハネスブルグ", reason: "南アフリカの大きな経済都市。", displayCity: "ヨハネスブルグ" }
+        ]
+      },
+      {
+        country: "ナイジェリア",
+        capital: "アブジャ",
+        region: "アフリカ",
+        famousCities: [
+          { city: "アブジャ", reason: "ナイジェリアの首都。国の中心に近い都市。", displayCity: "アブジャ" },
+          { city: "ラゴス", reason: "ナイジェリアのとても大きな港町。", displayCity: "ラゴス" }
+        ]
+      },
+      {
+        country: "アメリカ",
+        capital: "ワシントンD.C.",
+        region: "北アメリカ",
+        famousCities: [
+          { city: "ワシントンD.C.", reason: "アメリカの首都で、ホワイトハウスで有名。", displayCity: "ワシントンD.C." },
+          { city: "ニューヨーク", reason: "自由の女神やタイムズスクエアで有名な大都市。", displayCity: "ニューヨーク" },
+          { city: "ロサンゼルス", reason: "映画の街ハリウッドで有名。", displayCity: "ロサンゼルス" },
+          { city: "サンフランシスコ", reason: "ゴールデンゲートブリッジで有名な都市。", displayCity: "サンフランシスコ" }
+        ]
+      },
+      {
+        country: "カナダ",
+        capital: "オタワ",
+        region: "北アメリカ",
+        famousCities: [
+          { city: "オタワ", reason: "カナダの首都。国会議事堂がある都市。", displayCity: "オタワ" },
+          { city: "トロント", reason: "カナダの大きな都市で、高いタワーで有名。", displayCity: "トロント" },
+          { city: "バンクーバー", reason: "海と山が近い、自然が美しい都市。", displayCity: "バンクーバー" }
+        ]
+      },
+      {
+        country: "メキシコ",
+        capital: "メキシコシティ",
+        region: "北アメリカ",
+        famousCities: [
+          { city: "メキシコシティ", reason: "メキシコの首都で、とても大きな都市。", displayCity: "メキシコシティ" },
+          { city: "カンクン", reason: "美しい海とリゾートで有名な都市。", displayCity: "カンクン" }
+        ]
+      },
+      {
+        country: "ブラジル",
+        capital: "ブラジリア",
+        region: "南アメリカ",
+        famousCities: [
+          { city: "ブラジリア", reason: "ブラジルの首都。計画して作られた都市として有名。", displayCity: "ブラジリア" },
+          { city: "リオデジャネイロ", reason: "カーニバルや大きなキリスト像で有名。", displayCity: "リオデジャネイロ" },
+          { city: "サンパウロ", reason: "ブラジルでとても人口が多い大都市。", displayCity: "サンパウロ" }
+        ]
+      },
+      {
+        country: "アルゼンチン",
+        capital: "ブエノスアイレス",
+        region: "南アメリカ",
+        famousCities: [
+          { city: "ブエノスアイレス", reason: "アルゼンチンの首都で、タンゴで有名。", displayCity: "ブエノスアイレス" }
+        ]
+      },
+      {
+        country: "チリ",
+        capital: "サンティアゴ",
+        region: "南アメリカ",
+        famousCities: [
+          { city: "サンティアゴ", reason: "チリの首都。アンデス山脈に近い都市。", displayCity: "サンティアゴ" }
+        ]
+      },
+      {
+        country: "ペルー",
+        capital: "リマ",
+        region: "南アメリカ",
+        famousCities: [
+          { city: "リマ", reason: "ペルーの首都。太平洋に近い大きな都市。", displayCity: "リマ" },
+          { city: "クスコ", reason: "マチュピチュ観光の入口として有名な都市。", displayCity: "クスコ" }
+        ]
+      },
+      {
+        country: "コロンビア",
+        capital: "ボゴタ",
+        region: "南アメリカ",
+        famousCities: [
+          { city: "ボゴタ", reason: "コロンビアの首都。高い場所にある大都市。", displayCity: "ボゴタ" }
+        ]
+      },
+      {
+        country: "オーストラリア",
+        capital: "キャンベラ",
+        region: "オセアニア",
+        famousCities: [
+          { city: "キャンベラ", reason: "オーストラリアの首都。政治の中心地。", displayCity: "キャンベラ" },
+          { city: "シドニー", reason: "オペラハウスやハーバーブリッジで有名。", displayCity: "シドニー" },
+          { city: "メルボルン", reason: "スポーツや芸術で有名な大都市。", displayCity: "メルボルン" }
+        ]
+      },
+      {
+        country: "ニュージーランド",
+        capital: "ウェリントン",
+        region: "オセアニア",
+        famousCities: [
+          { city: "ウェリントン", reason: "ニュージーランドの首都。海に近い風の強い都市。", displayCity: "ウェリントン" },
+          { city: "オークランド", reason: "ニュージーランドの大きな港町。", displayCity: "オークランド" }
+        ]
+      },
+      {
+        country: "ロシア",
+        capital: "モスクワ",
+        region: "ヨーロッパ・アジア",
+        famousCities: [
+          { city: "モスクワ", reason: "ロシアの首都で、赤の広場で有名。", displayCity: "モスクワ" },
+          { city: "サンクトペテルブルク", reason: "美しい宮殿や美術館で有名な都市。", displayCity: "サンクトペテルブルク" }
+        ]
+      }
+    ];
+
+    const MODE_LABELS = {
+      countryToCapital: "国から首都",
+      capitalToCountry: "首都から国",
+      cityToCountry: "有名都市から国",
+      challenge: "チャレンジ"
+    };
+
+    const TOTAL_QUESTIONS = 10;
+
+    let currentMode = "countryToCapital";
+    let quizQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let answered = false;
+    let results = [];
+
+    function plainText(htmlText) {
+      const div = document.createElement("div");
+      div.innerHTML = htmlText || "";
+      return div.textContent || div.innerText || "";
+    }
+
+    function shuffle(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function sample(array, count) {
+      return shuffle(array).slice(0, count);
+    }
+
+    function allCountries() {
+      return WORLD_DATA.map(item => item.country);
+    }
+
+    function allCapitals() {
+      return WORLD_DATA.map(item => item.capital);
+    }
+
+    function allCityItems() {
+      return WORLD_DATA.flatMap(countryData =>
+        countryData.famousCities.map(cityData => ({
+          ...cityData,
+          country: countryData.country,
+          capital: countryData.capital,
+          region: countryData.region
+        }))
+      );
+    }
+
+    function makeChoices(correct, pool) {
+      const wrongPool = pool.filter(item => item !== correct);
+      return shuffle([correct, ...sample(wrongPool, 3)]);
+    }
+
+    function makeCountryToCapitalQuestion(data) {
+      return {
+        type: "countryToCapital",
+        region: data.region,
+        question: `${data.country}の首都はどこ？`,
+        answer: data.capital,
+        choices: makeChoices(data.capital, allCapitals()),
+        explanation: `${data.country}の首都は${data.capital}です。${data.region}にあります。`
+      };
+    }
+
+    function makeCapitalToCountryQuestion(data) {
+      return {
+        type: "capitalToCountry",
+        region: data.region,
+        question: `${data.capital}はどこの国の首都？`,
+        answer: data.country,
+        choices: makeChoices(data.country, allCountries()),
+        explanation: `${data.capital}は${data.country}の首都です。`
+      };
+    }
+
+    function makeCityToCountryQuestion(cityItem) {
+      const display = cityItem.displayCity || cityItem.city;
+      return {
+        type: "cityToCountry",
+        region: cityItem.region,
+        question: `${display}がある国はどこ？`,
+        answer: cityItem.country,
+        choices: makeChoices(cityItem.country, allCountries()),
+        explanation: `${display}は${cityItem.country}の都市です。${cityItem.reason}`
+      };
+    }
+
+    function makeQuestion(type) {
+      if (type === "countryToCapital") {
+        return makeCountryToCapitalQuestion(sample(WORLD_DATA, 1)[0]);
+      }
+
+      if (type === "capitalToCountry") {
+        return makeCapitalToCountryQuestion(sample(WORLD_DATA, 1)[0]);
+      }
+
+      if (type === "cityToCountry") {
+        return makeCityToCountryQuestion(sample(allCityItems(), 1)[0]);
+      }
+
+      const types = ["countryToCapital", "capitalToCountry", "cityToCountry"];
+      return makeQuestion(sample(types, 1)[0]);
+    }
+
+    function buildQuestions(mode) {
+      const questions = [];
+      const usedKeys = new Set();
+      let guard = 0;
+
+      while (questions.length < TOTAL_QUESTIONS && guard < 300) {
+        guard++;
+        const q = makeQuestion(mode);
+        const key = `${q.type}-${plainText(q.question)}-${q.answer}`;
+        if (!usedKeys.has(key)) {
+          usedKeys.add(key);
+          questions.push(q);
+        }
+      }
+
+      return questions;
+    }
+
+    function startQuiz(mode) {
+      currentMode = mode;
+      quizQuestions = buildQuestions(mode);
+      currentIndex = 0;
+      score = 0;
+      answered = false;
+      results = [];
+
+      showScreen("quizScreen");
+      showQuestion();
+    }
+
+    function showScreen(screenId) {
+      document.querySelectorAll(".screen").forEach(screen => {
+        screen.classList.remove("active");
+      });
+      document.getElementById(screenId).classList.add("active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function showQuestion() {
+      answered = false;
+      const q = quizQuestions[currentIndex];
+
+      document.getElementById("modeBadge").textContent = MODE_LABELS[currentMode];
+      document.getElementById("progressBadge").textContent = `${currentIndex + 1} / ${TOTAL_QUESTIONS}`;
+      document.getElementById("scoreBadge").textContent = `せいかい ${score}`;
+      document.getElementById("regionLabel").textContent = q.region;
+      document.getElementById("questionText").innerHTML = q.question;
+
+      const choicesEl = document.getElementById("choices");
+      choicesEl.innerHTML = "";
+
+      q.choices.forEach(choice => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.textContent = choice;
+        btn.onclick = () => answerQuestion(choice, btn);
+        choicesEl.appendChild(btn);
+      });
+
+      const feedback = document.getElementById("feedback");
+      feedback.className = "feedback";
+      feedback.innerHTML = "";
+      document.getElementById("nextBtn").style.display = "none";
+    }
+
+    function answerQuestion(choice, clickedBtn) {
+      if (answered) return;
+      answered = true;
+
+      const q = quizQuestions[currentIndex];
+      const isCorrect = choice === q.answer;
+
+      if (isCorrect) score++;
+
+      document.querySelectorAll(".choice-btn").forEach(btn => {
+        btn.disabled = true;
+        if (btn.textContent === q.answer) {
+          btn.classList.add("correct");
+        } else if (btn === clickedBtn) {
+          btn.classList.add("wrong");
+        }
+      });
+
+      const feedback = document.getElementById("feedback");
+      feedback.classList.add("show");
+      feedback.classList.add(isCorrect ? "good" : "bad");
+
+      if (isCorrect) {
+        feedback.innerHTML = `🎉 せいかい！<span class="explain">${q.explanation}</span>`;
+      } else {
+        feedback.innerHTML = `💡 もういちど！<span class="explain">正しい答えは「${q.answer}」です。<br>${q.explanation}</span>`;
+      }
+
+      results.push({
+        question: plainText(q.question),
+        answer: q.answer,
+        yourAnswer: choice,
+        correct: isCorrect,
+        explanation: plainText(q.explanation)
+      });
+
+      document.getElementById("scoreBadge").textContent = `せいかい ${score}`;
+      document.getElementById("nextBtn").style.display = "inline-block";
+      document.getElementById("nextBtn").textContent =
+        currentIndex + 1 >= TOTAL_QUESTIONS ? "結果を見る" : "つぎへ";
+    }
+
+    function nextQuestion() {
+      if (currentIndex + 1 >= TOTAL_QUESTIONS) {
+        showResult();
+      } else {
+        currentIndex++;
+        showQuestion();
+      }
+    }
+
+    function showResult() {
+      showScreen("resultScreen");
+
+      document.getElementById("resultScore").textContent = `${score} / ${TOTAL_QUESTIONS}`;
+
+      let message = "よくがんばったね！";
+      let stars = "⭐⭐⭐";
+
+      if (score === 10) {
+        message = "すごい！世界マスターだね！";
+        stars = "⭐⭐⭐⭐⭐";
+      } else if (score >= 8) {
+        message = "とてもよくできました！";
+        stars = "⭐⭐⭐⭐";
+      } else if (score >= 5) {
+        message = "いい感じ！もう一回やるともっと覚えられるよ！";
+        stars = "⭐⭐⭐";
+      } else {
+        message = "だいじょうぶ！少しずつ覚えていこう！";
+        stars = "⭐⭐";
+      }
+
+      document.getElementById("resultMessage").textContent = message;
+      document.getElementById("starLine").textContent = stars;
+
+      const reviewList = document.getElementById("reviewList");
+      reviewList.innerHTML = "";
+
+      results.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "review-item";
+        div.innerHTML = `
+          <strong>${index + 1}. ${item.correct ? "⭕" : "❌"} ${item.question}</strong><br>
+          あなたの答え：${item.yourAnswer}<br>
+          正しい答え：${item.answer}
+        `;
+        reviewList.appendChild(div);
+      });
+    }
+
+    function restartSameMode() {
+      startQuiz(currentMode);
+    }
+
+    function goTop() {
+      showScreen("topScreen");
+    }
+  </script>
+</body>
+</html>

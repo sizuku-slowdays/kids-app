@@ -299,18 +299,6 @@
   #five-min-card p  { font-size: 0.9rem; color: #3A8A9A; margin-bottom: 16px; }
 
   /* 完了カード */
-  #done-card {
-    background: linear-gradient(135deg, #FFF8C0, #FFE4A8);
-    border-radius: 24px; padding: 26px 20px; text-align: center;
-    display: none; border: 2.5px solid rgba(255,255,255,0.9);
-    box-shadow: 0 6px 24px rgba(200,150,0,0.2); animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1);
-    margin-bottom: 14px;
-  }
-  #done-card.active { display: block; }
-  #done-card .emoji { font-size: 3.5rem; display: block; margin-bottom: 12px; animation: spin 1s ease-out; }
-  @keyframes spin { from{transform:rotate(-180deg)scale(0)} to{transform:rotate(0)scale(1)} }
-  #done-card h2 { font-size: 1.4rem; font-weight: 800; color: #7B5000; margin-bottom: 8px; line-height: 1.5; }
-  #done-card p  { font-size: 0.9rem; color: #9B7000; }
 </style>
 </head>
 <body>
@@ -589,23 +577,18 @@ function onOneMinDone() {
   setTimeout(() => overlay.querySelector('.popup-card').classList.remove('flashing'), 2600);
 }
 
-// 1分ポップアップの「とじる」（×ボタン） → のみこんだよと同じ動作
+// ×ボタン：ポップアップを閉じるだけ（通知を確認した・あとでのみこむ）
 document.getElementById('btn-close-one-min').addEventListener('click', () => {
-  dismissOneMin(false); // のみこまずに閉じる
+  document.getElementById('one-min-overlay').classList.remove('active');
 });
 
-function dismissOneMin(swallowed) {
+// 「のみこんだよ！」ボタン：5分タイマーへ進む
+document.getElementById('btn-swallowed').addEventListener('click', () => {
   document.getElementById('one-min-overlay').classList.remove('active');
   banner.classList.remove('active');
-  if (swallowed) {
-    showEl('five-min-card');
-    phase = 'five-min';
-    startTimer(300, '🥤 のみものがまんタイマー', onFiveMinDone);
-  }
-}
-
-document.getElementById('btn-swallowed').addEventListener('click', () => {
-  dismissOneMin(true);
+  showEl('five-min-card');
+  phase = 'five-min';
+  startTimer(300, '🥤 のみものがまんタイマー', onFiveMinDone);
 });
 
 function onFiveMinDone() {

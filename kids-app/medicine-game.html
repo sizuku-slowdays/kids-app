@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>おくすりタイマー🌈</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+
+  :root {
+    --pink:    #FFB7C5;
+    --lavender:#D4AAFF;
+    --sky:     #A8DEFF;
+    --mint:    #A8F0D4;
+    --yellow:  #FFF0A0;
+    --peach:   #FFD6A5;
+    --white:   #FFFAFD;
+    --soft-gray:#F0E6F8;
+    --text:    #6B4F72;
+    --shadow:  rgba(180,120,200,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    background: linear-gradient(135deg, #FFE4F0 0%, #F0E0FF 30%, #E0F0FF 60%, #E0FFF0 100%);
+    min-height: 100vh;
+    color: var(--text);
+    overflow-x: hidden;
+    padding-bottom: 40px;
+  }
+
+  /* ======= 浮かぶデコ ======= */
+  .deco-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .deco-bg span {
+    position: absolute; font-size: 1.5rem;
+    animation: floatDeco linear infinite;
+    opacity: 0.35;
+  }
+  @keyframes floatDeco {
+    0%   { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+    10%  { opacity: 0.35; }
+    90%  { opacity: 0.35; }
+    100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+  }
+
+  .app {
+    position: relative; z-index: 1;
+    max-width: 480px; margin: 0 auto;
+    padding: 16px;
+  }
+
+  /* ======= タイマーバナー ======= */
+  #timer-banner {
+    background: linear-gradient(135deg, #FFD1E8, #E8D1FF);
+    border-radius: 20px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 16px var(--shadow);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid rgba(255,255,255,0.8);
+  }
+  #timer-banner.active { display: flex; }
+  .timer-label { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; color: #9B6DB5; }
+  .timer-digits {
+    font-family: 'Kaisei Decol', serif;
+    font-size: 3.2rem; font-weight: 700; color: #7B3FA0;
+    line-height: 1; text-shadow: 0 2px 8px rgba(120,60,160,0.2); letter-spacing: 0.05em;
+  }
+  .timer-progress { width: 100%; height: 10px; background: rgba(255,255,255,0.5); border-radius: 10px; overflow: hidden; }
+  .timer-progress-bar { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #FF9ED2, #C97BFF); transition: width 1s linear; }
+
+  /* ======= オーバーレイポップアップ ======= */
+  .popup-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(120,60,160,0.35);
+    backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+    animation: fadeOverlay 0.3s ease;
+  }
+  .popup-overlay.active { display: flex; }
+  @keyframes fadeOverlay { from{opacity:0} to{opacity:1} }
+
+  .popup-card {
+    border-radius: 28px; padding: 28px 24px;
+    box-shadow: 0 12px 40px rgba(100,40,140,0.3);
+    text-align: center; width: 100%; max-width: 360px;
+    border: 2.5px solid rgba(255,255,255,0.95);
+    animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1);
+    position: relative;
+  }
+  @keyframes popIn { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+  @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .flashing { animation: flash 0.5s ease-in-out 5; }
+  .popup-card .emoji { font-size: 3.8rem; display: block; margin-bottom: 12px; }
+  .popup-card h2 { font-size: 1.4rem; font-weight: 800; line-height: 1.5; color: #7B3FA0; margin-bottom: 18px; }
+  .popup-card .btn-close {
+    position: absolute; top: 12px; right: 14px;
+    background: rgba(200,180,220,0.3); border: none; border-radius: 50%;
+    width: 32px; height: 32px; font-size: 1rem; cursor: pointer; color: #9B7AB0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 800;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+  }
+  .popup-card .btn-close:hover { background: rgba(200,180,220,0.55); }
+
+  /* ======= ボタン共通 ======= */
+  .btn {
+    display: inline-block; border: none; outline: none; cursor: pointer;
+    border-radius: 50px; font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 800;
+    transition: transform 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.93); }
+  .btn-primary {
+    background: linear-gradient(135deg, #FF9ED2, #C97BFF); color: white;
+    font-size: 1.25rem; padding: 18px 36px;
+    box-shadow: 0 6px 18px rgba(180,80,200,0.35); width: 100%;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .btn-primary:hover { box-shadow: 0 8px 22px rgba(180,80,200,0.45); transform: translateY(-1px); }
+  .btn-secondary {
+    background: linear-gradient(135deg, #A8DEFF, #A8F0D4); color: #3A7A7A;
+    font-size: 1rem; padding: 14px 28px;
+    box-shadow: 0 4px 14px rgba(80,160,200,0.25); width: 100%;
+  }
+  .btn-small {
+    font-size: 0.9rem; padding: 10px 22px;
+    background: linear-gradient(135deg, #FFF0A0, #FFD6A5); color: #9B7000;
+    box-shadow: 0 3px 10px rgba(200,150,0,0.2);
+  }
+
+  /* ======= スタート画面 ======= */
+  #screen-start { text-align: center; padding: 24px 10px; }
+  #screen-start .hero-emoji { font-size: 4.5rem; display: block; margin-bottom: 14px; animation: bounce 2s ease-in-out infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+  #screen-start h1 { font-family: 'Kaisei Decol', serif; font-size: 1.8rem; font-weight: 700; color: #9B3FBF; margin-bottom: 8px; line-height: 1.4; }
+  #screen-start p { font-size: 0.95rem; color: #9B7AB0; margin-bottom: 20px; line-height: 1.7; }
+
+  /* ======= ゲーム設定パネル ======= */
+  #game-settings {
+    background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(240,225,255,0.8));
+    border-radius: 22px; padding: 18px 16px;
+    box-shadow: 0 4px 18px var(--shadow);
+    border: 2px solid rgba(255,255,255,0.9);
+    margin-bottom: 18px;
+    text-align: left;
+  }
+  .settings-title { font-size: 1rem; font-weight: 800; color: #7B3FA0; margin-bottom: 14px; text-align: center; }
+
+  .setting-row { margin-bottom: 14px; }
+  .setting-label { font-size: 0.85rem; font-weight: 700; color: #9B7AB0; margin-bottom: 7px; display: block; }
+
+  /* トグルボタングループ */
+  .toggle-group { display: flex; gap: 7px; }
+  .toggle-btn {
+    flex: 1; border: 2.5px solid rgba(200,180,220,0.5);
+    border-radius: 40px; padding: 9px 6px;
+    background: rgba(255,255,255,0.7);
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    font-size: 0.82rem; font-weight: 700;
+    color: #9B7AB0; cursor: pointer;
+    transition: all 0.15s; text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .toggle-btn:active { transform: scale(0.93); }
+  .toggle-btn.selected {
+    background: linear-gradient(135deg, #FF9ED2, #C97BFF);
+    border-color: transparent; color: white;
+    box-shadow: 0 3px 10px rgba(180,80,200,0.3);
+  }
+
+  /* ======= ゲームエリア ======= */
+  #game-section {
+    background: linear-gradient(135deg, rgba(255,255,255,0.75), rgba(240,230,255,0.75));
+    border-radius: 24px; padding: 18px;
+    box-shadow: 0 4px 20px var(--shadow);
+    border: 2px solid rgba(255,255,255,0.9);
+    margin-top: 14px;
+  }
+  .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .game-title { font-size: 1.05rem; font-weight: 800; color: #7B3FA0; }
+  .match-info { font-size: 0.85rem; color: #9B7AB0; }
+
+  /* CPU バッジ */
+  .cpu-badge {
+    display: inline-block; font-size: 0.7rem; font-weight: 800;
+    background: linear-gradient(135deg, #FFD1E8, #E8D1FF);
+    color: #9B3FBF; border-radius: 20px; padding: 2px 8px;
+    margin-left: 4px; vertical-align: middle;
+    border: 1.5px solid rgba(180,80,200,0.2);
+  }
+
+  /* スコアボード */
+  .scoreboard { display: flex; gap: 10px; margin-bottom: 14px; }
+  .score-box {
+    flex: 1; border-radius: 16px; padding: 10px 6px; text-align: center;
+    font-weight: 800; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 2px 8px var(--shadow);
+  }
+  .score-box.circle { background: linear-gradient(135deg, #FFD1E8, #FFB7C5); color: #B03060; }
+  .score-box.draw   { background: linear-gradient(135deg, #FFF0A0, #FFD6A5); color: #9B7000; }
+  .score-box.cross  { background: linear-gradient(135deg, #C8ECFF, #A8DEFF); color: #205080; }
+  .score-box .s-emoji { font-size: 1.4rem; display: block; }
+  .score-box .s-label { font-size: 0.68rem; display: block; margin-top: 2px; line-height: 1.3; }
+  .score-box .s-count { font-size: 1.5rem; display: block; margin-top: 2px; }
+
+  .turn-display { text-align: center; font-size: 1rem; font-weight: 700; color: #9B6DB5; margin-bottom: 12px; min-height: 1.5rem; }
+
+  /* 盤面 */
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .cell {
+    aspect-ratio: 1; border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(240,230,255,0.8));
+    border: 2.5px solid rgba(200,180,220,0.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.4rem; cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+    box-shadow: 0 2px 8px var(--shadow);
+    user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  .cell:hover:not(.taken) { background: linear-gradient(135deg,#FFF0F8,#EFE0FF); transform: scale(1.04); }
+  .cell:active:not(.taken) { transform: scale(0.92); }
+  .cell.taken { cursor: default; }
+  .cell.win-cell {
+    background: linear-gradient(135deg, #FFE4F8, #E8D0FF) !important;
+    border-color: #C97BFF !important;
+    animation: winCellPulse 0.5s ease-in-out 3;
+  }
+  @keyframes winCellPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+  /* CPUが打つとき盤面を暗くする */
+  .board.cpu-thinking .cell:not(.taken) { pointer-events: none; opacity: 0.7; }
+
+  /* ゲーム中のCPU強さ変更バー */
+  #in-game-level {
+    display: none; align-items: center; gap: 8px;
+    margin-bottom: 12px; flex-wrap: wrap;
+  }
+  #in-game-level.visible { display: flex; }
+  #in-game-level .level-label {
+    font-size: 0.8rem; font-weight: 700; color: #9B7AB0; white-space: nowrap;
+  }
+  #in-game-level .toggle-group { flex: 1; display: flex; gap: 6px; }
+  #in-game-level .toggle-btn { font-size: 0.78rem; padding: 7px 4px; }
+
+  /* 結果 */
+  .game-result {
+    text-align: center; background: linear-gradient(135deg, #FFE4F8, #E8D8FF);
+    border-radius: 18px; padding: 16px; margin-bottom: 12px;
+    display: none; animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1);
+    border: 2px solid rgba(255,255,255,0.85);
+  }
+  .game-result.active { display: block; }
+  .game-result .r-emoji { font-size: 2.4rem; }
+  .game-result .r-text { font-size: 1.15rem; font-weight: 800; color: #7B3FA0; margin-top: 6px; }
+
+  /* 最終結果 */
+  #final-result {
+    background: linear-gradient(135deg, #FFF0A0, #FFD6A5);
+    border-radius: 22px; padding: 22px 16px; text-align: center;
+    display: none; border: 2.5px solid rgba(255,255,255,0.9);
+    box-shadow: 0 6px 20px rgba(200,150,0,0.2);
+    animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1); margin-bottom: 12px;
+  }
+  #final-result.active { display: block; }
+  #final-result h3 { font-size: 1.3rem; font-weight: 800; color: #7B5000; margin-bottom: 14px; }
+  .final-scores { display: flex; gap: 10px; justify-content: center; margin-bottom: 16px; }
+  .final-score-item { background: rgba(255,255,255,0.7); border-radius: 14px; padding: 10px 14px; font-weight: 800; }
+  .final-score-item .fi-emoji { font-size: 1.6rem; display: block; }
+  .final-score-item .fi-count { font-size: 1.4rem; color: #7B5000; display: block; }
+
+  /* カード背景色 */
+  .card-pink     { background: linear-gradient(135deg, #FFE4F0, #FFD1E8); }
+  .card-mint     { background: linear-gradient(135deg, #D8FFF0, #C0F8E4); }
+  .card-lavender { background: linear-gradient(135deg, #EDE0FF, #DDD0FF); }
+
+  .hidden { display: none !important; }
+  .mt-10 { margin-top: 10px; }
+  .mt-14 { margin-top: 14px; }
+
+  /* 5分タイマーカード */
+  #five-min-card {
+    background: linear-gradient(135deg, #D8FFF0, #C8E8FF);
+    border-radius: 24px; padding: 22px 20px; margin-bottom: 14px; text-align: center;
+    display: none; border: 2.5px solid rgba(255,255,255,0.9);
+    box-shadow: 0 6px 24px rgba(80,160,200,0.15); animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  #five-min-card.active { display: block; }
+  #five-min-card .emoji { font-size: 2.8rem; display: block; margin-bottom: 10px; }
+  #five-min-card h2 { font-size: 1.25rem; font-weight: 800; color: #2A6A7A; margin-bottom: 8px; line-height: 1.5; }
+  #five-min-card p  { font-size: 0.9rem; color: #3A8A9A; margin-bottom: 16px; }
+
+  /* 完了カード */
+  #done-card {
+    background: linear-gradient(135deg, #FFF8C0, #FFE4A8);
+    border-radius: 24px; padding: 26px 20px; text-align: center;
+    display: none; border: 2.5px solid rgba(255,255,255,0.9);
+    box-shadow: 0 6px 24px rgba(200,150,0,0.2); animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1);
+    margin-bottom: 14px;
+  }
+  #done-card.active { display: block; }
+  #done-card .emoji { font-size: 3.5rem; display: block; margin-bottom: 12px; animation: spin 1s ease-out; }
+  @keyframes spin { from{transform:rotate(-180deg)scale(0)} to{transform:rotate(0)scale(1)} }
+  #done-card h2 { font-size: 1.4rem; font-weight: 800; color: #7B5000; margin-bottom: 8px; line-height: 1.5; }
+  #done-card p  { font-size: 0.9rem; color: #9B7000; }
+</style>
+</head>
+<body>
+
+<div class="deco-bg" id="decoBg"></div>
+
+<div class="app">
+
+  <!-- タイマーバナー -->
+  <div id="timer-banner">
+    <div class="timer-label" id="banner-label">⏱ おくすりタイマー</div>
+    <div class="timer-digits" id="banner-digits">1:00</div>
+    <div class="timer-progress"><div class="timer-progress-bar" id="banner-bar" style="width:100%"></div></div>
+  </div>
+
+  <!-- スタート画面 -->
+  <div id="screen-start">
+    <span class="hero-emoji">🦄</span>
+    <h1>おくすりタイマー<br>🌟🌈🌟</h1>
+    <p>おくすりをくちにいれたら<br>ボタンをおしてね！<br>ゲームをしながらまとうね✨</p>
+
+    <!-- ゲーム設定 -->
+    <div id="game-settings">
+      <div class="settings-title">🎮 ゲームのせってい</div>
+
+      <div class="setting-row">
+        <span class="setting-label">🤖 だれがCPU？</span>
+        <div class="toggle-group">
+          <button class="toggle-btn" data-setting="cpu" data-value="none">ふたりとも人間</button>
+          <button class="toggle-btn selected" data-setting="cpu" data-value="X">❌ばつがCPU</button>
+          <button class="toggle-btn" data-setting="cpu" data-value="O">⭕まるがCPU</button>
+        </div>
+      </div>
+
+      <div class="setting-row" id="difficulty-row">
+        <span class="setting-label">💪 CPUのつよさ</span>
+        <div class="toggle-group">
+          <button class="toggle-btn selected" data-setting="level" data-value="easy">よわい🌸</button>
+          <button class="toggle-btn" data-setting="level" data-value="normal">ふつう⭐</button>
+          <button class="toggle-btn" data-setting="level" data-value="hard">つよい🔥</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-start">
+      ✨ おくすりタイマーをはじめる ✨
+    </button>
+  </div>
+
+  <!-- 1分終了ポップアップ -->
+  <div class="popup-overlay" id="one-min-overlay">
+    <div class="popup-card" style="background:linear-gradient(135deg,#EDE0FF,#DDD0FF);">
+      <button class="btn-close" id="btn-close-one-min">✕</button>
+      <span class="emoji">🎉</span>
+      <h2>1ぷんたったよ！<br>おくすりをのみこんでね💜</h2>
+      <button class="btn btn-primary" id="btn-swallowed">💫 のみこんだよ！</button>
+    </div>
+  </div>
+
+  <!-- 5分終了ポップアップ -->
+  <div class="popup-overlay" id="five-done-overlay">
+    <div class="popup-card" style="background:linear-gradient(135deg,#FFF8C0,#FFE4A8);">
+      <button class="btn-close" id="btn-close-five-done">✕</button>
+      <span class="emoji">🌈</span>
+      <h2 style="color:#7B5000;">もう のんでも<br>だいじょうぶだよ！🎊</h2>
+      <button class="btn btn-primary" style="background:linear-gradient(135deg,#FFD060,#FFB020);box-shadow:0 6px 18px rgba(200,140,0,0.35);" id="btn-close-five-done2">
+        やったー！とじる
+      </button>
+    </div>
+  </div>
+
+  <!-- 5分タイマーカード -->
+  <div id="five-min-card">
+    <span class="emoji">🥤</span>
+    <h2>5ふんは のみもの・たべものは<br>がまんだよ🙏</h2>
+    <p>のこり時間がおわったら おしえるね！</p>
+  </div>
+
+  <!-- 完了カード（ポップアップ表示に変更済み） -->
+
+  <!-- ゲームエリア -->
+  <div id="game-section" class="hidden">
+    <div class="game-header">
+      <span class="game-title">🎮 さんもくならべ</span>
+      <span class="match-info" id="match-info">1かいせん / 3かいせん</span>
+    </div>
+
+    <!-- ゲーム中CPU強さ変更 -->
+    <div id="in-game-level">
+      <span class="level-label">🤖 CPUつよさ：</span>
+      <div class="toggle-group">
+        <button class="toggle-btn" data-ig-level="easy">よわい🌸</button>
+        <button class="toggle-btn" data-ig-level="normal">ふつう⭐</button>
+        <button class="toggle-btn" data-ig-level="hard">つよい🔥</button>
+      </div>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score-box circle">
+        <span class="s-emoji">⭕</span>
+        <span class="s-label" id="label-o">まる</span>
+        <span class="s-count" id="score-o">0</span>
+      </div>
+      <div class="score-box draw">
+        <span class="s-emoji">🤝</span>
+        <span class="s-label">ひきわけ</span>
+        <span class="s-count" id="score-d">0</span>
+      </div>
+      <div class="score-box cross">
+        <span class="s-emoji">❌</span>
+        <span class="s-label" id="label-x">ばつ</span>
+        <span class="s-count" id="score-x">0</span>
+      </div>
+    </div>
+
+    <div class="turn-display" id="turn-display">⭕ まるのばん</div>
+
+    <div class="board" id="board">
+      <div class="cell" data-i="0"></div>
+      <div class="cell" data-i="1"></div>
+      <div class="cell" data-i="2"></div>
+      <div class="cell" data-i="3"></div>
+      <div class="cell" data-i="4"></div>
+      <div class="cell" data-i="5"></div>
+      <div class="cell" data-i="6"></div>
+      <div class="cell" data-i="7"></div>
+      <div class="cell" data-i="8"></div>
+    </div>
+
+    <div class="game-result" id="game-result">
+      <div class="r-emoji" id="result-emoji">🎉</div>
+      <div class="r-text" id="result-text">まるのかち！</div>
+    </div>
+
+    <div id="final-result">
+      <h3>🏆 3かいせん おわり！</h3>
+      <div class="final-scores">
+        <div class="final-score-item"><span class="fi-emoji">⭕</span><span class="fi-count" id="final-o">0</span></div>
+        <div class="final-score-item"><span class="fi-emoji">🤝</span><span class="fi-count" id="final-d">0</span></div>
+        <div class="final-score-item"><span class="fi-emoji">❌</span><span class="fi-count" id="final-x">0</span></div>
+      </div>
+      <div id="final-message" style="font-size:1.1rem;font-weight:800;color:#7B5000;margin-bottom:14px;"></div>
+      <button class="btn btn-small" id="btn-play-again">🔄 もういちどあそぶ</button>
+    </div>
+
+    <button class="btn btn-secondary hidden" id="btn-next-match">▶ つぎのしあい</button>
+    <button class="btn btn-small" id="btn-reset-all" style="margin-top:10px;width:100%;">🏠 スタートにもどる</button>
+  </div>
+
+</div>
+
+<script>
+/* ======== 背景デコ ======== */
+(function() {
+  const emojis = ['⭐','💫','✨','🌸','🌈','💜','💗','💛','🍭','🌙','☁️','🦋','🎀','💎','🌺'];
+  const container = document.getElementById('decoBg');
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement('span');
+    s.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.fontSize = (1.0 + Math.random() * 1.2) + 'rem';
+    const dur = 8 + Math.random() * 12;
+    s.style.animation = `floatDeco ${dur}s ${-(Math.random()*dur)}s linear infinite`;
+    container.appendChild(s);
+  }
+})();
+
+/* ======== 音 ======== */
+function playBell() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[880,0,0.4],[1108,0.2,0.4],[1318,0.4,0.6],[1760,0.7,0.8]].forEach(([f,t,d]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination); o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(0.35, ctx.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+t+d);
+      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+d+0.05);
+    });
+  } catch(e) {}
+}
+function playShort() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0,0.18].forEach(t => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination); o.type='sine'; o.frequency.value=880;
+      g.gain.setValueAtTime(0.35, ctx.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+t+0.15);
+      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+0.2);
+    });
+  } catch(e) {}
+}
+function playCpuSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination); o.type='sine'; o.frequency.value=660;
+    g.gain.setValueAtTime(0.25, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.2);
+    o.start(ctx.currentTime); o.stop(ctx.currentTime+0.25);
+  } catch(e) {}
+}
+
+/* ======== 設定UI（スタート画面） ======== */
+let settings = { cpu: 'X', level: 'easy' };
+
+document.querySelectorAll('.toggle-btn[data-setting]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.setting;
+    const val = btn.dataset.value;
+    settings[key] = val;
+    document.querySelectorAll(`.toggle-btn[data-setting="${key}"]`).forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('difficulty-row').style.display = (settings.cpu === 'none') ? 'none' : '';
+  });
+});
+
+/* ゲーム中CPU強さ変更 */
+document.querySelectorAll('.toggle-btn[data-ig-level]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    cpuLevel = btn.dataset.igLevel;
+    settings.level = cpuLevel;
+    document.querySelectorAll('.toggle-btn[data-ig-level]').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    // スタート画面のトグルも同期
+    document.querySelectorAll(`.toggle-btn[data-setting="level"]`).forEach(b => {
+      b.classList.toggle('selected', b.dataset.value === cpuLevel);
+    });
+  });
+});
+
+/* ======== タイマー ======== */
+let phase = 'start';
+let timerInterval = null;
+let timerSecs = 60, totalSecs = 60;
+const banner = document.getElementById('timer-banner');
+
+function fmt(s) { return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
+
+function startTimer(seconds, label, onDone) {
+  timerSecs = seconds; totalSecs = seconds;
+  banner.classList.add('active');
+  document.getElementById('banner-label').textContent = label;
+  document.getElementById('banner-digits').textContent = fmt(timerSecs);
+  document.getElementById('banner-bar').style.width = '100%';
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timerSecs--;
+    document.getElementById('banner-digits').textContent = fmt(timerSecs);
+    document.getElementById('banner-bar').style.width = (timerSecs/totalSecs*100) + '%';
+    if (timerSecs <= 0) { clearInterval(timerInterval); onDone(); }
+  }, 1000);
+}
+function stopTimer() { clearInterval(timerInterval); banner.classList.remove('active'); }
+
+function showEl(id) { document.getElementById(id).classList.add('active'); }
+function hideEl(id) { document.getElementById(id).classList.remove('active'); }
+
+/* ======== タイマー開始 ======== */
+document.getElementById('btn-start').addEventListener('click', () => {
+  document.getElementById('screen-start').classList.add('hidden');
+  document.getElementById('game-section').classList.remove('hidden');
+  phase = 'one-min';
+  applySettingsToUI();
+  initGame();
+  startTimer(60, '⏱ おくすりタイマー', onOneMinDone);
+});
+
+function onOneMinDone() {
+  playBell(); phase = 'swallow';
+  document.getElementById('banner-digits').textContent = '0:00';
+  document.getElementById('banner-bar').style.width = '0%';
+  const overlay = document.getElementById('one-min-overlay');
+  overlay.classList.add('active');
+  overlay.querySelector('.popup-card').classList.add('flashing');
+  setTimeout(() => overlay.querySelector('.popup-card').classList.remove('flashing'), 2600);
+}
+
+// 1分ポップアップの「とじる」（×ボタン） → のみこんだよと同じ動作
+document.getElementById('btn-close-one-min').addEventListener('click', () => {
+  dismissOneMin(false); // のみこまずに閉じる
+});
+
+function dismissOneMin(swallowed) {
+  document.getElementById('one-min-overlay').classList.remove('active');
+  banner.classList.remove('active');
+  if (swallowed) {
+    showEl('five-min-card');
+    phase = 'five-min';
+    startTimer(300, '🥤 のみものがまんタイマー', onFiveMinDone);
+  }
+}
+
+document.getElementById('btn-swallowed').addEventListener('click', () => {
+  dismissOneMin(true);
+});
+
+function onFiveMinDone() {
+  playBell();
+  hideEl('five-min-card');
+  stopTimer();
+  phase = 'done';
+  document.getElementById('five-done-overlay').classList.add('active');
+}
+
+// 5分完了ポップアップを閉じる
+['btn-close-five-done','btn-close-five-done2'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('five-done-overlay').classList.remove('active');
+  });
+});
+
+document.getElementById('btn-reset-all').addEventListener('click', resetAll);
+function resetAll() {
+  stopTimer();
+  hideEl('five-min-card');
+  document.getElementById('one-min-overlay').classList.remove('active');
+  document.getElementById('five-done-overlay').classList.remove('active');
+  document.getElementById('screen-start').classList.remove('hidden');
+  document.getElementById('game-section').classList.add('hidden');
+  phase = 'start'; resetGameFull();
+}
+
+/* ======================================================
+   ===== 三目並べ ＋ CPU =====
+   ====================================================== */
+const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const EMOJI = { O: '⭕', X: '❌' };
+
+let board, currentPlayer, gameOver;
+let matchNum = 1;
+let scores = { O:0, D:0, X:0 };
+const MAX_MATCHES = 3;
+let cpuPlayer = 'X';   // 'X' | 'O' | null
+let cpuLevel  = 'easy'; // 'easy' | 'normal' | 'hard'
+
+function applySettingsToUI() {
+  cpuPlayer = settings.cpu === 'none' ? null : settings.cpu;
+  cpuLevel  = settings.level;
+
+  // スコアラベルにCPUバッジ
+  const labelO = document.getElementById('label-o');
+  const labelX = document.getElementById('label-x');
+  labelO.innerHTML = cpuPlayer === 'O' ? 'まる<span class="cpu-badge">CPU</span>' : 'まる';
+  labelX.innerHTML = cpuPlayer === 'X' ? 'ばつ<span class="cpu-badge">CPU</span>' : 'ばつ';
+
+  // ゲーム中CPU強さUIの表示
+  const inGameLevel = document.getElementById('in-game-level');
+  if (cpuPlayer) {
+    inGameLevel.classList.add('visible');
+    // 現在のレベルを選択状態に
+    document.querySelectorAll('.toggle-btn[data-ig-level]').forEach(b => {
+      b.classList.toggle('selected', b.dataset.igLevel === cpuLevel);
+    });
+  } else {
+    inGameLevel.classList.remove('visible');
+  }
+}
+
+function initGame() {
+  board = Array(9).fill(null);
+  currentPlayer = 'O';
+  gameOver = false;
+  document.getElementById('game-result').classList.remove('active');
+  document.getElementById('final-result').classList.remove('active');
+  document.getElementById('btn-next-match').classList.add('hidden');
+  document.getElementById('match-info').textContent = matchNum + 'かいせん / ' + MAX_MATCHES + 'かいせん';
+  renderBoard();
+  updateTurnDisplay();
+  // CPUが先手なら自動で打つ
+  if (!gameOver && currentPlayer === cpuPlayer) scheduleCpu();
+}
+
+function resetGameFull() {
+  scores = {O:0,D:0,X:0}; matchNum = 1;
+  updateScoreBoard(); initGame();
+}
+
+function renderBoard() {
+  document.querySelectorAll('.cell').forEach((cell, i) => {
+    cell.textContent = board[i] ? EMOJI[board[i]] : '';
+    cell.classList.toggle('taken', !!board[i]);
+    cell.classList.remove('win-cell');
+  });
+}
+
+function updateScoreBoard() {
+  document.getElementById('score-o').textContent = scores.O;
+  document.getElementById('score-d').textContent = scores.D;
+  document.getElementById('score-x').textContent = scores.X;
+}
+
+function updateTurnDisplay() {
+  if (gameOver) return;
+  const isCpu = currentPlayer === cpuPlayer;
+  const mark = currentPlayer === 'O' ? '⭕' : '❌';
+  const name = currentPlayer === 'O' ? 'まる' : 'ばつ';
+  document.getElementById('turn-display').textContent =
+    isCpu ? `${mark} CPUがかんがえてる…🤔` : `${mark} ${name}のばん`;
+}
+
+function checkWinner() {
+  for (const [a,b,c] of WINS) {
+    if (board[a] && board[a]===board[b] && board[b]===board[c])
+      return { winner: board[a], line: [a,b,c] };
+  }
+  if (board.every(v=>v)) return { winner:'D', line:[] };
+  return null;
+}
+
+/* ---- 人間クリック ---- */
+document.getElementById('board').addEventListener('click', e => {
+  const cell = e.target.closest('.cell');
+  if (!cell || gameOver) return;
+  if (currentPlayer === cpuPlayer) return; // CPUのターンは受け付けない
+  const i = parseInt(cell.dataset.i);
+  if (board[i]) return;
+  placeMove(i);
+});
+
+function placeMove(i) {
+  board[i] = currentPlayer;
+  renderBoard();
+  const result = checkWinner();
+  if (result) { endMatch(result); return; }
+  currentPlayer = currentPlayer === 'O' ? 'X' : 'O';
+  updateTurnDisplay();
+  if (currentPlayer === cpuPlayer) scheduleCpu();
+}
+
+/* ---- CPU思考 ---- */
+function scheduleCpu() {
+  const boardEl = document.getElementById('board');
+  boardEl.classList.add('cpu-thinking');
+  const delay = cpuLevel === 'easy' ? 600 : cpuLevel === 'normal' ? 500 : 400;
+  setTimeout(() => {
+    boardEl.classList.remove('cpu-thinking');
+    if (!gameOver) {
+      const move = getCpuMove();
+      playCpuSound();
+      placeMove(move);
+    }
+  }, delay);
+}
+
+function getCpuMove() {
+  const empty = board.map((v,i)=>v?null:i).filter(v=>v!==null);
+  const opp = cpuPlayer === 'O' ? 'X' : 'O';
+
+  if (cpuLevel === 'easy') {
+    // よわい: ランダム（たまに勝てる手を打つ: 30%）
+    if (Math.random() < 0.3) {
+      const win = findWinMove(cpuPlayer);
+      if (win !== null) return win;
+    }
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  if (cpuLevel === 'normal') {
+    // ふつう: 勝てるなら勝つ → 相手をブロック → ランダム
+    const win = findWinMove(cpuPlayer);
+    if (win !== null) return win;
+    const block = findWinMove(opp);
+    if (block !== null) return block;
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  // つよい: ミニマックス（必ず最善手）
+  return minimax(board, cpuPlayer, cpuPlayer, opp).index;
+}
+
+function findWinMove(player) {
+  for (const i of board.map((v,i)=>v?null:i).filter(v=>v!==null)) {
+    board[i] = player;
+    const win = WINS.some(([a,b,c]) => board[a]&&board[a]===board[b]&&board[b]===board[c]);
+    board[i] = null;
+    if (win) return i;
+  }
+  return null;
+}
+
+function minimax(b, player, maxPlayer, minPlayer) {
+  const empty = b.map((v,i)=>v?null:i).filter(v=>v!==null);
+  // 終端判定
+  for (const [a,bc,c] of WINS) {
+    if (b[a]&&b[a]===b[bc]&&b[bc]===b[c]) {
+      return { score: b[a]===maxPlayer ? 10 : -10 };
+    }
+  }
+  if (empty.length === 0) return { score: 0 };
+
+  const moves = [];
+  for (const i of empty) {
+    b[i] = player;
+    const result = minimax(b, player===maxPlayer?minPlayer:maxPlayer, maxPlayer, minPlayer);
+    moves.push({ index: i, score: result.score });
+    b[i] = null;
+  }
+  if (player === maxPlayer) {
+    return moves.reduce((best,m) => m.score > best.score ? m : best, { score:-Infinity });
+  } else {
+    return moves.reduce((best,m) => m.score < best.score ? m : best, { score:Infinity });
+  }
+}
+
+/* ---- 試合終了 ---- */
+function endMatch(result) {
+  gameOver = true;
+  document.getElementById('turn-display').textContent = '';
+
+  if (result.winner !== 'D') {
+    result.line.forEach(i => document.querySelectorAll('.cell')[i].classList.add('win-cell'));
+    scores[result.winner]++;
+    const isCpuWin = result.winner === cpuPlayer;
+    document.getElementById('result-emoji').textContent = isCpuWin ? '🤖' : '🎉';
+    if (result.winner === 'O') {
+      document.getElementById('result-text').textContent = cpuPlayer==='O' ? 'CPUのかち！🤖' : '⭕ まるのかち！';
+    } else {
+      document.getElementById('result-text').textContent = cpuPlayer==='X' ? 'CPUのかち！🤖' : '❌ ばつのかち！';
+    }
+  } else {
+    scores.D++;
+    document.getElementById('result-emoji').textContent = '🤝';
+    document.getElementById('result-text').textContent = 'ひきわけ！';
+  }
+  updateScoreBoard();
+  playShort();
+  document.getElementById('game-result').classList.add('active');
+
+  if (matchNum >= MAX_MATCHES) {
+    setTimeout(showFinalResult, 900);
+  } else {
+    document.getElementById('btn-next-match').classList.remove('hidden');
+  }
+}
+
+function showFinalResult() {
+  document.getElementById('final-o').textContent = scores.O;
+  document.getElementById('final-d').textContent = scores.D;
+  document.getElementById('final-x').textContent = scores.X;
+  let msg = '';
+  if (cpuPlayer) {
+    const humanPlayer = cpuPlayer === 'O' ? 'X' : 'O';
+    if (scores[humanPlayer] > scores[cpuPlayer]) msg = '🎉 あなたのかち！すごい！';
+    else if (scores[cpuPlayer] > scores[humanPlayer]) msg = '🤖 CPUのかち！またちょうせんしてね！';
+    else msg = 'いい勝負だったね🤝✨';
+  } else {
+    if (scores.O > scores.X) msg = '⭕ まるのひとのかち！🎊';
+    else if (scores.X > scores.O) msg = '❌ ばつのひとのかち！🎊';
+    else msg = 'おたがいにいい勝負だったね🤝✨';
+  }
+  document.getElementById('final-message').textContent = msg;
+  document.getElementById('btn-next-match').classList.add('hidden');
+  document.getElementById('final-result').classList.add('active');
+}
+
+document.getElementById('btn-next-match').addEventListener('click', () => { matchNum++; initGame(); });
+document.getElementById('btn-play-again').addEventListener('click', resetGameFull);
+</script>
+</body>
+</html>

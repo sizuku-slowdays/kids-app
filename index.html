@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アプリの入り口</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: linear-gradient(135deg, #fff7fb, #eef7ff);
+      color: #333;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 36px 16px 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: #7b5cff;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    main {
+      width: min(960px, 92%);
+      margin: 0 auto;
+      padding-bottom: 40px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      display: block;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.88);
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 8px 20px rgba(120, 120, 160, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 28px rgba(120, 120, 160, 0.22);
+    }
+
+    .icon {
+      font-size: 2.2rem;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      font-size: 1.15rem;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .desc {
+      font-size: 0.9rem;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    footer {
+      text-align: center;
+      color: #888;
+      font-size: 0.8rem;
+      padding: 24px 12px 36px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>アプリの入り口</h1>
+    <div class="subtitle">つくったアプリやページをまとめた場所です</div>
+  </header>
+
+  <main>
+    <div class="grid">
+
+      <a class="card" href="./kids-app/">
+        <div class="icon">🎮</div>
+        <div class="title">キッズアプリ</div>
+        <div class="desc">
+          クイズ、学習、チェックリストなど、子ども向けアプリの一覧です。
+        </div>
+      </a>
+
+      <a class="card" href="./maker/">
+        <div class="icon">📝</div>
+        <div class="title">プリントメーカー</div>
+        <div class="desc">
+          算数・文章問題・学習プリントなどを作るページです。
+        </div>
+      </a>
+
+      <a class="card" href="./quiz-lab/">
+        <div class="icon">❓</div>
+        <div class="title">クイズラボ</div>
+        <div class="desc">
+          クイズ系の実験・作成・確認用ページです。
+        </div>
+      </a>
+
+      <a class="card" href="./diary/">
+        <div class="icon">🪽</div>
+        <div class="title">羽根の置き場</div>
+        <div class="desc">
+          思ったことや気持ちを書いて残す日記ページです。
+        </div>
+      </a>
+
+      <a class="card" href="./kanriapp/">
+        <div class="icon">🌷</div>
+        <div class="title">管理アプリ</div>
+        <div class="desc">
+          家計簿・ママ銀行・記録系など、管理用アプリの置き場です。
+        </div>
+      </a>
+
+    </div>
+  </main>
+
+  <footer>
+    © app portal
+  </footer>
+
+</body>
+</html>

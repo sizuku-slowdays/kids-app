@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ママ銀行</title>
+<link rel="apple-touch-icon" sizes="180x180" href="img/mamabank.png?v=20260601">
+<link rel="icon" type="image/png" href="img/mamabank.png?v=20260601">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ママ銀行">
+<meta name="theme-color" content="#fff5f8">
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Fredoka+One&display=swap');
+
+  :root {
+    --saru: #ff8fab;
+    --saru-light: #ffd6e7;
+    --saru-mid: #ffaec9;
+    --saru-dark: #d4426a;
+    --uni: #c77de8;
+    --uni-light: #f0dafa;
+    --uni-mid: #dbb4f5;
+    --uni-dark: #7c3aaa;
+    --bg: #fff5f8;
+    --bg2: #fdf0ff;
+    --card: #ffffff;
+    --text: #3a2840;
+    --text-soft: #9a7aa8;
+    --green: #5cb87a;
+    --red: #e05a6a;
+    --shadow: 0 4px 18px rgba(160,80,180,0.10);
+    --radius: 22px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: linear-gradient(160deg, #fff0f8 0%, #f5eaff 50%, #fff8f0 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 48px;
+  }
+
+  header {
+    background: linear-gradient(135deg, #ffb3c6 0%, #d98af0 50%, #ffb347 100%);
+    padding: 22px 16px 18px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '🌸';
+    position: absolute;
+    top: 8px; left: 16px;
+    font-size: 1.8rem;
+    opacity: 0.5;
+    animation: float 3s ease-in-out infinite;
+  }
+  header::after {
+    content: '⭐';
+    position: absolute;
+    top: 10px; right: 20px;
+    font-size: 1.6rem;
+    opacity: 0.5;
+    animation: float 3.5s ease-in-out infinite reverse;
+  }
+  .header-deco-left { position: absolute; bottom: 6px; left: 20px; font-size: 1.4rem; opacity: 0.45; animation: float 2.8s ease-in-out infinite 0.5s; }
+  .header-deco-right { position: absolute; bottom: 6px; right: 18px; font-size: 1.4rem; opacity: 0.45; animation: float 3.2s ease-in-out infinite 1s; }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  .header-title { font-family: 'Fredoka One', cursive; font-size: 2.6rem; color: white; text-shadow: 2px 3px 0 rgba(100,0,80,0.18), 0 0 20px rgba(255,255,255,0.4); letter-spacing: 3px; }
+  .header-subtitle { font-size: 0.82rem; color: rgba(255,255,255,0.9); margin-top: 4px; font-weight: 700; letter-spacing: 1px; }
+
+  /* Drive ステータスバー */
+  .drive-bar {
+    max-width: 480px;
+    margin: 10px auto 0;
+    padding: 0 12px;
+  }
+  .drive-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    background: rgba(255,255,255,0.88);
+    border: 1.5px solid #e8d0f0;
+    border-radius: 14px;
+    padding: 9px 13px;
+    font-size: 0.8rem;
+  }
+  .drive-status { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; transition: background .3s; }
+  .dot.ok { background: #5cb87a; }
+  .dot.busy { background: #ffb347; animation: pulse .7s infinite alternate; }
+  .dot.err { background: #e05a6a; }
+  @keyframes pulse { from{opacity:.5} to{opacity:1} }
+  .drive-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .drive-btn {
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1.5px solid #dbc8f0;
+    background: #faf4ff;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--uni-dark);
+    transition: background .15s;
+  }
+  .drive-btn:hover { background: #f0e0fa; }
+  .drive-btn.danger { border-color: #f5c0c8; background: #fff0f2; color: var(--red); }
+
+  .container { max-width: 480px; margin: 0 auto; padding: 0 12px; }
+
+  .tabs { display: flex; gap: 6px; padding: 14px 12px 0; max-width: 480px; margin: 0 auto; }
+  .tab-btn { flex: 1; padding: 10px 4px; border: none; border-radius: 14px 14px 0 0; font-family: 'Noto Sans JP', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.45); color: var(--text-soft); }
+  .tab-btn.active { background: var(--card); color: var(--text); box-shadow: 0 -2px 8px rgba(180,100,200,0.12); }
+
+  .section { background: var(--card); border-radius: var(--radius); padding: 18px 16px; margin-top: 14px; box-shadow: var(--shadow); border: 1.5px solid rgba(200,150,220,0.18); }
+  .section-title { font-size: 1rem; font-weight: 900; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; color: var(--text); }
+
+  .balance-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+  .balance-card { border-radius: 20px; padding: 18px 10px 14px; text-align: center; position: relative; overflow: hidden; transition: transform 0.15s, box-shadow 0.15s; }
+  .balance-card:active { transform: scale(0.96); }
+  .balance-card::before { content: ''; position: absolute; top: -18px; right: -18px; width: 60px; height: 60px; border-radius: 50%; opacity: 0.18; }
+  .balance-card.saru { background: linear-gradient(145deg, #ffd6e7, #ffb3cc); border: 2.5px solid var(--saru); box-shadow: 0 4px 14px rgba(255,100,150,0.22); }
+  .balance-card.saru::before { background: var(--saru); }
+  .balance-card.uni { background: linear-gradient(145deg, #f2e0fc, #e4c5f8); border: 2.5px solid var(--uni); box-shadow: 0 4px 14px rgba(199,125,232,0.22); }
+  .balance-card.uni::before { background: var(--uni); }
+  .card-icon { font-size: 2.4rem; line-height: 1; margin-bottom: 6px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.12)); }
+  .card-name { font-size: 0.78rem; font-weight: 700; }
+  .balance-card.saru .card-name { color: var(--saru-dark); }
+  .balance-card.uni .card-name { color: var(--uni-dark); }
+  .card-balance { font-family: 'Fredoka One', cursive; font-size: 1.9rem; margin-top: 5px; line-height: 1; }
+  .balance-card.saru .card-balance { color: var(--saru-dark); }
+  .balance-card.uni .card-balance { color: var(--uni-dark); }
+  .card-unit { font-size: 0.82rem; font-weight: 700; color: var(--text-soft); margin-top: 2px; }
+  .card-goal { font-size: 0.72rem; font-weight: 700; margin-top: 8px; padding: 5px 8px; border-radius: 20px; white-space: nowrap; line-height: 1.3; }
+  .balance-card.saru .card-goal { background: rgba(212,66,106,0.12); color: var(--saru-dark); }
+  .balance-card.uni .card-goal { background: rgba(124,58,170,0.12); color: var(--uni-dark); }
+  .card-goal .goal-reached { color: var(--green); font-size: 0.8rem; }
+
+  .goal-setting { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .goal-item { display: flex; flex-direction: column; gap: 5px; }
+  .goal-item label { font-size: 0.78rem; font-weight: 700; color: var(--text-soft); }
+  .goal-input-row { display: flex; align-items: center; gap: 4px; }
+  .goal-input-row input { flex: 1; padding: 9px 10px; font-size: 0.9rem; border-radius: 11px; }
+  .goal-input-row span { font-size: 0.8rem; font-weight: 700; color: var(--text-soft); flex-shrink: 0; }
+  .btn-goal-set { width: 100%; margin-top: 10px; padding: 11px; border: none; border-radius: 13px; background: linear-gradient(135deg, #f0a0c0, #c080e0); color: white; font-family: 'Noto Sans JP', sans-serif; font-size: 0.88rem; font-weight: 900; cursor: pointer; box-shadow: 0 3px 10px rgba(180,80,200,0.25); transition: all 0.18s; }
+  .btn-goal-set:active { transform: scale(0.97); }
+
+  .form-group { margin-bottom: 12px; }
+  label { display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 5px; color: var(--text-soft); }
+
+  .account-select { display: flex; gap: 8px; margin-bottom: 12px; }
+  .acc-btn { flex: 1; padding: 11px 0; border: 2.5px solid #e8dded; border-radius: 13px; background: white; font-family: 'Noto Sans JP', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.18s; color: var(--text-soft); }
+  .acc-btn.saru.selected { background: var(--saru-light); border-color: var(--saru); color: var(--saru-dark); box-shadow: 0 2px 8px rgba(255,100,150,0.25); }
+  .acc-btn.uni.selected { background: var(--uni-light); border-color: var(--uni); color: var(--uni-dark); box-shadow: 0 2px 8px rgba(199,125,232,0.25); }
+
+  input[type="number"], input[type="text"] { width: 100%; padding: 12px 14px; border: 2px solid #ead8f0; border-radius: 13px; font-family: 'Noto Sans JP', sans-serif; font-size: 1rem; background: #fdf8ff; color: var(--text); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+  input:focus { border-color: var(--uni); background: white; box-shadow: 0 0 0 3px rgba(199,125,232,0.12); }
+
+  .sticker-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .sticker-btn { flex: 1; padding: 10px 6px; border: 2px solid #e8dded; border-radius: 13px; background: white; font-family: 'Noto Sans JP', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: default; text-align: center; line-height: 1.4; }
+  .sticker-btn.small { border-color: #b0e0b8; background: #f0fbf2; color: #2e7a40; }
+  .sticker-btn.medium { border-color: #a8c8f0; background: #f0f5ff; color: #1a4f9a; }
+  .sticker-btn.large { border-color: #e0b8d8; background: #fdf0fa; color: #8a2a70; }
+  .sticker-count { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 5px; font-size: 1.1rem; font-weight: 900; font-family: 'Fredoka One', cursive; }
+  .sticker-minus, .sticker-plus { width: 24px; height: 24px; border-radius: 50%; border: 2px solid currentColor; background: transparent; font-size: 1rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; transition: all 0.15s; }
+  .sticker-minus:hover, .sticker-plus:hover { background: rgba(0,0,0,0.07); }
+  .sticker-total { text-align: center; font-size: 0.85rem; color: var(--text-soft); margin: 8px 0; padding: 9px 12px; background: linear-gradient(135deg, #fff8f0, #fdf0ff); border-radius: 11px; border: 1.5px dashed #e0c8e8; }
+  .sticker-total strong { font-size: 1.15rem; color: var(--green); font-family: 'Fredoka One', cursive; }
+
+  .action-btn { width: 100%; padding: 14px; border: none; border-radius: 15px; font-family: 'Noto Sans JP', sans-serif; font-size: 1rem; font-weight: 900; cursor: pointer; transition: all 0.18s; letter-spacing: 0.5px; }
+  .action-btn:active { transform: scale(0.97); opacity: 0.9; }
+  .btn-deposit { background: linear-gradient(135deg, #5cb87a, #3a9a58); color: white; box-shadow: 0 4px 14px rgba(60,160,80,0.35); }
+  .btn-withdraw { background: linear-gradient(135deg, #e05a6a, #c03045); color: white; box-shadow: 0 4px 14px rgba(220,60,80,0.35); }
+  .btn-ofuro { background: linear-gradient(135deg, #5bc0de, #2a9fbf); color: white; box-shadow: 0 4px 12px rgba(40,160,200,0.35); margin-bottom: 10px; }
+  .btn-danger { background: #fde8ec; color: var(--red); font-size: 0.85rem; padding: 11px; border: 1.5px solid #f5c0c8; box-shadow: none; }
+.history-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1.5px dashed #ead8f0; animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+  .history-item:last-child { border-bottom: none; }
+  .history-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .history-info { flex: 1; min-width: 0; }
+  .history-name { font-size: 0.78rem; font-weight: 700; color: var(--text-soft); }
+  .history-memo { font-size: 0.83rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-date { font-size: 0.68rem; color: #bba8c8; margin-top: 1px; }
+  .history-amount { font-family: 'Fredoka One', cursive; font-size: 1.1rem; flex-shrink: 0; }
+  .history-amount.plus { color: var(--green); }
+  .history-amount.minus { color: var(--red); }
+  .history-undo { background: #f5eeff; border: 1.5px solid #d8c0ec; border-radius: 9px; padding: 5px 9px; font-size: 0.74rem; cursor: pointer; color: var(--uni-dark); font-family: 'Noto Sans JP', sans-serif; font-weight: 700; flex-shrink: 0; transition: background 0.15s; }
+  .history-undo:hover { background: #ede0fa; }
+  .no-history { text-align: center; padding: 28px; color: var(--text-soft); font-size: 0.9rem; }
+.hint-box { background: linear-gradient(135deg, #fffbf0, #fff5f8); border: 1.5px solid #f0d8a0; border-radius: 14px; padding: 14px 16px; margin-top: 14px; }
+  .hint-box .hint-title { font-size: 0.85rem; font-weight: 900; color: #c08020; margin-bottom: 8px; }
+  .hint-box ul { list-style: none; }
+  .hint-box li { font-size: 0.82rem; color: #6a4820; padding: 2px 0; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #3a1850; color: white; padding: 12px 26px; border-radius: 40px; font-size: 0.9rem; font-weight: 700; z-index: 1000; transition: transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275); white-space: nowrap; box-shadow: 0 4px 20px rgba(100,0,100,0.25); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: #2a7a40; }
+  .toast.error { background: #b02030; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .divider { text-align: center; font-size: 0.75rem; color: #c8a8d8; margin: 12px 0; position: relative; }
+  .divider::before, .divider::after { content: ''; position: absolute; top: 50%; width: 38%; height: 1px; background: #ead8f0; }
+  .divider::before { left: 0; }
+  .divider::after { right: 0; }
+
+  footer { text-align: center; font-size: 0.72rem; color: #c8a8d8; padding: 20px 0 8px; }
+
+  .home-screen-icon {
+    width: 74px;
+    height: 74px;
+    border-radius: 20px;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.16);
+    background: rgba(255,255,255,0.85);
+  }
+
+
+  .chore-list { display: grid; gap: 8px; margin-top: 10px; }
+  .chore-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 11px;
+    border: 1.5px solid #ead8f0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #fffafd, #fff7fb);
+  }
+  .chore-name { font-size: 0.88rem; font-weight: 800; color: var(--text); }
+  .chore-badge {
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .chore-badge.small { background: #f0fbf2; color: #2e7a40; border: 1.5px solid #b0e0b8; }
+  .chore-badge.medium { background: #f0f5ff; color: #1a4f9a; border: 1.5px solid #a8c8f0; }
+  .chore-badge.large { background: #fdf0fa; color: #8a2a70; border: 1.5px solid #e0b8d8; }
+  .chore-delete {
+    border: 1.5px solid #f5c0c8;
+    background: #fff0f2;
+    color: var(--red);
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 0.73rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .chore-add-grid {
+    display: grid;
+    grid-template-columns: 1fr 120px;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .btn-chore-add {
+    width: 100%;
+    margin-top: 10px;
+    padding: 11px;
+    border: none;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #f0a0c0, #c080e0);
+    color: white;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(180,80,200,0.25);
+  }
+  @media (max-width: 420px) {
+    .chore-add-grid { grid-template-columns: 1fr; }
+    .chore-item { grid-template-columns: 1fr auto; }
+    .chore-delete { grid-column: 1 / -1; }
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <span class="header-deco-left">🌺</span>
+  <span class="header-deco-right">💫</span>
+  <img class="home-screen-icon" src="img/mamabank.png" alt="ママ銀行アイコン">
+  <div class="header-title">🏦 ママ銀行</div>
+  <div class="header-subtitle">おこづかいを たのしく かんりしよう♪</div>
+</header>
+
+<!-- Cloudflare ステータスバー -->
+<div class="drive-bar">
+  <div class="drive-inner">
+    <div class="drive-status">
+      <div class="dot" id="driveDot"></div>
+      <span id="driveStatusText">データ: Cloudflare 読み込み中...</span>
+    </div>
+    <div class="drive-btns">
+      <button class="drive-btn" id="driveSaveNow">💾 今すぐ保存</button>
+      <button class="drive-btn" id="driveLoadNow">🔄 最新にする</button>
+      <button class="drive-btn" id="passwordChangeBtn">🔑 パスワード変更</button>
+      <button class="drive-btn danger" id="resetAllBtn">🧹 0円に初期化</button>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('home',event)">🏠 ホーム</button>
+  <button class="tab-btn" onclick="showTab('deposit',event)">💰 入金</button>
+  <button class="tab-btn" onclick="showTab('withdraw',event)">💸 出金</button>
+  <button class="tab-btn" onclick="showTab('history',event)">📋 履歴</button>
+</div>
+
+<!-- ホーム -->
+<div id="tab-home" class="tab-panel active">
+  <div class="container">
+    <div class="section">
+      <div class="section-title">💳 ざんだか</div>
+      <div class="balance-cards">
+        <div class="balance-card saru">
+          <div class="card-icon">🐰</div>
+          <div class="card-name">うさぎ口座</div>
+          <div class="card-balance" id="balance-usagi">0</div>
+          <div class="card-unit">円</div>
+          <div class="card-goal" id="goal-disp-usagi" style="display:none"></div>
+        </div>
+        <div class="balance-card uni">
+          <div class="card-icon">🦄</div>
+          <div class="card-name">ユニコーン口座</div>
+          <div class="card-balance" id="balance-kuma">0</div>
+          <div class="card-unit">円</div>
+          <div class="card-goal" id="goal-disp-kuma" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🎯 目標を設定する</div>
+      <div class="goal-setting">
+        <div class="goal-item">
+          <label>🐰 うさぎ口座の目標</label>
+          <div class="goal-input-row">
+            <input type="number" id="goal-input-usagi" placeholder="例：1000" min="0" inputmode="numeric">
+            <span>円</span>
+          </div>
+        </div>
+        <div class="goal-item">
+          <label>🦄 ユニコーン口座の目標</label>
+          <div class="goal-input-row">
+            <input type="number" id="goal-input-kuma" placeholder="例：3000" min="0" inputmode="numeric">
+            <span>円</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn-goal-set" onclick="saveGoals()">🎯 目標を保存する</button>
+    </div>
+
+    <div class="section">
+      <label>口座を選んでね</label>
+      <div class="account-select">
+        <button class="acc-btn saru" id="quick-usagi" onclick="selectQuick('usagi')">🐰 うさぎ</button>
+        <button class="acc-btn uni" id="quick-kuma" onclick="selectQuick('kuma')">🦄 ユニコーン</button>
+      </div>
+      <button class="action-btn btn-ofuro" onclick="doOfuro()">🛁 おふろあらい +100円</button>
+    </div>
+
+
+    <div class="section">
+      <div class="section-title">📋 お手伝い料金表</div>
+      <p style="font-size:0.82rem;color:var(--text-soft);margin-bottom:10px;">
+        お手伝いごとに、小・中・大シールを決めておけます。
+      </p>
+      <div id="chore-list" class="chore-list"></div>
+
+      <div class="chore-add-grid">
+        <div>
+          <label>お手伝い名</label>
+          <input type="text" id="chore-name-input" placeholder="例：お皿を下げる">
+        </div>
+        <div>
+          <label>シール</label>
+          <select id="chore-sticker-input">
+            <option value="small">小シール 10円</option>
+            <option value="medium">中シール 50円</option>
+            <option value="large">大シール 100円</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-chore-add" onclick="addChore()">➕ お手伝いを追加</button>
+    </div>
+<div class="hint-box">
+      <div class="hint-title">💡 おこづかいのつかいかた</div>
+      <ul>
+        <li>✨ 本当にほしいものに使おうね</li>
+        <li>😊 計画を立てて使うと、もっと楽しいよ</li>
+        <li>💗 大切に使うと、もっとたまるよ</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 入金 -->
+<div id="tab-deposit" class="tab-panel">
+  <div class="container">
+    <div class="section">
+      <div class="section-title">💰 入金する</div>
+      <label>口座を選んでね</label>
+      <div class="account-select">
+        <button class="acc-btn saru" id="dep-usagi" onclick="selectDepAcc('usagi')">🐰 うさぎ</button>
+        <button class="acc-btn uni" id="dep-kuma" onclick="selectDepAcc('kuma')">🦄 ユニコーン</button>
+      </div>
+      <div class="divider">シールで入力（自動計算）</div>
+      <div class="sticker-row">
+        <div class="sticker-btn small">
+          <div>🌟 小シール</div>
+          <div style="font-size:0.73rem;color:#4a9a5a;margin-bottom:2px">10円</div>
+          <div class="sticker-count">
+            <button class="sticker-minus" style="color:#2e7a40" onclick="changeSticker('small',-1)">−</button>
+            <span id="cnt-small">0</span>
+            <button class="sticker-plus" style="color:#2e7a40" onclick="changeSticker('small',1)">＋</button>
+          </div>
+        </div>
+        <div class="sticker-btn medium">
+          <div>⭐ 中シール</div>
+          <div style="font-size:0.73rem;color:#3a6aaa;margin-bottom:2px">50円</div>
+          <div class="sticker-count">
+            <button class="sticker-minus" style="color:#1a4f9a" onclick="changeSticker('medium',-1)">−</button>
+            <span id="cnt-medium">0</span>
+            <button class="sticker-plus" style="color:#1a4f9a" onclick="changeSticker('medium',1)">＋</button>
+          </div>
+        </div>
+        <div class="sticker-btn large">
+          <div>🌠 大シール</div>
+          <div style="font-size:0.73rem;color:#9a3a80;margin-bottom:2px">100円</div>
+          <div class="sticker-count">
+            <button class="sticker-minus" style="color:#8a2a70" onclick="changeSticker('large',-1)">−</button>
+            <span id="cnt-large">0</span>
+            <button class="sticker-plus" style="color:#8a2a70" onclick="changeSticker('large',1)">＋</button>
+          </div>
+        </div>
+      </div>
+      <div class="sticker-total">シール合計：<strong id="sticker-total-disp">0</strong> 円</div>
+      <div class="divider">または手入力</div>
+      <div class="form-group">
+        <label>💴 金額（円）</label>
+        <input type="number" id="dep-amount" placeholder="例：150" min="0" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>📝 メモ（なんでもいいよ）</label>
+        <input type="text" id="dep-memo" placeholder="例：おてつだいしたよ">
+      </div>
+      <button class="action-btn btn-deposit" onclick="doDeposit()">💰 入金する！</button>
+    </div>
+  </div>
+</div>
+
+<!-- 出金 -->
+<div id="tab-withdraw" class="tab-panel">
+  <div class="container">
+    <div class="section">
+      <div class="section-title">💸 出金する</div>
+      <label>口座を選んでね</label>
+      <div class="account-select">
+        <button class="acc-btn saru" id="wit-usagi" onclick="selectWitAcc('usagi')">🐰 うさぎ</button>
+        <button class="acc-btn uni" id="wit-kuma" onclick="selectWitAcc('kuma')">🦄 ユニコーン</button>
+      </div>
+      <div class="form-group">
+        <label>💴 金額（円）</label>
+        <input type="number" id="wit-amount" placeholder="例：200" min="0" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>📝 メモ（なんに使ったの？）</label>
+        <input type="text" id="wit-memo" placeholder="例：アイスを買った">
+      </div>
+      <button class="action-btn btn-withdraw" onclick="doWithdraw()">💸 出金する！</button>
+    </div>
+  </div>
+</div>
+
+<!-- 履歴 -->
+<div id="tab-history" class="tab-panel">
+  <div class="container">
+    <div class="section">
+      <div class="section-title">📋 きろく</div>
+      <div id="history-list"><div class="no-history">まだきろくがないよ 🌸</div></div>
+    </div>
+  </div>
+</div>
+
+<footer>© ママ銀行 | たのしくおこづかいかんり 💫</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// ママ銀行 Cloudflare版 v3
+// 方針：
+// 1) 本体データ（残高・履歴・目標・お手伝い）は app-data に保存
+// 2) /balance は閲覧用の残高バックアップとしてだけ同期
+// 3) 新しいブラウザでは、初回パスワード入力後に app-data から復元
+// 4) app-data保存が確認できない時は「残高だけ保存」と表示して誤解を防ぐ
+// ============================================================
+const API_BASE = 'https://api.cetus.fun/api';
+const APP_KEYS = ['mama-bank', 'mama-bank-view'];
+const KEY_API_PASSWORD = 'mama_bank_api_password';
+const KEY_BAL   = 'mama_bank_balances';
+const KEY_HIS   = 'mama_bank_history';
+const KEY_GOAL  = 'mama_bank_goals';
+const KEY_CHORE = 'mama_bank_chores';
+
+let autoSaveTimer = null;
+let stickers = {small:0, medium:0, large:0};
+let depAcc = 'usagi';
+let witAcc = 'usagi';
+let quickAcc = 'usagi';
+
+// ============================================================
+// ローカル保存：初期値は必ず0円
+// ============================================================
+function normalizeBalances(b){
+  b = b || {};
+  return {
+    usagi: Number(b.usagi ?? b.rabbit ?? 0) || 0,
+    kuma:  Number(b.kuma ?? b.unicorn ?? b.uni ?? 0) || 0
+  };
+}
+function normalizeGoals(g){
+  g = g || {};
+  return {
+    usagi: Number(g.usagi ?? 0) || 0,
+    kuma:  Number(g.kuma ?? g.unicorn ?? g.uni ?? 0) || 0
+  };
+}
+function loadBalances(){
+  try{return normalizeBalances(JSON.parse(localStorage.getItem(KEY_BAL)) || {usagi:0,kuma:0});}
+  catch{return {usagi:0,kuma:0};}
+}
+function saveBalances(b){ localStorage.setItem(KEY_BAL, JSON.stringify(normalizeBalances(b))); }
+function loadHistory(){
+  try{ const h = JSON.parse(localStorage.getItem(KEY_HIS)); return Array.isArray(h) ? h : []; }
+  catch{return [];}
+}
+function saveHistory(h){ localStorage.setItem(KEY_HIS, JSON.stringify(Array.isArray(h) ? h : [])); }
+function loadGoals(){
+  try{return normalizeGoals(JSON.parse(localStorage.getItem(KEY_GOAL)) || {usagi:0,kuma:0});}
+  catch{return {usagi:0,kuma:0};}
+}
+function saveGoalData(g){ localStorage.setItem(KEY_GOAL, JSON.stringify(normalizeGoals(g))); }
+function defaultChores(){
+  return [
+    {name:'おふろあらい', sticker:'large'},
+    {name:'お皿を下げる', sticker:'small'},
+    {name:'テーブルをふく', sticker:'small'},
+    {name:'洗濯物をたたむ', sticker:'medium'},
+    {name:'玄関をはく', sticker:'medium'}
+  ];
+}
+function loadChores(){
+  try{ const c = JSON.parse(localStorage.getItem(KEY_CHORE)); return Array.isArray(c) ? c : defaultChores(); }
+  catch{return defaultChores();}
+}
+function saveChores(c){ localStorage.setItem(KEY_CHORE, JSON.stringify(Array.isArray(c) ? c : defaultChores())); }
+
+function makePayload(appKey='mama-bank'){
+  return {
+    app: appKey,
+    version: 3,
+    balances: loadBalances(),
+    history: loadHistory(),
+    goals: loadGoals(),
+    chores: loadChores(),
+    savedAt: new Date().toISOString()
+  };
+}
+function unwrapCloudData(data){
+  if(!data) return null;
+  if(typeof data === 'string'){
+    try{return unwrapCloudData(JSON.parse(data));}catch{return null;}
+  }
+  if(data.balances) return data;
+  for(const key of ['data','value','payload','record']){
+    if(data[key]){
+      const unwrapped = unwrapCloudData(data[key]);
+      if(unwrapped && unwrapped.balances) return unwrapped;
+    }
+  }
+  return null;
+}
+function applyPayload(raw){
+  const payload = unwrapCloudData(raw);
+  if(!payload || !payload.balances) return false;
+  saveBalances(payload.balances);
+  saveHistory(Array.isArray(payload.history) ? payload.history : []);
+  saveGoalData(payload.goals || {usagi:0,kuma:0});
+  saveChores(payload.chores || defaultChores());
+  updateAllUI();
+  return true;
+}
+
+// ============================================================
+// パスワード：HTMLには置かず、端末に初回だけ保存
+// ============================================================
+function getSavedPassword(){ return localStorage.getItem(KEY_API_PASSWORD) || ''; }
+function setSavedPassword(pw){ if(pw) localStorage.setItem(KEY_API_PASSWORD, pw); }
+function clearSavedPassword(){ localStorage.removeItem(KEY_API_PASSWORD); }
+function ensurePassword(){
+  let pw = getSavedPassword();
+  if(pw) return pw;
+  pw = prompt('ママ銀行の保存用パスワードを入力してください。\n（学校チェック等と同じパスワードでOKです）');
+  if(!pw){ setCloudStatus('err', 'パスワード未設定（読み書きできません）'); return ''; }
+  setSavedPassword(pw);
+  return pw;
+}
+function makeHeaders(needsJson=false, needsPassword=true){
+  const h = {};
+  if(needsJson) h['Content-Type'] = 'application/json';
+  if(needsPassword){
+    const pw = ensurePassword();
+    if(pw) h['X-App-Password'] = pw;
+  }
+  return h;
+}
+async function getJson(url, needsPassword=true){
+  const res = await fetch(url, {method:'GET', headers: makeHeaders(false, needsPassword), cache:'no-store'});
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+async function sendJson(url, method, body, needsPassword=true){
+  const res = await fetch(url, {method, headers: makeHeaders(true, needsPassword), body: JSON.stringify(body)});
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  try{return await res.json();}catch{return {};}
+}
+
+// ============================================================
+// app-data 読み書き：Worker実装の違いに備えて複数形式に対応
+// ============================================================
+function readUrls(appKey){
+  const k = encodeURIComponent(appKey);
+  return [
+    `${API_BASE}/app-data?key=${k}`,
+    `${API_BASE}/app-data?app=${k}`,
+    `${API_BASE}/app-data/${k}`
+  ];
+}
+function writeTargets(appKey, payload){
+  const k = encodeURIComponent(appKey);
+  return [
+    {url:`${API_BASE}/app-data`, method:'POST', body:{key:appKey, data:payload}},
+    {url:`${API_BASE}/app-data`, method:'POST', body:{app:appKey, data:payload}},
+    {url:`${API_BASE}/app-data`, method:'POST', body:{key:appKey, value:payload}},
+    {url:`${API_BASE}/app-data`, method:'POST', body:{key:appKey, value:JSON.stringify(payload)}},
+    {url:`${API_BASE}/app-data?key=${k}`, method:'POST', body:payload},
+    {url:`${API_BASE}/app-data?app=${k}`, method:'POST', body:payload},
+    {url:`${API_BASE}/app-data/${k}`, method:'POST', body:payload},
+    {url:`${API_BASE}/app-data/${k}`, method:'PUT', body:payload},
+    {url:`${API_BASE}/app-data/${k}`, method:'PATCH', body:payload}
+  ];
+}
+async function loadAppDataOneKey(appKey, needsPassword=true){
+  for(const url of readUrls(appKey)){
+    try{
+      const raw = await getJson(url, needsPassword);
+      if(applyPayload(raw)) return true;
+    }catch(e){ console.warn('app-data read failed', appKey, url, e.message); }
+  }
+  return false;
+}
+async function verifyAppData(appKey, expected){
+  for(const url of readUrls(appKey)){
+    try{
+      const raw = await getJson(url, true);
+      const got = unwrapCloudData(raw);
+      if(got && got.savedAt === expected.savedAt) return true;
+      if(got && JSON.stringify(normalizeBalances(got.balances)) === JSON.stringify(expected.balances) && Array.isArray(got.history)) return true;
+    }catch(e){}
+  }
+  return false;
+}
+async function saveAppDataOneKey(appKey){
+  const payload = makePayload(appKey);
+  let wrote = false;
+  for(const t of writeTargets(appKey, payload)){
+    try{ await sendJson(t.url, t.method, t.body, true); wrote = true; }
+    catch(e){ console.warn('app-data write failed', appKey, t.method, t.url, e.message); }
+  }
+  if(!wrote) return false;
+  // 保存APIが200でも実際に読めないことがあるので確認する
+  const verified = await verifyAppData(appKey, payload);
+  return verified;
+}
+async function loadAnyAppData(){
+  for(const key of APP_KEYS){
+    const ok = await loadAppDataOneKey(key, true);
+    if(ok) return true;
+  }
+  return false;
+}
+async function saveAllAppData(){
+  let ok = false;
+  for(const key of APP_KEYS){
+    const one = await saveAppDataOneKey(key);
+    ok = ok || one;
+  }
+  return ok;
+}
+
+// /balance は残高だけのバックアップ。履歴の保存判定には使わない。
+async function syncPublicBalances(){
+  const b = loadBalances();
+  let ok = false;
+  for(const item of [
+    {account:'usagi', amount:b.usagi},
+    {account:'unicorn', amount:b.kuma},
+    {account:'kuma', amount:b.kuma}
+  ]){
+    try{ await sendJson(`${API_BASE}/balance`, 'POST', item, true); ok = true; }
+    catch(e){ console.warn('balance sync failed', item.account, e.message); }
+  }
+  return ok;
+}
+async function loadBalanceFallback(){
+  try{
+    const [u, n] = await Promise.all([
+      getJson(`${API_BASE}/balance?account=usagi`, false),
+      getJson(`${API_BASE}/balance?account=unicorn`, false)
+    ]);
+    saveBalances({usagi:Number(u.amount||0), kuma:Number(n.amount||0)});
+    saveHistory([]);
+    updateAllUI();
+    return true;
+  }catch(e){ return false; }
+}
+
+// ============================================================
+// Cloudflare 読み込み・保存
+// ============================================================
+async function loadFromCloud(){
+  setCloudStatus('busy', 'Cloudflareから読み込み中...');
+  try{
+    const loadedFull = await loadAnyAppData();
+    if(loadedFull){
+      const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+      setCloudStatus('ok', `Cloudflare読み込み完了 (${now})`);
+      return;
+    }
+    const loadedBalance = await loadBalanceFallback();
+    if(loadedBalance){
+      setCloudStatus('err', '残高だけ読み込み：履歴データは未保存です');
+      return;
+    }
+    saveBalances({usagi:0,kuma:0});
+    saveHistory([]);
+    saveGoalData({usagi:0,kuma:0});
+    saveChores(defaultChores());
+    updateAllUI();
+    setCloudStatus('ok', 'Cloudflareデータなし：0円で開始');
+  }catch(e){
+    console.warn(e);
+    setCloudStatus('err', 'Cloudflare読み込み失敗（この端末の控えを表示中）');
+    updateAllUI();
+  }
+}
+async function saveToCloudNow(){
+  setCloudStatus('busy', 'Cloudflareへ保存中...');
+  const okFull = await saveAllAppData();
+  const okBalance = await syncPublicBalances();
+  const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  if(okFull){
+    setCloudStatus('ok', `Cloudflare保存済み：履歴もOK (${now})`);
+    return true;
+  }
+  if(okBalance){
+    setCloudStatus('err', `残高だけ保存：履歴は未保存 (${now})`);
+    alert('残高だけ保存できましたが、履歴データの保存確認ができませんでした。\n閲覧用に履歴を出すには、Cloudflare Workerの app-data API 側の確認が必要です。');
+    return false;
+  }
+  setCloudStatus('err', 'Cloudflare保存失敗（この端末にだけ保存中）');
+  return false;
+}
+function scheduleAutoSave(){ clearTimeout(autoSaveTimer); autoSaveTimer = setTimeout(saveToCloudNow, 700); }
+function setCloudStatus(state, msg){
+  const dot = document.getElementById('driveDot');
+  if(dot) dot.className = 'dot' + (state==='ok'?' ok':state==='busy'?' busy':state==='err'?' err':'');
+  const text = document.getElementById('driveStatusText');
+  if(text) text.textContent = msg;
+}
+
+// ============================================================
+// アプリ本体ロジック
+// ============================================================
+function saveGoals(){
+  saveGoalData({
+    usagi: parseInt(document.getElementById('goal-input-usagi').value) || 0,
+    kuma:  parseInt(document.getElementById('goal-input-kuma').value) || 0
+  });
+  updateBalanceUI(); showToast('🎯 目標を保存したよ！','success'); scheduleAutoSave();
+}
+function updateGoalInputs(){
+  const g = loadGoals();
+  document.getElementById('goal-input-usagi').value = g.usagi || '';
+  document.getElementById('goal-input-kuma').value  = g.kuma || '';
+}
+function stickerInfo(sticker){
+  if(sticker === 'small') return {label:'🌟 小シール', amount:10, cls:'small'};
+  if(sticker === 'medium') return {label:'⭐ 中シール', amount:50, cls:'medium'};
+  return {label:'🌠 大シール', amount:100, cls:'large'};
+}
+function updateChoreList(){
+  const list = loadChores(); const area = document.getElementById('chore-list'); if(!area) return;
+  if(!list.length){ area.innerHTML = '<div class="no-history">お手伝いがまだ登録されていないよ 🌸</div>'; return; }
+  area.innerHTML = list.map((item, index) => {
+    const info = stickerInfo(item.sticker);
+    return `<div class="chore-item"><div class="chore-name">${escapeHtml(item.name)}</div><div class="chore-badge ${info.cls}">${info.label} ${info.amount}円</div><button class="chore-delete" onclick="deleteChore(${index})">削除</button></div>`;
+  }).join('');
+}
+function addChore(){
+  const nameInput = document.getElementById('chore-name-input');
+  const stickerInput = document.getElementById('chore-sticker-input');
+  const name = (nameInput.value || '').trim();
+  if(!name){ showToast('お手伝い名を入れてね','error'); return; }
+  const list = loadChores(); list.push({name, sticker: stickerInput.value || 'small'}); saveChores(list);
+  nameInput.value = ''; stickerInput.value = 'small'; updateChoreList(); showToast('📋 お手伝いを追加したよ！','success'); scheduleAutoSave();
+}
+function deleteChore(index){
+  const list = loadChores(); if(!list[index]) return; if(!confirm('このお手伝いを削除しますか？')) return;
+  list.splice(index, 1); saveChores(list); updateChoreList(); scheduleAutoSave();
+}
+function updateBalanceUI(){
+  const b = loadBalances(); const g = loadGoals();
+  document.getElementById('balance-usagi').textContent = Number(b.usagi||0).toLocaleString();
+  document.getElementById('balance-kuma').textContent  = Number(b.kuma||0).toLocaleString();
+  ['usagi','kuma'].forEach(acc => {
+    const el = document.getElementById('goal-disp-'+acc); if(!el) return;
+    const goal = Number(g[acc]||0); const bal = Number(b[acc]||0);
+    if(!goal){ el.style.display='none'; return; }
+    el.style.display = 'block';
+    const rem = goal - bal;
+    el.innerHTML = rem <= 0 ? `<span class="goal-reached">🎉 目標 ${goal.toLocaleString()}円 たっせい！</span>` : `目標：${goal.toLocaleString()}円 ｜ あと <strong>${rem.toLocaleString()}円</strong>`;
+  });
+}
+function updateHistoryUI(){
+  const h = loadHistory(); const el = document.getElementById('history-list'); if(!el) return;
+  if(!h.length){ el.innerHTML='<div class="no-history">まだきろくがないよ 🌸</div>'; return; }
+  el.innerHTML = h.slice().reverse().map((item,i) => {
+    const isPlus = item.type === 'deposit';
+    const icon = item.acc === 'usagi' ? '🐰' : '🦄';
+    const accName = item.acc === 'usagi' ? 'うさぎ口座' : 'ユニコーン口座';
+    const realIdx = h.length - 1 - i;
+    return `<div class="history-item"><div class="history-icon">${icon}</div><div class="history-info"><div class="history-name">${accName}</div><div class="history-memo">${escapeHtml(item.memo||'メモなし')}</div><div class="history-date">${escapeHtml(item.date||'')}</div></div><div class="history-amount ${isPlus?'plus':'minus'}">${isPlus?'+':'-'}${Number(item.amount||0).toLocaleString()}円</div>${i===0?`<button class="history-undo" onclick="undoLast(${realIdx})">↩ 取消</button>`:''}</div>`;
+  }).join('');
+}
+function updateAllUI(){ updateBalanceUI(); updateHistoryUI(); updateGoalInputs(); updateChoreList(); }
+function updateStickerTotal(){
+  const total = stickers.small*10 + stickers.medium*50 + stickers.large*100;
+  document.getElementById('sticker-total-disp').textContent = total.toLocaleString();
+  ['small','medium','large'].forEach(k => { document.getElementById('cnt-'+k).textContent = stickers[k]; });
+}
+function showTab(name, e){
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(e && e.target) e.target.classList.add('active');
+}
+function selectDepAcc(acc){ depAcc=acc; document.getElementById('dep-usagi').classList.toggle('selected',acc==='usagi'); document.getElementById('dep-kuma').classList.toggle('selected',acc==='kuma'); }
+function selectWitAcc(acc){ witAcc=acc; document.getElementById('wit-usagi').classList.toggle('selected',acc==='usagi'); document.getElementById('wit-kuma').classList.toggle('selected',acc==='kuma'); }
+function selectQuick(acc){ quickAcc=acc; document.getElementById('quick-usagi').classList.toggle('selected',acc==='usagi'); document.getElementById('quick-kuma').classList.toggle('selected',acc==='kuma'); }
+function changeSticker(type, delta){ stickers[type]=Math.max(0,(stickers[type]||0)+delta); updateStickerTotal(); }
+function doDeposit(){
+  const stickerTotal = stickers.small*10 + stickers.medium*50 + stickers.large*100;
+  const manual = parseInt(document.getElementById('dep-amount').value)||0;
+  const amt = manual || stickerTotal;
+  if(amt<=0){ showToast('💴 金額を入れてね！','error'); return; }
+  const memo = document.getElementById('dep-memo').value.trim() || (stickerTotal ? `シール合計 ${amt}円` : 'にゅうきん');
+  addTransaction(depAcc,'deposit',amt,memo);
+  stickers = {small:0, medium:0, large:0}; updateStickerTotal();
+  document.getElementById('dep-amount').value=''; document.getElementById('dep-memo').value='';
+  showToast(`💰 ${amt.toLocaleString()}円 入金したよ！`,'success');
+}
+function doWithdraw(){
+  const amt = parseInt(document.getElementById('wit-amount').value)||0;
+  if(amt<=0){ showToast('💴 金額を入れてね！','error'); return; }
+  const b = loadBalances();
+  if(Number(b[witAcc]||0)<amt){ showToast('😢 ざんだかが足りないよ！','error'); return; }
+  const memo = document.getElementById('wit-memo').value.trim()||'しゅっきん';
+  addTransaction(witAcc,'withdraw',amt,memo);
+  document.getElementById('wit-amount').value=''; document.getElementById('wit-memo').value='';
+  showToast(`💸 ${amt.toLocaleString()}円 出金したよ！`,'success');
+}
+function doOfuro(){ addTransaction(quickAcc,'deposit',100,'おふろあらい 🛁'); showToast('🛁 おふろあらい 100円 入金したよ！','success'); }
+function addTransaction(acc, type, amount, memo){
+  const b = loadBalances();
+  if(type==='deposit') b[acc] = Number(b[acc]||0) + Number(amount||0);
+  else b[acc] = Math.max(0, Number(b[acc]||0) - Number(amount||0));
+  saveBalances(b);
+  const h = loadHistory(); const now = new Date();
+  h.push({acc, type, amount:Number(amount||0), memo, date: now.toLocaleDateString('ja-JP')+' '+now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});
+  saveHistory(h); updateBalanceUI(); updateHistoryUI(); scheduleAutoSave();
+}
+function undoLast(idx){
+  const h = loadHistory(); const item = h[idx]; if(!item) return;
+  const b = loadBalances();
+  if(item.type==='deposit') b[item.acc] = Math.max(0, Number(b[item.acc]||0) - Number(item.amount||0));
+  else b[item.acc] = Number(b[item.acc]||0) + Number(item.amount||0);
+  saveBalances(b); h.splice(idx,1); saveHistory(h); updateBalanceUI(); updateHistoryUI(); showToast('↩ 取り消したよ！','success'); scheduleAutoSave();
+}
+async function resetAllData(){
+  if(!confirm('ママ銀行を 0円 に初期化します。\n履歴も全部消えます。よろしいですか？')) return;
+  saveBalances({usagi:0,kuma:0}); saveHistory([]); saveGoalData({usagi:0,kuma:0}); updateAllUI();
+  await saveToCloudNow(); showToast('🧹 0円に初期化して保存しました','success');
+}
+function escapeHtml(value){ return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+function showToast(msg, type=''){
+  const t = document.getElementById('toast'); t.textContent=msg; t.className='toast show '+type;
+  clearTimeout(t._timer); t._timer=setTimeout(()=>{ t.classList.remove('show'); }, 2400);
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+document.getElementById('driveSaveNow').addEventListener('click', saveToCloudNow);
+document.getElementById('driveLoadNow').addEventListener('click', loadFromCloud);
+document.getElementById('passwordChangeBtn').addEventListener('click', () => {
+  clearSavedPassword(); const pw = ensurePassword(); if(pw){ showToast('🔑 パスワードを保存しました','success'); loadFromCloud(); }
+});
+document.getElementById('resetAllBtn').addEventListener('click', resetAllData);
+selectDepAcc('usagi'); selectWitAcc('usagi'); selectQuick('usagi'); updateStickerTotal(); updateAllUI(); loadFromCloud();
+</script>
+
+</body>
+</html>

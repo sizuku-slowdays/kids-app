@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家計簿</title>
+<link rel="apple-touch-icon" sizes="180x180" href="img/kakeibo.png?v=20260601">
+<link rel="icon" type="image/png" href="img/kakeibo.png?v=20260601">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="家計簿">
+<meta name="theme-color" content="#fff3c4">
+
+<style>
+:root{
+  --bg:#fff8e7;--card:#fff;--main:#ffb84d;--safe:#2e9f62;--danger:#e63946;
+  --text:#333;--muted:#777;--line:#eadfc9;--radius:18px;
+  --shadow:0 4px 16px rgba(130,90,30,.1)
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,#fff2bf 0%,var(--bg) 200px);color:var(--text);line-height:1.6;min-height:100vh}
+header{padding:20px 16px 8px;text-align:center}
+header h1{margin:0;font-size:1.6rem;letter-spacing:.04em}
+header p{margin:4px 0 0;color:#6b4b1f;font-size:.9rem}
+.app{width:min(1100px,100%);margin:0 auto;padding:8px 14px 80px}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;align-items:start}
+.card{background:rgba(255,255,255,.94);border:1px solid rgba(234,223,201,.9);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:1.1rem}
+.month-nav{display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:12px}
+.month-nav strong{min-width:130px;text-align:center;font-size:1.05rem}
+.view-switch{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:0 0 14px;padding:8px;background:rgba(255,255,255,.65);border:1px solid var(--line);border-radius:18px}
+.view-switch label{display:inline-flex;align-items:center;gap:5px;margin:0;padding:6px 10px;border-radius:999px;background:#fffdf8;font-size:.88rem;cursor:pointer}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.summary-box{background:#fff9ed;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+.summary-label{color:var(--muted);font-size:.8rem}
+.summary-value{margin-top:4px;font-size:1.2rem;font-weight:800}
+.income-note{background:#f0fff7;border:1px solid #c6ead6;border-radius:14px;padding:10px;margin-top:10px;font-size:.88rem}
+.pink-box{background:linear-gradient(135deg,#ffe3ef,#fff7fb);border:2px solid #ffc3dc}
+.pink-title{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:800;color:#a6164b;margin-bottom:10px}
+.meter{height:16px;background:#ffeef5;border-radius:999px;overflow:hidden;border:1px solid #ffc3dc}
+.meter-fill{height:100%;width:0%;background:linear-gradient(90deg,#ff7baa,#ff2f79);border-radius:999px;transition:width .25s}
+.pink-message{margin-top:8px;font-weight:700;font-size:.9rem}
+label{display:block;font-size:.86rem;font-weight:700;margin-bottom:4px}
+input,select,textarea{width:100%;border:1px solid #dfd1ba;border-radius:12px;padding:10px 11px;font-size:.96rem;background:#fffdf8;color:var(--text)}
+textarea{min-height:66px;resize:vertical}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.full{grid-column:1/-1}
+.button-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button,.file-label{border:none;border-radius:999px;padding:10px 16px;font-size:.93rem;font-weight:800;cursor:pointer;background:var(--main);color:#3e2600;box-shadow:0 4px 10px rgba(160,105,25,.14);display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none}
+.secondary{background:#fff3d1;border:1px solid #ebd19a}
+.danger{background:#ffe1e5;color:#a4161a;border:1px solid #f4a7af}
+.mini-btn{padding:6px 10px;font-size:.8rem;box-shadow:none}
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:12px;background:#fffdf8}
+th,td{border-bottom:1px solid #eee2cf;padding:9px 7px;text-align:left;vertical-align:top;font-size:.88rem}
+th{background:#fff1cc;color:#5b3a05;font-size:.8rem;white-space:nowrap}
+td.amount{text-align:right;font-weight:800;white-space:nowrap}
+.tag{display:inline-block;padding:2px 7px;border-radius:999px;background:#f4ead8;font-size:.76rem;font-weight:700;white-space:nowrap}
+.tag.pink{background:#ffe1ee;color:#a6164b}
+.empty{text-align:center;color:var(--muted);padding:20px 8px}
+.hint{color:var(--muted);font-size:.83rem;margin:7px 0 0}
+.hidden-file{display:none}
+/* Drive status bar */
+.drive-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:14px;font-size:.86rem}
+.drive-status{display:flex;align-items:center;gap:6px;font-weight:700}
+.dot{width:9px;height:9px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .3s}
+.dot.ok{background:#2e9f62}
+.dot.busy{background:#ffb84d;animation:pulse .7s infinite alternate}
+.dot.err{background:#e63946}
+@keyframes pulse{from{opacity:.5}to{opacity:1}}
+.drive-btn-row{display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr}}
+@media(max-width:560px){header h1{font-size:1.35rem}.app{padding-inline:9px}.card{padding:12px}.form-grid{grid-template-columns:1fr}table,thead,tbody,tr,th,td{display:block}thead{display:none}tr{border:1px solid #eee2cf;border-radius:14px;margin-bottom:10px;padding:8px;background:#fffdf8}td{border-bottom:none;padding:4px 3px}td.amount{text-align:left;font-size:1rem}td::before{content:attr(data-label);display:inline-block;min-width:5.5em;color:var(--muted);font-size:.78rem;font-weight:700}td.actions::before{display:none}}
+
+  .home-screen-icon {
+    width: 74px;
+    height: 74px;
+    border-radius: 20px;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.16);
+    background: rgba(255,255,255,0.85);
+  }
+
+</style>
+</head>
+<body>
+<header>
+  <img class="home-screen-icon" src="img/kakeibo.png" alt="家計簿アイコン">
+  <h1>🌼 家計簿</h1>
+  <p>PINKカードを見張りながら、月ごとのお金の流れをチェック</p>
+</header>
+<main class="app">
+
+  <!-- Google Drive 同期バー -->
+  <div class="drive-bar" id="driveBar">
+    <div class="drive-status">
+      <div class="dot" id="driveDot"></div>
+      <span id="driveStatusText">Google Drive: 未接続</span>
+    </div>
+    <div class="drive-btn-row">
+      <button class="secondary mini-btn" id="driveSignIn">🔑 Googleでサインイン</button>
+      <button class="secondary mini-btn" id="driveSaveNow" style="display:none">💾 今すぐ保存</button>
+      <button class="secondary mini-btn" id="driveLoadNow" style="display:none">📂 Driveから読込</button>
+      <button class="danger mini-btn" id="driveSignOut" style="display:none">サインアウト</button>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="month-nav">
+      <button class="secondary mini-btn" id="prevMonth">← 前月</button>
+      <strong id="currentMonthLabel">読み込み中</strong>
+      <button class="secondary mini-btn" id="nextMonth">翌月 →</button>
+    </div>
+    <div class="view-switch">
+      <label><input type="radio" name="viewMode" value="settle" checked> 引落・反映月で見る</label>
+      <label><input type="radio" name="viewMode" value="use"> 利用日で見る</label>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-box"><div class="summary-label">収入</div><div class="summary-value" id="incomeTotal">0円</div></div>
+      <div class="summary-box"><div class="summary-label">支出</div><div class="summary-value" id="expenseTotal">0円</div></div>
+      <div class="summary-box"><div class="summary-label">差し引き</div><div class="summary-value" id="balanceTotal">0円</div></div>
+    </div>
+    <div class="income-note" id="incomeNote">読み込み中...</div>
+  </section>
+
+  <div class="grid">
+    <section>
+      <div class="card">
+        <h2>入力</h2>
+        <form id="entryForm">
+          <input type="hidden" id="editId">
+          <div class="form-grid">
+            <div><label for="date">日付</label><input type="date" id="date" required></div>
+            <div><label for="type">種類</label><select id="type"><option value="expense">支出</option><option value="income">収入</option></select></div>
+            <div><label for="amount">金額</label><input type="number" id="amount" min="0" step="1" placeholder="例：1200" required></div>
+            <div><label for="payment">支払方法・入金先</label><select id="payment"></select></div>
+            <div><label for="category">カテゴリ</label><select id="category"></select></div>
+            <div><label for="settleMonth">引落・反映月</label><input type="month" id="settleMonth"></div>
+            <div class="full"><label for="memo">メモ</label><textarea id="memo" placeholder="例：仕事立替、子ども用品、誕生日外食など"></textarea></div>
+          </div>
+          <div class="button-row">
+            <button type="submit" id="saveButton">保存する</button>
+            <button type="button" class="secondary" id="resetForm">入力をクリア</button>
+          </div>
+          <p class="hint">※ ローカルに自動保存 ＋ Google Drive にも同期します。</p>
+        </form>
+      </div>
+      <div class="card">
+        <h2>一覧</h2>
+        <div class="filters">
+          <div><label for="filterType">種類</label><select id="filterType"><option value="all">すべて</option><option value="expense">支出</option><option value="income">収入</option></select></div>
+          <div><label for="filterPayment">支払方法</label><select id="filterPayment"></select></div>
+          <div><label for="searchText">検索</label><input type="search" id="searchText" placeholder="メモ・カテゴリ検索"></div>
+        </div>
+        <div id="tableArea"></div>
+      </div>
+    </section>
+    <aside>
+      <div class="card pink-box">
+        <div class="pink-title"><span>PINKカード監視</span><span id="pinkTotal">0円</span></div>
+        <div class="meter"><div class="meter-fill" id="pinkMeter"></div></div>
+        <div class="pink-message" id="pinkMessage"></div>
+        <p class="hint">目標：50,000円／注意：100,000円</p>
+      </div>
+      <div class="card"><h2>支払方法別</h2><div id="paymentSummary"></div></div>
+      <div class="card"><h2>カテゴリ別支出</h2><div id="categorySummary"></div></div>
+</aside>
+  </div>
+</main>
+
+<!-- Google Identity Services + Drive API -->
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://apis.google.com/js/api.js" async></script>
+
+<script>
+// ============================================================
+// 設定
+// ============================================================
+const STORAGE_KEY = "kakeibo-app-stable-v1";
+const DRIVE_FILE_NAME = "kakeibo-data.json";
+const PINK_GOAL = 50000;
+const PINK_WARNING = 100000;
+
+// ▼▼▼ Google Cloud Console で取得したクライアントIDを貼ってください ▼▼▼
+const CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID_HERE";
+// ▲▲▲ ここを書き換えてください ▲▲▲
+
+const SCOPES = "https://www.googleapis.com/auth/drive.appdata";
+
+const payments = ["楽天visa","楽天pink","ゆうちょ","福岡銀行","福岡中央銀行","現金","立替","その他"];
+const categories = ["食費","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","仕事立替","固定費","特別費","収入","その他"];
+
+// ============================================================
+// State
+// ============================================================
+let entries = [];
+let currentMonth = new Date(); currentMonth.setDate(1);
+let tokenClient = null;
+let accessToken = null;
+let driveFileId = null;
+let autoSaveTimer = null;
+
+// ============================================================
+// Utilities
+// ============================================================
+function $(id){return document.getElementById(id)}
+function yen(v){return Number(v||0).toLocaleString("ja-JP")+"円"}
+function pad(n){return String(n).padStart(2,"0")}
+function dateString(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function todayString(){return dateString(new Date())}
+function monthString(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)}
+function makeId(){return crypto.randomUUID ? crypto.randomUUID() : "id-"+Date.now()+"-"+Math.random().toString(36).slice(2)}
+function html(v){return String(v==null?"":v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+
+// ============================================================
+// LocalStorage
+// ============================================================
+function loadLocal(){try{entries=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch{entries=[]}}
+function saveLocal(){localStorage.setItem(STORAGE_KEY,JSON.stringify(entries))}
+
+// ============================================================
+// Drive Status UI
+// ============================================================
+function setDriveStatus(state, msg){
+  const dot=$("driveDot");
+  dot.className="dot"+(state==="ok"?" ok":state==="busy"?" busy":state==="err"?" err":"");
+  $("driveStatusText").textContent="Google Drive: "+msg;
+}
+
+// ============================================================
+// Google Identity Services 初期化
+// ============================================================
+function initGIS(){
+  if(!window.google || !window.google.accounts){
+    setTimeout(initGIS, 300); return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if(resp.error){setDriveStatus("err","認証エラー: "+resp.error);return}
+      accessToken = resp.access_token;
+      setDriveStatus("busy","接続中...");
+      $("driveSignIn").style.display="none";
+      $("driveSaveNow").style.display="";
+      $("driveLoadNow").style.display="";
+      $("driveSignOut").style.display="";
+      await loadFromDrive();
+    }
+  });
+  setDriveStatus("","未接続 — サインインするとデータを同期できます");
+  $("driveSignIn").addEventListener("click",()=>{
+    if(CLIENT_ID==="YOUR_GOOGLE_CLIENT_ID_HERE"){
+      alert("⚠️ CLIENT_IDが設定されていません。\n\nこのHTMLファイルを開いて\nCLIENT_ID = \"YOUR_GOOGLE_CLIENT_ID_HERE\"\nの部分をあなたのGoogleクライアントIDに書き換えてください。\n\n設定方法は下記の手順を参照してください。");
+      return;
+    }
+    tokenClient.requestAccessToken();
+  });
+  $("driveSignOut").addEventListener("click",()=>{
+    google.accounts.oauth2.revoke(accessToken,()=>{});
+    accessToken=null; driveFileId=null;
+    $("driveSignIn").style.display="";
+    $("driveSaveNow").style.display="none";
+    $("driveLoadNow").style.display="none";
+    $("driveSignOut").style.display="none";
+    setDriveStatus("","未接続");
+  });
+  $("driveSaveNow").addEventListener("click", saveToDrive);
+  $("driveLoadNow").addEventListener("click", async()=>{await loadFromDrive();render()});
+}
+
+// ============================================================
+// Drive API: ファイルID取得 or 作成
+// ============================================================
+async function getOrCreateFile(){
+  // AppData フォルダ内で検索
+  const searchResp = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id,name)`,
+    {headers:{Authorization:"Bearer "+accessToken}}
+  );
+  const searchData = await searchResp.json();
+  if(searchData.files && searchData.files.length > 0){
+    return searchData.files[0].id;
+  }
+  // なければ新規作成
+  const createResp = await fetch(
+    "https://www.googleapis.com/drive/v3/files",
+    {
+      method:"POST",
+      headers:{Authorization:"Bearer "+accessToken,"Content-Type":"application/json"},
+      body: JSON.stringify({name:DRIVE_FILE_NAME,parents:["appDataFolder"]})
+    }
+  );
+  const createData = await createResp.json();
+  return createData.id;
+}
+
+// ============================================================
+// Drive API: 保存
+// ============================================================
+async function saveToDrive(){
+  if(!accessToken){return}
+  setDriveStatus("busy","保存中...");
+  try{
+    if(!driveFileId) driveFileId = await getOrCreateFile();
+    const body = JSON.stringify({entries, savedAt: new Date().toISOString()});
+    await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,
+      {
+        method:"PATCH",
+        headers:{Authorization:"Bearer "+accessToken,"Content-Type":"application/json"},
+        body
+      }
+    );
+    const now = new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+    setDriveStatus("ok","同期済み ("+now+")");
+  }catch(e){
+    setDriveStatus("err","保存失敗: "+e.message);
+  }
+}
+
+// ============================================================
+// Drive API: 読み込み
+// ============================================================
+async function loadFromDrive(){
+  if(!accessToken){return}
+  setDriveStatus("busy","Driveから読み込み中...");
+  try{
+    if(!driveFileId) driveFileId = await getOrCreateFile();
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,
+      {headers:{Authorization:"Bearer "+accessToken}}
+    );
+    if(resp.status===204||resp.status===404){
+      // ファイル空 → ローカルのデータをアップロード
+      await saveToDrive(); return;
+    }
+    const data = await resp.json();
+    if(data.entries && Array.isArray(data.entries)){
+      // ローカルとマージ（idで重複除去、新しい方優先）
+      const driveMap = {};
+      data.entries.forEach(e=>{driveMap[e.id]=e});
+      entries.forEach(e=>{
+        if(!driveMap[e.id] || (e.updatedAt||"") > (driveMap[e.id].updatedAt||"")){
+          driveMap[e.id]=e;
+        }
+      });
+      entries = Object.values(driveMap).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+      saveLocal();
+      setDriveStatus("ok","読み込み完了");
+    } else {
+      setDriveStatus("ok","ファイル確認OK（データなし）");
+    }
+  }catch(e){
+    setDriveStatus("err","読み込み失敗: "+e.message);
+  }
+}
+
+// ============================================================
+// 自動保存（入力後2秒でDriveに保存）
+// ============================================================
+function scheduleAutoSave(){
+  if(!accessToken) return;
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(saveToDrive, 2000);
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+function fillSelect(id,list,first){
+  const s=$(id);s.innerHTML="";
+  if(first){const o=document.createElement("option");o.value="all";o.textContent=first;s.appendChild(o)}
+  list.forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;s.appendChild(o)})
+}
+
+function init(){
+  loadLocal();
+  fillSelect("payment",payments);
+  fillSelect("category",categories);
+  fillSelect("filterPayment",payments,"すべて");
+  $("date").value=todayString();
+  $("settleMonth").value=monthString(currentMonth);
+  $("entryForm").addEventListener("submit",handleSubmit);
+  $("resetForm").addEventListener("click",resetForm);
+  $("prevMonth").addEventListener("click",()=>{currentMonth.setMonth(currentMonth.getMonth()-1);render()});
+  $("nextMonth").addEventListener("click",()=>{currentMonth.setMonth(currentMonth.getMonth()+1);render()});
+  $("filterType").addEventListener("change",render);
+  $("filterPayment").addEventListener("change",render);
+  $("searchText").addEventListener("input",render);
+  document.querySelectorAll("input[name='viewMode']").forEach(r=>r.addEventListener("change",render));
+  render();
+  // GIS初期化（スクリプト読み込み後）
+  setTimeout(initGIS, 800);
+}
+
+// ============================================================
+// フォーム
+// ============================================================
+function handleSubmit(e){
+  e.preventDefault();
+  const date=$("date").value;
+  const amount=Number($("amount").value);
+  if(!date||Number.isNaN(amount)||amount<0){alert("日付と金額を入力してください。");return}
+  const editId=$("editId").value;
+  const now=new Date().toISOString();
+  const data={id:editId||makeId(),date,type:$("type").value,amount,payment:$("payment").value,
+    category:$("category").value,settleMonth:$("settleMonth").value||date.slice(0,7),
+    memo:$("memo").value.trim(),updatedAt:now};
+  if(editId){entries=entries.map(x=>x.id===editId?Object.assign({},x,data):x)}
+  else{data.createdAt=now;entries.push(data)}
+  saveLocal();resetForm();render();scheduleAutoSave();
+}
+
+function resetForm(){
+  $("editId").value="";$("entryForm").reset();
+  $("date").value=todayString();$("settleMonth").value=monthString(currentMonth);
+  $("saveButton").textContent="保存する";
+}
+
+// ============================================================
+// 表示
+// ============================================================
+function viewMode(){const c=document.querySelector("input[name='viewMode']:checked");return c?c.value:"settle"}
+function entryMonth(e){return viewMode()==="use"?String(e.date||"").slice(0,7):(e.settleMonth||String(e.date||"").slice(0,7))}
+function sum(list){return list.reduce((t,e)=>t+Number(e.amount||0),0)}
+
+function visibleEntries(){
+  const m=monthString(currentMonth);
+  const type=$("filterType").value;
+  const payment=$("filterPayment").value;
+  const kw=$("searchText").value.trim().toLowerCase();
+  return entries.filter(e=>entryMonth(e)===m)
+    .filter(e=>type==="all"||e.type===type)
+    .filter(e=>payment==="all"||e.payment===payment)
+    .filter(e=>!kw||((e.memo||"")+" "+(e.category||"")+" "+(e.payment||"")).toLowerCase().includes(kw))
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+}
+
+function render(){
+  const m=monthString(currentMonth);
+  $("currentMonthLabel").textContent=m.replace("-","年")+"月";
+  $("settleMonth").value=m;
+  const me=entries.filter(e=>entryMonth(e)===m);
+  const income=sum(me.filter(e=>e.type==="income"));
+  const expense=sum(me.filter(e=>e.type==="expense"));
+  const bal=income-expense;
+  $("incomeTotal").textContent=yen(income);
+  $("expenseTotal").textContent=yen(expense);
+  $("balanceTotal").textContent=yen(bal);
+  $("balanceTotal").style.color=bal>=0?"var(--safe)":"var(--danger)";
+  const basis=viewMode()==="use"?"利用日ベース":"引落・反映月ベース";
+  $("incomeNote").textContent=basis+"で集計中。";
+  renderPink(me);renderSummaries(me);renderTable(visibleEntries());
+}
+
+function renderPink(list){
+  const total=sum(list.filter(e=>e.type==="expense"&&e.payment==="楽天pink"));
+  $("pinkTotal").textContent=yen(total);
+  $("pinkMeter").style.width=Math.min((total/PINK_WARNING)*100,100)+"%";
+  if(total===0)$("pinkMessage").textContent="今月のPINK利用はまだ0円。";
+  else if(total<=PINK_GOAL)$("pinkMessage").textContent="目標5万円まであと "+yen(PINK_GOAL-total)+"。まだ安全圏！";
+  else if(total<PINK_WARNING)$("pinkMessage").textContent="5万円を "+yen(total-PINK_GOAL)+" オーバー。ここから慎重に！";
+  else $("pinkMessage").textContent="10万円ライン到達。PINKブラックゾーンです。";
+}
+
+function group(list,key){
+  const map={};
+  list.forEach(e=>{const l=e[key]||"未分類";map[l]=(map[l]||0)+Number(e.amount||0)});
+  return Object.keys(map).map(k=>[k,map[k]]).sort((a,b)=>b[1]-a[1]);
+}
+
+function renderSummaries(list){
+  renderGroup("paymentSummary",group(list.filter(e=>e.type==="expense"),"payment"));
+  renderGroup("categorySummary",group(list.filter(e=>e.type==="expense"),"category"));
+}
+
+function renderGroup(id,rows){
+  const area=$(id);
+  if(!rows.length){area.innerHTML='<div class="empty">データなし</div>';return}
+  area.innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #eee2cf"><span>${html(r[0])}</span><strong>${yen(r[1])}</strong></div>`).join("");
+}
+
+function renderTable(list){
+  const area=$("tableArea");
+  if(!list.length){area.innerHTML='<div class="empty">表示するデータがありません</div>';return}
+  area.innerHTML='<table><thead><tr><th>日付</th><th>種類</th><th>金額</th><th>支払方法</th><th>カテゴリ</th><th>メモ</th><th></th></tr></thead><tbody>'+
+    list.map(e=>`<tr>
+      <td data-label="日付">${html(e.date)}</td>
+      <td data-label="種類">${e.type==="income"?"収入":"支出"}</td>
+      <td data-label="金額" class="amount">${yen(e.amount)}</td>
+      <td data-label="支払方法"><span class="tag ${e.payment==="楽天pink"?"pink":""}">${html(e.payment)}</span></td>
+      <td data-label="カテゴリ">${html(e.category)}</td>
+      <td data-label="メモ">${html(e.memo||"")}</td>
+      <td class="actions"><button class="secondary mini-btn" onclick="editEntry('${e.id}')">編集</button> <button class="danger mini-btn" onclick="deleteEntry('${e.id}')">削除</button></td>
+    </tr>`).join("")+'</tbody></table>';
+}
+
+window.editEntry=function(id){
+  const e=entries.find(x=>x.id===id);if(!e)return;
+  $("editId").value=e.id;$("date").value=e.date;$("type").value=e.type;
+  $("amount").value=e.amount;$("payment").value=e.payment;$("category").value=e.category;
+  $("settleMonth").value=e.settleMonth||e.date.slice(0,7);$("memo").value=e.memo||"";
+  $("saveButton").textContent="更新する";window.scrollTo({top:0,behavior:"smooth"});
+}
+
+window.deleteEntry=function(id){
+  if(!confirm("このデータを削除しますか？"))return;
+  entries=entries.filter(e=>e.id!==id);
+  saveLocal();render();scheduleAutoSave();
+}
+
+// ============================================================
+// CSV
+// ============================================================
+function csv(v){const s=String(v==null?"":v);if(/[",\r\n]/.test(s))return '"'+s.split('"').join('""')+'"';return s}
+function parseCsv(text){const rows=[];let row=[],cell="",inQ=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(c==='"'&&inQ&&n==='"'){cell+='"';i++}else if(c==='"'){inQ=!inQ}else if(c===','&&!inQ){row.push(cell);cell=""}else if((c==='\n'||c==='\r')&&!inQ){if(c==='\r'&&n==='\n')i++;row.push(cell);rows.push(row);row=[];cell=""}else cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows}
+
+function exportCsv(mode){
+  const data=mode==="today"?entries.filter(e=>e.date===todayString()):mode==="yesterday"?(()=>{const d=new Date();d.setDate(d.getDate()-1);const y=dateString(d);return entries.filter(e=>e.date===y)})():entries;
+  if(!data.length){alert("保存するデータがありません。");return}
+  const header=["id","date","type","amount","payment","category","settleMonth","memo","createdAt","updatedAt"];
+  const nl="\n";
+  const rows=data.map(e=>header.map(k=>csv(e[k]||"")).join(","));
+  const text="\uFEFF"+header.join(",")+nl+rows.join(nl);
+  const blob=new Blob([text],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download="kakeibo-"+mode+"-"+todayString()+".csv";a.click();URL.revokeObjectURL(url);
+}
+
+function importCsv(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(){
+    try{
+      const parsed=parseCsv(String(reader.result||""));
+      if(parsed.length<2){alert("CSVにデータがありません。");return}
+      const header=parsed[0];
+      const imported=parsed.slice(1).filter(r=>r.length>1).map(r=>{
+        const obj={};header.forEach((k,i)=>{obj[k]=r[i]||""});
+        return {id:obj.id||makeId(),date:obj.date,type:obj.type||"expense",amount:Number(obj.amount||0),
+          payment:obj.payment||"その他",category:obj.category||"その他",
+          settleMonth:obj.settleMonth||(obj.date?obj.date.slice(0,7):monthString(new Date())),
+          memo:obj.memo||"",createdAt:obj.createdAt||new Date().toISOString(),updatedAt:obj.updatedAt||new Date().toISOString()};
+      }).filter(e=>e.date&&!Number.isNaN(e.amount));
+      const ids=new Set(entries.map(e=>e.id));
+      const add=imported.filter(e=>!ids.has(e.id));
+      const skip=imported.length-add.length;
+      if(!confirm(`${imported.length}件確認しました。新規追加：${add.length}件、スキップ：${skip}件。追加しますか？`))return;
+      entries=entries.concat(add);saveLocal();render();scheduleAutoSave();
+    }catch(err){alert("CSV読込に失敗しました。"+err.message)}
+  };
+  reader.readAsText(file,"utf-8");event.target.value="";
+}
+
+function clearAll(){
+  if(!confirm("すべて削除しますか？"))return;
+  entries=[];saveLocal();render();scheduleAutoSave();
+}
+
+window.addEventListener("DOMContentLoaded",init);
+</script>
+</body>
+</html>

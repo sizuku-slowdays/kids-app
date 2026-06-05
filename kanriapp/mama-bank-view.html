@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ママ銀行 👀</title>
+<link rel="apple-touch-icon" sizes="180x180" href="img/mamabank.png">
+<link rel="icon" type="image/png" href="img/mamabank.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ママ銀">
+<meta name="theme-color" content="#fff5f8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Fredoka+One&display=swap');
+  :root {
+    --saru:#ff8fab;--saru-light:#ffd6e7;--saru-dark:#d4426a;
+    --uni:#c77de8;--uni-light:#f0dafa;--uni-dark:#7c3aaa;
+    --card:#ffffff;--text:#3a2840;--text-soft:#9a7aa8;
+    --green:#5cb87a;--red:#e05a6a;
+    --shadow:0 4px 18px rgba(160,80,180,0.10);--radius:22px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans JP',sans-serif;background:linear-gradient(160deg,#fff0f8 0%,#f5eaff 50%,#fff8f0 100%);background-attachment:fixed;color:var(--text);min-height:100vh;padding-bottom:48px}
+  header{background:linear-gradient(135deg,#ffb3c6 0%,#d98af0 50%,#ffb347 100%);padding:22px 16px 18px;text-align:center;position:relative;overflow:hidden}
+  header::before{content:'🌸';position:absolute;top:8px;left:16px;font-size:1.8rem;opacity:0.5;animation:float 3s ease-in-out infinite}
+  header::after{content:'⭐';position:absolute;top:10px;right:20px;font-size:1.6rem;opacity:0.5;animation:float 3.5s ease-in-out infinite reverse}
+  .hd-left{position:absolute;bottom:6px;left:20px;font-size:1.4rem;opacity:0.45;animation:float 2.8s ease-in-out infinite 0.5s}
+  .hd-right{position:absolute;bottom:6px;right:18px;font-size:1.4rem;opacity:0.45;animation:float 3.2s ease-in-out infinite 1s}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  .header-icon{width:64px;height:64px;border-radius:18px;object-fit:cover;display:block;margin:0 auto 8px;box-shadow:0 4px 12px rgba(0,0,0,0.14);background:rgba(255,255,255,0.8)}
+  .header-title{font-family:'Fredoka One',cursive;font-size:2.4rem;color:white;text-shadow:2px 3px 0 rgba(100,0,80,0.18);letter-spacing:3px}
+  .header-subtitle{font-size:0.82rem;color:rgba(255,255,255,0.9);margin-top:4px;font-weight:700;letter-spacing:1px}
+  .container{max-width:480px;margin:0 auto;padding:0 12px}
+  .status-bar{max-width:480px;margin:12px auto 0;padding:0 12px}
+  .status-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;background:rgba(255,255,255,0.88);border:1.5px solid #e8d0f0;border-radius:14px;padding:9px 13px;font-size:0.8rem}
+  .status-text{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--text-soft)}
+  .reload-btn{padding:5px 13px;border-radius:999px;border:1.5px solid #dbc8f0;background:#faf4ff;font-family:'Noto Sans JP',sans-serif;font-size:0.76rem;font-weight:700;cursor:pointer;color:var(--uni-dark);transition:background .15s}
+  .reload-btn:hover{background:#f0e0fa}
+  .reload-btn:active{transform:scale(0.96)}
+  .section{background:var(--card);border-radius:var(--radius);padding:18px 16px;margin-top:14px;box-shadow:var(--shadow);border:1.5px solid rgba(200,150,220,0.18)}
+  .section-title{font-size:1rem;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+  .balance-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .balance-card{border-radius:20px;padding:18px 10px 14px;text-align:center;position:relative;overflow:hidden}
+  .balance-card.saru{background:linear-gradient(145deg,#ffd6e7,#ffb3cc);border:2.5px solid var(--saru);box-shadow:0 4px 14px rgba(255,100,150,0.22)}
+  .balance-card.uni{background:linear-gradient(145deg,#f2e0fc,#e4c5f8);border:2.5px solid var(--uni);box-shadow:0 4px 14px rgba(199,125,232,0.22)}
+  .card-icon{font-size:2.4rem;line-height:1;margin-bottom:6px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.12))}
+  .card-name{font-size:0.78rem;font-weight:700}
+  .balance-card.saru .card-name{color:var(--saru-dark)}
+  .balance-card.uni .card-name{color:var(--uni-dark)}
+  .card-balance{font-family:'Fredoka One',cursive;font-size:2rem;margin-top:5px;line-height:1}
+  .balance-card.saru .card-balance{color:var(--saru-dark)}
+  .balance-card.uni .card-balance{color:var(--uni-dark)}
+  .card-unit{font-size:0.82rem;font-weight:700;color:var(--text-soft);margin-top:2px}
+  .goal-block{margin-top:10px}
+  .goal-label{font-size:0.72rem;font-weight:700;margin-bottom:4px}
+  .balance-card.saru .goal-label{color:var(--saru-dark)}
+  .balance-card.uni .goal-label{color:var(--uni-dark)}
+  .goal-bar-bg{height:10px;border-radius:999px;background:rgba(255,255,255,0.55);overflow:hidden}
+  .goal-bar-fill{height:100%;border-radius:999px;transition:width .6s ease}
+  .balance-card.saru .goal-bar-fill{background:var(--saru-dark)}
+  .balance-card.uni .goal-bar-fill{background:var(--uni-dark)}
+  .goal-remaining{font-size:0.7rem;margin-top:4px;font-weight:700}
+  .balance-card.saru .goal-remaining{color:var(--saru-dark)}
+  .balance-card.uni .goal-remaining{color:var(--uni-dark)}
+  .goal-reached-txt{color:var(--green)!important}
+  .history-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1.5px dashed #ead8f0}
+  .history-item:last-child{border-bottom:none}
+  .history-icon{font-size:1.4rem;flex-shrink:0}
+  .history-info{flex:1;min-width:0}
+  .history-name{font-size:0.78rem;font-weight:700;color:var(--text-soft)}
+  .history-memo{font-size:0.83rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .history-date{font-size:0.68rem;color:#bba8c8;margin-top:1px}
+  .history-amount{font-family:'Fredoka One',cursive;font-size:1.1rem;flex-shrink:0}
+  .history-amount.plus{color:var(--green)}
+  .history-amount.minus{color:var(--red)}
+  .no-history{text-align:center;padding:28px;color:var(--text-soft);font-size:0.9rem}
+  .loading{text-align:center;padding:40px 20px;color:var(--text-soft);font-size:1rem;font-weight:700}
+  .spin{display:inline-block;font-size:2rem;animation:spin 1s linear infinite}
+  @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  .setup-box{background:#fffbf0;border:1.5px solid #f0d8a0;border-radius:14px;padding:18px 16px;margin-top:14px}
+  .setup-title{font-size:0.9rem;font-weight:900;color:#c08020;margin-bottom:10px}
+  .setup-box p{font-size:0.84rem;color:#6a4820;line-height:1.7}
+  .setup-box code{background:#f5e8c0;padding:2px 7px;border-radius:6px;font-size:0.78rem;font-family:monospace}
+  footer{text-align:center;font-size:0.72rem;color:#c8a8d8;padding:20px 0 8px}
+</style>
+</head>
+<body>
+<header>
+  <span class="hd-left">🌺</span>
+  <span class="hd-right">💫</span>
+  <img class="header-icon" src="img/mamabank.png" alt="ママ銀行" onerror="this.style.display='none'">
+  <div class="header-title">🏦 ママ銀行</div>
+  <div class="header-subtitle">みるだけモード 👀</div>
+</header>
+
+<div class="status-bar">
+  <div class="status-inner">
+    <div class="status-text" id="statusText">📡 よみこみちゅう...</div>
+    <button class="reload-btn" onclick="loadData()">🔄 さいしんにする</button>
+  </div>
+</div>
+
+<div class="container" id="mainContent">
+  <div class="loading"><div class="spin">🌸</div><br>よみこんでいます...</div>
+</div>
+
+<footer>© ママ銀行 | みるだけモード 💫</footer>
+
+<script>
+// ============================================================
+// ママ銀行 みるだけモード Cloudflare版 v3
+// まず公開app-dataを読む → ダメなら初回パスワードでapp-dataを読む → 最後に残高だけ読む
+// ============================================================
+const API_BASE = 'https://api.cetus.fun/api';
+const APP_KEYS = ['mama-bank-view', 'mama-bank'];
+const KEY_VIEW_PASSWORD = 'mama_bank_view_password';
+
+function esc(s){
+  return String(s||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function normalizeBalances(b){
+  b = b || {};
+  return {
+    usagi: Number(b.usagi ?? b.rabbit ?? 0) || 0,
+    kuma:  Number(b.kuma ?? b.unicorn ?? b.uni ?? 0) || 0
+  };
+}
+function normalizeGoals(g){
+  g = g || {};
+  return {
+    usagi: Number(g.usagi ?? 0) || 0,
+    kuma:  Number(g.kuma ?? g.unicorn ?? g.uni ?? 0) || 0
+  };
+}
+function unwrapCloudData(data){
+  if(!data) return null;
+  if(typeof data === 'string'){
+    try{return unwrapCloudData(JSON.parse(data));}catch{return null;}
+  }
+  if(data.balances) return data;
+  for(const key of ['data','value','payload','record']){
+    if(data[key]){
+      const unwrapped = unwrapCloudData(data[key]);
+      if(unwrapped && unwrapped.balances) return unwrapped;
+    }
+  }
+  return null;
+}
+function readUrls(appKey){
+  const k = encodeURIComponent(appKey);
+  return [
+    `${API_BASE}/app-data-public?key=${k}`,
+    `${API_BASE}/public/app-data?key=${k}`,
+    `${API_BASE}/app-data?key=${k}`,
+    `${API_BASE}/app-data?app=${k}`,
+    `${API_BASE}/app-data/${k}`
+  ];
+}
+function makeHeaders(password){
+  return password ? {'X-App-Password': password} : {};
+}
+async function getJson(url, password=''){
+  const res = await fetch(url, {method:'GET', headers: makeHeaders(password), cache:'no-store'});
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+async function tryLoadAppData(password=''){
+  for(const key of APP_KEYS){
+    for(const url of readUrls(key)){
+      try{
+        const raw = await getJson(url, password);
+        const data = unwrapCloudData(raw);
+        if(data && data.balances) return data;
+      }catch(e){ console.warn('view app-data read failed', key, url, e.message); }
+    }
+  }
+  return null;
+}
+async function tryLoadBalanceOnly(){
+  try{
+    const [u, n] = await Promise.all([
+      getJson(`${API_BASE}/balance?account=usagi`),
+      getJson(`${API_BASE}/balance?account=unicorn`)
+    ]);
+    return {
+      balances: {usagi:Number(u.amount||0), kuma:Number(n.amount||0)},
+      goals: {usagi:0,kuma:0},
+      history: [],
+      balanceOnly: true
+    };
+  }catch(e){ return null; }
+}
+function saveViewPassword(){
+  const pw = prompt('履歴を読むためのパスワードを入力してください。\n一度だけ入力すれば、この端末に保存します。');
+  if(!pw) return;
+  localStorage.setItem(KEY_VIEW_PASSWORD, pw);
+  loadData();
+}
+function clearViewPassword(){
+  localStorage.removeItem(KEY_VIEW_PASSWORD);
+  loadData();
+}
+async function loadData(){
+  const statusEl  = document.getElementById('statusText');
+  const contentEl = document.getElementById('mainContent');
+
+  statusEl.textContent = '📡 よみこみちゅう...';
+  contentEl.innerHTML  = '<div class="loading"><div class="spin">🌸</div><br>よみこんでいます...</div>';
+
+  try{
+    let data = await tryLoadAppData('');
+    let usedPassword = false;
+
+    if(!data){
+      const savedPw = localStorage.getItem(KEY_VIEW_PASSWORD) || '';
+      if(savedPw){
+        data = await tryLoadAppData(savedPw);
+        usedPassword = !!data;
+      }
+    }
+
+    if(data){
+      renderData(data, {usedPassword, balanceOnly:false});
+      const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+      statusEl.textContent = '✅ ' + now + ' こうしん';
+      return;
+    }
+
+    // app-dataが読めない時だけ、残高だけ表示する。
+    const balanceOnly = await tryLoadBalanceOnly();
+    if(balanceOnly){
+      renderData(balanceOnly, {usedPassword:false, balanceOnly:true});
+      const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+      statusEl.textContent = '⚠️ ' + now + ' 残高だけこうしん';
+      return;
+    }
+
+    throw new Error('データが見つかりませんでした');
+  }catch(e){
+    statusEl.textContent = '❌ よみこみ しっぱい';
+    contentEl.innerHTML = `
+      <div class="setup-box">
+        <div class="setup-title">😢 よみこめませんでした</div>
+        <p>「🔄 さいしんにする」をおしてみてね。<br>なおらない ときは ママに おしえてね！<br><br><small style="color:#9a7aa8">${esc(e.message)}</small></p>
+      </div>`;
+  }
+}
+
+function renderData(data, options={}){
+  const contentEl = document.getElementById('mainContent');
+  const b = normalizeBalances(data.balances);
+  const g = normalizeGoals(data.goals || {usagi:0,kuma:0});
+  const h = Array.isArray(data.history) ? data.history : [];
+
+  function goalBlock(acc){
+    const bal  = Number(b[acc]||0);
+    const goal = Number(g[acc]||0);
+    if(!goal) return '';
+    const pct = Math.min(Math.round(bal/goal*100),100);
+    const rem = goal - bal;
+    if(rem<=0) return `<div class="goal-block"><div class="goal-label">🎯 もくひょう ${goal.toLocaleString()}えん</div><div class="goal-bar-bg"><div class="goal-bar-fill" style="width:100%"></div></div><div class="goal-remaining goal-reached-txt">🎉 たっせい！すごい！</div></div>`;
+    return `<div class="goal-block"><div class="goal-label">🎯 もくひょう ${goal.toLocaleString()}えん（${pct}%）</div><div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%"></div></div><div class="goal-remaining">あと <strong>${rem.toLocaleString()}えん</strong></div></div>`;
+  }
+
+  const histHtml = !h.length
+    ? '<div class="no-history">まだきろくがないよ 🌸</div>'
+    : h.slice().reverse().map(item=>{
+        const isPlus  = item.type==='deposit';
+        const icon    = item.acc==='usagi'?'🐰':'🦄';
+        const accName = item.acc==='usagi'?'うさぎ口座':'ユニコーン口座';
+        return `<div class="history-item"><div class="history-icon">${icon}</div><div class="history-info"><div class="history-name">${accName}</div><div class="history-memo">${esc(item.memo||'メモなし')}</div><div class="history-date">${esc(item.date||'')}</div></div><div class="history-amount ${isPlus?'plus':'minus'}">${isPlus?'+':'-'}${Number(item.amount||0).toLocaleString()}円</div></div>`;
+      }).join('');
+
+  const notice = options.balanceOnly ? `
+    <div class="setup-box">
+      <div class="setup-title">⚠️ 残高だけ表示中</div>
+      <p>履歴データを読むには、初回だけパスワードが必要な場合があります。<br><br>
+      <button class="reload-btn" onclick="saveViewPassword()">🔑 履歴も読む</button></p>
+    </div>` : (options.usedPassword ? `
+    <div class="setup-box">
+      <div class="setup-title">🔑 履歴も読み込み済み</div>
+      <p>この端末では初回パスワードを保存しています。<br><br>
+      <button class="reload-btn" onclick="clearViewPassword()">パスワードを消す</button></p>
+    </div>` : '');
+
+  contentEl.innerHTML = `
+    ${notice}
+    <div class="section">
+      <div class="section-title">💳 ざんだか</div>
+      <div class="balance-cards">
+        <div class="balance-card saru">
+          <div class="card-icon">🐰</div>
+          <div class="card-name">うさぎ口座</div>
+          <div class="card-balance">${Number(b.usagi||0).toLocaleString()}</div>
+          <div class="card-unit">円</div>
+          ${goalBlock('usagi')}
+        </div>
+        <div class="balance-card uni">
+          <div class="card-icon">🦄</div>
+          <div class="card-name">ユニコーン口座</div>
+          <div class="card-balance">${Number(b.kuma||0).toLocaleString()}</div>
+          <div class="card-unit">円</div>
+          ${goalBlock('kuma')}
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">📋 きろく</div>
+      ${histHtml}
+    </div>`;
+}
+
+loadData();
+</script>
+
+</body>
+</html>

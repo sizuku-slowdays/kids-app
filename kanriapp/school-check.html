@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="学校チェック">
+<link rel="apple-touch-icon" href="school-check.png">
+<title>学校チェック</title>
+<style>
+  :root {
+    --morning-primary: #FF8C42;
+    --morning-secondary: #FFD166;
+    --morning-light: #FFF5E6;
+    --morning-card-done: #FFE8CC;
+    --after-primary: #4ECDC4;
+    --after-secondary: #A8DADC;
+    --after-light: #E8FAF9;
+    --after-card-done: #C5EAE8;
+    --school-primary: #43A047;
+    --school-secondary: #A5D6A7;
+    --school-light: #E8F5E9;
+    --school-card-done: #C8E6C9;
+    --night-primary: #6C63FF;
+    --night-secondary: #C3BDFF;
+    --night-light: #EFEDFF;
+    --night-card-done: #D4D0FF;
+    --text-main: #333;
+    --radius: 18px;
+    --shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Noto Sans JP', sans-serif;
+    background: #f7f0fb;
+    min-height: 100vh;
+    color: var(--text-main);
+    padding-bottom: 40px;
+  }
+
+  /* ===== HEADER ===== */
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: white;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    padding: 10px 12px 8px;
+  }
+
+  .app-title {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    color: #7c5cbf;
+  }
+
+  /* ===== KID SWITCHER ===== */
+  .kid-switcher {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  .kid-btn {
+    flex: 1;
+    max-width: 160px;
+    padding: 10px 0;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .2s;
+    background: #ece6f7;
+    color: #9b7ec8;
+  }
+
+  .kid-btn.active {
+    background: linear-gradient(135deg, #b388ff, #7c4dff);
+    color: white;
+    box-shadow: 0 4px 12px rgba(124,77,255,0.35);
+    transform: scale(1.04);
+  }
+
+  /* ===== SCENE SWITCHER ===== */
+  .scene-switcher {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .scene-btn {
+    flex: 1;
+    max-width: 88px;
+    padding: 8px 4px;
+    border: none;
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+    background: #f0e8ff;
+    color: #9b7ec8;
+  }
+
+  .scene-btn[data-scene="morning"].active {
+    background: linear-gradient(135deg, var(--morning-primary), var(--morning-secondary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(255,140,66,0.4);
+    transform: scale(1.04);
+  }
+
+  .scene-btn[data-scene="school"].active {
+    background: linear-gradient(135deg, var(--school-primary), var(--school-secondary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(67,160,71,0.4);
+    transform: scale(1.04);
+  }
+
+  .scene-btn[data-scene="after"].active {
+    background: linear-gradient(135deg, var(--after-primary), var(--after-secondary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(78,205,196,0.4);
+    transform: scale(1.04);
+  }
+
+  .scene-btn[data-scene="night"].active {
+    background: linear-gradient(135deg, var(--night-primary), var(--night-secondary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(108,99,255,0.4);
+    transform: scale(1.04);
+  }
+
+  /* ===== PROGRESS BAR ===== */
+  .progress-wrap {
+    padding: 10px 16px 4px;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.92rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #7c5cbf;
+  }
+
+  .progress-bar-bg {
+    background: #e8dff5;
+    border-radius: 20px;
+    height: 14px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width .4s cubic-bezier(.34,1.56,.64,1);
+    background: linear-gradient(90deg, #b388ff, #7c4dff);
+  }
+
+  .scene-morning .progress-bar-fill { background: linear-gradient(90deg, var(--morning-secondary), var(--morning-primary)); }
+  .scene-school  .progress-bar-fill { background: linear-gradient(90deg, var(--school-secondary), var(--school-primary)); }
+  .scene-after   .progress-bar-fill { background: linear-gradient(90deg, var(--after-secondary), var(--after-primary)); }
+  .scene-night   .progress-bar-fill { background: linear-gradient(90deg, var(--night-secondary), var(--night-primary)); }
+
+  /* ===== MAIN CONTENT ===== */
+  .main {
+    padding: 12px 12px 0;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ===== SECTION ===== */
+  .section {
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    font-weight: 800;
+    padding: 6px 14px 6px 12px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+  }
+
+  .scene-morning .section-title { background: linear-gradient(90deg, var(--morning-primary), var(--morning-secondary)); }
+  .scene-school   .section-title { background: linear-gradient(90deg, var(--school-primary), var(--school-secondary)); }
+  .scene-after   .section-title { background: linear-gradient(90deg, var(--after-primary), var(--after-secondary)); }
+  .scene-night   .section-title { background: linear-gradient(90deg, var(--night-primary), var(--night-secondary)); }
+
+  .section-body {
+    background: white;
+    border-radius: 0 0 14px 14px;
+    padding: 10px 10px 6px;
+    box-shadow: var(--shadow);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* ===== MITIQUA FLOW (full width) ===== */
+  .mitiqua-flow {
+    grid-column: 1 / -1;
+    background: #fff7e6;
+    border: 2.5px solid var(--morning-secondary);
+    border-radius: 14px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mitiqua-flow-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--morning-primary);
+    text-align: center;
+    margin-bottom: 2px;
+  }
+
+  .mitiqua-steps {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .mitiqua-arrow {
+    font-size: 1.1rem;
+    color: var(--morning-primary);
+    flex-shrink: 0;
+  }
+
+  /* ===== CHECK CARD ===== */
+  .check-card {
+    background: #fafafa;
+    border: 2.5px solid #e8dff5;
+    border-radius: var(--radius);
+    padding: 14px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all .18s cubic-bezier(.34,1.56,.64,1);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    min-height: 80px;
+    justify-content: center;
+  }
+
+  .check-card:active { transform: scale(0.94); }
+
+  .check-card .card-icon { font-size: 1.6rem; line-height: 1; }
+  .check-card .card-text { font-size: 0.92rem; font-weight: 700; text-align: center; line-height: 1.35; }
+  .check-card .card-check { position: absolute; top: 6px; right: 8px; font-size: 1.1rem; opacity: 0; transition: opacity .2s; }
+
+  /* scene colors */
+  .scene-morning .check-card { border-color: #ffd7a8; }
+  .scene-morning .check-card.done {
+    background: var(--morning-card-done);
+    border-color: var(--morning-primary);
+    box-shadow: 0 2px 10px rgba(255,140,66,0.25);
+  }
+  .scene-morning .check-card.done .card-check { opacity: 1; color: var(--morning-primary); }
+  .scene-morning .check-card.done .card-text { color: var(--morning-primary); }
+
+  .scene-school .check-card { border-color: #b9dfba; }
+  .scene-school .check-card.done {
+    background: var(--school-card-done);
+    border-color: var(--school-primary);
+    box-shadow: 0 2px 10px rgba(67,160,71,0.25);
+  }
+  .scene-school .check-card.done .card-check { opacity: 1; color: var(--school-primary); }
+  .scene-school .check-card.done .card-text { color: var(--school-primary); }
+
+  .scene-after .check-card { border-color: #aadedd; }
+  .scene-after .check-card.done {
+    background: var(--after-card-done);
+    border-color: var(--after-primary);
+    box-shadow: 0 2px 10px rgba(78,205,196,0.25);
+  }
+  .scene-after .check-card.done .card-check { opacity: 1; color: var(--after-primary); }
+  .scene-after .check-card.done .card-text { color: #2a9d96; }
+
+  .scene-night .check-card { border-color: #c3bdff; }
+  .scene-night .check-card.done {
+    background: var(--night-card-done);
+    border-color: var(--night-primary);
+    box-shadow: 0 2px 10px rgba(108,99,255,0.25);
+  }
+  .scene-night .check-card.done .card-check { opacity: 1; color: var(--night-primary); }
+  .scene-night .check-card.done .card-text { color: var(--night-primary); }
+
+  /* full-width cards */
+  .check-card.full { grid-column: 1 / -1; flex-direction: row; gap: 12px; padding: 12px 14px; justify-content: flex-start; }
+  .check-card.full .card-text { text-align: left; }
+
+  /* greyed-out (optional items not yet activated) */
+  .check-card.greyed {
+    background: #f0f0f0;
+    border-color: #ddd;
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: default;
+  }
+  .check-card.greyed .card-icon { filter: grayscale(1); }
+  .check-card.greyed .card-text { color: #aaa; }
+
+  /* ===== TODAY ADD SECTION ===== */
+  .today-add-section {
+    margin-bottom: 16px;
+  }
+
+  .today-add-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, #f7a8d0, #f9c5df);
+    border-radius: 12px 12px 0 0;
+    padding: 6px 14px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .today-add-toggle {
+    background: rgba(255,255,255,0.35);
+    border: none;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+  }
+
+  .today-add-body {
+    background: white;
+    border-radius: 0 0 14px 14px;
+    padding: 10px;
+    box-shadow: var(--shadow);
+  }
+
+  .today-add-candidates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .candidate-btn {
+    background: #f0e8ff;
+    color: #7c4dff;
+    border: 2px solid #c9b8f7;
+    border-radius: 50px;
+    padding: 7px 14px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+  }
+
+  .candidate-btn:active { transform: scale(0.93); }
+  .candidate-btn.added { background: #ede0ff; border-color: #7c4dff; color: #4a0080; text-decoration: line-through; opacity: 0.5; }
+
+  .today-added-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .today-added-list:empty::after {
+    content: "ここに追加した項目が出るよ ✨";
+    display: block;
+    font-size: 0.85rem;
+    color: #bbb;
+    text-align: center;
+    padding: 6px;
+    grid-column: 1/-1;
+  }
+
+  /* ===== FRIDAY BUTTON ===== */
+  .friday-btn-wrap {
+    margin-bottom: 10px;
+  }
+
+  .friday-btn {
+    width: 100%;
+    padding: 12px;
+    border: 2.5px dashed var(--after-primary);
+    background: var(--after-light);
+    color: #2a9d96;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .15s;
+  }
+
+  .friday-btn.active {
+    background: var(--after-card-done);
+    border-style: solid;
+    border-color: var(--after-primary);
+  }
+
+  /* ===== RESET BUTTON ===== */
+  .reset-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0 20px;
+    padding: 0 12px;
+  }
+
+  .reset-btn {
+    background: white;
+    border: 2.5px solid #e0d0f5;
+    color: #9b7ec8;
+    border-radius: 50px;
+    padding: 12px 36px;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  .reset-btn:active { transform: scale(0.96); }
+
+  /* ===== COMPLETE OVERLAY ===== */
+  .complete-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.88);
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    backdrop-filter: blur(6px);
+  }
+
+  .complete-overlay.show { display: flex; }
+
+  .complete-emoji {
+    font-size: 5rem;
+    animation: pop .5s cubic-bezier(.34,1.8,.64,1) both;
+  }
+
+  .complete-msg {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #7c4dff;
+    text-align: center;
+    animation: pop .5s .1s cubic-bezier(.34,1.8,.64,1) both;
+  }
+
+  .complete-stars {
+    font-size: 2.2rem;
+    letter-spacing: 4px;
+    animation: pop .5s .2s cubic-bezier(.34,1.8,.64,1) both;
+  }
+
+  .complete-close {
+    margin-top: 8px;
+    padding: 14px 40px;
+    background: linear-gradient(135deg, #b388ff, #7c4dff);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(124,77,255,0.4);
+    animation: pop .5s .3s cubic-bezier(.34,1.8,.64,1) both;
+  }
+
+  .confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 199;
+  }
+
+  /* ===== CLOUD SAVE STATUS ===== */
+  .sync-status {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #9b7ec8;
+    margin-top: 4px;
+    min-height: 1em;
+  }
+
+  /* ===== FURIGANA ===== */
+  ruby rt {
+    font-size: 0.6em;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  /* ===== FURIGANA TOGGLE ===== */
+  .furigana-toggle-wrap {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+  }
+
+  .furigana-btn {
+    background: #ece6f7;
+    border: none;
+    color: #9b7ec8;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 50px;
+    cursor: pointer;
+  }
+
+  .furigana-btn.on { background: #c3bdff; color: #4a0080; }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes cardDone {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  .check-card.bounce { animation: cardDone .3s ease; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 380px) {
+    .check-card .card-icon { font-size: 1.3rem; }
+    .check-card .card-text { font-size: 0.82rem; }
+    .section-body { gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-title">🎒 学校チェック</div>
+  <div class="sync-status" id="sync-status">Cloudflareと同期します</div>
+
+  <div class="kid-switcher">
+    <button class="kid-btn active" data-kid="elder" onclick="switchKid('elder')">
+      👧 長女
+    </button>
+    <button class="kid-btn" data-kid="younger" onclick="switchKid('younger')">
+      🐣 次女
+    </button>
+  </div>
+
+  <div class="scene-switcher">
+    <button class="scene-btn active" data-scene="morning" onclick="switchScene('morning')">☀️ 朝の用意</button>
+    <button class="scene-btn" data-scene="school"  onclick="switchScene('school')">🏫 学校</button>
+    <button class="scene-btn" data-scene="after"   onclick="switchScene('after')">🏠 帰宅後</button>
+    <button class="scene-btn" data-scene="night"   onclick="switchScene('night')">🌙 寝る前</button>
+  </div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-label">
+    <span id="progress-text">0 / 0 できた</span>
+    <span id="furigana-area"></span>
+  </div>
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="main" id="main-content"></div>
+
+<div class="reset-wrap">
+  <button class="reset-btn" onclick="resetAll()">🔄 リセット</button>
+</div>
+
+<canvas class="confetti-canvas" id="confetti-canvas"></canvas>
+<div class="complete-overlay" id="complete-overlay">
+  <div class="complete-emoji" id="complete-emoji">🌟</div>
+  <div class="complete-msg" id="complete-msg">ぜんぶできた！</div>
+  <div class="complete-stars">⭐⭐⭐⭐⭐</div>
+  <button class="complete-close" onclick="closeComplete()">とじる</button>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let currentKid = 'elder';   // 'elder' | 'younger'
+let currentScene = 'morning'; // 'morning' | 'after' | 'night'
+let checkedIds = new Set();
+let todayAdded = [];         // [{id, label}]  session-only
+let fridayForced = false;
+let furiganaOn = true;
+
+// ============================================================
+// CLOUDFLARE SAVE SETTINGS
+// ============================================================
+// Cloudflare Worker のURL。独自ドメインを使う場合はこのままでOK。
+const API_BASE = 'https://api.cetus.fun';
+
+// GitHubにパスワードを直書きしないため、初回入力した合言葉を端末内に保存します。
+const PASSWORD_STORAGE_KEY = 'cloudflare_app_password';
+function getAppPassword() {
+  try { return localStorage.getItem(PASSWORD_STORAGE_KEY) || ''; } catch(e) { return ''; }
+}
+function ensureAppPassword() {
+  let p = getAppPassword();
+  if (!p) {
+    p = prompt('Cloudflareの合言葉を入力してください');
+    if (p) {
+      try { localStorage.setItem(PASSWORD_STORAGE_KEY, p); } catch(e) {}
+    }
+  }
+  return p || '';
+}
+function clearAppPassword() {
+  try { localStorage.removeItem(PASSWORD_STORAGE_KEY); } catch(e) {}
+}
+const APP_ID = 'school-check';
+
+let schoolDataLoaded = false;
+let schoolSaveTimer = null;
+let schoolLastKey = null;
+
+try { furiganaOn = localStorage.getItem('furiganaOn') !== 'false'; } catch(e){}
+
+// ============================================================
+// DATA HELPERS
+// ============================================================
+const isFriday = new Date().getDay() === 5;
+
+// Furigana helper: returns ruby HTML or plain text depending on mode
+function R(kanji, yomi) {
+  if (furiganaOn) {
+    return `<ruby>${kanji}<rt>${yomi}</rt></ruby>`;
+  }
+  return kanji;
+}
+
+// For younger child, return hiragana version if furigana is off
+function Y(elder, younger) {
+  return currentKid === 'younger' ? younger : elder;
+}
+
+// ============================================================
+// ITEM DEFINITIONS
+// (Each returns {id, icon, label (HTML string), fullwidth?})
+// Called fresh each render so labels use current furigana state
+// ============================================================
+
+function getMorningItems() {
+  const sections = [];
+
+  // --- 生活面 ---
+  const life = [];
+  life.push({ id: 'life_face',  icon: '🚿', label: Y(`${R('顔','かお')}をあらう`, 'かおをあらう'), fullwidth: false });
+  life.push({ id: 'life_ugai',  icon: '💧', label: 'うがい', fullwidth: false });
+  life.push({ id: 'life_brush', icon: '💈', label: 'ブラシ', fullwidth: false });
+  life.push({ id: '_mitiqua_flow', _type: 'mitiqua' });
+  life.push({ id: 'life_teeth', icon: '🦷', label: 'はみがき', fullwidth: false });
+  life.push({ id: 'life_mouth', icon: '😬', label: 'マウスピース', fullwidth: false });
+
+  sections.push({ title: `🧹 ${Y(R('生活','せいかつ')+'面','せいかつ')}`, items: life });
+
+  return sections;
+}
+
+function getSchoolItems() {
+  const sections = [];
+
+  // 毎日持っていくもの
+  const daily = [
+    { id: 'sch_bottle',  icon: '🧃', label: Y(R('水筒','すいとう'), 'すいとう') },
+    { id: 'sch_hat',     icon: '🧢', label: Y(R('帽子','ぼうし'), 'ぼうし') },
+    { id: 'sch_hanky',   icon: '🫱', label: 'はんかち' },
+    { id: 'sch_tissue',  icon: '🤧', label: 'ティッシュ' },
+    { id: 'sch_lunch',   icon: '👜', label: Y(R('給食袋','きゅうしょくぶくろ'), 'きゅうしょくぶくろ') },
+    { id: 'sch_hashi',   icon: '🥢', label: 'おはし' },
+  ];
+  sections.push({ title: `🎒 ${Y(R('学校','がっこう')+'・'+R('毎日','まいにち'), 'がっこう・まいにち')}`, items: daily });
+
+  // ひつようなとき
+  const optional = [
+    { id: 'opt_shoes',  icon: '👟', label: Y(R('上靴','うわぐつ'), 'うわぐつ') },
+    { id: 'opt_gym',    icon: '👕', label: Y(R('体操服','たいそうふく'), 'たいそうふく') },
+    { id: 'opt_lib',    icon: '📚', label: Y(R('図書','としょ')+'バッグ', 'としょバッグ') },
+    { id: 'opt_kenbody',icon: '🎹', label: Y(R('鍵盤','けんばん')+'ハーモニカ'+R('本体','ほんたい'), 'けんばんハーモニカほんたい'), fullwidth: true },
+    { id: 'opt_kenpipe',icon: '🎵', label: Y(R('鍵盤','けんばん')+'ハーモニカの'+R('吹','ふ')+'き'+R('口','くち'), 'けんばんハーモニカのふきぐち'), fullwidth: true },
+    { id: 'opt_clay',   icon: '🟫', label: 'ねんど' },
+    { id: 'opt_apron',  icon: '🧥', label: 'エプロン' },
+    { id: 'opt_mask',   icon: '😷', label: 'マスク' },
+    { id: 'opt_tri',    icon: '🔺', label: Y(R('三角巾','さんかくきん'), 'さんかくきん') },
+    { id: 'opt_swim',   icon: '🏊', label: Y(R('水泳','すいえい')+'セット', 'すいえいセット') },
+    { id: 'opt_swimc',  icon: '📋', label: Y(R('水泳','すいえい')+'カード', 'すいえいカード') },
+  ];
+  if (currentKid === 'elder') {
+    optional.push({ id: 'opt_paint', icon: '🎨', label: Y(R('絵具','えのぐ'), 'えのぐ') });
+    optional.push({ id: 'opt_shuji', icon: '✍️', label: Y(R('習字道具','しゅうじどうぐ'), 'しゅうじどうぐ') });
+  }
+  sections.push({ title: `📅 ${Y(R('学校','がっこう')+'・'+R('必要','ひつよう')+'な'+R('時','とき'), 'がっこう・ひつようなとき')}`, items: optional });
+
+  return sections;
+}
+
+function getAfterItems() {
+  const sections = [];
+
+  // 毎日
+  const daily = [
+    { id: 'aft_socks',  icon: '🧦', label: Y(R('靴下','くつした')+'を'+R('洗濯','せんたく')+'かごに'+R('入','い')+'れる', 'くつしたをせんたくかごにいれる'), fullwidth: true },
+    { id: 'aft_lunch',  icon: '👜', label: Y(R('給食袋','きゅうしょくぶくろ')+'を'+R('出','だ')+'す', 'きゅうしょくぶくろをだす'), fullwidth: true },
+    { id: 'aft_hashi',  icon: '🥢', label: Y('おはしを'+R('出','だ')+'す', 'おはしをだす'), fullwidth: true },
+    { id: 'aft_bottle', icon: '🧃', label: Y(R('水筒','すいとう')+'を'+R('出','だ')+'す', 'すいとうをだす'), fullwidth: true },
+  ];
+  sections.push({ title: `📦 ${Y(R('毎日','まいにち'), 'まいにち')}`, items: daily });
+
+  // 宿題
+  const hw = currentKid === 'elder' ? [
+    { id: 'hw_kanji',  icon: '📝', label: Y(R('漢字','かんじ'), 'かんじ') },
+    { id: 'hw_calc',   icon: '🔢', label: Y(R('計算','けいさん')+'ドリル', 'けいさんドリル') },
+    { id: 'hw_read',   icon: '📖', label: Y(R('音読','おんどく'), 'おんどく') },
+  ] : [
+    { id: 'hw_read',   icon: '📖', label: 'おんどく' },
+    { id: 'hw_kskill', icon: '📒', label: 'かん字スキルノート', fullwidth: true },
+    { id: 'hw_kprint', icon: '📄', label: 'かん字プリント', fullwidth: true },
+    { id: 'hw_math',   icon: '🔢', label: 'さんすう' },
+  ];
+  sections.push({ title: `✏️ ${Y(R('宿題','しゅくだい'), 'しゅくだい')}`, items: hw });
+
+  // 金曜日
+  const friday = [
+    { id: 'fri_gym',   icon: '👕', label: Y(R('体操服','たいそうふく')+'を'+R('出','だ')+'す', 'たいそうふくをだす'), fullwidth: true },
+    { id: 'fri_shoes', icon: '👟', label: Y(R('上靴','うわぐつ')+'を'+R('出','だ')+'す', 'うわぐつをだす'), fullwidth: true },
+  ];
+  sections.push({ title: `🗓️ ${Y(R('金曜日','きんようび'), 'きんようび')}`, items: friday, fridaySection: true });
+
+  return sections;
+}
+
+function getNightItems() {
+  const sections = [];
+
+  const items = [
+    { id: 'nig_charge',  icon: '🔋', label: Y(R('携帯','けいたい')+'の'+R('充電','じゅうでん'), 'けいたいのじゅうでん') },
+    { id: 'nig_living',  icon: '🛋️', label: Y('リビング'+R('片づけ','かたづけ'), 'リビングかたづけ') },
+    { id: 'nig_prep',    icon: '🎒', label: Y(R('明日','あした')+'の'+R('準備','じゅんび')+'を'+R('見','み')+'る', 'あしたのじゅんびをみる'), fullwidth: true },
+  ];
+
+  if (currentKid === 'elder') {
+    items.push({ id: 'nig_mouth', icon: '😬', label: Y(R('明日','あした')+'の'+R('上','うえ')+'マウスピース'+R('確認','かくにん'), 'あしたのうえマウスピースかくにん'), fullwidth: true });
+  } else {
+    items.push({ id: 'nig_mouth', icon: '😬', label: 'マウスピースをつける', fullwidth: true });
+  }
+
+  sections.push({ title: `🌙 ${Y(R('寝','ね')+'る'+R('前','まえ'), 'ねるまえ')}`, items: items });
+
+  return sections;
+}
+
+// ============================================================
+// TODAY-ADD candidates
+// ============================================================
+const todayCandidates = [
+  { id: 'ta_shoes',   icon: '👟', label_elder: '上靴',                    label_younger: 'うわぐつ' },
+  { id: 'ta_gym',     icon: '👕', label_elder: '体操服',                  label_younger: 'たいそうふく' },
+  { id: 'ta_lib',     icon: '📚', label_elder: '図書バッグ',              label_younger: 'としょバッグ' },
+  { id: 'ta_kenbody', icon: '🎹', label_elder: '鍵盤ハーモニカ本体',      label_younger: 'けんばんハーモニカほんたい' },
+  { id: 'ta_kenpipe', icon: '🎵', label_elder: '鍵盤ハーモニカの吹き口',  label_younger: 'けんばんハーモニカのふきぐち' },
+  { id: 'ta_clay',    icon: '🟫', label_elder: 'ねんど',                  label_younger: 'ねんど' },
+  { id: 'ta_paint',   icon: '🎨', label_elder: '絵具',                    label_younger: 'えのぐ' },
+  { id: 'ta_shuji',   icon: '✍️', label_elder: '習字道具',                label_younger: 'しゅうじどうぐ' },
+  { id: 'ta_apron',   icon: '👔', label_elder: 'エプロン',                label_younger: 'エプロン' },
+  { id: 'ta_mask',    icon: '😷', label_elder: 'マスク',                  label_younger: 'マスク' },
+  { id: 'ta_tri',     icon: '🔺', label_elder: '三角巾',                  label_younger: 'さんかくきん' },
+  { id: 'ta_swim',    icon: '🏊', label_elder: '水泳セット',              label_younger: 'すいえいセット' },
+  { id: 'ta_swimc',   icon: '📋', label_elder: '水泳カード',              label_younger: 'すいえいカード' },
+];
+
+// todayCandidates の ta_xxx → opt_xxx マッピング
+// （学校タブの「ひつようなとき」カードとの対応）
+const TA_TO_OPT = {
+  'ta_shoes':   'opt_shoes',
+  'ta_gym':     'opt_gym',
+  'ta_lib':     'opt_lib',
+  'ta_kenbody': 'opt_kenbody',
+  'ta_kenpipe': 'opt_kenpipe',
+  'ta_clay':    'opt_clay',
+  'ta_paint':   'opt_paint',
+  'ta_shuji':   'opt_shuji',
+  'ta_apron':   'opt_apron',
+  'ta_mask':    'opt_mask',
+  'ta_tri':     'opt_tri',
+  'ta_swim':    'opt_swim',
+  'ta_swimc':   'opt_swimc',
+};
+
+// 現在「今日だけ追加」で有効化された opt_xxx のIDセット
+function getActiveOptIds() {
+  const s = new Set();
+  for (const a of todayAdded) {
+    const optId = TA_TO_OPT[a.id];
+    if (optId) s.add(optId);
+  }
+  return s;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  const main = document.getElementById('main-content');
+  main.className = `main scene-${currentScene}`;
+  // Also update progress bar scene class
+  document.querySelector('.progress-wrap').className = `progress-wrap scene-${currentScene}`;
+
+  let html = '';
+
+  // Furigana toggle
+  html += `<div class="furigana-toggle-wrap">
+    <button class="furigana-btn ${furiganaOn ? 'on' : ''}" onclick="toggleFurigana()">
+      ${furiganaOn ? '📖 ふりがな ON' : '📖 ふりがな OFF'}
+    </button>
+  </div>`;
+
+  if (currentScene === 'morning') {
+    const sections = getMorningItems();
+    for (const sec of sections) {
+      html += renderSection(sec.title, sec.items);
+    }
+  } else if (currentScene === 'school') {
+    // Today Add section（学校タブ内）
+    html += renderTodayAdd();
+    const sections = getSchoolItems();
+    for (const sec of sections) {
+      html += renderSection(sec.title, sec.items);
+    }
+  } else if (currentScene === 'after') {
+    const sections = getAfterItems();
+    for (const sec of sections) {
+      if (sec.fridaySection) {
+        const show = isFriday || fridayForced;
+        html += `<div class="friday-btn-wrap">
+          <button class="friday-btn ${fridayForced ? 'active' : ''}" onclick="toggleFriday()">
+            ${isFriday ? '🗓️ 今日は金曜日！' : '🗓️ 金曜日セットを表示'}
+            ${fridayForced && !isFriday ? ' ✅' : ''}
+          </button>
+        </div>`;
+        if (show) {
+          html += renderSection(sec.title, sec.items);
+        }
+      } else {
+        html += renderSection(sec.title, sec.items);
+      }
+    }
+  } else if (currentScene === 'night') {
+    const sections = getNightItems();
+    for (const sec of sections) {
+      html += renderSection(sec.title, sec.items);
+    }
+  }
+
+  main.innerHTML = html;
+  updateProgress();
+}
+
+function renderSection(title, items) {
+  let cardsHtml = '';
+  for (const item of items) {
+    if (item._type === 'mitiqua') {
+      cardsHtml += renderMitiqua();
+      continue;
+    }
+    cardsHtml += renderCard(item);
+  }
+  return `<div class="section">
+    <div class="section-title">${title}</div>
+    <div class="section-body">${cardsHtml}</div>
+  </div>`;
+}
+
+function renderCard(item) {
+  const done = checkedIds.has(item.id);
+  const fw = item.fullwidth ? ' full' : '';
+  // 学校タブの「ひつようなとき」カード（opt_xxx）はactiveでなければグレー
+  const isOptional = item.id && item.id.startsWith('opt_');
+  const isActive = isOptional ? getActiveOptIds().has(item.id) : true;
+  const grey = (isOptional && !isActive) ? ' greyed' : '';
+  return `<div class="check-card${fw}${done ? ' done' : ''}${grey}" 
+               id="card-${item.id}"
+               onclick="toggleCheck('${item.id}')">
+    <span class="card-icon">${item.icon}</span>
+    <span class="card-text">${item.label}</span>
+    <span class="card-check">✅</span>
+  </div>`;
+}
+
+function renderMitiqua() {
+  const ids = ['mit_main', 'mit_1min', 'mit_5min'];
+  const steps = [
+    { id: 'mit_main', icon: '💊', label: 'ミティキュア' },
+    { id: 'mit_1min', icon: '⏱️', label: '1ぷん まつ' },
+    { id: 'mit_5min', icon: '🍽️', label: '5ぷんたったら いんしょくOK' },
+  ];
+  const stepsHtml = steps.map((s, i) => {
+    const done = checkedIds.has(s.id);
+    return `${i > 0 ? '<span class="mitiqua-arrow">→</span>' : ''}
+    <div class="check-card${done ? ' done' : ''}" id="card-${s.id}"
+         style="min-height:64px;min-width:80px;flex:1;max-width:110px"
+         onclick="toggleCheck('${s.id}')">
+      <span class="card-icon">${s.icon}</span>
+      <span class="card-text" style="font-size:0.8rem">${s.label}</span>
+      <span class="card-check" style="font-size:0.9rem">✅</span>
+    </div>`;
+  }).join('');
+
+  return `<div class="mitiqua-flow" style="grid-column:1/-1">
+    <div class="mitiqua-flow-title">💊 ミティキュアの じゅんばん</div>
+    <div class="mitiqua-steps">${stepsHtml}</div>
+  </div>`;
+}
+
+function renderTodayAdd() {
+  let candidatesHtml = '';
+  for (const c of todayCandidates) {
+    const label = currentKid === 'younger' ? c.label_younger : c.label_elder;
+    const isAdded = todayAdded.some(a => a.id === c.id);
+    candidatesHtml += `<button class="candidate-btn${isAdded ? ' added' : ''}"
+      onclick="addToday('${c.id}', '${c.icon}', this)">${c.icon} ${label}</button>`;
+  }
+
+  const headerStyle = currentScene === 'school'
+    ? 'background: linear-gradient(90deg, #43A047, #A5D6A7);'
+    : 'background: linear-gradient(90deg, #f7a8d0, #f9c5df);';
+
+  // 学校シーンはopt_xxxカード自体がリストになるため今日だけ追加済み欄は不要
+  const addedListHtml = currentScene === 'school' ? '' : `
+      <div class="today-added-list" id="today-added-list">
+        ${todayAdded.map(a => renderCard(a)).join('')}
+      </div>`;
+
+  return `<div class="today-add-section">
+    <div class="today-add-header" style="${headerStyle}">
+      ✨ 今日だけ追加
+      <button class="today-add-toggle" onclick="toggleTodayAdd()">▲ とじる</button>
+    </div>
+    <div class="today-add-body" id="today-add-body">
+      <div class="today-add-candidates">${candidatesHtml}</div>
+      ${addedListHtml}
+    </div>
+  </div>`;
+}
+
+
+// ============================================================
+// CLOUDFLARE API HELPERS
+// ============================================================
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function currentDataKey() {
+  return `${todayStr()}/${currentKid}/${currentScene}`;
+}
+
+function setSyncStatus(msg) {
+  const el = document.getElementById('sync-status');
+  if (el) el.textContent = msg;
+}
+
+function cloudHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  const p = getAppPassword();
+  if (p) h['X-App-Password'] = p;
+  return h;
+}
+
+async function loadSchoolState() {
+  if (!ensureAppPassword()) {
+    setSyncStatus('合言葉を入力すると同期できます');
+    schoolDataLoaded = true;
+    return;
+  }
+  const key = currentDataKey();
+  schoolLastKey = key;
+  setSyncStatus('読み込み中...');
+  try {
+    const url = `${API_BASE}/api/app-data?app=${encodeURIComponent(APP_ID)}&key=${encodeURIComponent(key)}`;
+    const r = await fetch(url, { headers: cloudHeaders() });
+    if (r.status === 404) {
+      checkedIds = new Set();
+      todayAdded = [];
+      fridayForced = false;
+      schoolDataLoaded = true;
+      setSyncStatus('今日の記録はまだありません');
+      return;
+    }
+    if (!r.ok) {
+      if (r.status === 401) clearAppPassword();
+      throw new Error('load failed: ' + r.status);
+    }
+    const json = await r.json();
+    const data = json.data || json;
+    checkedIds = new Set(Array.isArray(data.checkedIds) ? data.checkedIds : []);
+    todayAdded = Array.isArray(data.todayAdded) ? data.todayAdded : [];
+    fridayForced = !!data.fridayForced;
+    schoolDataLoaded = true;
+    setSyncStatus('Cloudflareから読み込みました');
+  } catch (e) {
+    console.error(e);
+    schoolDataLoaded = true;
+    setSyncStatus('⚠️ 読み込み失敗：この端末だけで表示中');
+  }
+}
+
+async function saveSchoolStateNow(key = currentDataKey()) {
+  if (!schoolDataLoaded) return;
+  const payload = {
+    checkedIds: Array.from(checkedIds),
+    todayAdded,
+    fridayForced,
+    updatedAt: new Date().toISOString()
+  };
+  setSyncStatus('保存中...');
+  try {
+    const url = `${API_BASE}/api/app-data?app=${encodeURIComponent(APP_ID)}&key=${encodeURIComponent(key)}`;
+    const r = await fetch(url, {
+      method: 'PUT',
+      headers: cloudHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) {
+      if (r.status === 401) clearAppPassword();
+      throw new Error('save failed: ' + r.status);
+    }
+    setSyncStatus('💾 Cloudflareに保存しました');
+  } catch (e) {
+    console.error(e);
+    setSyncStatus('⚠️ 保存に失敗しました');
+  }
+}
+
+function scheduleSchoolSave() {
+  clearTimeout(schoolSaveTimer);
+  schoolSaveTimer = setTimeout(() => saveSchoolStateNow(), 300);
+}
+
+// ============================================================
+// INTERACTIONS
+// ============================================================
+async function switchKid(kid) {
+  if (kid === currentKid) return;
+  const oldKey = currentDataKey();
+  await saveSchoolStateNow(oldKey);
+  currentKid = kid;
+  checkedIds.clear();
+  todayAdded = [];
+  fridayForced = false;
+  completedAlready = false;
+  stopConfetti();
+  document.getElementById('complete-overlay').classList.remove('show');
+  document.querySelectorAll('.kid-btn').forEach(b => b.classList.toggle('active', b.dataset.kid === kid));
+  await loadSchoolState();
+  render();
+}
+
+async function switchScene(scene) {
+  if (scene === currentScene) return;
+  const oldKey = currentDataKey();
+  await saveSchoolStateNow(oldKey);
+  currentScene = scene;
+  checkedIds.clear();
+  fridayForced = false;
+  completedAlready = false;
+  stopConfetti();
+  document.getElementById('complete-overlay').classList.remove('show');
+  document.querySelectorAll('.scene-btn').forEach(b => b.classList.toggle('active', b.dataset.scene === scene));
+  await loadSchoolState();
+  render();
+}
+
+function toggleCheck(id) {
+  if (checkedIds.has(id)) {
+    checkedIds.delete(id);
+  } else {
+    checkedIds.add(id);
+    // bounce
+    const card = document.getElementById('card-' + id);
+    if (card) {
+      card.classList.add('bounce');
+      card.addEventListener('animationend', () => card.classList.remove('bounce'), { once: true });
+    }
+  }
+  updateCardState(id);
+  updateProgress();
+  scheduleSchoolSave();
+}
+
+function updateCardState(id) {
+  const card = document.getElementById('card-' + id);
+  if (!card) return;
+  const done = checkedIds.has(id);
+  card.classList.toggle('done', done);
+}
+
+function getAllCheckableIds() {
+  const ids = [];
+  let sections = [];
+  if (currentScene === 'morning') {
+    sections = getMorningItems();
+    for (const sec of sections) {
+      for (const item of sec.items) {
+        if (item._type === 'mitiqua') {
+          ids.push('mit_main', 'mit_1min', 'mit_5min');
+        } else {
+          ids.push(item.id);
+        }
+      }
+    }
+  } else if (currentScene === 'school') {
+    const activeOpts = getActiveOptIds();
+    sections = getSchoolItems();
+    for (const sec of sections) {
+      for (const item of sec.items) {
+        // optional(opt_xxx)はactiveになったものだけカウント対象
+        if (item.id && item.id.startsWith('opt_')) {
+          if (activeOpts.has(item.id)) ids.push(item.id);
+        } else {
+          ids.push(item.id);
+        }
+      }
+    }
+    // todayAddedは（opt_xxxに対応するものは上記で既にカウント済みなので追加しない）
+  } else if (currentScene === 'after') {
+    sections = getAfterItems();
+    for (const sec of sections) {
+      if (sec.fridaySection && !(isFriday || fridayForced)) continue;
+      for (const item of sec.items) ids.push(item.id);
+    }
+  } else if (currentScene === 'night') {
+    sections = getNightItems();
+    for (const sec of sections) {
+      for (const item of sec.items) ids.push(item.id);
+    }
+  }
+  return ids;
+}
+
+function updateProgress() {
+  const all = getAllCheckableIds();
+  const done = all.filter(id => checkedIds.has(id)).length;
+  const total = all.length;
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  document.getElementById('progress-text').textContent = `${done} / ${total} できた`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  if (total > 0 && done === total) {
+    showComplete();
+  }
+}
+
+function resetAll() {
+  checkedIds.clear();
+  todayAdded = [];
+  fridayForced = false;
+  render();
+  scheduleSchoolSave();
+}
+
+function toggleFriday() {
+  fridayForced = !fridayForced;
+  render();
+  scheduleSchoolSave();
+}
+
+function toggleTodayAdd() {
+  const body = document.getElementById('today-add-body');
+  if (!body) return;
+  const btn = body.previousElementSibling.querySelector('.today-add-toggle');
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    btn.textContent = '▲ とじる';
+  } else {
+    body.style.display = 'none';
+    btn.textContent = '▼ ひらく';
+  }
+}
+
+function addToday(id, icon, btnEl) {
+  if (todayAdded.some(a => a.id === id)) return;
+  const cand = todayCandidates.find(c => c.id === id);
+  if (!cand) return;
+  const label = currentKid === 'younger' ? cand.label_younger : cand.label_elder;
+
+  if (currentScene === 'school') {
+    // 学校タブ：todayAddedにta_xxxのIDで保存し、対応opt_xxxカードを有効化
+    todayAdded.push({ id, icon, label });
+    btnEl.classList.add('added');
+    // 対応するopt_xxxカードのグレーを解除（DOM直接更新）
+    const optId = TA_TO_OPT[id];
+    if (optId) {
+      const card = document.getElementById('card-' + optId);
+      if (card) {
+        card.classList.remove('greyed');
+        card.style.pointerEvents = '';
+      }
+    }
+    updateProgress();
+    scheduleSchoolSave();
+  } else {
+    // 朝タブ等：従来どおり today_ta_xxx IDで独立カードとして追加
+    const newItem = { id: 'today_' + id, icon, label, fullwidth: false };
+    todayAdded.push(newItem);
+    btnEl.classList.add('added');
+    const list = document.getElementById('today-added-list');
+    if (list) {
+      let html = '';
+      for (const a of todayAdded) html += renderCard(a);
+      list.innerHTML = html;
+    }
+    updateProgress();
+    scheduleSchoolSave();
+  }
+}
+
+function toggleFurigana() {
+  furiganaOn = !furiganaOn;
+  try { localStorage.setItem('furiganaOn', furiganaOn); } catch(e){}
+  render();
+}
+
+// ============================================================
+// COMPLETE OVERLAY + CONFETTI
+// ============================================================
+const EMOJIS_BY_SCENE = {
+  morning: ['🌞', '🎉', '✨'],
+  school:  ['🏫', '🎒', '⭐'],
+  after: ['🏠', '🎊', '⭐'],
+  night: ['🌙', '🌟', '💫'],
+};
+
+let completedAlready = false;
+
+function showComplete() {
+  if (completedAlready) return;
+  completedAlready = true;
+  const overlay = document.getElementById('complete-overlay');
+  const emojis = EMOJIS_BY_SCENE[currentScene];
+  document.getElementById('complete-emoji').textContent = emojis[Math.floor(Math.random() * emojis.length)];
+  overlay.classList.add('show');
+  startConfetti();
+  setTimeout(() => stopConfetti(), 3500);
+}
+
+function closeComplete() {
+  document.getElementById('complete-overlay').classList.remove('show');
+}
+
+// ============================================================
+// CONFETTI
+// ============================================================
+let confettiAnimId = null;
+const COLORS = ['#FF8C42','#FFD166','#4ECDC4','#6C63FF','#F9C5D1','#b388ff','#a8dadc'];
+
+function startConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const pieces = Array.from({length: 80}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height - canvas.height,
+    size: Math.random() * 10 + 6,
+    color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    speed: Math.random() * 3 + 2,
+    spin: (Math.random() - 0.5) * 0.2,
+    angle: Math.random() * Math.PI * 2,
+    drift: (Math.random() - 0.5) * 1.5,
+  }));
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of pieces) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      ctx.restore();
+      p.y += p.speed;
+      p.x += p.drift;
+      p.angle += p.spin;
+      if (p.y > canvas.height) {
+        p.y = -p.size;
+        p.x = Math.random() * canvas.width;
+      }
+    }
+    confettiAnimId = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function stopConfetti() {
+  if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// Reset completedAlready when reset is called
+const _origResetAll = resetAll;
+window.resetAll = function() {
+  completedAlready = false;
+  stopConfetti();
+  document.getElementById('complete-overlay').classList.remove('show');
+  _origResetAll();
+};
+
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', async () => {
+  await loadSchoolState();
+  render();
+});
+</script>
+</body>
+</html>

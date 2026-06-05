@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>お金管理アプリ</title>
+
+<link rel="apple-touch-icon" href="img/kids-app.png">
+<link rel="icon" type="image/png" href="img/kids-app.png">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="お金管理アプリ">
+<meta name="theme-color" content="#fff7d6">
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #fff7d6 0%, #ffe6f0 45%, #e6f7ff 100%);
+  color: #333;
+  text-align: center;
+  padding: 28px 18px;
+}
+
+h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+  color: #ff8a00;
+  text-shadow: 2px 2px 0 #fff;
+}
+
+.subtitle {
+  font-size: 16px;
+  margin-bottom: 28px;
+  color: #666;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 18px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.app-card {
+  display: block;
+  text-decoration: none;
+  color: #333;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 28px;
+  padding: 18px 12px 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border: 3px solid #fff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-card:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.app-card img {
+  width: 92px;
+  height: 92px;
+  border-radius: 24px;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto 10px;
+}
+
+.app-name {
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1.35;
+}
+
+.note {
+  margin-top: 28px;
+  font-size: 13px;
+  color: #777;
+}
+
+@media (min-width: 700px) {
+  .app-grid {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 760px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<h1>会計など</h1>
+<p class="subtitle">記録は残らないから気を付けて！</p>
+
+<div class="app-grid">
+
+<a class="app-card" href="mama-bank.html">
+  <img src="img/mamabank.png" alt="文章問題プリント">
+  <div class="app-name">ママ銀行</div>
+  <div class="app-desc">
+    おこづかい管理
+  </div>
+</a>
+  
+  <a class="app-card" href="kakeibo-app.html">
+  <img src="img/kakeibo.png" alt="文章問題プリント">
+  <div class="app-name">家計簿</div>
+  <div class="app-desc">
+    家計簿
+  </div>
+</a>
+  
+</div>
+
+<p class="note">ホーム画面に追加すると、アプリみたいに使えます</p>
+
+</body>
+</html>

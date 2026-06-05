@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>家計簿</title>
+  <link rel="apple-touch-icon" href="img/kakeibo.png">
+  <link rel="icon" type="image/png" href="img/kakeibo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="家計簿">
+  <meta name="theme-color" content="#fff3c4">
+  <style>
+    :root{--bg:#fff8e7;--card:#fff;--main:#ffb84d;--safe:#2e9f62;--danger:#e63946;--text:#333;--muted:#777;--line:#eadfc9;--shadow:0 8px 20px rgba(130,90,30,.12);--radius:18px}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#fff2bf 0%,var(--bg) 220px);color:var(--text);line-height:1.6}
+    header{padding:22px 16px 10px;text-align:center}
+    header h1{margin:0;font-size:1.7rem;letter-spacing:.04em}
+    header p{margin:6px 0 0;color:#6b4b1f;font-size:.95rem}
+    .app{width:min(1100px,100%);margin:0 auto;padding:10px 14px 80px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;align-items:start}
+    .card{background:rgba(255,255,255,.94);border:1px solid rgba(234,223,201,.9);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+    .card h2{margin:0 0 12px;font-size:1.15rem}
+    .month-nav{display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:12px}
+    .month-nav strong{min-width:130px;text-align:center;font-size:1.1rem}
+    .view-switch{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:0 0 14px;padding:8px;background:rgba(255,255,255,.65);border:1px solid var(--line);border-radius:18px}
+    .view-switch label{display:inline-flex;align-items:center;gap:5px;margin:0;padding:7px 10px;border-radius:999px;background:#fffdf8;font-size:.9rem;cursor:pointer}
+    .view-switch input{width:auto}
+    .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .summary-box{background:#fff9ed;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+    .summary-label{color:var(--muted);font-size:.82rem}
+    .summary-value{margin-top:4px;font-size:1.28rem;font-weight:800}
+    .income-note{background:#f0fff7;border:1px solid #c6ead6;border-radius:14px;padding:11px;margin-top:10px;font-size:.92rem}
+    .pink-box{background:linear-gradient(135deg,#ffe3ef,#fff7fb);border:2px solid #ffc3dc}
+    .pink-title{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:800;color:#a6164b;margin-bottom:10px}
+    .meter{height:18px;background:#ffeef5;border-radius:999px;overflow:hidden;border:1px solid #ffc3dc}
+    .meter-fill{height:100%;width:0%;background:linear-gradient(90deg,#ff7baa,#ff2f79);border-radius:999px;transition:width .25s ease}
+    .pink-message{margin-top:8px;font-weight:700}
+    label{display:block;font-size:.88rem;font-weight:700;margin-bottom:5px}
+    input,select,textarea{width:100%;border:1px solid #dfd1ba;border-radius:12px;padding:11px 12px;font-size:1rem;background:#fffdf8;color:var(--text)}
+    textarea{min-height:72px;resize:vertical}
+    .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .full{grid-column:1/-1}
+    .button-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    button,.file-label{border:none;border-radius:999px;padding:11px 17px;font-size:.98rem;font-weight:800;cursor:pointer;background:var(--main);color:#3e2600;box-shadow:0 5px 12px rgba(160,105,25,.16);display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+    .secondary{background:#fff3d1;border:1px solid #ebd19a}
+    .danger{background:#ffe1e5;color:#a4161a;border:1px solid #f4a7af}
+    .mini-btn{padding:7px 10px;font-size:.82rem;box-shadow:none}
+    .filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:12px;background:#fffdf8}
+    th,td{border-bottom:1px solid #eee2cf;padding:10px 8px;text-align:left;vertical-align:top;font-size:.92rem}
+    th{background:#fff1cc;color:#5b3a05;font-size:.83rem;white-space:nowrap}
+    td.amount{text-align:right;font-weight:800;white-space:nowrap}
+    .tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#f4ead8;font-size:.78rem;font-weight:700;white-space:nowrap}
+    .tag.pink{background:#ffe1ee;color:#a6164b}
+    .empty{text-align:center;color:var(--muted);padding:22px 8px}
+    .hint{color:var(--muted);font-size:.86rem;margin:8px 0 0}
+    .hidden-file{display:none}
+    .sync-box{background:linear-gradient(135deg,#eef8ff,#fff);border:2px solid #bfe4ff}
+    .sync-status{margin-top:10px;padding:9px 10px;border-radius:12px;background:#fffdf8;border:1px solid var(--line);font-size:.88rem;color:var(--muted)}
+    .sync-status.ok{background:#f0fff7;border-color:#c6ead6;color:#247344;font-weight:700}
+    .sync-status.ng{background:#fff1f2;border-color:#f4a7af;color:#a4161a;font-weight:700}
+    .inline-check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.9rem;font-weight:700}
+    .inline-check input{width:auto}
+    @media(max-width:860px){.grid{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr}}
+    @media(max-width:560px){header h1{font-size:1.45rem}.app{padding-inline:10px}.card{padding:13px}.form-grid{grid-template-columns:1fr}table,thead,tbody,tr,th,td{display:block}thead{display:none}tr{border:1px solid #eee2cf;border-radius:14px;margin-bottom:10px;padding:8px;background:#fffdf8}td{border-bottom:none;padding:5px 4px}td.amount{text-align:left;font-size:1.05rem}td::before{content:attr(data-label);display:inline-block;min-width:5.8em;color:var(--muted);font-size:.8rem;font-weight:700}td.actions::before{display:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>家計簿</h1>
+    <p>PINKカードを見張りながら、月ごとのお金の流れをチェック</p>
+  </header>
+  <main class="app">
+    <section class="card">
+      <div class="month-nav">
+        <button class="secondary mini-btn" id="prevMonth">← 前月</button>
+        <strong id="currentMonthLabel">読み込み中</strong>
+        <button class="secondary mini-btn" id="nextMonth">翌月 →</button>
+      </div>
+      <div class="view-switch">
+        <label><input type="radio" name="viewMode" value="settle" checked> 引落・反映月で見る</label>
+        <label><input type="radio" name="viewMode" value="use"> 利用日で見る</label>
+      </div>
+      <div class="summary-grid">
+        <div class="summary-box"><div class="summary-label">収入</div><div class="summary-value" id="incomeTotal">0円</div></div>
+        <div class="summary-box"><div class="summary-label">支出</div><div class="summary-value" id="expenseTotal">0円</div></div>
+        <div class="summary-box"><div class="summary-label">差し引き</div><div class="summary-value" id="balanceTotal">0円</div></div>
+      </div>
+      <div class="income-note" id="incomeNote">読み込み中...</div>
+    </section>
+    <div class="grid">
+      <section>
+        <div class="card">
+          <h2>入力</h2>
+          <form id="entryForm">
+            <input type="hidden" id="editId">
+            <div class="form-grid">
+              <div><label for="date">日付</label><input type="date" id="date" required></div>
+              <div><label for="type">種類</label><select id="type"><option value="expense">支出</option><option value="income">収入</option></select></div>
+              <div><label for="amount">金額</label><input type="number" id="amount" min="0" step="1" placeholder="例：1200" required></div>
+              <div><label for="payment">支払方法・入金先</label><select id="payment"></select></div>
+              <div><label for="category">カテゴリ</label><select id="category"></select></div>
+              <div><label for="settleMonth">引落・反映月</label><input type="month" id="settleMonth"></div>
+              <div class="full"><label for="memo">メモ</label><textarea id="memo" placeholder="例：仕事立替、子ども用品、誕生日外食など"></textarea></div>
+            </div>
+            <div class="button-row">
+              <button type="submit" id="saveButton">保存する</button>
+              <button type="button" class="secondary" id="resetForm">入力をクリア</button>
+            </div>
+            <p class="hint">※ データはこの端末のブラウザ内に保存されます。定期的にCSV保存してください。</p>
+          </form>
+        </div>
+        <div class="card">
+          <h2>一覧</h2>
+          <div class="filters">
+            <div><label for="filterType">種類</label><select id="filterType"><option value="all">すべて</option><option value="expense">支出</option><option value="income">収入</option></select></div>
+            <div><label for="filterPayment">支払方法</label><select id="filterPayment"></select></div>
+            <div><label for="searchText">検索</label><input type="search" id="searchText" placeholder="メモ・カテゴリ検索"></div>
+          </div>
+          <div id="tableArea"></div>
+        </div>
+      </section>
+      <aside>
+        <div class="card pink-box">
+          <div class="pink-title"><span>PINKカード監視</span><span id="pinkTotal">0円</span></div>
+          <div class="meter"><div class="meter-fill" id="pinkMeter"></div></div>
+          <div class="pink-message" id="pinkMessage"></div>
+          <p class="hint">表示基準に合わせて集計します。目標：50,000円／注意：100,000円</p>
+        </div>
+        <div class="card"><h2>支払方法別</h2><div id="paymentSummary"></div></div>
+        <div class="card"><h2>カテゴリ別支出</h2><div id="categorySummary"></div></div>
+        <div class="card sync-box">
+          <h2>クラウド保存</h2>
+          <div class="form-grid">
+            <div class="full">
+              <label for="apiUrl">API URL</label>
+              <input type="url" id="apiUrl" placeholder="https://api.cetus.fun/api/app-data">
+            </div>
+            <div class="full">
+              <label for="apiPassword">保存用パスワード</label>
+              <input type="password" id="apiPassword" placeholder="日記・ママ銀行と同じパスワードならそれを入力">
+            </div>
+          </div>
+          <label class="inline-check"><input type="checkbox" id="autoCloudSave"> 保存するたびにクラウドにも保存</label>
+          <div class="button-row">
+            <button type="button" id="saveCloud">クラウドへ保存</button>
+            <button type="button" class="secondary" id="loadCloud">クラウドから読み込み</button>
+          </div>
+          <div class="sync-status" id="syncStatus">まだクラウドとは同期していません。</div>
+          <p class="hint">パスワードはこの端末のブラウザ内に保存されます。GitHubには書き込まないので安全です。</p>
+        </div>
+        <div class="card">
+          <h2>バックアップ</h2>
+          <div class="button-row">
+            <button type="button" id="exportCsv">CSV保存（全部）</button>
+            <button type="button" class="secondary" id="exportTodayCsv">今日だけ保存</button>
+            <button type="button" class="secondary" id="exportYesterdayCsv">昨日だけ保存</button>
+            <label class="file-label secondary" for="importCsv">家計簿CSV読込</label>
+            <input class="hidden-file" type="file" id="importCsv" accept=".csv,text/csv">
+            <button type="button" class="danger" id="clearAll">全削除</button>
+          </div>
+          <p class="hint">クラウド保存を使っても、CSV保存は保険として残しています。</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <script>
+    const STORAGE_KEY = "kakeibo-app-stable-v3";
+    const LEGACY_STORAGE_KEYS = ["kakeibo-app-stable-v2", "kakeibo-app-stable-v1"];
+    const SETTINGS_KEY = "kakeibo-cloud-settings-v1";
+    const APP_KEY = "kakeibo-app";
+    const APP_VERSION = 3;
+    const DEFAULT_API_URL = "https://api.cetus.fun/api/app-data";
+    const PINK_GOAL = 50000;
+    const PINK_WARNING = 100000;
+    const payments = ["楽天pink","楽天visa","auじぶん銀行","ゆうちょ","福岡銀行","福岡中央銀行","現金","立替","その他"];
+    const categories = ["食費","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","仕事立替","固定費","特別費","収入","その他"];
+
+    let entries = [];
+    let currentMonth = new Date();
+    currentMonth.setDate(1);
+
+    function $(id){return document.getElementById(id)}
+    function yen(value){return Number(value || 0).toLocaleString("ja-JP") + "円"}
+    function pad(n){return String(n).padStart(2,"0")}
+    function dateString(d){return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate())}
+    function todayString(){return dateString(new Date())}
+    function monthString(d){return d.getFullYear() + "-" + pad(d.getMonth()+1)}
+    function makeId(){if(window.crypto && crypto.randomUUID){return crypto.randomUUID()}return "id-" + Date.now() + "-" + Math.random().toString(36).slice(2)}
+    function isCreditPayment(payment){return payment === "楽天pink" || payment === "楽天visa"}
+    function addMonthsToMonthString(dateValue, months){
+      if(!dateValue){return monthString(currentMonth)}
+      const parts = String(dateValue).split("-").map(Number);
+      if(parts.length < 2 || !parts[0] || !parts[1]){return monthString(currentMonth)}
+      const d = new Date(parts[0], parts[1] - 1 + months, 1);
+      return monthString(d);
+    }
+    function suggestedSettleMonth(){
+      const dateValue = $("date") ? $("date").value : todayString();
+      const typeValue = $("type") ? $("type").value : "expense";
+      const paymentValue = $("payment") ? $("payment").value : "";
+
+      // 家計管理ルール：
+      // ・収入は「翌月の生活費」として翌月反映
+      // ・クレジット支出は翌月引落として翌月反映
+      // ・現金／銀行などの支出は当月反映
+      if(typeValue === "income"){return addMonthsToMonthString(dateValue, 1)}
+      return isCreditPayment(paymentValue) ? addMonthsToMonthString(dateValue, 1) : addMonthsToMonthString(dateValue, 0);
+    }
+    function syncSettleMonth(){
+      if(!$("settleMonth")){return}
+      $("settleMonth").value = suggestedSettleMonth();
+    }
+
+    function normalizeEntry(e){
+      return {
+        id: e.id || makeId(),
+        date: e.date || todayString(),
+        type: e.type === "income" ? "income" : "expense",
+        amount: Number(e.amount || 0),
+        payment: e.payment || "その他",
+        category: e.category || "その他",
+        settleMonth: e.settleMonth || (e.date ? String(e.date).slice(0,7) : monthString(new Date())),
+        memo: e.memo || "",
+        createdAt: e.createdAt || new Date().toISOString(),
+        updatedAt: e.updatedAt || e.createdAt || new Date().toISOString()
+      };
+    }
+
+    function loadEntries(){
+      try{
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if(saved){
+          entries = JSON.parse(saved || "[]").map(normalizeEntry);
+          return;
+        }
+        for(const key of LEGACY_STORAGE_KEYS){
+          const legacy = localStorage.getItem(key);
+          if(legacy){
+            entries = JSON.parse(legacy || "[]").map(normalizeEntry);
+            saveEntries(false);
+            return;
+          }
+        }
+        entries = [];
+      }catch(e){
+        entries = [];
+      }
+    }
+
+    function saveEntries(syncCloud){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      if(syncCloud !== false && getCloudSettings().autoCloudSave){
+        saveToCloud({silent:true});
+      }
+    }
+
+    function getCloudSettings(){
+      try{
+        const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+        return {
+          apiUrl: s.apiUrl || DEFAULT_API_URL,
+          password: s.password || "",
+          autoCloudSave: Boolean(s.autoCloudSave)
+        };
+      }catch(e){
+        return {apiUrl:DEFAULT_API_URL,password:"",autoCloudSave:false};
+      }
+    }
+
+    function saveCloudSettings(){
+      const settings = {
+        apiUrl: $("apiUrl").value.trim() || DEFAULT_API_URL,
+        password: $("apiPassword").value,
+        autoCloudSave: $("autoCloudSave").checked
+      };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      return settings;
+    }
+
+    function loadCloudSettingsToForm(){
+      const settings = getCloudSettings();
+      $("apiUrl").value = settings.apiUrl || DEFAULT_API_URL;
+      $("apiPassword").value = settings.password || "";
+      $("autoCloudSave").checked = Boolean(settings.autoCloudSave);
+    }
+
+    function setSyncStatus(message, kind){
+      const area = $("syncStatus");
+      area.textContent = message;
+      area.classList.remove("ok","ng");
+      if(kind){area.classList.add(kind)}
+    }
+
+    function makeCloudPayload(){
+      return {
+        app: APP_KEY,
+        version: APP_VERSION,
+        entries: entries.map(normalizeEntry),
+        savedAt: new Date().toISOString()
+      };
+    }
+
+    function extractCloudData(responseJson){
+      const root = responseJson && typeof responseJson === "object" ? responseJson : {};
+      const data = root.data && typeof root.data === "object" ? root.data : root;
+      if(Array.isArray(data.entries)){return data}
+      if(Array.isArray(root.entries)){return root}
+      return null;
+    }
+
+    async function saveToCloud(options){
+      const silent = options && options.silent;
+      const settings = saveCloudSettings();
+
+      if(!settings.password){
+        if(!silent){setSyncStatus("パスワードを入力してから保存してください。", "ng")}
+        return;
+      }
+
+      try{
+        if(!silent){setSyncStatus("クラウドへ保存中です…")}
+        const res = await fetch(settings.apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-App-Password": settings.password
+          },
+          body: JSON.stringify({
+            key: APP_KEY,
+            app: APP_KEY,
+            data: makeCloudPayload()
+          })
+        });
+
+        const text = await res.text();
+        let json = {};
+        try{json = text ? JSON.parse(text) : {}}catch(e){json = {raw:text}}
+
+        if(!res.ok){
+          throw new Error((json && (json.error || json.message)) || ("HTTP " + res.status));
+        }
+
+        setSyncStatus("クラウド保存できました。最終保存：" + new Date().toLocaleString("ja-JP"), "ok");
+      }catch(err){
+        setSyncStatus("クラウド保存に失敗しました：" + err.message, "ng");
+      }
+    }
+
+    async function loadFromCloud(){
+      const settings = saveCloudSettings();
+
+      if(!settings.password){
+        setSyncStatus("パスワードを入力してから読み込んでください。", "ng");
+        return;
+      }
+
+      if(entries.length > 0 && !confirm("クラウドの家計簿データで、この端末の表示を置き換えますか？\n※念のため、先にCSV保存しておくと安心です。")){
+        return;
+      }
+
+      try{
+        setSyncStatus("クラウドから読み込み中です…");
+        const url = new URL(settings.apiUrl);
+        url.searchParams.set("key", APP_KEY);
+
+        const res = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            "X-App-Password": settings.password
+          }
+        });
+
+        const text = await res.text();
+        let json = {};
+        try{json = text ? JSON.parse(text) : {}}catch(e){json = {raw:text}}
+
+        if(!res.ok){
+          throw new Error((json && (json.error || json.message)) || ("HTTP " + res.status));
+        }
+
+        const cloudData = extractCloudData(json);
+        if(!cloudData || !Array.isArray(cloudData.entries)){
+          throw new Error("クラウド側に家計簿データが見つかりません。");
+        }
+
+        entries = cloudData.entries.map(normalizeEntry);
+        saveEntries(false);
+        render();
+
+        const savedAt = cloudData.savedAt ? new Date(cloudData.savedAt).toLocaleString("ja-JP") : "不明";
+        setSyncStatus("クラウドから読み込みました。クラウド保存日時：" + savedAt, "ok");
+      }catch(err){
+        setSyncStatus("クラウド読込に失敗しました：" + err.message, "ng");
+      }
+    }
+
+    function fillSelect(id, list, first){
+      const s=$(id);
+      s.innerHTML="";
+      if(first){
+        const o=document.createElement("option");
+        o.value="all";
+        o.textContent=first;
+        s.appendChild(o);
+      }
+      list.forEach(function(x){
+        const o=document.createElement("option");
+        o.value=x;
+        o.textContent=x;
+        s.appendChild(o);
+      });
+    }
+
+    function viewMode(){
+      const checked=document.querySelector("input[name='viewMode']:checked");
+      return checked ? checked.value : "settle";
+    }
+
+    function entryMonth(e){
+      return viewMode() === "use" ? String(e.date || "").slice(0,7) : (e.settleMonth || String(e.date || "").slice(0,7));
+    }
+
+    function init(){
+      loadEntries();
+      fillSelect("payment", payments);
+      fillSelect("category", categories);
+      fillSelect("filterPayment", payments, "すべて");
+      loadCloudSettingsToForm();
+
+      $("date").value = todayString();
+      syncSettleMonth();
+
+      $("date").addEventListener("change", syncSettleMonth);
+      $("type").addEventListener("change", syncSettleMonth);
+      $("payment").addEventListener("change", syncSettleMonth);
+
+      $("entryForm").addEventListener("submit", handleSubmit);
+      $("resetForm").addEventListener("click", resetForm);
+      $("prevMonth").addEventListener("click", function(){currentMonth.setMonth(currentMonth.getMonth()-1);render()});
+      $("nextMonth").addEventListener("click", function(){currentMonth.setMonth(currentMonth.getMonth()+1);render()});
+      $("filterType").addEventListener("change", render);
+      $("filterPayment").addEventListener("change", render);
+      $("searchText").addEventListener("input", render);
+      document.querySelectorAll("input[name='viewMode']").forEach(function(r){r.addEventListener("change", render)});
+
+      $("apiUrl").addEventListener("change", saveCloudSettings);
+      $("apiPassword").addEventListener("change", saveCloudSettings);
+      $("autoCloudSave").addEventListener("change", saveCloudSettings);
+      $("saveCloud").addEventListener("click", function(){saveToCloud({silent:false})});
+      $("loadCloud").addEventListener("click", loadFromCloud);
+
+      $("exportCsv").addEventListener("click", function(){exportCsv("all")});
+      $("exportTodayCsv").addEventListener("click", function(){exportCsv("today")});
+      $("exportYesterdayCsv").addEventListener("click", function(){exportCsv("yesterday")});
+      $("importCsv").addEventListener("change", importCsv);
+      $("clearAll").addEventListener("click", clearAll);
+
+      render();
+    }
+
+    function handleSubmit(e){
+      e.preventDefault();
+
+      const date=$("date").value;
+      const amount=Number($("amount").value);
+
+      if(!date || Number.isNaN(amount) || amount < 0){
+        alert("日付と金額を入力してください。");
+        return;
+      }
+
+      const editId=$("editId").value;
+      const now=new Date().toISOString();
+      const data={
+        id:editId || makeId(),
+        date:date,
+        type:$("type").value,
+        amount:amount,
+        payment:$("payment").value,
+        category:$("category").value,
+        settleMonth:$("settleMonth").value || date.slice(0,7),
+        memo:$("memo").value.trim(),
+        updatedAt:now
+      };
+
+      if(editId){
+        entries=entries.map(function(x){return x.id===editId ? Object.assign({}, x, data) : x});
+      }else{
+        data.createdAt=now;
+        entries.push(data);
+      }
+
+      saveEntries(true);
+      resetForm();
+      render();
+    }
+
+    function resetForm(){
+      $("editId").value="";
+      $("entryForm").reset();
+      $("date").value=todayString();
+      syncSettleMonth();
+      $("saveButton").textContent="保存する";
+    }
+
+    function sum(list){return list.reduce(function(total,e){return total + Number(e.amount || 0)},0)}
+
+    function visibleEntries(){
+      const m=monthString(currentMonth);
+      const type=$("filterType").value;
+      const payment=$("filterPayment").value;
+      const keyword=$("searchText").value.trim().toLowerCase();
+
+      return entries.filter(function(e){return entryMonth(e) === m})
+        .filter(function(e){return type === "all" || e.type === type})
+        .filter(function(e){return payment === "all" || e.payment === payment})
+        .filter(function(e){
+          if(!keyword){return true}
+          return ((e.memo || "") + " " + (e.category || "") + " " + (e.payment || "")).toLowerCase().includes(keyword);
+        })
+        .sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
+    }
+
+    function render(){
+      const m=monthString(currentMonth);
+      $("currentMonthLabel").textContent = m.replace("-","年") + "月";
+
+      const monthEntries=entries.filter(function(e){return entryMonth(e) === m});
+      const income=sum(monthEntries.filter(function(e){return e.type === "income"}));
+      const expense=sum(monthEntries.filter(function(e){return e.type === "expense"}));
+      const balance=income-expense;
+
+      $("incomeTotal").textContent=yen(income);
+      $("expenseTotal").textContent=yen(expense);
+      $("balanceTotal").textContent=yen(balance);
+      $("balanceTotal").style.color=balance >= 0 ? "var(--safe)" : "var(--danger)";
+
+      const basis=viewMode() === "use" ? "利用日ベース" : "引落・反映月ベース";
+      $("incomeNote").textContent = basis + "で集計中。クラウド保存をONにすると、保存するたびにCloudflareへ記録します。";
+
+      renderPink(monthEntries);
+      renderSummaries(monthEntries);
+      renderTable(visibleEntries());
+    }
+
+    function renderPink(list){
+      const total=sum(list.filter(function(e){return e.type === "expense" && e.payment === "楽天pink"}));
+      $("pinkTotal").textContent=yen(total);
+      $("pinkMeter").style.width=Math.min((total / PINK_WARNING) * 100,100) + "%";
+
+      if(total===0){
+        $("pinkMessage").textContent="今月のPINK利用はまだ0円。";
+      }else if(total<=PINK_GOAL){
+        $("pinkMessage").textContent="目標5万円まであと " + yen(PINK_GOAL-total) + "。まだ安全圏！";
+      }else if(total<PINK_WARNING){
+        $("pinkMessage").textContent="5万円を " + yen(total-PINK_GOAL) + " オーバー。ここから慎重に！";
+      }else{
+        $("pinkMessage").textContent="10万円ライン到達。PINKブラックゾーンです。";
+      }
+    }
+
+    function group(list,key){
+      const map={};
+      list.forEach(function(e){
+        const label=e[key] || "未分類";
+        map[label]=(map[label] || 0)+Number(e.amount || 0);
+      });
+      return Object.keys(map).map(function(k){return [k,map[k]]}).sort(function(a,b){return b[1]-a[1]});
+    }
+
+    function renderSummaries(list){
+      renderGroup("paymentSummary",group(list.filter(function(e){return e.type === "expense"}),"payment"));
+      renderGroup("categorySummary",group(list.filter(function(e){return e.type === "expense"}),"category"));
+    }
+
+    function renderGroup(id,rows){
+      const area=$(id);
+      if(rows.length===0){
+        area.innerHTML='<div class="empty">データなし</div>';
+        return;
+      }
+      area.innerHTML=rows.map(function(r){
+        return '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #eee2cf"><span>'+html(r[0])+'</span><strong>'+yen(r[1])+'</strong></div>';
+      }).join("");
+    }
+
+    function renderTable(list){
+      const area=$("tableArea");
+      if(list.length===0){
+        area.innerHTML='<div class="empty">表示するデータがありません</div>';
+        return;
+      }
+
+      area.innerHTML='<table><thead><tr><th>日付</th><th>種類</th><th>金額</th><th>支払方法</th><th>カテゴリ</th><th>メモ</th><th></th></tr></thead><tbody>'+
+        list.map(function(e){
+          return '<tr><td data-label="日付">'+html(e.date)+'</td><td data-label="種類">'+(e.type === "income" ? "収入" : "支出")+'</td><td data-label="金額" class="amount">'+yen(e.amount)+'</td><td data-label="支払方法"><span class="tag '+(e.payment === "楽天pink" ? "pink" : "")+'">'+html(e.payment)+'</span></td><td data-label="カテゴリ">'+html(e.category)+'</td><td data-label="メモ">'+html(e.memo || "")+'</td><td class="actions"><button class="secondary mini-btn" onclick="editEntry(\''+e.id+'\')">編集</button> <button class="danger mini-btn" onclick="deleteEntry(\''+e.id+'\')">削除</button></td></tr>';
+        }).join("")+
+      '</tbody></table>';
+    }
+
+    window.editEntry=function(id){
+      const e=entries.find(function(x){return x.id===id});
+      if(!e){return}
+
+      $("editId").value=e.id;
+      $("date").value=e.date;
+      $("type").value=e.type;
+      $("amount").value=e.amount;
+      $("payment").value=e.payment;
+      $("category").value=e.category;
+      $("settleMonth").value=e.settleMonth || e.date.slice(0,7);
+      $("memo").value=e.memo || "";
+      $("saveButton").textContent="更新する";
+      window.scrollTo({top:0,behavior:"smooth"});
+    };
+
+    window.deleteEntry=function(id){
+      if(!confirm("このデータを削除しますか？")){return}
+      entries=entries.filter(function(e){return e.id !== id});
+      saveEntries(true);
+      render();
+    };
+
+    function exportCsv(mode){
+      const data=exportEntries(mode);
+      if(data.length===0){
+        alert("保存するデータがありません。");
+        return;
+      }
+
+      const header=["id","date","type","amount","payment","category","settleMonth","memo","createdAt","updatedAt"];
+      const nl=String.fromCharCode(10);
+      const rows=data.map(function(e){return header.map(function(k){return csv(e[k] || "")}).join(",")});
+      const text=String.fromCharCode(65279)+header.join(",")+nl+rows.join(nl);
+      const blob=new Blob([text],{type:"text/csv;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;
+      a.download="kakeibo-"+mode+"-"+todayString()+".csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportEntries(mode){
+      if(mode==="today"){return entries.filter(function(e){return e.date===todayString()})}
+      if(mode==="yesterday"){
+        const d=new Date();
+        d.setDate(d.getDate()-1);
+        const y=dateString(d);
+        return entries.filter(function(e){return e.date===y});
+      }
+      return entries;
+    }
+
+    function importCsv(event){
+      const file=event.target.files[0];
+      if(!file){return}
+
+      const reader=new FileReader();
+      reader.onload=function(){
+        try{
+          const parsed=parseCsv(String(reader.result || ""));
+          if(parsed.length<2){
+            alert("CSVにデータがありません。");
+            return;
+          }
+
+          const header=parsed[0];
+          const imported=parsed.slice(1).filter(function(row){return row.length>1}).map(function(row){
+            const obj={};
+            header.forEach(function(k,i){obj[k]=row[i] || ""});
+            return normalizeEntry({
+              id:obj.id || makeId(),
+              date:obj.date,
+              type:obj.type || "expense",
+              amount:Number(obj.amount || 0),
+              payment:obj.payment || "その他",
+              category:obj.category || "その他",
+              settleMonth:obj.settleMonth || (obj.date ? obj.date.slice(0,7) : monthString(new Date())),
+              memo:obj.memo || "",
+              createdAt:obj.createdAt || new Date().toISOString(),
+              updatedAt:obj.updatedAt || new Date().toISOString()
+            });
+          }).filter(function(e){return e.date && !Number.isNaN(e.amount)});
+
+          const ids=new Set(entries.map(function(e){return e.id}));
+          const add=imported.filter(function(e){return !ids.has(e.id)});
+          const skip=imported.length-add.length;
+
+          if(!confirm(imported.length+"件確認しました。新規追加："+add.length+"件、スキップ："+skip+"件。追加しますか？")){
+            return;
+          }
+
+          entries=entries.concat(add);
+          saveEntries(true);
+          render();
+        }catch(err){
+          alert("CSV読込に失敗しました。" + err.message);
+        }
+      };
+      reader.readAsText(file,"utf-8");
+      event.target.value="";
+    }
+
+    function clearAll(){
+      if(!confirm("すべて削除しますか？")){return}
+      if(!confirm("本当に全削除しますか？クラウド自動保存がONの場合、空データでクラウドも上書きされます。")){
+        return;
+      }
+      entries=[];
+      saveEntries(true);
+      render();
+    }
+
+    function csv(value){
+      const s=String(value == null ? "" : value);
+      if(s.includes('"') || s.includes(',') || s.includes(String.fromCharCode(10)) || s.includes(String.fromCharCode(13))){
+        return '"'+s.split('"').join('""')+'"';
+      }
+      return s;
+    }
+
+    function parseCsv(text){
+      const rows=[];
+      let row=[];
+      let cell="";
+      let inQuotes=false;
+      const quote='"';
+
+      for(let i=0;i<text.length;i++){
+        const ch=text[i];
+        const next=text[i+1];
+        const code=ch.charCodeAt(0);
+
+        if(ch===quote && inQuotes && next===quote){
+          cell+=quote;
+          i++;
+        }else if(ch===quote){
+          inQuotes=!inQuotes;
+        }else if(ch===',' && !inQuotes){
+          row.push(cell);
+          cell="";
+        }else if((code===10 || code===13) && !inQuotes){
+          if(code===13 && next && next.charCodeAt(0)===10){i++}
+          row.push(cell);
+          rows.push(row);
+          row=[];
+          cell="";
+        }else{
+          cell+=ch;
+        }
+      }
+
+      if(cell!=="" || row.length>0){
+        row.push(cell);
+        rows.push(row);
+      }
+
+      return rows;
+    }
+
+    function html(value){
+      return String(value == null ? "" : value)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

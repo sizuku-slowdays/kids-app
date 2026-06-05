@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="矯正チェック">
+<title>矯正チェック日記 🦷</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mint: #4ecdc4;
+    --mint-light: #e8f8f7;
+    --mint-dark: #2db5ac;
+    --pink: #ff9bb3;
+    --pink-light: #fff0f4;
+    --pink-dark: #e07090;
+    --lavender: #b5aaff;
+    --lavender-light: #f0eeff;
+    --yellow: #ffd166;
+    --yellow-light: #fff8e6;
+    --gray: #888;
+    --gray-light: #f5f5f5;
+    --white: #fff;
+    --text: #333;
+    --text-light: #777;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 18px rgba(0,0,0,0.08);
+    --font: 'Zen Maru Gothic', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: linear-gradient(160deg, #e8f8f7 0%, #fff0f4 100%);
+    min-height: 100vh;
+    color: var(--text);
+    font-size: 15px;
+  }
+
+  /* ===== ログイン画面 ===== */
+  #login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    gap: 1.5rem;
+  }
+  .login-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+    max-width: 340px;
+    width: 100%;
+  }
+  .login-emoji { font-size: 3rem; margin-bottom: 0.5rem; }
+  .login-title { font-size: 1.4rem; font-weight: 700; color: var(--mint-dark); margin-bottom: 0.3rem; }
+  .login-sub { font-size: 0.85rem; color: var(--text-light); margin-bottom: 1.5rem; line-height: 1.6; }
+  #google-signin-btn {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 50px;
+    padding: 0.75rem 1.5rem;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    justify-content: center;
+    width: 100%;
+    transition: all 0.2s;
+  }
+  #google-signin-btn:hover { border-color: var(--mint); background: var(--mint-light); }
+  .google-logo { width: 20px; height: 20px; }
+  .loading-msg { font-size: 0.85rem; color: var(--text-light); }
+
+  /* ===== メイン画面 ===== */
+  #main-screen { display: none; }
+
+  /* ===== ヘッダー ===== */
+  .header {
+    background: white;
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-title { font-size: 1.1rem; font-weight: 700; color: var(--mint-dark); }
+  .header-right { display: flex; align-items: center; gap: 0.6rem; }
+  .user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--mint-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; color: var(--mint-dark);
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ===== タブ ===== */
+  .tabs {
+    display: flex;
+    background: var(--gray-light);
+    margin: 1rem;
+    border-radius: 50px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 0.55rem 0.5rem;
+    border: none;
+    border-radius: 50px;
+    background: transparent;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    color: var(--text);
+  }
+  .tab-btn.tab-elder.active { color: var(--mint-dark); }
+  .tab-btn.tab-younger.active { color: var(--pink-dark); }
+
+  /* ===== ページ ===== */
+  .page { display: none; padding: 0 1rem 6rem; }
+  .page.active { display: block; }
+
+  /* ===== 月ナビ ===== */
+  .month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border-radius: var(--radius);
+    padding: 0.8rem 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+  }
+  .month-nav-btn {
+    background: none; border: none; font-size: 1.2rem;
+    cursor: pointer; padding: 0.2rem 0.6rem;
+    color: var(--text-light); border-radius: var(--radius-sm);
+    transition: all 0.15s;
+  }
+  .month-nav-btn:hover { background: var(--gray-light); }
+  .month-label { font-weight: 700; font-size: 1.05rem; }
+
+  /* ===== 月次サマリー ===== */
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.7rem;
+    margin-bottom: 1rem;
+  }
+  .summary-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 0.8rem 0.5rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .summary-card .s-label { font-size: 0.7rem; color: var(--text-light); margin-bottom: 0.2rem; }
+  .summary-card .s-value { font-size: 1.3rem; font-weight: 700; }
+  .summary-card.good .s-value { color: var(--mint-dark); }
+  .summary-card.bad .s-value { color: var(--pink-dark); }
+  .summary-card.neutral .s-value { color: var(--lavender); }
+
+  /* ===== チェック項目タブ ===== */
+  .item-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+  .item-tab-btn {
+    flex-shrink: 0;
+    padding: 0.35rem 0.9rem;
+    border-radius: 50px;
+    border: 2px solid #e0e0e0;
+    background: white;
+    font-family: var(--font);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .item-tab-btn.active {
+    border-color: var(--mint);
+    background: var(--mint-light);
+    color: var(--mint-dark);
+  }
+  .page-younger .item-tab-btn.active {
+    border-color: var(--pink);
+    background: var(--pink-light);
+    color: var(--pink-dark);
+  }
+
+  /* ===== カレンダー ===== */
+  .calendar {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .cal-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--mint-light);
+  }
+  .page-younger .cal-header { background: var(--pink-light); }
+  .cal-dow {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.5rem 0;
+    color: var(--text-light);
+  }
+  .cal-dow.sun { color: #e05a5a; }
+  .cal-dow.sat { color: #4a90d9; }
+  .cal-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .cal-day {
+    border-top: 1px solid #f0f0f0;
+    border-right: 1px solid #f0f0f0;
+    min-height: 58px;
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .cal-day:nth-child(7n) { border-right: none; }
+  .cal-day.empty { cursor: default; background: #fafafa; }
+  .cal-day.weekend { background: #fcfcfc; }
+  .cal-day.weekend .day-num { color: #aaa; }
+  .cal-day.weekend:not(.has-check):hover { background: #f5f5f5; cursor: default; }
+  .cal-day.today .day-num {
+    background: var(--mint);
+    color: white;
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .page-younger .cal-day.today .day-num { background: var(--pink); }
+  .cal-day:not(.empty):not(.weekend):hover { background: var(--mint-light); }
+  .page-younger .cal-day:not(.empty):not(.weekend):hover { background: var(--pink-light); }
+  .day-num { font-size: 0.75rem; font-weight: 500; line-height: 1; }
+  .day-num.sun { color: #e05a5a; }
+  .day-num.sat { color: #4a90d9; }
+  .check-mark {
+    font-size: 0.95rem;
+    line-height: 1;
+  }
+  .check-mark.maru { color: var(--mint-dark); }
+  .check-mark.batsu { color: #e05a5a; }
+  .day-comment {
+    font-size: 0.6rem;
+    color: var(--text-light);
+    text-align: center;
+    line-height: 1.2;
+    max-width: 36px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* ===== コメントモーダル ===== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: flex-end;
+    z-index: 100;
+    animation: fadeIn 0.2s;
+  }
+  .modal-overlay.hidden { display: none; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal-sheet {
+    background: white;
+    border-radius: 24px 24px 0 0;
+    padding: 1.5rem;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease-out;
+  }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--mint-dark); }
+  .modal-date { font-size: 0.85rem; color: var(--text-light); margin-bottom: 1rem; }
+  .modal-choices { display: flex; gap: 0.8rem; margin-bottom: 1rem; }
+  .choice-btn {
+    flex: 1; padding: 1rem;
+    border-radius: var(--radius); border: 3px solid #e0e0e0;
+    background: white; font-family: var(--font);
+    font-size: 1.5rem; cursor: pointer;
+    transition: all 0.2s;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 0.3rem;
+  }
+  .choice-btn .choice-label { font-size: 0.75rem; font-weight: 700; color: var(--text-light); }
+  .choice-btn.maru:hover, .choice-btn.maru.selected {
+    border-color: var(--mint-dark);
+    background: var(--mint-light);
+  }
+  .choice-btn.maru.selected .choice-label { color: var(--mint-dark); }
+  .choice-btn.batsu:hover, .choice-btn.batsu.selected {
+    border-color: #e05a5a;
+    background: #fff0f0;
+  }
+  .choice-btn.batsu.selected .choice-label { color: #e05a5a; }
+  .choice-btn.none:hover, .choice-btn.none.selected {
+    border-color: #bbb;
+    background: var(--gray-light);
+  }
+  .comment-area {
+    width: 100%; padding: 0.8rem;
+    border: 2px solid #e0e0e0; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.9rem;
+    resize: none; margin-bottom: 1rem;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .comment-area:focus { border-color: var(--mint); }
+  .page-younger .comment-area:focus { border-color: var(--pink); }
+  .modal-actions { display: flex; gap: 0.7rem; }
+  .btn-save {
+    flex: 1; padding: 0.9rem;
+    background: var(--mint); color: white;
+    border: none; border-radius: 50px;
+    font-family: var(--font); font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-save:hover { background: var(--mint-dark); }
+  .page-younger .btn-save { background: var(--pink); }
+  .page-younger .btn-save:hover { background: var(--pink-dark); }
+  .btn-cancel {
+    padding: 0.9rem 1.2rem;
+    background: var(--gray-light); color: var(--text-light);
+    border: none; border-radius: 50px;
+    font-family: var(--font); font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .btn-delete {
+    padding: 0.9rem 1rem;
+    background: #fff0f0; color: #e05a5a;
+    border: none; border-radius: 50px;
+    font-family: var(--font); font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  /* ===== 設定画面 ===== */
+  .settings-section {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  .settings-header {
+    padding: 0.8rem 1rem;
+    background: var(--mint-light);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--mint-dark);
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .settings-row {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid #f5f5f5;
+    display: flex; align-items: center; gap: 0.7rem;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row input[type="text"] {
+    flex: 1; border: none; font-family: var(--font);
+    font-size: 0.9rem; outline: none; background: transparent;
+    color: var(--text);
+  }
+  .row-emoji { font-size: 1.1rem; }
+  .row-label { flex: 1; font-size: 0.9rem; }
+  .toggle {
+    position: relative; width: 44px; height: 24px; flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: #ddd; border-radius: 24px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .toggle-slider:before {
+    content: ''; position: absolute;
+    height: 18px; width: 18px;
+    left: 3px; bottom: 3px;
+    background: white; border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--mint); }
+  .page-younger .toggle input:checked + .toggle-slider { background: var(--pink); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+  .btn-add-item, .btn-remove-item {
+    padding: 0.4rem 0.8rem;
+    border-radius: 50px; border: none;
+    font-family: var(--font); font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .btn-add-item { background: var(--mint-light); color: var(--mint-dark); }
+  .btn-remove-item { background: #fff0f0; color: #e05a5a; }
+
+  /* ===== 週報・グラフ ===== */
+  .streak-bar {
+    background: white;
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+  }
+  .streak-title { font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.6rem; }
+  .streak-dots {
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  .streak-dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem;
+  }
+  .streak-dot.maru { background: var(--mint-light); color: var(--mint-dark); }
+  .streak-dot.batsu { background: #fff0f0; color: #e05a5a; }
+  .streak-dot.none { background: #f5f5f5; }
+
+  /* ===== ボトムナビ ===== */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
+    display: flex;
+    z-index: 10;
+  }
+  .nav-btn {
+    flex: 1; padding: 0.7rem 0.2rem;
+    border: none; background: none;
+    font-family: var(--font); font-size: 0.6rem;
+    cursor: pointer; color: var(--text-light);
+    display: flex; flex-direction: column;
+    align-items: center; gap: 2px;
+    transition: color 0.2s;
+  }
+  .nav-btn .nav-icon { font-size: 1.3rem; }
+  .nav-btn.active { color: var(--mint-dark); }
+  .nav-btn.active-pink { color: var(--pink-dark); }
+
+  /* ===== ローディング ===== */
+  .loading { text-align: center; padding: 2rem; color: var(--text-light); }
+  .spin {
+    display: inline-block; width: 24px; height: 24px;
+    border: 3px solid #e0e0e0;
+    border-top-color: var(--mint);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== トースト ===== */
+  .toast {
+    position: fixed; bottom: 5rem; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(50,50,50,0.85);
+    color: white; padding: 0.6rem 1.2rem;
+    border-radius: 50px; font-size: 0.85rem;
+    z-index: 200; opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  .no-data { text-align: center; padding: 2rem 1rem; color: var(--text-light); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-emoji">🦷</div>
+    <div class="login-title">矯正チェック日記</div>
+    <div class="login-sub">マウスピースをちゃんとつけてるかな？<br>毎日チェックして記録しよう！</div>
+    <button id="google-signin-btn" onclick="signIn()">
+      <svg class="google-logo" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Cloudflareから読み込む
+    </button>
+    <p id="login-msg" class="loading-msg" style="margin-top:1rem;"></p>
+  </div>
+</div>
+
+<!-- メイン画面 -->
+<div id="main-screen">
+  <!-- ヘッダー -->
+  <div class="header">
+    <div class="header-title">🦷 矯正チェック日記</div>
+    <div class="header-right">
+      <div class="user-avatar" id="user-avatar" onclick="showView('settings')">?</div>
+    </div>
+  </div>
+
+  <!-- ===== ホームビュー ===== -->
+  <div id="view-home" class="view-section">
+    <!-- タブ -->
+    <div class="tabs" style="margin-top:1rem;">
+      <button class="tab-btn tab-elder active" id="tab-elder" onclick="switchChild('elder')">
+        🌸 長女
+      </button>
+      <button class="tab-btn tab-younger" id="tab-younger" onclick="switchChild('younger')">
+        🌙 次女
+      </button>
+    </div>
+
+    <!-- 長女ページ -->
+    <div class="page active page-elder" id="page-elder">
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="changeMonth(-1, 'elder')">◀</button>
+        <div class="month-label" id="month-label-elder">2025年6月</div>
+        <button class="month-nav-btn" onclick="changeMonth(1, 'elder')">▶</button>
+      </div>
+      <div class="summary-cards" id="summary-elder"></div>
+      <div class="item-tabs" id="item-tabs-elder"></div>
+      <div class="calendar" id="calendar-elder"></div>
+      <div class="streak-bar" style="margin-top:1rem;">
+        <div class="streak-title">📅 今月の記録（平日）</div>
+        <div class="streak-dots" id="streak-elder"></div>
+      </div>
+    </div>
+
+    <!-- 次女ページ -->
+    <div class="page page-younger" id="page-younger">
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="changeMonth(-1, 'younger')">◀</button>
+        <div class="month-label" id="month-label-younger">2025年6月</div>
+        <button class="month-nav-btn" onclick="changeMonth(1, 'younger')">▶</button>
+      </div>
+      <div class="summary-cards" id="summary-younger"></div>
+      <div class="item-tabs" id="item-tabs-younger"></div>
+      <div class="calendar" id="calendar-younger"></div>
+      <div class="streak-bar" style="margin-top:1rem;">
+        <div class="streak-title">📅 今月の記録</div>
+        <div class="streak-dots" id="streak-younger"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 設定ビュー ===== -->
+  <div id="view-settings" class="view-section" style="display:none; padding: 1rem 1rem 6rem;">
+    <div style="font-weight:700; font-size:1rem; margin-bottom:1rem; color:var(--mint-dark);">⚙️ 設定</div>
+
+    <!-- 長女の設定 -->
+    <div class="settings-section">
+      <div class="settings-header">🌸 長女のチェック項目</div>
+      <div id="items-elder-settings"></div>
+      <div class="settings-row">
+        <button class="btn-add-item" onclick="addItem('elder')">＋ 項目を追加</button>
+      </div>
+    </div>
+
+    <!-- 次女の設定 -->
+    <div class="settings-section">
+      <div class="settings-header">🌙 次女のチェック項目</div>
+      <div id="items-younger-settings"></div>
+      <div class="settings-row">
+        <button class="btn-add-item" onclick="addItem('younger')">＋ 項目を追加</button>
+      </div>
+    </div>
+
+    <!-- アカウント -->
+    <div class="settings-section">
+      <div class="settings-header">👤 アカウント</div>
+      <div class="settings-row">
+        <span class="row-label" id="settings-user-name">ログイン中...</span>
+      </div>
+      <div class="settings-row">
+        <button class="btn-remove-item" onclick="signOut()" style="width:100%;">ログアウト</button>
+      </div>
+    </div>
+
+    <div style="text-align:center; font-size:0.75rem; color:var(--text-light); margin-top:1rem;">
+      データはCloudflare D1に自動保存されます 💾
+    </div>
+  </div>
+
+  <!-- ボトムナビ -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="showView('home')">
+      <span class="nav-icon">🏠</span>カレンダー
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="showView('settings')">
+      <span class="nav-icon">⚙️</span>設定
+    </button>
+  </div>
+</div>
+
+<!-- チェックモーダル -->
+<div class="modal-overlay hidden" id="check-modal" onclick="closeModalOutside(event)">
+  <div class="modal-sheet">
+    <div class="modal-title" id="modal-title">🦷 マウスピースチェック</div>
+    <div class="modal-date" id="modal-date"></div>
+    <div class="modal-choices">
+      <button class="choice-btn maru" id="choice-maru" onclick="selectChoice('maru')">
+        ⭕<span class="choice-label">つけた</span>
+      </button>
+      <button class="choice-btn batsu" id="choice-batsu" onclick="selectChoice('batsu')">
+        ❌<span class="choice-label">忘れた</span>
+      </button>
+      <button class="choice-btn none" id="choice-none" onclick="selectChoice('none')">
+        ➖<span class="choice-label">記録なし</span>
+      </button>
+    </div>
+    <textarea class="comment-area" id="modal-comment" rows="2" placeholder="メモ（省略OK）"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-save" id="modal-save" onclick="saveCheck()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== 設定 =====
+// Cloudflare Worker のURL。独自ドメインを使う場合はこのままでOK。
+const API_BASE = 'https://api.cetus.fun';
+
+// GitHubにパスワードを直書きしないため、初回入力した合言葉を端末内に保存します。
+const PASSWORD_STORAGE_KEY = 'cloudflare_app_password';
+function getAppPassword() {
+  try { return localStorage.getItem(PASSWORD_STORAGE_KEY) || ''; } catch(e) { return ''; }
+}
+function ensureAppPassword() {
+  let p = getAppPassword();
+  if (!p) {
+    p = prompt('Cloudflareの合言葉を入力してください');
+    if (p) {
+      try { localStorage.setItem(PASSWORD_STORAGE_KEY, p); } catch(e) {}
+    }
+  }
+  return p || '';
+}
+function clearAppPassword() {
+  try { localStorage.removeItem(PASSWORD_STORAGE_KEY); } catch(e) {}
+}
+const APP_ID = 'kyosei-check';
+const DATA_KEY = 'main';
+
+// ===== アプリ状態 =====
+let state = {
+  accessToken: null,
+  userInfo: null,
+  driveFileId: null,
+  data: null,
+  currentView: 'home',
+  currentChild: 'elder',
+  currentItemIndex: { elder: 0, younger: 0 },
+  currentMonth: { elder: null, younger: null },
+  modalState: { child: null, dateStr: null, itemIdx: null, choice: null }
+};
+
+// ===== デフォルトデータ構造 =====
+function defaultData() {
+  const now = new Date();
+  return {
+    version: 2,
+    lastUpdated: now.toISOString(),
+    children: {
+      elder: {
+        name: '長女',
+        emoji: '🌸',
+        items: [
+          { id: 'item1', name: '上マウスピース（日中）', emoji: '🦷', active: true, timeLabel: '朝・登校時' }
+        ],
+        records: {}
+      },
+      younger: {
+        name: '次女',
+        emoji: '🌙',
+        items: [
+          { id: 'item1', name: 'マウスピース（就寝時）', emoji: '🌙', active: true, timeLabel: '夜・寝る前' }
+        ],
+        records: {}
+      }
+    }
+  };
+}
+
+// ===== 月状態初期化 =====
+function initMonths() {
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if (!state.currentMonth.elder) state.currentMonth.elder = ym;
+  if (!state.currentMonth.younger) state.currentMonth.younger = ym;
+}
+
+// ===== Cloudflare読み込み・保存 =====
+function cloudHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  const p = getAppPassword();
+  if (p) h['X-App-Password'] = p;
+  return h;
+}
+
+function appDataUrl() {
+  return `${API_BASE}/api/app-data?app=${encodeURIComponent(APP_ID)}&key=${encodeURIComponent(DATA_KEY)}`;
+}
+
+async function signIn() {
+  if (!ensureAppPassword()) {
+    document.getElementById('login-msg').textContent = '合言葉を入力すると読み込めます。';
+    return;
+  }
+  document.getElementById('login-msg').textContent = 'Cloudflareから読み込み中...';
+  try {
+    await loadOrCreateData();
+    showMainScreen();
+  } catch (e) {
+    console.error(e);
+    if (String(e.message || e).includes('401')) {
+      clearAppPassword();
+      document.getElementById('login-msg').textContent = '⚠️ 合言葉が違うかもしれません。もう一度ボタンを押して入力してください。';
+    } else {
+      document.getElementById('login-msg').textContent = '⚠️ 読み込みに失敗しました。Worker設定を確認してください。';
+    }
+  }
+}
+
+async function silentSignIn() {
+  if (!getAppPassword()) return false;
+  try {
+    await loadOrCreateData();
+    showMainScreen();
+    return true;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
+
+function signOut() {
+  clearAppPassword();
+  // Cloudflare保存版ではログアウト処理はありません。
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-msg').textContent = '';
+}
+
+async function readCloudflareData() {
+  const r = await fetch(appDataUrl(), { headers: cloudHeaders() });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('load failed: ' + r.status);
+  const json = await r.json();
+  return json.data || json;
+}
+
+async function saveDriveFile(data) {
+  data.lastUpdated = new Date().toISOString();
+  const r = await fetch(appDataUrl(), {
+    method: 'PUT',
+    headers: cloudHeaders(),
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error('save failed: ' + r.status);
+}
+
+async function loadOrCreateData() {
+  const loaded = await readCloudflareData();
+  if (loaded) {
+    state.data = loaded;
+    if (!state.data.version || state.data.version < 2) {
+      state.data = Object.assign(defaultData(), state.data);
+      state.data.version = 2;
+      await saveDriveFile(state.data);
+    }
+  } else {
+    state.data = defaultData();
+    await saveDriveFile(state.data);
+  }
+}
+
+// ===== UI表示 =====
+function showMainScreen() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'block';
+  initMonths();
+  // アバター
+  const av = document.getElementById('user-avatar');
+  av.textContent = 'CF';
+  document.getElementById('settings-user-name').textContent = 'Cloudflare D1に保存中';
+  renderAll();
+}
+
+function renderAll() {
+  renderPage('elder');
+  renderPage('younger');
+  renderSettingsItems('elder');
+  renderSettingsItems('younger');
+}
+
+function showView(view) {
+  state.currentView = view;
+  document.getElementById('view-home').style.display = view === 'home' ? 'block' : 'none';
+  document.getElementById('view-settings').style.display = view === 'settings' ? 'block' : 'none';
+  document.getElementById('nav-home').classList.toggle('active', view === 'home');
+  document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
+  if (view === 'settings') renderAll();
+}
+
+function switchChild(child) {
+  state.currentChild = child;
+  document.getElementById('tab-elder').classList.toggle('active', child === 'elder');
+  document.getElementById('tab-younger').classList.toggle('active', child === 'younger');
+  document.getElementById('page-elder').classList.toggle('active', child === 'elder');
+  document.getElementById('page-younger').classList.toggle('active', child === 'younger');
+}
+
+function changeMonth(delta, child) {
+  const ym = state.currentMonth[child];
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  state.currentMonth[child] = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  renderPage(child);
+}
+
+// ===== カレンダー描画 =====
+function renderPage(child) {
+  if (!state.data) return;
+  const ym = state.currentMonth[child];
+  const [year, month] = ym.split('-').map(Number);
+  const childData = state.data.children[child];
+  const items = childData.items.filter(i => i.active);
+
+  // 月ラベル
+  document.getElementById(`month-label-${child}`).textContent = `${year}年${month}月`;
+
+  // 項目タブ
+  const itemTabsEl = document.getElementById(`item-tabs-${child}`);
+  itemTabsEl.innerHTML = '';
+  items.forEach((item, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'item-tab-btn' + (idx === (state.currentItemIndex[child] || 0) ? ' active' : '');
+    btn.textContent = item.emoji + ' ' + item.name;
+    btn.onclick = () => {
+      state.currentItemIndex[child] = idx;
+      renderPage(child);
+    };
+    itemTabsEl.appendChild(btn);
+  });
+
+  const itemIdx = state.currentItemIndex[child] || 0;
+  const item = items[itemIdx];
+  if (!item) {
+    document.getElementById(`calendar-${child}`).innerHTML = '<div class="no-data">チェック項目がありません<br>設定から追加してください</div>';
+    return;
+  }
+
+  // カレンダー
+  const calEl = document.getElementById(`calendar-${child}`);
+  const dows = ['日','月','火','水','木','金','土'];
+  const firstDay = new Date(year, month - 1, 1).getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  let html = '<div class="cal-header">';
+  dows.forEach((d, i) => {
+    const cls = i === 0 ? 'sun' : i === 6 ? 'sat' : '';
+    html += `<div class="cal-dow ${cls}">${d}</div>`;
+  });
+  html += '</div><div class="cal-body">';
+
+  for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month - 1, d);
+    const dow = dateObj.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const record = (childData.records[dateStr] || {})[item.id];
+    const check = record ? record.check : null;
+    const comment = record ? record.comment : '';
+
+    let cls = 'cal-day';
+    if (isWeekend) cls += ' weekend';
+    if (isToday) cls += ' today';
+    if (check) cls += ' has-check';
+
+    const isSun = dow === 0, isSat = dow === 6;
+    const numCls = isSun ? 'day-num sun' : isSat ? 'day-num sat' : 'day-num';
+
+    let markHtml = '';
+    if (check === 'maru') markHtml = '<span class="check-mark maru">⭕</span>';
+    else if (check === 'batsu') markHtml = '<span class="check-mark batsu">❌</span>';
+
+    const commentHtml = comment ? `<span class="day-comment">${escHtml(comment)}</span>` : '';
+
+    const clickable = !isWeekend || (child === 'younger'); // 次女は毎日OK
+    const onclickAttr = clickable ? `onclick="openModal('${child}',${itemIdx},'${dateStr}')"` : '';
+
+    html += `<div class="${cls}" ${onclickAttr}>
+      <span class="${numCls}">${d}</span>
+      ${markHtml}
+      ${commentHtml}
+    </div>`;
+  }
+  html += '</div>';
+  calEl.innerHTML = html;
+
+  // サマリー
+  renderSummary(child, childData, item, year, month);
+  // ストリーク
+  renderStreak(child, childData, item, year, month);
+}
+
+function renderSummary(child, childData, item, year, month) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let weekdayCount = 0, maruCount = 0, batsuCount = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month - 1, d);
+    const dow = dateObj.getDay();
+    const isTarget = child === 'younger' ? true : (dow !== 0 && dow !== 6);
+    if (!isTarget) continue;
+    weekdayCount++;
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const record = (childData.records[dateStr] || {})[item.id];
+    if (record && record.check === 'maru') maruCount++;
+    if (record && record.check === 'batsu') batsuCount++;
+  }
+  const pct = weekdayCount > 0 ? Math.round((batsuCount / weekdayCount) * 100) : 0;
+  const recordedDays = maruCount + batsuCount;
+
+  document.getElementById(`summary-${child}`).innerHTML = `
+    <div class="summary-card good">
+      <div class="s-label">⭕ つけた日</div>
+      <div class="s-value">${maruCount}日</div>
+    </div>
+    <div class="summary-card bad">
+      <div class="s-label">❌ 忘れた日</div>
+      <div class="s-value">${batsuCount}日</div>
+    </div>
+    <div class="summary-card neutral">
+      <div class="s-label">😬 忘れ率</div>
+      <div class="s-value">${pct}%</div>
+    </div>
+  `;
+}
+
+function renderStreak(child, childData, item, year, month) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const today = new Date();
+  let html = '';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month - 1, d);
+    const dow = dateObj.getDay();
+    const isTarget = child === 'younger' ? true : (dow !== 0 && dow !== 6);
+    if (!isTarget) continue;
+    const isFuture = dateObj > today;
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const record = (childData.records[dateStr] || {})[item.id];
+    const check = record ? record.check : null;
+    if (isFuture) {
+      html += `<div class="streak-dot none" title="${d}日">${d}</div>`;
+    } else if (check === 'maru') {
+      html += `<div class="streak-dot maru" title="${d}日">⭕</div>`;
+    } else if (check === 'batsu') {
+      html += `<div class="streak-dot batsu" title="${d}日">❌</div>`;
+    } else {
+      html += `<div class="streak-dot none" title="${d}日">${d}</div>`;
+    }
+  }
+  document.getElementById(`streak-${child}`).innerHTML = html;
+}
+
+// ===== モーダル =====
+function openModal(child, itemIdx, dateStr) {
+  const childData = state.data.children[child];
+  const items = childData.items.filter(i => i.active);
+  const item = items[itemIdx];
+  if (!item) return;
+
+  const [y, m, d] = dateStr.split('-');
+  const dateObj = new Date(parseInt(y), parseInt(m)-1, parseInt(d));
+  const dows = ['日','月','火','水','木','金','土'];
+  const dow = dateObj.getDay();
+
+  // 長女は平日のみ（次女は毎日）
+  if (child === 'elder' && (dow === 0 || dow === 6)) return;
+
+  state.modalState = { child, dateStr, itemIdx, choice: null };
+
+  const record = (childData.records[dateStr] || {})[item.id];
+  const existing = record ? record.check : null;
+  state.modalState.choice = existing;
+
+  document.getElementById('modal-title').textContent = item.emoji + ' ' + item.name;
+  document.getElementById('modal-date').textContent = `${y}年${parseInt(m)}月${parseInt(d)}日（${dows[dow]}）　${item.timeLabel || ''}`;
+  document.getElementById('modal-comment').value = record ? (record.comment || '') : '';
+
+  ['maru','batsu','none'].forEach(c => {
+    document.getElementById(`choice-${c}`).classList.toggle('selected', existing === c);
+  });
+
+  const modal = document.getElementById('check-modal');
+  modal.classList.remove('hidden');
+  // ページカラー
+  document.getElementById('modal-save').style.background = child === 'younger' ? 'var(--pink)' : 'var(--mint)';
+}
+
+function closeModal() {
+  document.getElementById('check-modal').classList.add('hidden');
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('check-modal')) closeModal();
+}
+
+function selectChoice(c) {
+  state.modalState.choice = c;
+  ['maru','batsu','none'].forEach(cc => {
+    document.getElementById(`choice-${cc}`).classList.toggle('selected', cc === c);
+  });
+}
+
+async function saveCheck() {
+  const { child, dateStr, itemIdx, choice } = state.modalState;
+  const comment = document.getElementById('modal-comment').value.trim();
+
+  const childData = state.data.children[child];
+  const items = childData.items.filter(i => i.active);
+  const item = items[itemIdx];
+  if (!item) return;
+
+  if (!childData.records[dateStr]) childData.records[dateStr] = {};
+  if (choice === 'none' || !choice) {
+    delete childData.records[dateStr][item.id];
+    if (Object.keys(childData.records[dateStr]).length === 0) {
+      delete childData.records[dateStr];
+    }
+  } else {
+    childData.records[dateStr][item.id] = { check: choice, comment };
+  }
+
+  closeModal();
+  renderPage(child);
+  showToast('保存中...');
+  try {
+    await saveDriveFile(state.data);
+    showToast('💾 保存しました！');
+  } catch(e) {
+    showToast('⚠️ 保存に失敗しました');
+  }
+}
+
+// ===== 設定 =====
+function renderSettingsItems(child) {
+  const childData = state.data.children[child];
+  const el = document.getElementById(`items-${child}-settings`);
+  el.innerHTML = '';
+  childData.items.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'settings-row';
+    row.innerHTML = `
+      <span class="row-emoji">${item.emoji || '🦷'}</span>
+      <input type="text" value="${escHtml(item.name)}" placeholder="項目名" oninput="updateItemName('${child}',${idx},this.value)">
+      <input type="text" value="${escHtml(item.timeLabel||'')}" placeholder="時間帯" style="max-width:80px; font-size:0.8rem; color:var(--text-light);" oninput="updateItemLabel('${child}',${idx},this.value)">
+      <label class="toggle"><input type="checkbox" ${item.active ? 'checked' : ''} onchange="toggleItem('${child}',${idx},this.checked)"><span class="toggle-slider"></span></label>
+      ${childData.items.length > 1 ? `<button class="btn-remove-item" onclick="removeItem('${child}',${idx})">✕</button>` : ''}
+    `;
+    el.appendChild(row);
+  });
+}
+
+function updateItemName(child, idx, val) {
+  state.data.children[child].items[idx].name = val;
+  debounceSave();
+}
+function updateItemLabel(child, idx, val) {
+  state.data.children[child].items[idx].timeLabel = val;
+  debounceSave();
+}
+function toggleItem(child, idx, val) {
+  state.data.children[child].items[idx].active = val;
+  renderPage(child);
+  debounceSave();
+}
+function addItem(child) {
+  const items = state.data.children[child].items;
+  const id = 'item' + Date.now();
+  items.push({ id, name: '新しい項目', emoji: '🦷', active: true, timeLabel: '' });
+  renderSettingsItems(child);
+  debounceSave();
+}
+function removeItem(child, idx) {
+  if (state.data.children[child].items.length <= 1) return;
+  if (!confirm('この項目を削除しますか？記録は残ります。')) return;
+  state.data.children[child].items.splice(idx, 1);
+  renderSettingsItems(child);
+  renderPage(child);
+  debounceSave();
+}
+
+let saveTimer = null;
+function debounceSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await saveDriveFile(state.data);
+      showToast('💾 保存しました');
+    } catch(e) {}
+  }, 1500);
+}
+
+// ===== ユーティリティ =====
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ===== 起動 =====
+window.addEventListener('load', async () => {
+  const ok = await silentSignIn();
+  if (!ok) {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-msg').textContent = '読み込めないときは、ボタンを押してください。';
+  }
+});
+</script>
+</body>
+</html>

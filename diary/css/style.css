@@ -1,0 +1,267 @@
+/* Base Reset & Variables */
+:root {
+    --font-main: 'Shippori Mincho', 'Yu Mincho', serif;
+    --color-bg: #fdfdfd;
+    --color-text: #2a2a2a;
+    --color-accent: #b93a3a;
+    /* Muted Red */
+    --color-nav-bg: rgba(0, 0, 0, 0.75);
+    --color-nav-text: #fff;
+    --hero-overlay: rgba(0, 0, 0, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: transparent;
+    /* Changed to show fixed background */
+    color: var(--color-text);
+    line-height: 1.8;
+    overflow-x: hidden;
+    opacity: 0;
+    /* JS Fade-in */
+    transition: opacity 1.5s ease-out;
+}
+
+body.loaded {
+    opacity: 1;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.3s;
+}
+
+/* Background Texture */
+.background-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Header (Title Overlay) */
+.site-header {
+    position: absolute;
+    top: 5vh;
+    left: 5vw;
+    z-index: 10;
+    text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+}
+
+.site-title {
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2rem;
+}
+
+.site-subtitle {
+    font-size: 1rem;
+    letter-spacing: 0.2em;
+    color: var(--color-accent);
+    font-weight: bold;
+}
+
+/* Hero Section */
+.hero-section {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    /* Keep nav inside */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Spacer for the fixed background */
+    background: transparent;
+}
+
+.hero-image-container {
+    position: fixed;
+    /* Fixed background */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    /* Behind everything */
+}
+
+.hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* Slanted Navigation */
+.slant-nav {
+    position: absolute;
+    bottom: 10%;
+    right: 5%;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.slant-nav ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.slant-nav li {
+    position: relative;
+    transform: skewX(-20deg);
+    /* The Slant */
+    background: var(--color-nav-bg);
+    padding: 0.8rem 2.5rem;
+    color: var(--color-nav-text);
+    text-align: right;
+    border-right: 4px solid var(--color-accent);
+    transition: transform 0.3s ease, background 0.3s ease, padding-right 0.3s ease;
+    cursor: pointer;
+}
+
+.slant-nav li:hover {
+    background: var(--color-accent);
+    padding-right: 3.5rem;
+}
+
+.slant-nav a {
+    display: block;
+    transform: skewX(20deg);
+    /* Un-slant text */
+    text-align: right;
+}
+
+.nav-en {
+    display: block;
+    font-family: sans-serif;
+    font-weight: bold;
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+    line-height: 1;
+}
+
+.nav-jp {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-top: 0.2rem;
+}
+
+/* Content Sections */
+.content-section {
+    padding: 6rem 10%;
+    min-height: 50vh;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1;
+    /* Glassmorphism gradient for smooth transition */
+    background: linear-gradient(to bottom,
+            rgba(253, 253, 253, 0) 0%,
+            rgba(253, 253, 253, 0.3) 20%,
+            rgba(253, 253, 253, 0.5) 100%);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    margin-top: -10vh;
+    /* Overlap slightly with hero */
+    padding-top: 15vh;
+}
+
+/* Reset margin top for following sections */
+.content-section+.content-section {
+    margin-top: 0;
+    padding-top: 6rem;
+    background: rgba(253, 253, 253, 0.5);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+h2 {
+    font-size: 1.8rem;
+    margin-bottom: 3rem;
+    border-left: 5px solid var(--color-accent);
+    padding-left: 1rem;
+    letter-spacing: 0.1em;
+}
+
+article {
+    margin-bottom: 3rem;
+}
+
+h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    font-weight: bold;
+}
+
+p {
+    margin-bottom: 1.5rem;
+    text-align: justify;
+}
+
+.log-list {
+    list-style: none;
+    border-top: 1px solid #ddd;
+}
+
+.log-list li {
+    padding: 1rem 0;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    gap: 2rem;
+}
+
+.date {
+    font-family: monospace;
+    color: #666;
+}
+
+/* Footer */
+.site-footer {
+    padding: 2rem;
+    text-align: center;
+    background: #111;
+    color: #fff;
+    font-size: 0.8rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .site-title {
+        font-size: 2rem;
+    }
+
+    .slant-nav {
+        right: 0;
+        bottom: 5%;
+    }
+
+    .slant-nav li {
+        padding: 0.8rem 1.5rem;
+    }
+
+    .content-section {
+        padding: 4rem 5%;
+    }
+}

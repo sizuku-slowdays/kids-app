@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>羽根の置き場</title>
+
+  <meta name="theme-color" content="#f8dce8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="羽根の置き場" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <style>
+    :root {
+      --bg: #fff8fb;
+      --card: #ffffff;
+      --main: #d96c93;
+      --main-dark: #b94f75;
+      --soft: #f8dce8;
+      --text: #4a3a40;
+      --muted: #8a747c;
+      --border: #f0c8d8;
+      --shadow: rgba(120, 70, 90, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+        "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, #ffeef5 0, transparent 35%),
+        radial-gradient(circle at bottom right, #fff0d8 0, transparent 35%),
+        var(--bg);
+    }
+
+    .page {
+      width: min(900px, 100%);
+      margin: 0 auto;
+      padding: 24px 16px 56px;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px 8px 18px;
+    }
+
+    .logo {
+      font-size: 42px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0.08em;
+      color: var(--main-dark);
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 10px 30px var(--shadow);
+      padding: 18px;
+      backdrop-filter: blur(8px);
+    }
+
+    .form-card { margin-bottom: 22px; }
+
+    label {
+      display: block;
+      margin: 0 0 7px;
+      font-weight: 700;
+      color: var(--main-dark);
+      font-size: 14px;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 13px 14px;
+      font-size: 16px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--main);
+      box-shadow: 0 0 0 4px rgba(217, 108, 147, 0.14);
+    }
+
+    textarea {
+      min-height: 170px;
+      resize: vertical;
+      line-height: 1.7;
+    }
+
+    .field { margin-bottom: 16px; }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .save-btn {
+      background: var(--main);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(217, 108, 147, 0.28);
+    }
+
+    .reload-btn {
+      background: var(--soft);
+      color: var(--main-dark);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status.ok { color: #3f8a5a; }
+    .status.error { color: #c04444; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 26px 4px 14px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      color: var(--main-dark);
+      font-size: 20px;
+    }
+
+    .count {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .entries {
+      display: grid;
+      gap: 14px;
+    }
+
+    .entry {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 8px 22px var(--shadow);
+    }
+
+    .entry-title {
+      margin: 0 0 8px;
+      font-size: 18px;
+      color: var(--main-dark);
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .entry-date {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .entry-body {
+      margin: 0;
+      white-space: pre-wrap;
+      line-height: 1.8;
+      word-break: break-word;
+      font-size: 15px;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 26px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .small-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 560px) {
+      .page { padding: 18px 12px 44px; }
+      h1 { font-size: 26px; }
+      .card { padding: 15px; }
+      button { width: 100%; }
+      .buttons { gap: 8px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <header>
+      <div class="logo">🪽</div>
+      <h1>羽根の置き場</h1>
+      <p class="subtitle">今日の気持ちを、そっと置いていく場所。</p>
+    </header>
+
+    <main>
+      <section class="card form-card">
+        <div class="field">
+          <label for="password">パスワード</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="パスワードを入力"
+            autocomplete="current-password"
+          />
+        </div>
+
+        <button id="savePasswordBtn" class="reload-btn" type="button">
+  　　　　この端末に保存
+　　　　 </button>
+
+        <div class="field">
+          <label for="title">タイトル</label>
+          <input
+            id="title"
+            type="text"
+            maxlength="100"
+            placeholder="例：今日のこと"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="field">
+          <label for="body">本文</label>
+          <textarea
+            id="body"
+            maxlength="5000"
+            placeholder="ここに日記を書いてね。"
+          ></textarea>
+        </div>
+
+        <div class="buttons">
+          <button id="saveBtn" class="save-btn" type="button">保存する</button>
+          <button id="reloadBtn" class="reload-btn" type="button">一覧を読む</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </section>
+
+      <div class="section-title">
+        <h2>日記一覧</h2>
+        <div id="count" class="count"></div>
+      </div>
+
+      <section id="entries" class="entries">
+        <div class="empty">パスワードを入力して「一覧を読む」を押してね。</div>
+      </section>
+
+      <p class="small-note">
+        ※ パスワードはこのHTMLには保存していません。<br />
+        保存先は Cloudflare D1 です。
+      </p>
+    </main>
+  </div>
+<script>
+  const API_BASE = "https://api.cetus.fun";
+
+  const passwordInput = document.getElementById("password");
+  const titleInput = document.getElementById("title");
+  const bodyInput = document.getElementById("body");
+  const saveBtn = document.getElementById("saveBtn");
+  const reloadBtn = document.getElementById("reloadBtn");
+  const savePasswordBtn = document.getElementById("savePasswordBtn");
+  const statusEl = document.getElementById("status");
+  const entriesEl = document.getElementById("entries");
+  const countEl = document.getElementById("count");
+
+  saveBtn.addEventListener("click", saveDiary);
+  reloadBtn.addEventListener("click", loadDiary);
+  
+async function deleteDiary(id) {
+  if (!checkPassword()) return;
+
+  if (!confirm("この日記を削除しますか？")) {
+    return;
+  }
+
+  showStatus("削除しています…", "");
+
+  try {
+    const response = await fetch(`${API_BASE}/api/diary`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "X-App-Password": getPassword()
+      },
+      body: JSON.stringify({ id })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "削除に失敗しました。");
+    }
+
+    showStatus("削除しました。", "ok");
+    await loadDiary();
+  } catch (error) {
+    showStatus(`削除できませんでした：${error.message}`, "error");
+  }
+}
+  document.addEventListener("DOMContentLoaded", () => {
+    const savedPassword = localStorage.getItem("hane_password");
+
+    if (savedPassword) {
+      passwordInput.value = savedPassword;
+      showStatus("保存済みパスワードを読み込みました。", "ok");
+    }
+  });
+
+  savePasswordBtn.addEventListener("click", () => {
+    const password = getPassword();
+
+    if (!password) {
+      showStatus("保存するパスワードを入力してね。", "error");
+      passwordInput.focus();
+      return;
+    }
+
+    localStorage.setItem("hane_password", password);
+    showStatus("この端末にパスワードを保存しました。", "ok");
+  });
+
+  function getPassword() {
+    return passwordInput.value.trim();
+  }
+
+  function checkPassword() {
+    if (!getPassword()) {
+      showStatus("パスワードを入力してね。", "error");
+      passwordInput.focus();
+      return false;
+    }
+    return true;
+  }
+
+  async function saveDiary() {
+    if (!checkPassword()) return;
+
+    const title = titleInput.value.trim();
+    const body = bodyInput.value.trim();
+
+    if (!title) {
+      showStatus("タイトルを入力してね。", "error");
+      titleInput.focus();
+      return;
+    }
+
+    if (!body) {
+      showStatus("本文を入力してね。", "error");
+      bodyInput.focus();
+      return;
+    }
+
+    saveBtn.disabled = true;
+    reloadBtn.disabled = true;
+    showStatus("保存しています…", "");
+
+    try {
+      const response = await fetch(`${API_BASE}/api/diary`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-App-Password": getPassword()
+        },
+        body: JSON.stringify({ title, body })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "保存に失敗しました。");
+      }
+
+      titleInput.value = "";
+      bodyInput.value = "";
+
+      showStatus("保存しました。", "ok");
+      await loadDiary();
+    } catch (error) {
+      showStatus(`保存できませんでした：${error.message}`, "error");
+    } finally {
+      saveBtn.disabled = false;
+      reloadBtn.disabled = false;
+    }
+  }
+
+  async function loadDiary() {
+    if (!checkPassword()) return;
+
+    reloadBtn.disabled = true;
+    showStatus("読み込んでいます…", "");
+
+    try {
+      const response = await fetch(`${API_BASE}/api/diary`, {
+        headers: {
+          "X-App-Password": getPassword()
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "読み込みに失敗しました。");
+      }
+
+      renderEntries(data.entries || []);
+      showStatus("読み込みました。", "ok");
+    } catch (error) {
+      entriesEl.innerHTML = "";
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = `日記を読み込めませんでした：${error.message}`;
+      entriesEl.appendChild(empty);
+      countEl.textContent = "";
+      showStatus(`読み込みできませんでした：${error.message}`, "error");
+    } finally {
+      reloadBtn.disabled = false;
+    }
+  }
+
+  function renderEntries(entries) {
+    entriesEl.innerHTML = "";
+    countEl.textContent = `${entries.length}件`;
+
+    if (entries.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "まだ日記がありません。最初の一枚を書いてみよう。";
+      entriesEl.appendChild(empty);
+      return;
+    }
+
+    for (const entry of entries) {
+      const article = document.createElement("article");
+      article.className = "entry";
+
+      const title = document.createElement("h3");
+      title.className = "entry-title";
+      title.textContent = entry.title;
+
+      const date = document.createElement("div");
+      date.className = "entry-date";
+      date.textContent = formatDate(entry.created_at);
+
+      const body = document.createElement("p");
+      body.className = "entry-body";
+      body.textContent = entry.body;
+
+article.appendChild(title);
+article.appendChild(date);
+article.appendChild(body);
+
+const deleteBtn = document.createElement("button");
+deleteBtn.className = "reload-btn";
+deleteBtn.type = "button";
+deleteBtn.textContent = "削除";
+deleteBtn.style.marginTop = "12px";
+deleteBtn.addEventListener("click", () => deleteDiary(entry.id));
+
+article.appendChild(deleteBtn);
+
+entriesEl.appendChild(article);
+    }
+  }
+
+  function formatDate(value) {
+    if (!value) return "";
+
+    const normalized = value.includes("T")
+      ? value
+      : value.replace(" ", "T") + "Z";
+
+    const date = new Date(normalized);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(date);
+  }
+
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = "status";
+
+    if (type) {
+      statusEl.classList.add(type);
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social | Hane no Okiba</title>
+    <!-- Google Fonts: Zen Maru Gothic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="css/diary.css">
+    <style>
+        /* Specific styles for Social page */
+        .social-container {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .social-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: center;
+        }
+
+        .social-note {
+            text-align: center;
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="main-header">
+            <div class="logo">
+                <i class="fa-brands fa-twitter"></i>
+                <h1><a href="index.html" style="text-decoration:none; color:inherit;">Social</a></h1>
+            </div>
+            <a href="index.html" class="btn btn-text">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+        </header>
+
+        <main id="main-content">
+            <div class="social-container">
+                <p class="social-note">
+                    Twitter (X) の埋め込みコードをここに貼り付けて表示できます。
+                </p>
+
+                <!-- Example Placeholder for Twitter Embed --><a class="twitter-timeline"
+                    href="https://twitter.com/baten_love2?ref_src=twsrc%5Etfw">Tweets by baten_love2</a>
+                <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+                <!-- <div class="social-item">
+                    (Paste Twitter Embed Code Here)
+                </div> -->
+
+                <div class="social-item">
+                    <p>ここにツイートが表示されます</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Hane no Okiba</p>
+        </footer>
+    </div>
+
+
+</body>
+
+</html>

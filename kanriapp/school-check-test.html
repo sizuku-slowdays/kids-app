@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>学校チェック送信テスト</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <h1>学校チェック送信テスト</h1>
+
+  <button onclick="sendTest()">
+    長女の朝の用意をテスト送信
+  </button>
+
+  <script>
+    const API_BASE = "https://api.cetus.fun";
+
+    async function sendTest() {
+      const report = {
+        child: "elder",
+        tab: "morning",
+        completed: 5,
+        total: 7,
+        unchecked: ["帽子", "水筒"],
+        message: "できたよ！"
+      };
+
+      const res = await fetch(`${API_BASE}/api/school-report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(report)
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        alert("送信できた！");
+      } else {
+        alert("送信失敗");
+      }
+    }
+  </script>
+</body>
+</html>

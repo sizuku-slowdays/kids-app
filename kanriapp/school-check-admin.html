@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>学校チェック 管理画面</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #fff7fb;
+      margin: 0;
+      padding: 16px;
+      color: #444;
+    }
+
+    h1 {
+      text-align: center;
+      color: #d36b9d;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 16px;
+      margin: 14px 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .child {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .tab {
+      margin-top: 6px;
+      font-size: 18px;
+    }
+
+    .count {
+      margin-top: 8px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #d36b9d;
+    }
+
+    .unchecked {
+      margin-top: 10px;
+      background: #fff1f1;
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .message {
+      margin-top: 10px;
+      background: #f2f8ff;
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .time {
+      font-size: 13px;
+      color: #888;
+      margin-top: 8px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: #d36b9d;
+      color: white;
+      font-size: 17px;
+      font-weight: bold;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>📋 学校チェック管理画面</h1>
+
+  <button onclick="loadReports()">最新にする</button>
+
+  <div id="reports"></div>
+
+  <script>
+    const API_BASE = "https://api.cetus.fun";
+
+    const CHILD_NAMES = {
+      elder: "長女",
+      younger: "次女"
+    };
+
+    const TAB_NAMES = {
+      morning: "🌞 朝の用意",
+      school: "🎒 明日の学校準備",
+      after: "🏠 帰宅後",
+      night: "🌙 寝る前"
+    };
+
+    function formatTime(iso) {
+      const d = new Date(iso);
+      return d.toLocaleString("ja-JP", {
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    async function loadReports() {
+      const box = document.getElementById("reports");
+      box.innerHTML = "読み込み中...";
+
+      try {
+        const res = await fetch(`${API_BASE}/api/school-report`);
+        const data = await res.json();
+
+        if (!data.ok) {
+          box.innerHTML = "読み込みに失敗しました。";
+          return;
+        }
+
+        if (!data.reports.length) {
+          box.innerHTML = "<p>まだ報告はありません。</p>";
+          return;
+        }
+
+        box.innerHTML = data.reports.map(report => {
+          let unchecked = [];
+          try {
+            unchecked = JSON.parse(report.unchecked || "[]");
+          } catch(e) {}
+
+          const uncheckedHtml = unchecked.length
+            ? `<div class="unchecked">⚠️ 未チェック<br>${unchecked.map(x => `・${x}`).join("<br>")}</div>`
+            : `<div class="unchecked">✅ 未チェックなし</div>`;
+
+          return `
+            <div class="card">
+              <div class="child">${CHILD_NAMES[report.child] || report.child}</div>
+              <div class="tab">${TAB_NAMES[report.tab] || report.tab}</div>
+              <div class="count">${report.completed} / ${report.total} 完了</div>
+              ${uncheckedHtml}
+              ${report.message ? `<div class="message">💬 ${report.message}</div>` : ""}
+              <div class="time">送信：${formatTime(report.created_at)}</div>
+            </div>
+          `;
+        }).join("");
+
+      } catch (e) {
+        box.innerHTML = "エラーが出ました。";
+      }
+    }
+
+    loadReports();
+  </script>
+</body>
+</html>

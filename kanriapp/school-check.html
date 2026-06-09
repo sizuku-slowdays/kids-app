@@ -603,6 +603,12 @@
 </div>
 
 <script>
+ // school-check からの呼び出し対応
+const _scReturnUrl = new URLSearchParams(location.search).get('return'); 
+  if (_scReturnUrl) {
+  location.href = decodeURIComponent(_scReturnUrl);
+  return;
+}
 // ============================================================
 // STATE
 // ============================================================

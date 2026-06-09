@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>ポイっ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&display=swap');
+
+  :root {
+    --sky1: #b8e4ff;
+    --sky2: #dff0ff;
+    --sky3: #f5f0ff;
+    --pink1: #ffb3d9;
+    --pink2: #ffd6ec;
+    --purple1: #c9b3ff;
+    --purple2: #e8deff;
+    --mint1: #b3f0e0;
+    --yellow1: #fff4b3;
+    --white: #ffffff;
+    --text-dark: #5a4a6a;
+    --text-mid: #8a7a9a;
+    --shadow: rgba(180,150,220,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%; min-height: 100vh;
+    font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'BIZ UDPGothic', sans-serif;
+    background: linear-gradient(170deg, var(--sky1) 0%, var(--sky2) 35%, var(--sky3) 70%, var(--purple2) 100%);
+    overflow-x: hidden;
+    color: var(--text-dark);
+    user-select: none;
+  }
+
+  /* ---- CANVAS BG ---- */
+  #bgCanvas {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ---- WRAPPER ---- */
+  #app {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    padding: 24px 20px 40px;
+  }
+
+  /* ---- SCREENS ---- */
+  .screen { width: 100%; max-width: 440px; display: none; flex-direction: column; align-items: center; }
+  .screen.active { display: flex; }
+
+  /* ---- TITLE SCREEN ---- */
+  #titleArea {
+    margin-top: 16px;
+    text-align: center;
+    animation: floatY 3.5s ease-in-out infinite;
+  }
+  .title-emoji { font-size: 52px; display: block; margin-bottom: 4px; animation: spinBounce 4s ease-in-out infinite; }
+  .app-title {
+    font-size: 48px; font-weight: 900;
+    background: linear-gradient(135deg, #e86bcf, #9b6bff, #6bbfff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 4px;
+    text-shadow: none;
+    filter: drop-shadow(0 2px 8px rgba(180,100,255,0.25));
+  }
+  .app-subtitle {
+    margin-top: 10px;
+    font-size: 15px; font-weight: 700;
+    color: var(--text-mid);
+    line-height: 1.7;
+  }
+
+  /* ---- CARD ---- */
+  .card {
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 28px;
+    padding: 24px 20px;
+    box-shadow: 0 8px 32px var(--shadow), 0 1px 0 rgba(255,255,255,0.9) inset;
+    width: 100%;
+  }
+
+  /* ---- TEXTAREA ---- */
+  .input-label {
+    font-size: 13px; font-weight: 700;
+    color: var(--text-mid);
+    margin-bottom: 8px;
+    display: block; letter-spacing: 0.5px;
+  }
+  #inputArea {
+    width: 100%; min-height: 150px;
+    border: 2.5px solid var(--purple2);
+    border-radius: 18px;
+    padding: 16px;
+    font-size: 17px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: rgba(255,255,255,0.9);
+    resize: none;
+    outline: none;
+    line-height: 1.7;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #inputArea:focus {
+    border-color: var(--purple1);
+    box-shadow: 0 0 0 4px rgba(180,150,255,0.18);
+  }
+  #inputArea::placeholder { color: #c0b0d0; }
+
+  /* ---- MODE BUTTONS ---- */
+  .mode-btns {
+    display: flex; gap: 12px;
+    margin-top: 18px;
+  }
+  .btn {
+    flex: 1; padding: 16px 8px;
+    border: none; border-radius: 20px;
+    font-family: inherit; font-weight: 900;
+    font-size: 18px; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+    position: relative; overflow: hidden;
+    letter-spacing: 1px;
+  }
+  .btn:active { transform: scale(0.95); }
+
+  .btn-fly {
+    background: linear-gradient(135deg, #9b6bff, #6bbfff);
+    color: white;
+    box-shadow: 0 6px 20px rgba(150,100,255,0.35);
+  }
+  .btn-fly:hover { filter: brightness(1.07); box-shadow: 0 8px 24px rgba(150,100,255,0.5); }
+
+  .btn-tear {
+    background: linear-gradient(135deg, #ff7eb3, #ffbe6b);
+    color: white;
+    box-shadow: 0 6px 20px rgba(255,100,150,0.32);
+  }
+  .btn-tear:hover { filter: brightness(1.07); box-shadow: 0 8px 24px rgba(255,100,150,0.45); }
+
+  /* ---- ANIMATE SCREEN ---- */
+  #animScreen {
+    position: fixed; z-index: 50;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(170deg, var(--sky1) 0%, var(--sky2) 40%, var(--purple2) 100%);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  #animScreen.active { display: flex; }
+  #animCanvas {
+    width: 100%; height: 100%;
+    position: absolute; top: 0; left: 0;
+  }
+
+  /* ---- PAPER (shredder mode) ---- */
+  #paperWrap {
+    position: relative; z-index: 10;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  #paperEl {
+    background: white;
+    border-radius: 10px;
+    padding: 20px 24px;
+    max-width: 280px;
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--text-dark);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    text-align: center;
+    word-break: break-all;
+    cursor: pointer;
+    transition: transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  #paperEl:active { transform: scale(0.97); }
+  #tapHint {
+    margin-top: 16px;
+    font-size: 14px; font-weight: 700;
+    color: var(--text-mid);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  /* ---- RESULT SCREEN ---- */
+  #resultScreen {
+    position: fixed; z-index: 60;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(160deg, #fff0fa 0%, #f0f0ff 50%, #e8f8ff 100%);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px;
+  }
+  #resultScreen.active { display: flex; }
+
+  .result-title {
+    font-size: 28px; font-weight: 900;
+    color: #9b6bff;
+    text-align: center;
+    line-height: 1.5;
+    animation: bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .result-sub {
+    margin-top: 10px;
+    font-size: 16px; font-weight: 700;
+    color: var(--text-mid);
+    text-align: center;
+    animation: fadeInUp 0.5s 0.2s both;
+  }
+
+  /* ---- UNICORN ---- */
+  #unicornWrap {
+    margin-top: 28px;
+    position: relative;
+    animation: floatY 3s ease-in-out infinite, fadeInUp 0.5s 0.4s both;
+  }
+  #unicornSvg { width: 160px; height: 160px; }
+  .speech-bubble {
+    position: absolute;
+    top: -44px; left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-size: 17px; font-weight: 900;
+    color: #9b6bff;
+    box-shadow: 0 4px 16px rgba(150,100,255,0.2);
+    white-space: nowrap;
+    animation: bubblePop 0.4s 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+    transform-origin: center bottom;
+  }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px; left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: white;
+  }
+
+  /* ---- RESET BTN ---- */
+  .btn-reset {
+    margin-top: 32px;
+    background: linear-gradient(135deg, #ffb3d9, #c9b3ff);
+    color: white;
+    font-size: 17px; font-weight: 900;
+    padding: 16px 36px;
+    border: none; border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(200,100,200,0.3);
+    font-family: inherit;
+    transition: transform 0.15s, box-shadow 0.15s;
+    animation: fadeInUp 0.5s 0.8s both;
+  }
+  .btn-reset:active { transform: scale(0.95); }
+
+  /* ---- RESULT CANVAS ---- */
+  #resultCanvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  /* ---- ANIMATIONS ---- */
+  @keyframes floatY {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes spinBounce {
+    0%,100% { transform: rotate(-8deg) scale(1); }
+    50% { transform: rotate(8deg) scale(1.12); }
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  @keyframes bounceIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes fadeInUp {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes bubblePop {
+    0% { transform: translateX(-50%) scale(0); opacity: 0; }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
+  }
+
+  /* crack SVG overlay */
+  #crackSvg {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<div id="app">
+  <!-- INPUT SCREEN -->
+  <div id="inputScreen" class="screen active">
+    <div id="titleArea">
+      <span class="title-emoji">✉️</span>
+      <div class="app-title">ポイっ</div>
+      <div class="app-subtitle">いやだったことを書いて<br>お空へ飛ばしてしまおう ✨</div>
+    </div>
+
+    <div class="card" style="margin-top:28px;">
+      <label class="input-label">📝 いやだったこと</label>
+      <textarea id="inputArea" placeholder="・友達とけんかした&#10;・宿題が大変だった&#10;・今日は疲れた&#10;・ゲームで負けた"></textarea>
+      <div class="mode-btns">
+        <button class="btn btn-fly" id="flyBtn" onclick="startFly()">✈️ 飛ばす</button>
+        <button class="btn btn-tear" id="tearBtn" onclick="startTear()">🧻 やぶる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ANIMATION SCREEN (fly / tear) -->
+<div id="animScreen">
+  <canvas id="animCanvas"></canvas>
+  <div id="paperWrap" style="display:none;">
+    <div id="paperEl" onclick="tapPaper()">
+      <svg id="crackSvg" viewBox="0 0 280 160" xmlns="http://www.w3.org/2000/svg"></svg>
+      <span id="paperText"></span>
+    </div>
+    <div id="tapHint">タップしてやぶろう！</div>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="resultScreen">
+  <canvas id="resultCanvas"></canvas>
+  <div class="result-title">✨ よくがんばったね ✨</div>
+  <div class="result-sub">いやなことは空へ飛んでいったよ</div>
+  <div id="unicornWrap">
+    <div class="speech-bubble">だいじょうぶ！</div>
+    <svg id="unicornSvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <!-- body -->
+      <ellipse cx="105" cy="130" rx="55" ry="40" fill="#ffe0f0"/>
+      <!-- head -->
+      <circle cx="75" cy="90" r="32" fill="#ffe0f0"/>
+      <!-- ear -->
+      <polygon points="60,62 54,45 72,58" fill="#ffb3d9"/>
+      <!-- horn -->
+      <polygon points="75,58 68,30 82,30" fill="#ffd700"/>
+      <line x1="75" y1="58" x2="75" y2="30" stroke="#ffbe00" stroke-width="1.5"/>
+      <!-- mane -->
+      <path d="M72 60 Q55 75 58 95" stroke="#c9b3ff" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <path d="M78 58 Q64 72 66 90" stroke="#ffb3d9" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <!-- eye -->
+      <ellipse cx="65" cy="88" rx="5" ry="6" fill="#7a5a8a"/>
+      <circle cx="63.5" cy="86.5" r="1.5" fill="white"/>
+      <!-- blush -->
+      <ellipse cx="55" cy="97" rx="7" ry="4" fill="#ffb3d9" opacity="0.7"/>
+      <!-- mouth -->
+      <path d="M62 100 Q65 105 70 100" stroke="#c07090" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <!-- legs -->
+      <rect x="80" y="162" width="12" height="30" rx="6" fill="#ffe0f0"/>
+      <rect x="98" y="165" width="12" height="28" rx="6" fill="#ffe0f0"/>
+      <rect x="116" y="162" width="12" height="30" rx="6" fill="#ffe0f0"/>
+      <rect x="134" y="164" width="12" height="28" rx="6" fill="#ffe0f0"/>
+      <!-- hooves -->
+      <rect x="80" y="188" width="12" height="8" rx="4" fill="#c9b3ff"/>
+      <rect x="98" y="189" width="12" height="7" rx="4" fill="#c9b3ff"/>
+      <rect x="116" y="188" width="12" height="8" rx="4" fill="#c9b3ff"/>
+      <rect x="134" y="188" width="12" height="7" rx="4" fill="#c9b3ff"/>
+      <!-- tail -->
+      <path d="M158 128 Q180 110 172 90 Q165 72 178 60" stroke="#c9b3ff" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path d="M158 132 Q185 118 176 96 Q168 78 182 68" stroke="#ffb3d9" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <!-- wing sparkle -->
+      <path d="M108 115 Q95 100 80 108" stroke="#b3f0e0" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M108 122 Q90 112 76 120" stroke="#b3f0e0" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <button class="btn-reset" onclick="resetAll()">🌈 もういちど</button>
+</div>
+
+<script>
+// ---- BG CANVAS: clouds + sparkles ----
+(function() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  const clouds = [], sparkles = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 5; i++) {
+    clouds.push({
+      x: Math.random() * window.innerWidth,
+      y: 40 + Math.random() * (window.innerHeight * 0.45),
+      r: 38 + Math.random() * 36,
+      speed: 0.18 + Math.random() * 0.22,
+      opacity: 0.55 + Math.random() * 0.3
+    });
+  }
+  for (let i = 0; i < 28; i++) {
+    sparkles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      size: 1.5 + Math.random() * 3,
+      speed: 0.3 + Math.random() * 0.5,
+      phase: Math.random() * Math.PI * 2,
+      color: ['#ffb3d9','#c9b3ff','#b3f0e0','#fff4b3','#6bbfff'][Math.floor(Math.random()*5)]
+    });
+  }
+
+  function drawCloud(c) {
+    ctx.save();
+    ctx.globalAlpha = c.opacity;
+    ctx.fillStyle = 'white';
+    ctx.shadowColor = 'rgba(180,200,255,0.3)';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    ctx.arc(c.x + c.r * 0.8, c.y + 8, c.r * 0.75, 0, Math.PI * 2);
+    ctx.arc(c.x - c.r * 0.7, c.y + 6, c.r * 0.65, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSparkle(s, t) {
+    const alpha = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    const r = s.size;
+    ctx.moveTo(s.x, s.y - r * 2);
+    ctx.lineTo(s.x + r * 0.4, s.y - r * 0.4);
+    ctx.lineTo(s.x + r * 2, s.y);
+    ctx.lineTo(s.x + r * 0.4, s.y + r * 0.4);
+    ctx.lineTo(s.x, s.y + r * 2);
+    ctx.lineTo(s.x - r * 0.4, s.y + r * 0.4);
+    ctx.lineTo(s.x - r * 2, s.y);
+    ctx.lineTo(s.x - r * 0.4, s.y - r * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  let t = 0;
+  function loop() {
+    ctx.clearRect(0, 0, W, H);
+    clouds.forEach(c => {
+      c.x += c.speed;
+      if (c.x - c.r * 1.8 > W) c.x = -c.r * 2;
+      drawCloud(c);
+    });
+    sparkles.forEach(s => drawSparkle(s, t));
+    t += 0.04;
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// ---- FLY MODE ----
+let flyAnim = null;
+let resultAnim = null;
+
+function startFly() {
+  const text = document.getElementById('inputArea').value.trim();
+  if (!text) { shake(document.getElementById('inputArea')); return; }
+
+  const screen = document.getElementById('animScreen');
+  const canvas = document.getElementById('animCanvas');
+  screen.style.display = 'flex';
+  screen.style.zIndex = 50;
+  document.getElementById('paperWrap').style.display = 'none';
+
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const W = canvas.width, H = canvas.height;
+  const startX = W / 2, startY = H * 0.65;
+  let px = startX, py = startY;
+  let scale = 1, angle = 0, alpha = 1;
+  let phase = 'fly'; // fly → star → done
+  let starT = 0;
+  const particles = [];
+
+  function drawPaperPlane(cx, cy, sc, rot, al) {
+    ctx.save();
+    ctx.globalAlpha = al;
+    ctx.translate(cx, cy);
+    ctx.scale(sc, sc);
+    ctx.rotate(rot);
+    // shadow
+    ctx.shadowColor = 'rgba(150,100,255,0.25)';
+    ctx.shadowBlur = 14;
+    // body
+    ctx.beginPath();
+    ctx.moveTo(0, -18);
+    ctx.lineTo(32, 8);
+    ctx.lineTo(0, 2);
+    ctx.lineTo(-32, 8);
+    ctx.closePath();
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    ctx.strokeStyle = '#c9b3ff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // crease
+    ctx.beginPath();
+    ctx.moveTo(0, -18);
+    ctx.lineTo(0, 2);
+    ctx.strokeStyle = '#ddd0ff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // wing fold
+    ctx.beginPath();
+    ctx.moveTo(-32, 8);
+    ctx.lineTo(0, 2);
+    ctx.lineTo(32, 8);
+    ctx.strokeStyle = '#e0d8ff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function spawnStarParticles(cx, cy) {
+    const colors = ['#ffb3d9','#c9b3ff','#fff4b3','#b3f0e0','#6bbfff','#ffd700'];
+    for (let i = 0; i < 50; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 1.5 + Math.random() * 5;
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        size: 2 + Math.random() * 5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: 1, life: 1,
+        rot: Math.random() * Math.PI * 2,
+        rotV: (Math.random() - 0.5) * 0.2
+      });
+    }
+  }
+
+  function drawStar(x, y, r, rot, al, col) {
+    ctx.save();
+    ctx.globalAlpha = al;
+    ctx.fillStyle = col;
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a1 = (i * 4 * Math.PI / 5) - Math.PI / 2;
+      const a2 = (i * 4 * Math.PI / 5 + 2 * Math.PI / 5) - Math.PI / 2;
+      ctx.lineTo(Math.cos(a1) * r, Math.sin(a1) * r);
+      ctx.lineTo(Math.cos(a2) * r * 0.45, Math.sin(a2) * r * 0.45);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // draw bg clouds in anim canvas
+  function drawBgClouds(ctx, W, H) {
+    ctx.save();
+    ctx.fillStyle = 'white';
+    [[W*0.15,H*0.18,50],[W*0.7,H*0.12,40],[W*0.45,H*0.25,35],[W*0.85,H*0.22,30]].forEach(([x,y,r]) => {
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.arc(x+r*0.8,y+8,r*0.75,0,Math.PI*2);
+      ctx.arc(x-r*0.7,y+6,r*0.65,0,Math.PI*2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  const totalFlyFrames = 90;
+  let frame = 0;
+
+  if (flyAnim) cancelAnimationFrame(flyAnim);
+
+  function animate() {
+    ctx.clearRect(0, 0, W, H);
+    drawBgClouds(ctx, W, H);
+
+    if (phase === 'fly') {
+      const prog = frame / totalFlyFrames;
+      // ease out to top-right
+      const ex = easeOut(prog);
+      px = startX + ex * (W * 0.5);
+      py = startY - ex * (H * 0.75);
+      scale = 1 - prog * 0.72;
+      angle = -0.25 + prog * 0.35;
+      alpha = prog < 0.8 ? 1 : 1 - (prog - 0.8) / 0.2;
+
+      drawPaperPlane(px, py, scale, angle, alpha);
+      frame++;
+      if (frame >= totalFlyFrames) {
+        phase = 'star';
+        spawnStarParticles(px, py);
+        starT = 0;
+      }
+    } else if (phase === 'star') {
+      // update particles
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        p.vy += 0.06;
+        p.life -= 0.022;
+        p.alpha = Math.max(0, p.life);
+        p.rot += p.rotV;
+        p.vx *= 0.97;
+      });
+      particles.forEach(p => drawStar(p.x, p.y, p.size, p.rot, p.alpha, p.color));
+      starT++;
+      if (starT > 70 && particles.every(p => p.life <= 0)) {
+        phase = 'done';
+      }
+    }
+
+    if (phase !== 'done') {
+      flyAnim = requestAnimationFrame(animate);
+    } else {
+      cancelAnimationFrame(flyAnim);
+      screen.style.display = 'none';
+      showResult();
+    }
+  }
+  animate();
+}
+
+function easeOut(t) { return 1 - Math.pow(1 - t, 2.5); }
+
+// ---- TEAR MODE ----
+let tapCount = 0;
+const MAX_TAPS = 5;
+let tearAnimRunning = false;
+
+function startTear() {
+  const text = document.getElementById('inputArea').value.trim();
+  if (!text) { shake(document.getElementById('inputArea')); return; }
+
+  tapCount = 0;
+  tearAnimRunning = false;
+  document.getElementById('paperText').textContent = text;
+
+  // clear crack svg
+  const crackSvg = document.getElementById('crackSvg');
+  crackSvg.innerHTML = '';
+
+  const screen = document.getElementById('animScreen');
+  const canvas = document.getElementById('animCanvas');
+  screen.style.display = 'flex';
+  screen.style.zIndex = 50;
+  document.getElementById('paperWrap').style.display = 'flex';
+  document.getElementById('tapHint').style.display = 'block';
+
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function tapPaper() {
+  if (tearAnimRunning) return;
+  tapCount++;
+  const paper = document.getElementById('paperEl');
+  const crackSvg = document.getElementById('crackSvg');
+  const hint = document.getElementById('tapHint');
+
+  // vibrate
+  if (navigator.vibrate) navigator.vibrate(30);
+
+  // add crack lines
+  addCrack(crackSvg, tapCount);
+
+  // shake effect
+  paper.style.transform = 'scale(0.95) rotate(' + ((Math.random()-0.5)*4) + 'deg)';
+  setTimeout(() => paper.style.transform = '', 120);
+
+  if (tapCount >= MAX_TAPS) {
+    tearAnimRunning = true;
+    hint.style.display = 'none';
+    runTearAnim();
+  } else {
+    const remaining = MAX_TAPS - tapCount;
+    hint.textContent = 'あと' + remaining + '回！';
+  }
+}
+
+function addCrack(svg, n) {
+  const lines = [
+    'M140 80 L80 20 M140 80 L200 15 M140 80 L60 100',
+    'M140 80 L220 110 M70 50 L170 130',
+    'M30 80 L160 40 M180 90 L90 150',
+    'M50 30 L210 140 M20 110 L240 60',
+    'M10 10 L270 150 M270 10 L10 150'
+  ];
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', lines[n-1] || '');
+  path.setAttribute('stroke', 'rgba(100,80,150,0.45)');
+  path.setAttribute('stroke-width', (n * 0.8).toString());
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(path);
+}
+
+function runTearAnim() {
+  const paperWrap = document.getElementById('paperWrap');
+  const canvas = document.getElementById('animCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // hide paper
+  paperWrap.style.display = 'none';
+
+  // create confetti pieces
+  const pieces = [];
+  const colors = ['#ffb3d9','#c9b3ff','#b3f0e0','#fff4b3','#6bbfff','#ffddee','#ffffff','#ffd700'];
+  for (let i = 0; i < 80; i++) {
+    pieces.push({
+      x: W/2 + (Math.random()-0.5)*200,
+      y: H/2 + (Math.random()-0.5)*120,
+      vx: (Math.random()-0.5)*8,
+      vy: -2 - Math.random()*5,
+      w: 8 + Math.random()*18,
+      h: 4 + Math.random()*8,
+      rot: Math.random()*Math.PI*2,
+      rotV: (Math.random()-0.5)*0.18,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      alpha: 1, life: 1
+    });
+  }
+
+  let frame = 0;
+  function animate() {
+    ctx.clearRect(0, 0, W, H);
+    pieces.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.18;
+      p.vx *= 0.99;
+      p.rot += p.rotV;
+      p.life -= 0.012;
+      p.alpha = Math.max(0, p.life);
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    frame++;
+    if (frame < 160 || pieces.some(p => p.life > 0)) {
+      requestAnimationFrame(animate);
+    } else {
+      document.getElementById('animScreen').style.display = 'none';
+      showResult();
+    }
+  }
+  animate();
+}
+
+// ---- RESULT ----
+function showResult() {
+  const screen = document.getElementById('resultScreen');
+  screen.style.display = 'flex';
+  screen.classList.add('active');
+  launchResultSparkles();
+}
+
+function launchResultSparkles() {
+  const canvas = document.getElementById('resultCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const W = canvas.width, H = canvas.height;
+  const particles = [];
+  const colors = ['#ffb3d9','#c9b3ff','#b3f0e0','#fff4b3','#6bbfff','#ffd700','#ffddee'];
+
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: -20 - Math.random() * 60,
+      vx: (Math.random()-0.5)*2.5,
+      vy: 1.5 + Math.random()*3,
+      size: 3 + Math.random()*7,
+      rot: Math.random()*Math.PI*2,
+      rotV: (Math.random()-0.5)*0.12,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      alpha: 1,
+      shape: Math.random() < 0.5 ? 'rect' : 'star'
+    });
+  }
+
+  function animate() {
+    ctx.clearRect(0,0,W,H);
+    let alive = false;
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      p.rot += p.rotV;
+      if (p.y < H + 20) alive = true;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - p.y/H);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      if (p.shape === 'rect') {
+        ctx.fillRect(-p.size/2, -p.size/4, p.size, p.size/2);
+      } else {
+        ctx.beginPath();
+        for (let i=0;i<5;i++){
+          const a1=(i*4*Math.PI/5)-Math.PI/2;
+          const a2=(i*4*Math.PI/5+2*Math.PI/5)-Math.PI/2;
+          ctx.lineTo(Math.cos(a1)*p.size,Math.sin(a1)*p.size);
+          ctx.lineTo(Math.cos(a2)*p.size*0.45,Math.sin(a2)*p.size*0.45);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+    if (alive) requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// ---- RESET ----
+function resetAll() {
+  // clear input
+  document.getElementById('inputArea').value = '';
+  tapCount = 0;
+  tearAnimRunning = false;
+
+  // hide result
+  const rs = document.getElementById('resultScreen');
+  rs.style.display = 'none';
+  rs.classList.remove('active');
+
+  // clear canvases
+  ['animCanvas','resultCanvas'].forEach(id => {
+    const c = document.getElementById(id);
+    c.getContext('2d').clearRect(0,0,c.width,c.height);
+  });
+  if (flyAnim) cancelAnimationFrame(flyAnim);
+  if (resultAnim) cancelAnimationFrame(resultAnim);
+
+  // show input screen
+  document.getElementById('animScreen').style.display = 'none';
+}
+
+// ---- SHAKE (empty input) ----
+function shake(el) {
+  el.style.transition = 'transform 0.08s';
+  let i = 0;
+  const steps = [6,-6,5,-5,4,-4,0];
+  function next() {
+    if (i >= steps.length) { el.style.transform=''; return; }
+    el.style.transform = `translateX(${steps[i]}px)`;
+    i++;
+    setTimeout(next, 60);
+  }
+  next();
+  el.focus();
+}
+</script>
+</body>
+</html>

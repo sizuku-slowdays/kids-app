@@ -608,7 +608,9 @@
 <div class="reset-wrap">
   <button class="reset-btn" onclick="resetAll()">🔄 リセット</button>
 </div>
-
+<div class="reset-wrap">
+  <button class="reset-btn" onclick="sendSchoolReport()">📩 ママに報告</button>
+</div>
 <canvas class="confetti-canvas" id="confetti-canvas"></canvas>
 <div class="complete-overlay" id="complete-overlay">
   <div class="complete-emoji" id="complete-emoji">🌟</div>
@@ -1309,7 +1311,87 @@ function toggleFurigana() {
   try { localStorage.setItem('furiganaOn', furiganaOn); } catch(e){}
   render();
 }
+function stripHtmlText(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+}
 
+function getSceneItemsForReport() {
+  let sections = [];
+
+  if (currentScene === 'morning') sections = getMorningItems();
+  if (currentScene === 'prep') sections = getPrepItems();
+  if (currentScene === 'school') sections = getSchoolItems();
+  if (currentScene === 'after') sections = getAfterItems();
+  if (currentScene === 'night') sections = getNightItems();
+
+  const items = [];
+
+  for (const sec of sections) {
+    if (sec.fridaySection && !(isFriday || fridayForced)) continue;
+
+    for (const item of sec.items) {
+      if (item.id && item.id.startsWith('opt_')) {
+        if (!getActiveOptIds().has(item.id)) continue;
+      }
+
+      items.push({
+        id: item.id,
+        label: stripHtmlText(item.label),
+        done: checkedIds.has(item.id)
+      });
+    }
+  }
+
+  return items;
+}
+
+async function sendSchoolReport() {
+  const items = getSceneItemsForReport();
+  const completed = items.filter(item => item.done).length;
+  const total = items.length;
+  const unchecked = items
+    .filter(item => !item.done)
+    .map(item => item.label);
+
+  const payload = {
+    child: currentKid,
+    tab: currentScene,
+    completed,
+    total,
+    unchecked,
+    message: completed === total ? 'できたよ！' : ''
+  };
+
+  try {
+    setSyncStatus('ママに報告中...');
+
+    const res = await fetch(`${API_BASE}/api/school-report`, {
+      method: 'POST',
+      headers: cloudHeaders(),
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      if (res.status === 401) {
+        setSyncStatus('⚠️ 合言葉が違うかも。ここをタップして入れ直してね');
+        return;
+      }
+      throw new Error('報告送信に失敗');
+    }
+
+    setSyncStatus('📩 ママに報告しました');
+    alert('ママに報告しました 🌸');
+
+  } catch (e) {
+    console.error(e);
+    setSyncStatus('⚠️ 報告に失敗しました');
+    alert('報告に失敗しました。通信を確認してね。');
+  }
+}
 // ============================================================
 // COMPLETE OVERLAY + CONFETTI
 // ============================================================

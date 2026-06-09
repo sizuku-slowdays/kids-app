@@ -452,18 +452,9 @@
 
 <script>
 // school-check からの呼び出し対応
-const _scReturnUrl = new URLSearchParams(location.search).get('return');
-// school-check 戻りボタン対応（load後に上書き）
-window.addEventListener('load', () => {
-  const returnUrl = new URLSearchParams(location.search).get('return');
-  if (!returnUrl) return;
-  const btns = Array.from(document.querySelectorAll('button'));
-  const homeBtn = btns.find(b => b.textContent.includes('スタートにもどる'));
-  if (homeBtn) {
-    homeBtn.onclick = () => { location.href = decodeURIComponent(returnUrl); };
-  }
-});
-  
+  const _scReturnUrl = new URLSearchParams(location.search).get('return');
+
+
 /* ======== 背景デコ ======== */
 (function() {
   const emojis = ['⭐','💫','✨','🌸','🌈','💜','💗','💛','🍭','🌙','☁️','🦋','🎀','💎','🌺'];
@@ -621,13 +612,19 @@ function onFiveMinDone() {
 
 document.getElementById('btn-reset-all').addEventListener('click', resetAll);
 function resetAll() {
+  if (_scReturnUrl) {
+    location.href = decodeURIComponent(_scReturnUrl);
+    return;
+  }
+
   stopTimer();
   hideEl('five-min-card');
   document.getElementById('one-min-overlay').classList.remove('active');
   document.getElementById('five-done-overlay').classList.remove('active');
   document.getElementById('screen-start').classList.remove('hidden');
   document.getElementById('game-section').classList.add('hidden');
-  phase = 'start'; resetGameFull();
+  phase = 'start';
+  resetGameFull();
 }
 
 /* ======================================================

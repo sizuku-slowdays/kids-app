@@ -573,14 +573,14 @@
 
 <div class="app-header">
   <div class="app-title">🎒 学校チェック</div>
-  <div class="sync-status" id="sync-status">Cloudflareと同期します</div>
+  <div class="sync-status" id="sync-status" onclick="resetAppPassword()" title="合言葉を入れ直す">Cloudflareと同期します</div>
 
   <div class="kid-switcher">
     <button class="kid-btn active" data-kid="elder" onclick="switchKid('elder')">
-      👧 長女
+      🌸 長女
     </button>
     <button class="kid-btn" data-kid="younger" onclick="switchKid('younger')">
-      🐣 次女
+      🦄 次女
     </button>
   </div>
 
@@ -636,21 +636,67 @@ const API_BASE = 'https://api.cetus.fun';
 
 // GitHubにパスワードを直書きしないため、初回入力した合言葉を端末内に保存します。
 const PASSWORD_STORAGE_KEY = 'cloudflare_app_password';
+const PASSWORD_PROMPTED_KEY = 'school_check_password_prompted';
+
+// localStorageが不安定な環境でも、同じ起動中は覚えておく
+let appPasswordCache = null;
+
 function getAppPassword() {
-  try { return localStorage.getItem(PASSWORD_STORAGE_KEY) || ''; } catch(e) { return ''; }
+  if (appPasswordCache !== null) return appPasswordCache;
+  try {
+    appPasswordCache = localStorage.getItem(PASSWORD_STORAGE_KEY) || '';
+  } catch(e) {
+    appPasswordCache = '';
+  }
+  return appPasswordCache;
 }
-function ensureAppPassword() {
+
+function saveAppPassword(password) {
+  appPasswordCache = password || '';
+  try {
+    if (password) localStorage.setItem(PASSWORD_STORAGE_KEY, password);
+  } catch(e) {}
+}
+
+function ensureAppPassword(force = false) {
   let p = getAppPassword();
+
+  // force=true の時だけ、保存済みでも入れ直しできる
+  if (force) {
+    p = prompt('Cloudflareの合言葉を入力してください', p || '');
+    if (p) saveAppPassword(p);
+    return p || '';
+  }
+
   if (!p) {
-    p = prompt('Cloudflareの合言葉を入力してください');
-    if (p) {
-      try { localStorage.setItem(PASSWORD_STORAGE_KEY, p); } catch(e) {}
+    // 1回の起動中に何度もpromptが出ないようにする
+    let alreadyPrompted = false;
+    try {
+      alreadyPrompted = sessionStorage.getItem(PASSWORD_PROMPTED_KEY) === '1';
+    } catch(e) {}
+
+    if (!alreadyPrompted) {
+      try { sessionStorage.setItem(PASSWORD_PROMPTED_KEY, '1'); } catch(e) {}
+      p = prompt('Cloudflareの合言葉を入力してください');
+      if (p) saveAppPassword(p);
     }
   }
+
   return p || '';
 }
+
 function clearAppPassword() {
+  appPasswordCache = '';
   try { localStorage.removeItem(PASSWORD_STORAGE_KEY); } catch(e) {}
+  try { sessionStorage.removeItem(PASSWORD_PROMPTED_KEY); } catch(e) {}
+}
+
+function resetAppPassword() {
+  const p = ensureAppPassword(true);
+  if (p) {
+    setSyncStatus('合言葉を保存しました');
+    loadSchoolState().then(render);
+  }
 }
 const APP_ID = 'school-check';
 
@@ -1021,7 +1067,11 @@ async function loadSchoolState() {
       return;
     }
     if (!r.ok) {
-      if (r.status === 401) clearAppPassword();
+      if (r.status === 401) {
+        setSyncStatus('⚠️ 合言葉が違うかも。ここをタップして入れ直してね');
+        schoolDataLoaded = true;
+        return;
+      }
       throw new Error('load failed: ' + r.status);
     }
     const json = await r.json();
@@ -1055,7 +1105,10 @@ async function saveSchoolStateNow(key = currentDataKey()) {
       body: JSON.stringify(payload)
     });
     if (!r.ok) {
-      if (r.status === 401) clearAppPassword();
+      if (r.status === 401) {
+        setSyncStatus('⚠️ 合言葉が違うかも。ここをタップして入れ直してね');
+        return;
+      }
       throw new Error('save failed: ' + r.status);
     }
     setSyncStatus('💾 Cloudflareに保存しました');

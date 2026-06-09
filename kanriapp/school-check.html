@@ -967,19 +967,22 @@ function renderCard(item) {
   const isActive = isOptional ? getActiveOptIds().has(item.id) : true;
   const grey = (isOptional && !isActive) ? ' greyed' : '';
 
-  // ミティキュアリンクカード：タップでゲームに飛び、戻ったら自動チェック
-  if (item._mitiqua_link) {
-    const returnUrl = encodeURIComponent(location.href.split('?')[0] + '?mitiqua=done');
-    const gameUrl = `https://cetus.fun/kids-app/medicine-game.html?return=${returnUrl}`;
-    return `<a class="check-card full mitiqua-link-card${done ? ' done' : ''}"
-               id="card-${item.id}"
-               href="${gameUrl}"
-               style="text-decoration:none;color:inherit;">
-      <span class="card-icon">${item.icon}</span>
-      <span class="card-text">${item.label}</span>
-      <span class="card-check">✅</span>
-    </a>`;
-  }
+// ミティキュアリンクカード：タップでゲームに飛び、戻ったら自動チェック
+if (item._mitiqua_link) {
+  const returnUrl = new URL(location.href);
+  returnUrl.searchParams.set('mitiqua', 'done');
+
+  const gameUrl = `https://cetus.fun/kids-app/medicine-game.html?return=${encodeURIComponent(returnUrl.toString())}`;
+
+  return `<a class="check-card full mitiqua-link-card${done ? ' done' : ''}"
+             id="card-${item.id}"
+             href="${gameUrl}"
+             style="text-decoration:none;color:inherit;">
+    <span class="card-icon">${item.icon}</span>
+    <span class="card-text">${item.label}</span>
+    <span class="card-check">✅</span>
+  </a>`;
+}
 
   return `<div class="check-card${fw}${done ? ' done' : ''}${grey}" 
                id="card-${item.id}"

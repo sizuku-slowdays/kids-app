@@ -22,6 +22,10 @@
     --school-secondary: #A5D6A7;
     --school-light: #E8F5E9;
     --school-card-done: #C8E6C9;
+    --prep-primary: #FB8C00;
+    --prep-secondary: #FFCC80;
+    --prep-light: #FFF3E0;
+    --prep-card-done: #FFE0B2;
     --night-primary: #6C63FF;
     --night-secondary: #C3BDFF;
     --night-light: #EFEDFF;
@@ -98,8 +102,8 @@
 
   .scene-btn {
     flex: 1;
-    max-width: 88px;
-    padding: 8px 4px;
+    max-width: 74px;
+    padding: 8px 2px;
     border: none;
     border-radius: 50px;
     font-size: 0.88rem;
@@ -114,6 +118,13 @@
     background: linear-gradient(135deg, var(--morning-primary), var(--morning-secondary));
     color: white;
     box-shadow: 0 4px 12px rgba(255,140,66,0.4);
+    transform: scale(1.04);
+  }
+
+  .scene-btn[data-scene="prep"].active {
+    background: linear-gradient(135deg, var(--prep-primary), var(--prep-secondary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(251,140,0,0.4);
     transform: scale(1.04);
   }
 
@@ -167,6 +178,7 @@
   }
 
   .scene-morning .progress-bar-fill { background: linear-gradient(90deg, var(--morning-secondary), var(--morning-primary)); }
+  .scene-prep    .progress-bar-fill { background: linear-gradient(90deg, var(--prep-secondary), var(--prep-primary)); }
   .scene-school  .progress-bar-fill { background: linear-gradient(90deg, var(--school-secondary), var(--school-primary)); }
   .scene-after   .progress-bar-fill { background: linear-gradient(90deg, var(--after-secondary), var(--after-primary)); }
   .scene-night   .progress-bar-fill { background: linear-gradient(90deg, var(--night-secondary), var(--night-primary)); }
@@ -195,7 +207,8 @@
   }
 
   .scene-morning .section-title { background: linear-gradient(90deg, var(--morning-primary), var(--morning-secondary)); }
-  .scene-school   .section-title { background: linear-gradient(90deg, var(--school-primary), var(--school-secondary)); }
+  .scene-prep    .section-title { background: linear-gradient(90deg, var(--prep-primary), var(--prep-secondary)); }
+  .scene-school  .section-title { background: linear-gradient(90deg, var(--school-primary), var(--school-secondary)); }
   .scene-after   .section-title { background: linear-gradient(90deg, var(--after-primary), var(--after-secondary)); }
   .scene-night   .section-title { background: linear-gradient(90deg, var(--night-primary), var(--night-secondary)); }
 
@@ -207,40 +220,6 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-  }
-
-  /* ===== MITIQUA FLOW (full width) ===== */
-  .mitiqua-flow {
-    grid-column: 1 / -1;
-    background: #fff7e6;
-    border: 2.5px solid var(--morning-secondary);
-    border-radius: 14px;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .mitiqua-flow-title {
-    font-size: 0.82rem;
-    font-weight: 800;
-    color: var(--morning-primary);
-    text-align: center;
-    margin-bottom: 2px;
-  }
-
-  .mitiqua-steps {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .mitiqua-arrow {
-    font-size: 1.1rem;
-    color: var(--morning-primary);
-    flex-shrink: 0;
   }
 
   /* ===== CHECK CARD ===== */
@@ -278,6 +257,15 @@
   .scene-morning .check-card.done .card-check { opacity: 1; color: var(--morning-primary); }
   .scene-morning .check-card.done .card-text { color: var(--morning-primary); }
 
+  .scene-prep .check-card { border-color: #ffd7a8; }
+  .scene-prep .check-card.done {
+    background: var(--prep-card-done);
+    border-color: var(--prep-primary);
+    box-shadow: 0 2px 10px rgba(251,140,0,0.25);
+  }
+  .scene-prep .check-card.done .card-check { opacity: 1; color: var(--prep-primary); }
+  .scene-prep .check-card.done .card-text { color: var(--prep-primary); }
+
   .scene-school .check-card { border-color: #b9dfba; }
   .scene-school .check-card.done {
     background: var(--school-card-done);
@@ -304,6 +292,32 @@
   }
   .scene-night .check-card.done .card-check { opacity: 1; color: var(--night-primary); }
   .scene-night .check-card.done .card-text { color: var(--night-primary); }
+
+  /* ミティキュアリンクカード */
+  .mitiqua-link-card {
+    background: #fff7e6;
+    border-color: var(--morning-secondary) !important;
+    border-width: 2.5px;
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    padding: 14px 16px;
+    justify-content: flex-start;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+  }
+  .mitiqua-link-card::after {
+    content: '▶';
+    position: absolute;
+    right: 14px;
+    font-size: 0.9rem;
+    color: var(--morning-primary);
+    opacity: 0.7;
+  }
+  .mitiqua-link-card.done { background: var(--morning-card-done) !important; border-color: var(--morning-primary) !important; }
+  .mitiqua-link-card.done .card-check { opacity: 1; color: var(--morning-primary); }
+  .mitiqua-link-card.done .card-text { color: var(--morning-primary); }
 
   /* full-width cards */
   .check-card.full { grid-column: 1 / -1; flex-direction: row; gap: 12px; padding: 12px 14px; justify-content: flex-start; }
@@ -571,9 +585,10 @@
   </div>
 
   <div class="scene-switcher">
-    <button class="scene-btn active" data-scene="morning" onclick="switchScene('morning')">☀️ 朝の用意</button>
-    <button class="scene-btn" data-scene="school"  onclick="switchScene('school')">🏫 学校</button>
+    <button class="scene-btn active" data-scene="morning" onclick="switchScene('morning')">☀️ 朝すること</button>
+    <button class="scene-btn" data-scene="prep"    onclick="switchScene('prep')">🎒 準備</button>
     <button class="scene-btn" data-scene="after"   onclick="switchScene('after')">🏠 帰宅後</button>
+    <button class="scene-btn" data-scene="school"  onclick="switchScene('school')">🏫 学校</button>
     <button class="scene-btn" data-scene="night"   onclick="switchScene('night')">🌙 寝る前</button>
   </div>
 </div>
@@ -603,12 +618,6 @@
 </div>
 
 <script>
- // school-check からの呼び出し対応
-const _scReturnUrl = new URLSearchParams(location.search).get('return'); 
-  if (_scReturnUrl) {
-  location.href = decodeURIComponent(_scReturnUrl);
-  return;
-}
 // ============================================================
 // STATE
 // ============================================================
@@ -678,25 +687,23 @@ function Y(elder, younger) {
 function getMorningItems() {
   const sections = [];
 
-  // --- 生活面 ---
+  // --- おはよう ---
   const life = [];
-  life.push({ id: 'life_face',  icon: '🚿', label: Y(`${R('顔','かお')}をあらう`, 'かおをあらう'), fullwidth: false });
-  life.push({ id: 'life_ugai',  icon: '💧', label: 'うがい', fullwidth: false });
-  life.push({ id: 'life_brush', icon: '💈', label: 'ブラシ', fullwidth: false });
-  life.push({ id: '_mitiqua_flow', _type: 'mitiqua' });
-  life.push({ id: 'life_teeth', icon: '🦷', label: 'はみがき', fullwidth: false });
-  life.push({ id: 'life_mouth', icon: '😬', label: 'マウスピース', fullwidth: false });
+  life.push({ id: 'life_face',  icon: '😊', label: Y(`${R('顔','かお')}をあらう`, 'かおをあらう') });
+  life.push({ id: 'life_ugai',  icon: '🥤', label: 'うがい' });
+  life.push({ id: 'life_brush', icon: '🪮', label: 'ブラシ' });
+  life.push({ id: 'mit_main',   icon: '💊', label: Y(`お${R('薬','くすり')}1${R('分','ぷん')}アプリ`, 'おくすり1ぷんアプリ'), fullwidth: true, _mitiqua_link: true });
+  life.push({ id: 'life_teeth', icon: '🦷', label: 'はみがき' });
+  life.push({ id: 'life_mouth', icon: '😬', label: 'マウスピース' });
 
-  sections.push({ title: `🧹 ${Y(R('生活','せいかつ')+'面','せいかつ')}`, items: life });
+  sections.push({ title: `🌅 おはよう`, items: life });
 
   return sections;
 }
 
-function getSchoolItems() {
+function getPrepItems() {
   const sections = [];
-
-  // 毎日持っていくもの
-  const daily = [
+  const prep = [
     { id: 'sch_bottle',  icon: '🧃', label: Y(R('水筒','すいとう'), 'すいとう') },
     { id: 'sch_hat',     icon: '🧢', label: Y(R('帽子','ぼうし'), 'ぼうし') },
     { id: 'sch_hanky',   icon: '🫱', label: 'はんかち' },
@@ -704,9 +711,14 @@ function getSchoolItems() {
     { id: 'sch_lunch',   icon: '👜', label: Y(R('給食袋','きゅうしょくぶくろ'), 'きゅうしょくぶくろ') },
     { id: 'sch_hashi',   icon: '🥢', label: 'おはし' },
   ];
-  sections.push({ title: `🎒 ${Y(R('学校','がっこう')+'・'+R('毎日','まいにち'), 'がっこう・まいにち')}`, items: daily });
+  sections.push({ title: `🎒 ${Y(R('準備','じゅんび'), 'じゅんび')}`, items: prep });
+  return sections;
+}
 
-  // ひつようなとき
+function getSchoolItems() {
+  const sections = [];
+
+  // がっこう：ひつようなとき（グレー制）
   const optional = [
     { id: 'opt_shoes',  icon: '👟', label: Y(R('上靴','うわぐつ'), 'うわぐつ') },
     { id: 'opt_gym',    icon: '👕', label: Y(R('体操服','たいそうふく'), 'たいそうふく') },
@@ -724,7 +736,7 @@ function getSchoolItems() {
     optional.push({ id: 'opt_paint', icon: '🎨', label: Y(R('絵具','えのぐ'), 'えのぐ') });
     optional.push({ id: 'opt_shuji', icon: '✍️', label: Y(R('習字道具','しゅうじどうぐ'), 'しゅうじどうぐ') });
   }
-  sections.push({ title: `📅 ${Y(R('学校','がっこう')+'・'+R('必要','ひつよう')+'な'+R('時','とき'), 'がっこう・ひつようなとき')}`, items: optional });
+  sections.push({ title: `🏫 ${Y(R('学校','がっこう')+'・'+R('必要','ひつよう')+'な'+R('時','とき'), 'がっこう・ひつようなとき')}`, items: optional });
 
   return sections;
 }
@@ -851,9 +863,10 @@ function render() {
 
   if (currentScene === 'morning') {
     const sections = getMorningItems();
-    for (const sec of sections) {
-      html += renderSection(sec.title, sec.items);
-    }
+    for (const sec of sections) html += renderSection(sec.title, sec.items);
+  } else if (currentScene === 'prep') {
+    const sections = getPrepItems();
+    for (const sec of sections) html += renderSection(sec.title, sec.items);
   } else if (currentScene === 'school') {
     // Today Add section（学校タブ内）
     html += renderTodayAdd();
@@ -893,10 +906,6 @@ function render() {
 function renderSection(title, items) {
   let cardsHtml = '';
   for (const item of items) {
-    if (item._type === 'mitiqua') {
-      cardsHtml += renderMitiqua();
-      continue;
-    }
     cardsHtml += renderCard(item);
   }
   return `<div class="section">
@@ -908,41 +917,30 @@ function renderSection(title, items) {
 function renderCard(item) {
   const done = checkedIds.has(item.id);
   const fw = item.fullwidth ? ' full' : '';
-  // 学校タブの「ひつようなとき」カード（opt_xxx）はactiveでなければグレー
   const isOptional = item.id && item.id.startsWith('opt_');
   const isActive = isOptional ? getActiveOptIds().has(item.id) : true;
   const grey = (isOptional && !isActive) ? ' greyed' : '';
+
+  // ミティキュアリンクカード：タップでゲームに飛び、戻ったら自動チェック
+  if (item._mitiqua_link) {
+    const returnUrl = encodeURIComponent(location.href.split('?')[0] + '?mitiqua=done');
+    const gameUrl = `https://cetus.fun/kids-app/medicine-game.html?return=${returnUrl}`;
+    return `<a class="check-card full mitiqua-link-card${done ? ' done' : ''}"
+               id="card-${item.id}"
+               href="${gameUrl}"
+               style="text-decoration:none;color:inherit;">
+      <span class="card-icon">${item.icon}</span>
+      <span class="card-text">${item.label}</span>
+      <span class="card-check">✅</span>
+    </a>`;
+  }
+
   return `<div class="check-card${fw}${done ? ' done' : ''}${grey}" 
                id="card-${item.id}"
                onclick="toggleCheck('${item.id}')">
     <span class="card-icon">${item.icon}</span>
     <span class="card-text">${item.label}</span>
     <span class="card-check">✅</span>
-  </div>`;
-}
-
-function renderMitiqua() {
-  const ids = ['mit_main', 'mit_1min', 'mit_5min'];
-  const steps = [
-    { id: 'mit_main', icon: '💊', label: 'ミティキュア' },
-    { id: 'mit_1min', icon: '⏱️', label: '1ぷん まつ' },
-    { id: 'mit_5min', icon: '🍽️', label: '5ぷんたったら いんしょくOK' },
-  ];
-  const stepsHtml = steps.map((s, i) => {
-    const done = checkedIds.has(s.id);
-    return `${i > 0 ? '<span class="mitiqua-arrow">→</span>' : ''}
-    <div class="check-card${done ? ' done' : ''}" id="card-${s.id}"
-         style="min-height:64px;min-width:80px;flex:1;max-width:110px"
-         onclick="toggleCheck('${s.id}')">
-      <span class="card-icon">${s.icon}</span>
-      <span class="card-text" style="font-size:0.8rem">${s.label}</span>
-      <span class="card-check" style="font-size:0.9rem">✅</span>
-    </div>`;
-  }).join('');
-
-  return `<div class="mitiqua-flow" style="grid-column:1/-1">
-    <div class="mitiqua-flow-title">💊 ミティキュアの じゅんばん</div>
-    <div class="mitiqua-steps">${stepsHtml}</div>
   </div>`;
 }
 
@@ -1136,13 +1134,12 @@ function getAllCheckableIds() {
   if (currentScene === 'morning') {
     sections = getMorningItems();
     for (const sec of sections) {
-      for (const item of sec.items) {
-        if (item._type === 'mitiqua') {
-          ids.push('mit_main', 'mit_1min', 'mit_5min');
-        } else {
-          ids.push(item.id);
-        }
-      }
+      for (const item of sec.items) ids.push(item.id);
+    }
+  } else if (currentScene === 'prep') {
+    sections = getPrepItems();
+    for (const sec of sections) {
+      for (const item of sec.items) ids.push(item.id);
     }
   } else if (currentScene === 'school') {
     const activeOpts = getActiveOptIds();
@@ -1261,6 +1258,7 @@ function toggleFurigana() {
 // ============================================================
 const EMOJIS_BY_SCENE = {
   morning: ['🌞', '🎉', '✨'],
+  prep:    ['🎒', '✨', '⭐'],
   school:  ['🏫', '🎒', '⭐'],
   after: ['🏠', '🎊', '⭐'],
   night: ['🌙', '🌟', '💫'],
@@ -1348,7 +1346,19 @@ window.resetAll = function() {
 // INIT
 // ============================================================
 window.addEventListener('load', async () => {
+  // medicine-game.html から戻ってきたとき ?mitiqua=done を検知して自動チェック
+  const urlParams = new URLSearchParams(location.search);
+  const mitiDone = urlParams.get('mitiqua') === 'done';
+
   await loadSchoolState();
+
+  if (mitiDone) {
+    checkedIds.add('mit_main');
+    // URLパラメータを消してきれいにする（履歴は変えない）
+    history.replaceState({}, '', location.pathname);
+    scheduleSchoolSave();
+  }
+
   render();
 });
 </script>

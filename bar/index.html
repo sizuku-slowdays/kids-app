@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>幻水酒場</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@400;500&display=swap');
+
+  :root {
+    --bg:        #1a1208;
+    --bg2:       #221a0e;
+    --bg3:       #2e2010;
+    --border:    #5a3e1b;
+    --border2:   #7a5a2a;
+    --gold:      #c8922a;
+    --gold2:     #e8b84a;
+    --text:      #e8dcc8;
+    --text2:     #b8a888;
+    --flic:      #7ab8d8;   /* フリック：クールな青 */
+    --vic:       #d88050;   /* ビクトール：温かいオレンジ */
+    --system:    #88aa88;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background-image:
+      radial-gradient(ellipse at 20% 80%, rgba(90,60,20,0.3) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(60,40,10,0.2) 0%, transparent 50%);
+  }
+
+  /* ── ヘッダー ── */
+  header {
+    background: linear-gradient(180deg, #0e0a04 0%, var(--bg2) 100%);
+    border-bottom: 2px solid var(--border);
+    padding: 14px 20px 12px;
+    text-align: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -5px; left: 10%; right: 10%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .header-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gold2);
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 20px rgba(200,146,42,0.4);
+  }
+  .header-sub {
+    font-size: 0.7rem;
+    color: var(--text2);
+    margin-top: 2px;
+    letter-spacing: 0.2em;
+  }
+
+  /* ── チャットエリア ── */
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+  #chat::-webkit-scrollbar { width: 4px; }
+  #chat::-webkit-scrollbar-track { background: var(--bg); }
+  #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── メッセージ共通 ── */
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 88%;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ユーザー */
+  .msg.user {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+  .msg.user .bubble {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 16px 16px 4px 16px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .msg.user .label {
+    font-size: 0.68rem;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  /* キャラクター */
+  .msg.char {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+  .msg.char .label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  .msg.flic .label { color: var(--flic); }
+  .msg.vic  .label { color: var(--vic); }
+
+  .msg.char .bubble {
+    border-radius: 4px 16px 16px 16px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg.flic .bubble {
+    background: rgba(122,184,216,0.08);
+    border: 1px solid rgba(122,184,216,0.25);
+  }
+  .msg.vic .bubble {
+    background: rgba(216,128,80,0.08);
+    border: 1px solid rgba(216,128,80,0.25);
+  }
+
+  /* システム */
+  .msg.system {
+    align-self: center;
+  }
+  .msg.system .bubble {
+    background: transparent;
+    color: var(--system);
+    font-size: 0.75rem;
+    font-style: italic;
+    letter-spacing: 0.05em;
+    text-align: center;
+    border: none;
+    padding: 4px 12px;
+  }
+
+  /* ローディング */
+  .typing {
+    display: flex; gap: 5px; align-items: center; padding: 12px 14px;
+  }
+  .typing span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold);
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%,80%,100% { transform: translateY(0); opacity: 0.5; }
+    40% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* ── 入力エリア ── */
+  footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px 16px;
+    flex-shrink: 0;
+  }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  textarea {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem;
+    padding: 10px 14px;
+    resize: none;
+    outline: none;
+    min-height: 44px;
+    max-height: 120px;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+  }
+  textarea::placeholder { color: var(--text2); opacity: 0.6; }
+  textarea:focus { border-color: var(--border2); }
+
+  button#send {
+    background: linear-gradient(135deg, var(--gold), #a07020);
+    border: none;
+    border-radius: 12px;
+    color: #1a1208;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+    height: 44px;
+    letter-spacing: 0.05em;
+  }
+  button#send:hover  { opacity: 0.85; }
+  button#send:active { transform: scale(0.97); }
+  button#send:disabled { opacity: 0.4; cursor: default; }
+
+  .hint {
+    font-size: 0.65rem;
+    color: var(--text2);
+    opacity: 0.5;
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  /* エラー */
+  .msg.error .bubble {
+    background: rgba(200,60,60,0.12);
+    border: 1px solid rgba(200,60,60,0.3);
+    color: #f08888;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">🍺 幻水酒場</div>
+  <div class="header-sub">— フリック &amp; ビクトール —</div>
+</header>
+
+<div id="chat"></div>
+
+<footer>
+  <div class="input-row">
+    <textarea id="input" placeholder="酒場の二人に話しかけてみよう" rows="1"></textarea>
+    <button id="send">送る</button>
+  </div>
+  <div class="hint">Shift+Enter で改行</div>
+</footer>
+
+<script>
+// ── 設定 ──────────────────────────────────────────────
+// Cloudflare Worker の URL に書き換えてください
+const WORKER_URL = 'https://gensui-bar.YOUR_SUBDOMAIN.workers.dev/chat';
+
+// ── 会話履歴 ──────────────────────────────────────────
+const history = [];
+
+// ── DOM ───────────────────────────────────────────────
+const chatEl  = document.getElementById('chat');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+
+// ── 初期メッセージ ────────────────────────────────────
+addSystemMsg('——— 酒場の扉を開けた ———');
+addCharMsg('vic',
+  'よう、いらっしゃい！今夜はいい晩だな。\nまあ座れ、飲もうぜ。');
+addCharMsg('flic',
+  '……来たのか。\nまあ、せっかくだ。ゆっくりしていけ。');
+
+// ── textarea 自動リサイズ ─────────────────────────────
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+});
+
+// ── Enter 送信 ────────────────────────────────────────
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    doSend();
+  }
+});
+sendBtn.addEventListener('click', doSend);
+
+// ── 送信処理 ──────────────────────────────────────────
+async function doSend() {
+  const text = inputEl.value.trim();
+  if (!text || sendBtn.disabled) return;
+
+  addUserMsg(text);
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+
+  history.push({ role: 'user', content: text });
+
+  const loadingEl = addLoading();
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history }),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const reply = data.reply ?? '';
+
+    loadingEl.remove();
+
+    // "フリック：\n〜\n\nビクトール：\n〜" 形式をパース
+    parseAndDisplay(reply);
+    history.push({ role: 'assistant', content: reply });
+
+  } catch (err) {
+    loadingEl.remove();
+    addErrorMsg('通信エラーが発生しました。しばらくしてから試してみてください。');
+    console.error(err);
+    history.pop(); // 失敗したユーザー発言を戻す
+  }
+
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+
+// ── 返答パース ────────────────────────────────────────
+function parseAndDisplay(reply) {
+  const flicMatch = reply.match(/フリック[：:]\s*([\s\S]*?)(?=ビクトール[：:]|$)/);
+  const vicMatch  = reply.match(/ビクトール[：:]\s*([\s\S]*?)(?=フリック[：:]|$)/);
+
+  // どちらのパターンにも当てはまらない場合はそのまま表示
+  if (!flicMatch && !vicMatch) {
+    addCharMsg('vic', reply.trim());
+    return;
+  }
+
+  // 登場順を保つ
+  const flicIdx = reply.search(/フリック[：:]/);
+  const vicIdx  = reply.search(/ビクトール[：:]/);
+
+  const entries = [];
+  if (flicMatch && flicMatch[1].trim()) entries.push({ who: 'flic', idx: flicIdx, text: flicMatch[1].trim() });
+  if (vicMatch  && vicMatch[1].trim())  entries.push({ who: 'vic',  idx: vicIdx,  text: vicMatch[1].trim() });
+  entries.sort((a,b) => a.idx - b.idx);
+
+  entries.forEach(e => addCharMsg(e.who, e.text));
+}
+
+// ── DOM ヘルパー ──────────────────────────────────────
+function addSystemMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg system';
+  div.innerHTML = `<div class="bubble">${escHtml(text)}</div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+}
+
+function addUserMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `<div class="bubble">${escHtml(text)}</div><div class="label">あなた</div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+}
+
+function addCharMsg(who, text) {
+  const label = who === 'flic' ? 'フリック' : 'ビクトール';
+  const div = document.createElement('div');
+  div.className = `msg char ${who}`;
+  div.innerHTML = `<div class="label">${label}</div><div class="bubble">${escHtml(text)}</div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+}
+
+function addErrorMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg char error';
+  div.innerHTML = `<div class="bubble">${escHtml(text)}</div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+}
+
+function addLoading() {
+  const div = document.createElement('div');
+  div.className = 'msg char vic';
+  div.innerHTML = `<div class="label">…</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+  return div;
+}
+
+function scrollBottom() {
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+}
+</script>
+</body>
+</html>

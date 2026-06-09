@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>99×99マスター</title>
+<style>
+  :root{
+    --bg1:#fff5f7;
+    --bg2:#eef6ff;
+    --pink:#ff8fb1;
+    --pink-d:#ff6f9c;
+    --blue:#7ec8ff;
+    --blue-d:#4fb0ff;
+    --green:#7fe3a3;
+    --green-d:#36c46c;
+    --yellow:#ffd86b;
+    --orange:#ffb056;
+    --purple:#c8a8ff;
+    --ink:#4a4458;
+    --card:#ffffff;
+    --shadow:0 6px 0 rgba(0,0,0,.08), 0 10px 24px rgba(120,90,160,.18);
+    --radius:22px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
+    color:var(--ink);
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    min-height:100vh;
+    font-size:18px;
+    line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 40px;}
+  .screen{display:none;animation:pop .25s ease;}
+  .screen.active{display:block;}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
+
+  h1.logo{
+    text-align:center;font-size:34px;margin:18px 0 4px;
+    color:var(--pink-d);text-shadow:0 3px 0 #ffe0ea;letter-spacing:1px;
+  }
+  .tagline{text-align:center;color:#9a90ad;margin:0 0 20px;font-size:15px;}
+
+  .menu{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px;}
+  .menu-btn{
+    border:none;border-radius:var(--radius);padding:26px 10px;
+    font-size:21px;font-weight:bold;color:#fff;cursor:pointer;
+    box-shadow:var(--shadow);transition:transform .08s;
+    display:flex;flex-direction:column;align-items:center;gap:8px;line-height:1.2;
+  }
+  .menu-btn .ico{font-size:38px;}
+  .menu-btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.08),0 6px 14px rgba(120,90,160,.18);}
+  .m-choice{background:linear-gradient(160deg,var(--pink),var(--pink-d));}
+  .m-input{background:linear-gradient(160deg,var(--blue),var(--blue-d));}
+  .m-table{background:linear-gradient(160deg,var(--green),var(--green-d));}
+  .m-weak{background:linear-gradient(160deg,var(--orange),#ff8a3c);}
+
+  .back-home{
+    display:block;width:100%;margin-top:18px;border:none;cursor:pointer;
+    background:#fff;color:#9a90ad;border-radius:18px;padding:14px;font-size:16px;
+    font-weight:bold;box-shadow:0 4px 0 rgba(0,0,0,.05);
+  }
+  .back-home:active{transform:translateY(2px);}
+
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .btn-back{
+    border:none;background:#fff;color:var(--ink);border-radius:16px;
+    padding:10px 16px;font-size:16px;font-weight:bold;cursor:pointer;
+    box-shadow:0 4px 0 rgba(0,0,0,.06);
+  }
+  .btn-back:active{transform:translateY(2px);}
+  .screen-title{font-size:22px;font-weight:bold;margin:0;color:var(--ink);}
+
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 18px;}
+
+  /* レベル選択 */
+  .lv-title{text-align:center;font-size:20px;margin:6px 0 18px;font-weight:bold;}
+  .lv-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .lv-btn{
+    border:none;border-radius:18px;padding:22px 8px;font-size:19px;font-weight:bold;
+    color:#fff;cursor:pointer;box-shadow:var(--shadow);line-height:1.3;
+  }
+  .lv-btn small{display:block;font-size:13px;font-weight:normal;opacity:.95;margin-top:4px;}
+  .lv-btn:active{transform:translateY(3px);}
+  .lv1{background:linear-gradient(160deg,#ffd6e2,var(--pink));}
+  .lv2{background:linear-gradient(160deg,#bfe6ff,var(--blue));}
+  .lv3{background:linear-gradient(160deg,#c8a8ff,#a87dff);}
+  .lv4{background:linear-gradient(160deg,#ffe08a,var(--orange));}
+
+  /* クイズ */
+  .progress{display:flex;justify-content:space-between;font-size:15px;color:#9a90ad;margin-bottom:10px;font-weight:bold;}
+  .question{text-align:center;font-size:46px;font-weight:bold;margin:18px 0 8px;color:var(--ink);}
+  .question .q{color:var(--pink-d);}
+  .choices{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px;}
+  .choice-btn{
+    border:none;border-radius:18px;padding:18px;font-size:26px;font-weight:bold;
+    background:#fff;color:var(--ink);cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.07),0 8px 16px rgba(120,90,160,.12);
+    transition:transform .08s;
+  }
+  .choice-btn:active{transform:translateY(3px);}
+  .choice-btn.correct{background:linear-gradient(160deg,var(--green),var(--green-d));color:#fff;}
+  .choice-btn.wrong{background:linear-gradient(160deg,#ffb3b3,#ff7e7e);color:#fff;}
+  .choice-btn:disabled{cursor:default;opacity:.85;}
+
+  .input-area{display:flex;gap:10px;justify-content:center;margin-top:16px;align-items:center;}
+  .answer-input{
+    width:160px;font-size:34px;text-align:center;padding:10px;border:3px solid #ffd0dd;
+    border-radius:16px;font-weight:bold;color:var(--ink);outline:none;
+  }
+  .answer-input:focus{border-color:var(--pink);}
+  .btn-ok{
+    border:none;border-radius:16px;padding:14px 22px;font-size:22px;font-weight:bold;
+    background:linear-gradient(160deg,var(--blue),var(--blue-d));color:#fff;cursor:pointer;
+    box-shadow:0 4px 0 rgba(0,0,0,.08);
+  }
+  .btn-ok:active{transform:translateY(2px);}
+
+  .feedback{text-align:center;font-size:24px;font-weight:bold;margin:18px 0;min-height:34px;}
+  .feedback.ok{color:var(--green-d);}
+  .feedback.ng{color:var(--orange);}
+  .feedback .sub{display:block;font-size:18px;color:#9a90ad;margin-top:6px;font-weight:bold;}
+
+  .next-btn{
+    display:block;width:100%;border:none;border-radius:18px;padding:16px;font-size:20px;
+    font-weight:bold;background:linear-gradient(160deg,var(--purple),#a87dff);color:#fff;
+    cursor:pointer;box-shadow:var(--shadow);margin-top:10px;
+  }
+  .next-btn:active{transform:translateY(3px);}
+
+  /* 結果 */
+  .result{text-align:center;}
+  .result .big{font-size:60px;margin:6px 0;}
+  .result .score{font-size:30px;font-weight:bold;margin:6px 0;color:var(--pink-d);}
+  .result .rate{font-size:20px;color:#9a90ad;margin-bottom:18px;font-weight:bold;}
+  .result-actions{display:grid;gap:12px;}
+
+  /* 全体表 */
+  .range-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .range-btn{
+    border:none;border-radius:14px;padding:9px 12px;font-size:14px;font-weight:bold;
+    background:#fff;color:var(--ink);cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.05);
+  }
+  .range-btn.active{background:linear-gradient(160deg,var(--green),var(--green-d));color:#fff;}
+  .range-btn:active{transform:translateY(2px);}
+  .table-hint{font-size:13px;color:#9a90ad;margin:0 0 8px;}
+  .table-scroll{
+    overflow:auto;max-height:70vh;border-radius:16px;background:#fff;
+    box-shadow:var(--shadow);-webkit-overflow-scrolling:touch;
+  }
+  table.kuku{border-collapse:collapse;font-size:13px;}
+  table.kuku th,table.kuku td{
+    border:1px solid #eee;text-align:center;padding:6px 8px;white-space:nowrap;min-width:40px;
+  }
+  table.kuku th{position:sticky;font-weight:bold;color:#fff;z-index:1;}
+  table.kuku thead th{top:0;}
+  table.kuku tbody th{left:0;z-index:2;}
+  table.kuku th.corner{left:0;top:0;z-index:3;background:#b8a8d0;}
+  table.kuku td.diag{font-weight:bold;outline:3px solid var(--pink-d);outline-offset:-3px;}
+  table.kuku td.hl{background:var(--yellow)!important;font-weight:bold;}
+  table.kuku th.hl{filter:brightness(.8);}
+
+  /* にがてチェック */
+  .weak-empty{text-align:center;color:#9a90ad;padding:30px 10px;font-size:17px;}
+  .weak-item{
+    background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:12px;
+    box-shadow:0 4px 0 rgba(0,0,0,.05);
+  }
+  .weak-q{font-size:22px;font-weight:bold;margin-bottom:6px;}
+  .weak-meta{font-size:14px;color:#9a90ad;margin-bottom:10px;line-height:1.7;}
+  .weak-meta b{color:var(--orange);}
+  .weak-again{
+    border:none;border-radius:14px;padding:10px 16px;font-size:15px;font-weight:bold;
+    background:linear-gradient(160deg,var(--blue),var(--blue-d));color:#fff;cursor:pointer;
+    box-shadow:0 3px 0 rgba(0,0,0,.08);
+  }
+  .weak-again:active{transform:translateY(2px);}
+  .weak-reset{
+    display:block;width:100%;border:none;border-radius:16px;padding:14px;font-size:16px;
+    font-weight:bold;background:#ffd6d6;color:#d05a5a;cursor:pointer;margin-top:8px;
+    box-shadow:0 4px 0 rgba(0,0,0,.05);
+  }
+  .weak-reset:active{transform:translateY(2px);}
+
+  /* 紙吹雪 */
+  .confetti{position:fixed;top:-20px;font-size:24px;pointer-events:none;z-index:9999;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:0;}}
+
+  @media (max-width:380px){
+    body{font-size:17px;}
+    h1.logo{font-size:30px;}
+    .question{font-size:40px;}
+    .menu-btn{font-size:19px;padding:22px 8px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== トップ画面 ===== -->
+  <section id="home" class="screen active">
+    <h1 class="logo">99×99マスター</h1>
+    <p class="tagline">10×10〜99×99 にチャレンジ！🌟</p>
+    <div class="menu">
+      <button class="menu-btn m-choice" onclick="startLevelSelect('choice')"><span class="ico">🎯</span>三択クイズ</button>
+      <button class="menu-btn m-input" onclick="startLevelSelect('input')"><span class="ico">✏️</span>入力クイズ</button>
+      <button class="menu-btn m-table" onclick="openTable()"><span class="ico">🗺️</span>全体表</button>
+      <button class="menu-btn m-weak" onclick="openWeak()"><span class="ico">🔁</span>にがてチェック</button>
+    </div>
+    <button class="back-home" onclick="location.href='index.html'">← アプリ一覧にもどる</button>
+  </section>
+
+  <!-- ===== レベル選択 ===== -->
+  <section id="level" class="screen">
+    <div class="topbar">
+      <button class="btn-back" onclick="show('home')">← もどる</button>
+      <h2 class="screen-title" id="levelTitle">レベルをえらぼう</h2>
+    </div>
+    <div class="card">
+      <p class="lv-title">どのはんいで れんしゅうする？</p>
+      <div class="lv-grid">
+        <button class="lv-btn lv1" onclick="beginQuiz(10,19)">10〜19<small>10×10〜19×19</small></button>
+        <button class="lv-btn lv2" onclick="beginQuiz(20,49)">20〜49<small>20×20〜49×49</small></button>
+        <button class="lv-btn lv3" onclick="beginQuiz(50,99)">50〜99<small>50×50〜99×99</small></button>
+        <button class="lv-btn lv4" onclick="beginQuiz(10,99)">10〜99 ぜんぶ<small>10×10〜99×99</small></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== クイズ ===== -->
+  <section id="quiz" class="screen">
+    <div class="topbar">
+      <button class="btn-back" onclick="show('home')">← やめる</button>
+      <h2 class="screen-title" id="quizTitle">クイズ</h2>
+    </div>
+    <div class="card">
+      <div class="progress">
+        <span id="qCount">1 / 10 問目</span>
+        <span id="qScore">⭐ 0 せいかい</span>
+      </div>
+      <div class="question"><span class="q" id="qText">12 × 13 = ?</span></div>
+
+      <div id="choiceArea" class="choices"></div>
+
+      <div id="inputArea" class="input-area" style="display:none;">
+        <input id="answerInput" class="answer-input" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="?">
+        <button class="btn-ok" onclick="submitInput()">こたえる</button>
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="nextBtn" style="display:none;" onclick="nextQuestion()">つぎの問題 →</button>
+    </div>
+  </section>
+
+  <!-- ===== 結果 ===== -->
+  <section id="result" class="screen">
+    <div class="topbar">
+      <button class="btn-back" onclick="show('home')">← トップ</button>
+      <h2 class="screen-title">けっか</h2>
+    </div>
+    <div class="card result">
+      <div class="big" id="resultEmoji">🎉</div>
+      <div class="score" id="resultScore">10問中 0問せいかい</div>
+      <div class="rate" id="resultRate">正答率 0%</div>
+      <div class="result-actions">
+        <button class="next-btn" onclick="beginQuiz(curMin,curMax)">もう一度 れんしゅう 🔁</button>
+        <button class="back-home" onclick="show('home')">トップにもどる</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 全体表 ===== -->
+  <section id="table" class="screen">
+    <div class="topbar">
+      <button class="btn-back" onclick="show('home')">← もどる</button>
+      <h2 class="screen-title">全体表 🗺️</h2>
+    </div>
+    <div class="range-bar" id="rangeBar"></div>
+    <p class="table-hint">マスをタップすると、ひっくり返した同じ答え（a×b と b×a）も光ります✨</p>
+    <div class="table-scroll" id="tableScroll"></div>
+  </section>
+
+  <!-- ===== にがてチェック ===== -->
+  <section id="weak" class="screen">
+    <div class="topbar">
+      <button class="btn-back" onclick="show('home')">← もどる</button>
+      <h2 class="screen-title">にがてチェック 🔁</h2>
+    </div>
+    <div id="weakList"></div>
+    <button class="weak-reset" onclick="resetWeak()">にがてリストをリセット 🗑️</button>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ====== 共通 ====== */
+var MODE = "choice";      // choice / input
+var curMin = 10, curMax = 99;
+var qIndex = 0;           // 0-9
+var correctCount = 0;
+var current = null;       // {a,b,answer}
+var answered = false;
+var TOTAL = 10;
+var singleMode = null;    // にがてチェックの「この問題だけ」用 {a,b,answer}
+var STORE_KEY = "kuku99-mistakes";
+
+function show(id){
+  var list = document.querySelectorAll(".screen");
+  for(var i=0;i<list.length;i++){ list[i].classList.remove("active"); }
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+
+function rnd(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+/* ====== レベル選択 ====== */
+function startLevelSelect(mode){
+  MODE = mode;
+  singleMode = null;
+  document.getElementById("levelTitle").textContent =
+    (mode==="choice" ? "三択クイズ 🎯" : "入力クイズ ✏️");
+  show("level");
+}
+
+/* ====== クイズ開始 ====== */
+function beginQuiz(min,max){
+  curMin = min; curMax = max;
+  qIndex = 0; correctCount = 0;
+  singleMode = null;
+  document.getElementById("quizTitle").textContent =
+    (MODE==="choice" ? "三択クイズ 🎯" : "入力クイズ ✏️");
+  show("quiz");
+  loadQuestion();
+}
+
+function makeProblem(){
+  var a = rnd(curMin,curMax);
+  var b = rnd(curMin,curMax);
+  return { a:a, b:b, answer:a*b };
+}
+
+function loadQuestion(){
+  answered = false;
+  current = singleMode ? singleMode : makeProblem();
+
+  document.getElementById("qText").textContent = current.a + " × " + current.b + " = ?";
+  document.getElementById("qCount").textContent = (qIndex+1) + " / " + TOTAL + " 問目";
+  document.getElementById("qScore").textContent = "⭐ " + correctCount + " せいかい";
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("nextBtn").style.display = "none";
+
+  var choiceArea = document.getElementById("choiceArea");
+  var inputArea = document.getElementById("inputArea");
+
+  if(MODE==="choice"){
+    choiceArea.style.display = "grid";
+    inputArea.style.display = "none";
+    buildChoices();
+  } else {
+    choiceArea.style.display = "none";
+    inputArea.style.display = "flex";
+    var inp = document.getElementById("answerInput");
+    inp.value = "";
+    inp.disabled = false;
+    setTimeout(function(){ inp.focus(); }, 50);
+  }
+}
+
+/* 三択の選択肢づくり（正解に近い数字をまぜる） */
+function buildChoices(){
+  var area = document.getElementById("choiceArea");
+  area.innerHTML = "";
+  var set = {};
+  set[current.answer] = true;
+  var opts = [current.answer];
+  var guard = 0;
+  while(opts.length < 3 && guard < 100){
+    guard++;
+    var delta = rnd(1,9) * (Math.random()<.5 ? -1 : 1);
+    var base = (Math.random()<.5)
+      ? current.answer + delta * rnd(1,12)
+      : current.a * (current.b + delta);
+    base = Math.round(base);
+    if(base > 0 && !set[base]){ set[base] = true; opts.push(base); }
+  }
+  // シャッフル
+  for(var i=opts.length-1;i>0;i--){ var j=rnd(0,i); var t=opts[i]; opts[i]=opts[j]; opts[j]=t; }
+  for(var k=0;k<opts.length;k++){
+    (function(val){
+      var btn = document.createElement("button");
+      btn.className = "choice-btn";
+      btn.textContent = val;
+      btn.onclick = function(){ checkAnswer(val, btn); };
+      area.appendChild(btn);
+    })(opts[k]);
+  }
+}
+
+/* ====== 採点 ====== */
+function checkAnswer(val, btn){
+  if(answered) return;
+  answered = true;
+  var ok = (Number(val) === current.answer);
+
+  if(MODE==="choice"){
+    var btns = document.querySelectorAll("#choiceArea .choice-btn");
+    for(var i=0;i<btns.length;i++){
+      btns[i].disabled = true;
+      if(Number(btns[i].textContent) === current.answer){ btns[i].classList.add("correct"); }
+    }
+    if(!ok && btn){ btn.classList.add("wrong"); }
+  } else {
+    document.getElementById("answerInput").disabled = true;
+  }
+
+  var fb = document.getElementById("feedback");
+  if(ok){
+    correctCount++;
+    fb.className = "feedback ok";
+    fb.innerHTML = pick(["せいかい！🎉","だいせいかい！🌟","すごい！✨","やったね！🎊"]);
+    celebrate();
+    removeWeakIfCleared();
+  } else {
+    fb.className = "feedback ng";
+    fb.innerHTML = "おしい！😊<span class='sub'>こたえは <b>" + current.answer + "</b> だよ（あなた: " +
+                   (val===""||val==null ? "—" : val) + "）</span>";
+    saveWeak(current.a, current.b, current.answer, val);
+  }
+  document.getElementById("qScore").textContent = "⭐ " + correctCount + " せいかい";
+  document.getElementById("nextBtn").style.display = "block";
+}
+
+function submitInput(){
+  if(answered) return;
+  var inp = document.getElementById("answerInput");
+  if(inp.value === ""){ return; }
+  checkAnswer(inp.value, null);
+}
+
+/* Enterで回答 / 次の問題へ */
+document.addEventListener("keydown", function(e){
+  if(e.key !== "Enter") return;
+  if(!document.getElementById("quiz").classList.contains("active")) return;
+  if(!answered && MODE==="input"){ submitInput(); }
+  else if(answered){ nextQuestion(); }
+});
+
+function pick(arr){ return arr[rnd(0,arr.length-1)]; }
+
+/* ====== 次の問題 / 結果 ====== */
+function nextQuestion(){
+  if(singleMode){
+    // にがてチェックの単問練習 → 1問で終了し、にがてリストへ戻る
+    openWeak();
+    return;
+  }
+  qIndex++;
+  if(qIndex >= TOTAL){ showResult(); }
+  else { loadQuestion(); }
+}
+
+function showResult(){
+  var rate = Math.round(correctCount / TOTAL * 100);
+  document.getElementById("resultScore").textContent = TOTAL + "問中 " + correctCount + "問せいかい";
+  document.getElementById("resultRate").textContent = "正答率 " + rate + "%";
+  var emoji = rate===100 ? "🏆" : rate>=70 ? "🎉" : rate>=40 ? "😊" : "💪";
+  document.getElementById("resultEmoji").textContent = emoji;
+  show("result");
+  if(rate>=70){ celebrate(); }
+}
+
+/* ====== 紙吹雪えんしゅつ ====== */
+function celebrate(){
+  var marks = ["🎉","✨","🌟","🎊","💖","⭐"];
+  for(var i=0;i<14;i++){
+    var c = document.createElement("div");
+    c.className = "confetti";
+    c.textContent = marks[rnd(0,marks.length-1)];
+    c.style.left = rnd(0,100) + "vw";
+    c.style.animationDuration = (1 + Math.random()*1.2) + "s";
+    c.style.fontSize = rnd(18,34) + "px";
+    document.body.appendChild(c);
+    (function(el){ setTimeout(function(){ el.remove(); }, 2400); })(c);
+  }
+}
+
+/* ====== にがてリスト (localStorage) ====== */
+function loadWeak(){
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function storeWeak(obj){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(obj)); }catch(e){}
+}
+function saveWeak(a,b,answer,userAns){
+  var data = loadWeak();
+  var key = a + "x" + b;
+  if(data[key]){
+    data[key].count += 1;
+    data[key].last = userAns;
+  } else {
+    data[key] = { a:a, b:b, answer:answer, count:1, last:userAns };
+  }
+  storeWeak(data);
+}
+function removeWeakIfCleared(){
+  if(!singleMode) return;
+  var data = loadWeak();
+  var key = singleMode.a + "x" + singleMode.b;
+  if(data[key]){ delete data[key]; storeWeak(data); }
+}
+
+function openWeak(){
+  var data = loadWeak();
+  var keys = Object.keys(data);
+  var list = document.getElementById("weakList");
+  list.innerHTML = "";
+
+  if(keys.length === 0){
+    list.innerHTML = '<div class="weak-empty">まだ にがてな問題はないよ！<br>クイズにチャレンジしてみよう 😊</div>';
+    show("weak");
+    return;
+  }
+  // 間違えた回数が多い順
+  keys.sort(function(x,y){ return data[y].count - data[x].count; });
+
+  for(var i=0;i<keys.length;i++){
+    (function(item){
+      var div = document.createElement("div");
+      div.className = "weak-item";
+      var lastTxt = (item.last===""||item.last==null) ? "—" : item.last;
+      div.innerHTML =
+        '<div class="weak-q">' + item.a + ' × ' + item.b + ' = ' + item.answer + '</div>' +
+        '<div class="weak-meta">' +
+          'せいかい： <b>' + item.answer + '</b><br>' +
+          'じぶんのこたえ： ' + lastTxt + '<br>' +
+          'まちがえた回数： <b>' + item.count + ' 回</b>' +
+        '</div>';
+      var btn = document.createElement("button");
+      btn.className = "weak-again";
+      btn.textContent = "この問題だけ もう一度 🔁";
+      btn.onclick = function(){ practiceSingle(item); };
+      div.appendChild(btn);
+      document.getElementById("weakList").appendChild(div);
+    })(data[keys[i]]);
+  }
+  show("weak");
+}
+
+function practiceSingle(item){
+  MODE = "input";
+  singleMode = { a:item.a, b:item.b, answer:item.answer };
+  qIndex = 0; correctCount = 0;
+  document.getElementById("quizTitle").textContent = "にがて れんしゅう 🔁";
+  show("quiz");
+  loadQuestion();
+  document.getElementById("qCount").textContent = "この問題だけ";
+}
+
+function resetWeak(){
+  if(confirm("にがてリストを ぜんぶ消してもいい？")){
+    try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+    openWeak();
+  }
+}
+
+/* ====== 全体表 ====== */
+var TABLE_RANGES = [
+  {label:"10〜19", min:10, max:19},
+  {label:"20〜29", min:20, max:29},
+  {label:"30〜39", min:30, max:39},
+  {label:"40〜49", min:40, max:49},
+  {label:"50〜59", min:50, max:59},
+  {label:"60〜69", min:60, max:69},
+  {label:"70〜79", min:70, max:79},
+  {label:"80〜89", min:80, max:89},
+  {label:"90〜99", min:90, max:99},
+  {label:"10〜99 ぜんぶ", min:10, max:99}
+];
+var tableActive = 0;
+
+/* 数字ごとの色（行ヘッダーと列ヘッダーで同じ数字＝同じ色） */
+function headColor(n){
+  var hue = (n * 36) % 360;
+  return "hsl(" + hue + ",65%,62%)";
+}
+
+function openTable(){
+  buildRangeBar();
+  renderTable(TABLE_RANGES[tableActive]);
+  show("table");
+}
+
+function buildRangeBar(){
+  var bar = document.getElementById("rangeBar");
+  bar.innerHTML = "";
+  for(var i=0;i<TABLE_RANGES.length;i++){
+    (function(idx){
+      var btn = document.createElement("button");
+      btn.className = "range-btn" + (idx===tableActive ? " active" : "");
+      btn.textContent = TABLE_RANGES[idx].label;
+      btn.onclick = function(){
+        tableActive = idx;
+        buildRangeBar();
+        renderTable(TABLE_RANGES[idx]);
+      };
+      bar.appendChild(btn);
+    })(i);
+  }
+}
+
+function renderTable(range){
+  var min = range.min, max = range.max;
+  var html = '<table class="kuku"><thead><tr><th class="corner">×</th>';
+  for(var c=min;c<=max;c++){
+    html += '<th data-h="col" data-n="' + c + '" style="background:' + headColor(c) + '">' + c + '</th>';
+  }
+  html += '</tr></thead><tbody>';
+  for(var r=min;r<=max;r++){
+    html += '<tr><th data-h="row" data-n="' + r + '" style="background:' + headColor(r) + '">' + r + '</th>';
+    for(var cc=min;cc<=max;cc++){
+      var cls = (r===cc) ? ' class="diag"' : '';
+      html += '<td data-r="' + r + '" data-c="' + cc + '"' + cls + '>' + (r*cc) + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById("tableScroll").innerHTML = html;
+
+  // セルタップで a×b と b×a を同時ハイライト
+  var tds = document.querySelectorAll("#tableScroll td");
+  for(var i=0;i<tds.length;i++){
+    tds[i].onclick = function(){ highlightSymmetry(this); };
+  }
+}
+
+function highlightSymmetry(cell){
+  var scroll = document.getElementById("tableScroll");
+  var prev = scroll.querySelectorAll(".hl");
+  for(var i=0;i<prev.length;i++){ prev[i].classList.remove("hl"); }
+
+  var r = cell.getAttribute("data-r");
+  var c = cell.getAttribute("data-c");
+  // 反対側 (c×r) を探す
+  var mirror = scroll.querySelector('td[data-r="' + c + '"][data-c="' + r + '"]');
+  cell.classList.add("hl");
+  if(mirror){ mirror.classList.add("hl"); }
+  // 対応するヘッダーも軽く強調
+  var heads = scroll.querySelectorAll('th[data-h]');
+  for(var k=0;k<heads.length;k++){
+    var n = heads[k].getAttribute("data-n");
+    if(n===r || n===c){ heads[k].classList.add("hl"); }
+  }
+}
+</script>
+</body>
+</html>

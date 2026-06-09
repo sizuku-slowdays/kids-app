@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#fff7d6">
+<title>とけいタイムマシン</title>
+<style>
+  :root{
+    --bg1:#fff7d6;
+    --bg2:#ffe9f2;
+    --ink:#5a4a3a;
+    --red:#ff5a5a;      /* みじかい針 = 何時 */
+    --blue:#4f9dff;     /* ながい針 = 何分 */
+    --pink:#ff8fb1;
+    --pink-d:#ff6f9c;
+    --green:#5fd089;
+    --green-d:#36c46c;
+    --yellow:#ffd35e;
+    --orange:#ffa84d;
+    --purple:#b89bff;
+    --card:#ffffff;
+    --shadow:0 6px 0 rgba(0,0,0,.07), 0 10px 22px rgba(150,120,90,.18);
+    --radius:22px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
+    color:var(--ink);
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    min-height:100vh;font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:16px 14px 40px;}
+  .screen{display:none;animation:pop .25s ease;}
+  .screen.active{display:block;}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
+
+  h1.logo{text-align:center;font-size:32px;margin:18px 0 4px;color:var(--pink-d);text-shadow:0 3px 0 #ffe0ea;}
+  .tagline{text-align:center;color:#a59180;margin:0 0 22px;font-size:15px;}
+
+  .menu{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .menu-btn{
+    border:none;border-radius:var(--radius);padding:26px 8px;font-size:19px;font-weight:bold;
+    color:#fff;cursor:pointer;box-shadow:var(--shadow);transition:transform .08s;
+    display:flex;flex-direction:column;align-items:center;gap:8px;line-height:1.25;
+  }
+  .menu-btn .ico{font-size:36px;}
+  .menu-btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.07),0 6px 12px rgba(150,120,90,.18);}
+  .m1{background:linear-gradient(160deg,var(--pink),var(--pink-d));}
+  .m2{background:linear-gradient(160deg,#8fd0ff,var(--blue));}
+  .m3{background:linear-gradient(160deg,var(--green),var(--green-d));}
+  .m4{background:linear-gradient(160deg,var(--yellow),var(--orange));}
+
+  .legend{
+    text-align:center;margin-top:20px;background:#fff;border-radius:18px;padding:14px;
+    box-shadow:0 4px 0 rgba(0,0,0,.05);font-size:15px;font-weight:bold;
+  }
+  .legend .r{color:var(--red);}
+  .legend .b{color:var(--blue);}
+
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .btn-top{
+    border:none;background:#fff;color:var(--ink);border-radius:16px;padding:10px 16px;
+    font-size:15px;font-weight:bold;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.06);
+  }
+  .btn-top:active{transform:translateY(2px);}
+  .screen-title{font-size:21px;font-weight:bold;margin:0;}
+
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 18px;}
+
+  /* パターン選択 */
+  .pat-title{text-align:center;font-size:19px;font-weight:bold;margin:4px 0 16px;}
+  .pat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .pat-btn{
+    border:none;border-radius:18px;padding:20px 8px;font-size:20px;font-weight:bold;color:#fff;
+    cursor:pointer;box-shadow:var(--shadow);background:linear-gradient(160deg,var(--purple),#9b7dff);
+  }
+  .pat-btn.rand{grid-column:1 / -1;background:linear-gradient(160deg,var(--orange),#ff8a3c);}
+  .pat-btn:active{transform:translateY(3px);}
+
+  /* 時計 */
+  .clock-box{display:flex;justify-content:center;margin:6px 0 12px;}
+  svg.clock{width:230px;height:230px;max-width:80vw;max-height:80vw;touch-action:none;}
+
+  /* クイズ */
+  .progress{display:flex;justify-content:space-between;font-size:15px;color:#a59180;font-weight:bold;margin-bottom:8px;}
+  .qtext{text-align:center;font-size:22px;font-weight:bold;margin:6px 0 4px;}
+  .qbig{text-align:center;font-size:26px;font-weight:bold;color:var(--pink-d);margin:8px 0 2px;}
+  .choices{display:grid;gap:12px;margin-top:14px;}
+  .choice-btn{
+    border:none;border-radius:18px;padding:18px;font-size:24px;font-weight:bold;background:#fff;
+    color:var(--ink);cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.07),0 8px 14px rgba(150,120,90,.12);
+    transition:transform .08s;
+  }
+  .choice-btn:active{transform:translateY(3px);}
+  .choice-btn.correct{background:linear-gradient(160deg,var(--green),var(--green-d));color:#fff;}
+  .choice-btn.wrong{background:linear-gradient(160deg,#ffb3b3,#ff7e7e);color:#fff;}
+  .choice-btn:disabled{cursor:default;}
+
+  .feedback{text-align:center;font-size:24px;font-weight:bold;margin:16px 0 6px;min-height:32px;}
+  .feedback.ok{color:var(--green-d);}
+  .feedback.ng{color:var(--orange);}
+  .feedback .sub{display:block;font-size:17px;color:#a59180;margin-top:6px;}
+  .next-btn{
+    display:block;width:100%;border:none;border-radius:18px;padding:16px;font-size:20px;font-weight:bold;
+    background:linear-gradient(160deg,var(--purple),#9b7dff);color:#fff;cursor:pointer;box-shadow:var(--shadow);
+  }
+  .next-btn:active{transform:translateY(3px);}
+
+  /* とけいを あわせる */
+  .target{text-align:center;font-size:26px;font-weight:bold;margin:4px 0;color:var(--pink-d);}
+  .now-time{text-align:center;font-size:18px;color:#a59180;font-weight:bold;margin-bottom:6px;}
+  .ctrl-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;}
+  .ctrl-btn{
+    border:none;border-radius:16px;padding:14px 6px;font-size:16px;font-weight:bold;color:#fff;cursor:pointer;
+    box-shadow:0 4px 0 rgba(0,0,0,.08);line-height:1.2;
+  }
+  .ctrl-btn:active{transform:translateY(2px);}
+  .ch{background:linear-gradient(160deg,#ff9aa2,var(--red));}
+  .cm5{background:linear-gradient(160deg,#8fd0ff,var(--blue));}
+  .cm1{background:linear-gradient(160deg,#bfe6ff,#6aa9ff);}
+  .ok-btn{
+    display:block;width:100%;border:none;border-radius:18px;padding:16px;font-size:20px;font-weight:bold;
+    background:linear-gradient(160deg,var(--green),var(--green-d));color:#fff;cursor:pointer;
+    box-shadow:var(--shadow);margin-top:14px;
+  }
+  .ok-btn:active{transform:translateY(3px);}
+  .next-set{display:block;width:100%;border:none;border-radius:18px;padding:14px;font-size:18px;font-weight:bold;
+    background:linear-gradient(160deg,var(--orange),#ff8a3c);color:#fff;cursor:pointer;box-shadow:var(--shadow);margin-top:10px;}
+  .next-set:active{transform:translateY(2px);}
+  .hint{text-align:center;font-size:13px;color:#a59180;margin:6px 0 0;}
+
+  /* 結果 */
+  .result{text-align:center;}
+  .result .big{font-size:60px;margin:6px 0;}
+  .result .msg{font-size:22px;font-weight:bold;margin:6px 0;}
+  .result .score{font-size:30px;font-weight:bold;color:var(--pink-d);margin:6px 0 16px;}
+  .result-actions{display:grid;gap:12px;}
+  .back-home{display:block;width:100%;border:none;cursor:pointer;background:#fff;color:#a59180;
+    border-radius:18px;padding:14px;font-size:16px;font-weight:bold;box-shadow:0 4px 0 rgba(0,0,0,.05);}
+  .back-home:active{transform:translateY(2px);}
+
+  /* 紙吹雪 */
+  .confetti{position:fixed;top:-20px;font-size:24px;pointer-events:none;z-index:9999;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:0;}}
+
+  @media (max-width:360px){
+    body{font-size:17px;}
+    .menu-btn{font-size:17px;}
+    .qtext{font-size:20px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== トップ ===== -->
+  <section id="home" class="screen active">
+    <h1 class="logo">とけいタイムマシン ⏰</h1>
+    <p class="tagline">じかんの けいさんと とけいあわせを れんしゅうしよう！</p>
+    <div class="menu">
+      <button class="menu-btn m1" onclick="openPattern('after')"><span class="ico">⏩</span>なんぷん後？</button>
+      <button class="menu-btn m2" onclick="openPattern('before')"><span class="ico">⏪</span>なんぷん前？</button>
+      <button class="menu-btn m3" onclick="startSet()"><span class="ico">🕐</span>とけいを<br>あわせる</button>
+      <button class="menu-btn m4" onclick="startQuiz('word',null)"><span class="ico">📖</span>文章<br>もんだい</button>
+    </div>
+    <div class="legend">
+      <span class="r">●</span> 赤いみじかい針＝「なんじ」　
+      <span class="b">●</span> 青いながい針＝「なんぷん」
+    </div>
+  </section>
+
+  <!-- ===== パターン選択（後／前） ===== -->
+  <section id="pattern" class="screen">
+    <div class="topbar">
+      <button class="btn-top" onclick="show('home')">← トップ</button>
+      <h2 class="screen-title" id="patTitle">なんぷん後？</h2>
+    </div>
+    <div class="card">
+      <p class="pat-title">なんぷん で だす？</p>
+      <div class="pat-grid">
+        <button class="pat-btn" onclick="startQuiz(patType,10)">10ぷん</button>
+        <button class="pat-btn" onclick="startQuiz(patType,15)">15ふん</button>
+        <button class="pat-btn" onclick="startQuiz(patType,30)">30ぷん</button>
+        <button class="pat-btn" onclick="startQuiz(patType,45)">45ふん</button>
+        <button class="pat-btn" onclick="startQuiz(patType,60)">60ぷん</button>
+        <button class="pat-btn rand" onclick="startQuiz(patType,'random')">🎲 ランダム</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== クイズ（後／前／文章 共通） ===== -->
+  <section id="quiz" class="screen">
+    <div class="topbar">
+      <button class="btn-top" onclick="show('home')">← トップ</button>
+      <h2 class="screen-title" id="quizTitle">クイズ</h2>
+    </div>
+    <div class="card">
+      <div class="progress">
+        <span id="qCount">1 / 10</span>
+        <span id="qScore">⭐ 0てん</span>
+      </div>
+      <div class="clock-box" id="quizClockBox"></div>
+      <div class="qtext" id="qText"></div>
+      <div class="qbig" id="qBig"></div>
+      <div class="choices" id="choices"></div>
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="nextBtn" style="display:none;" onclick="nextQuestion()">つぎの もんだいへ →</button>
+    </div>
+  </section>
+
+  <!-- ===== とけいを あわせる ===== -->
+  <section id="setclock" class="screen">
+    <div class="topbar">
+      <button class="btn-top" onclick="show('home')">← トップ</button>
+      <h2 class="screen-title">とけいを あわせる 🕐</h2>
+    </div>
+    <div class="card">
+      <p class="target" id="setTarget">7時35分に あわせてね</p>
+      <div class="clock-box" id="setClockBox"></div>
+      <p class="now-time" id="setNow">いま： 12時0分</p>
+      <p class="hint">ながいはり（青）を さわって うごかせるよ✋</p>
+      <div class="ctrl-grid">
+        <button class="ctrl-btn ch" onclick="adjust('h',1)">じかん ＋1</button>
+        <button class="ctrl-btn cm5" onclick="adjust('m',5)">ふん ＋5</button>
+        <button class="ctrl-btn cm1" onclick="adjust('m',1)">ふん ＋1</button>
+        <button class="ctrl-btn ch" onclick="adjust('h',-1)">じかん －1</button>
+        <button class="ctrl-btn cm5" onclick="adjust('m',-5)">ふん －5</button>
+        <button class="ctrl-btn cm1" onclick="adjust('m',-1)">ふん －1</button>
+      </div>
+      <button class="ok-btn" onclick="judgeSet()">これで OK ✅</button>
+      <div class="feedback" id="setFeedback"></div>
+      <button class="next-set" id="setNextBtn" style="display:none;" onclick="startSet()">つぎの もんだい →</button>
+    </div>
+  </section>
+
+  <!-- ===== 結果 ===== -->
+  <section id="result" class="screen">
+    <div class="topbar">
+      <button class="btn-top" onclick="show('home')">← トップ</button>
+      <h2 class="screen-title">けっか</h2>
+    </div>
+    <div class="card result">
+      <div class="big" id="resultEmoji">🎉</div>
+      <div class="msg" id="resultMsg">よくできました！</div>
+      <div class="score" id="resultScore">0 / 10</div>
+      <div class="result-actions">
+        <button class="next-btn" id="resultAgain" onclick="replay()">もう一度 あそぶ 🔁</button>
+        <button class="back-home" onclick="show('home')">トップに もどる</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ====== 設定 ====== */
+var STEP = 5;          // 分のきざみ。1にすれば1分きざみに拡張できる
+var TOTAL = 10;        // 1セットの問題数
+
+/* ====== 状態 ====== */
+var quizType = "after";   // after / before / word
+var quizPattern = 10;     // 後／前の分数 or "random"
+var patType = "after";
+var qIndex = 0, correctCount = 0, answered = false, current = null;
+var setH = 12, setM = 0, setTargetTime = null, setDone = false;
+
+/* ====== 画面きりかえ ====== */
+function show(id){
+  var s = document.querySelectorAll(".screen");
+  for(var i=0;i<s.length;i++){ s[i].classList.remove("active"); }
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+function rnd(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function pick(a){ return a[rnd(0,a.length-1)]; }
+
+/* ====== 時刻けいさん（12時間制：12時=0） ====== */
+function addMin(h,m,delta){
+  var t = ((h%12)*60 + m + delta);
+  t = ((t % 720) + 720) % 720;
+  var hh = Math.floor(t/60);
+  return { h: (hh===0 ? 12 : hh), m: t%60 };
+}
+function fmt(t){ return t.h + "時" + t.m + "分"; }
+function randTime(){ return { h: rnd(1,12), m: rnd(0, Math.floor(59/STEP))*STEP }; }
+
+/* ====== アナログ時計 SVG ====== */
+function buildClock(prefix){
+  var s = '<svg class="clock" viewBox="0 0 200 200" id="'+prefix+'svg">';
+  s += '<circle cx="100" cy="100" r="96" fill="#fffdf5" stroke="#ffd35e" stroke-width="6"/>';
+  // 目もり
+  for(var i=0;i<60;i++){
+    var ang = i*6*Math.PI/180;
+    var big = (i%5===0);
+    var r1 = big ? 80 : 85, r2 = 90;
+    var x1 = 100+r1*Math.sin(ang), y1 = 100-r1*Math.cos(ang);
+    var x2 = 100+r2*Math.sin(ang), y2 = 100-r2*Math.cos(ang);
+    s += '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+
+         '" stroke="'+(big?"#c9b070":"#e3d4a0")+'" stroke-width="'+(big?2.5:1.2)+'"/>';
+  }
+  // 数字
+  for(var n=1;n<=12;n++){
+    var a = n*30*Math.PI/180;
+    var x = 100+70*Math.sin(a), y = 100-70*Math.cos(a)+7;
+    s += '<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" text-anchor="middle" font-size="18" font-weight="bold" fill="#5a4a3a">'+n+'</text>';
+  }
+  // 針（赤＝みじかい/時, 青＝ながい/分）
+  s += '<line id="'+prefix+'hour" x1="100" y1="100" x2="100" y2="56" stroke="#ff5a5a" stroke-width="7" stroke-linecap="round"/>';
+  s += '<line id="'+prefix+'min" x1="100" y1="100" x2="100" y2="30" stroke="#4f9dff" stroke-width="4.5" stroke-linecap="round"/>';
+  s += '<circle cx="100" cy="100" r="6" fill="#5a4a3a"/>';
+  s += '</svg>';
+  return s;
+}
+function setClockHands(prefix,h,m){
+  var hourAng = ((h%12) + m/60) * 30;
+  var minAng = m * 6;
+  var he = document.getElementById(prefix+"hour");
+  var me = document.getElementById(prefix+"min");
+  if(he) he.setAttribute("transform","rotate("+hourAng+" 100 100)");
+  if(me) me.setAttribute("transform","rotate("+minAng+" 100 100)");
+}
+
+/* ====== パターン選択（後／前） ====== */
+function openPattern(type){
+  patType = type;
+  document.getElementById("patTitle").textContent = (type==="after" ? "なんぷん後？ ⏩" : "なんぷん前？ ⏪");
+  show("pattern");
+}
+
+/* ====== クイズ開始 ====== */
+function startQuiz(type, pattern){
+  quizType = type; quizPattern = pattern;
+  qIndex = 0; correctCount = 0;
+  var titles = { after:"なんぷん後？ ⏩", before:"なんぷん前？ ⏪", word:"文章もんだい 📖" };
+  document.getElementById("quizTitle").textContent = titles[type];
+  document.getElementById("quizClockBox").innerHTML = buildClock("q");
+  show("quiz");
+  loadQuestion();
+}
+
+function makeQuestion(){
+  if(quizType==="word"){ return makeWordQuestion(); }
+  var cur = randTime();
+  var delta = (quizPattern==="random") ? pick([10,15,30,45,60]) : quizPattern;
+  var ans = addMin(cur.h, cur.m, quizType==="after" ? delta : -delta);
+  var go = (quizType==="after" ? "後" : "前");
+  return {
+    clock: cur,
+    text: "いまは " + fmt(cur) + " です。",
+    big: delta + "分" + go + "は なんじなんぷん？",
+    answer: ans
+  };
+}
+
+function makeWordQuestion(){
+  var start = randTime();
+  var delta = pick([10,15,20,25,30,40,45]);
+  var ans = addMin(start.h, start.m, delta);
+  var tpl = pick([
+    {t:"% に いえを 出ます。"+delta+"分 あるくと、なんじなんぷんに つきますか？"},
+    {t:"% から "+delta+"分 べんきょうしました。おわった 時こくは？"},
+    {t:"% から "+delta+"分 ゲームを しました。おわった 時こくは？"},
+    {t:"% から "+delta+"分 ほんを よみました。よみおわった 時こくは？"},
+    {t:"% に でんしゃに のって、"+delta+"分で つきました。ついた 時こくは？"}
+  ]);
+  return {
+    clock: start,
+    text: tpl.t.replace("%", fmt(start)),
+    big: "",
+    answer: ans
+  };
+}
+
+/* せんたくし（3たく）づくり */
+function makeChoices(ans){
+  var set = {}; set[ans.h+":"+ans.m] = true;
+  var list = [ans];
+  var offsets = [5,-5,10,-10,15,-15,60,-60,STEP,-STEP];
+  var guard = 0;
+  while(list.length < 3 && guard < 60){
+    guard++;
+    var off = pick(offsets);
+    var cand = addMin(ans.h, ans.m, off);
+    var key = cand.h+":"+cand.m;
+    if(!set[key]){ set[key] = true; list.push(cand); }
+  }
+  for(var i=list.length-1;i>0;i--){ var j=rnd(0,i); var t=list[i]; list[i]=list[j]; list[j]=t; }
+  return list;
+}
+
+function loadQuestion(){
+  answered = false;
+  current = makeQuestion();
+  setClockHands("q", current.clock.h, current.clock.m);
+  document.getElementById("qCount").textContent = (qIndex+1) + " / " + TOTAL;
+  document.getElementById("qScore").textContent = "⭐ " + correctCount + "てん";
+  document.getElementById("qText").textContent = current.text;
+  document.getElementById("qBig").textContent = current.big;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("nextBtn").style.display = "none";
+
+  var area = document.getElementById("choices");
+  area.innerHTML = "";
+  var choices = makeChoices(current.answer);
+  for(var k=0;k<choices.length;k++){
+    (function(t){
+      var btn = document.createElement("button");
+      btn.className = "choice-btn";
+      btn.textContent = fmt(t);
+      btn.onclick = function(){ checkAnswer(t, btn); };
+      area.appendChild(btn);
+    })(choices[k]);
+  }
+}
+
+function checkAnswer(t, btn){
+  if(answered) return;
+  answered = true;
+  var ok = (t.h===current.answer.h && t.m===current.answer.m);
+  var btns = document.querySelectorAll("#choices .choice-btn");
+  for(var i=0;i<btns.length;i++){
+    btns[i].disabled = true;
+    if(btns[i].textContent === fmt(current.answer)){ btns[i].classList.add("correct"); }
+  }
+  var fb = document.getElementById("feedback");
+  if(ok){
+    correctCount++;
+    fb.className = "feedback ok";
+    fb.textContent = pick(["せいかい！🎉","だいせいかい！🌟","やったね！🎊"]);
+    celebrate();
+  } else {
+    if(btn){ btn.classList.add("wrong"); }
+    fb.className = "feedback ng";
+    fb.innerHTML = "もうすこし！😊<span class='sub'>こたえは <b>" + fmt(current.answer) + "</b> だよ</span>";
+  }
+  document.getElementById("qScore").textContent = "⭐ " + correctCount + "てん";
+  document.getElementById("nextBtn").style.display = "block";
+}
+
+function nextQuestion(){
+  qIndex++;
+  if(qIndex >= TOTAL){ showResult(); }
+  else { loadQuestion(); }
+}
+
+function replay(){
+  if(quizType==="word"){ startQuiz("word", null); }
+  else { startQuiz(quizType, quizPattern); }
+}
+
+/* ====== 結果 ====== */
+function showResult(){
+  var msg, emoji;
+  if(correctCount===TOTAL){ emoji="🏆"; msg="まんてん！すごい！"; }
+  else if(correctCount>=7){ emoji="🎉"; msg="よくできました！"; }
+  else if(correctCount>=4){ emoji="😊"; msg="その ちょうし！"; }
+  else { emoji="💪"; msg="つぎは がんばろう！"; }
+  document.getElementById("resultEmoji").textContent = emoji;
+  document.getElementById("resultMsg").textContent = msg;
+  document.getElementById("resultScore").textContent = correctCount + " / " + TOTAL;
+  document.getElementById("resultAgain").style.display = "block";
+  show("result");
+  if(correctCount>=7){ celebrate(); }
+}
+
+/* ====== とけいを あわせる ====== */
+function startSet(){
+  setTargetTime = randTime();
+  setH = rnd(1,12); setM = rnd(0, Math.floor(59/STEP))*STEP;
+  // ぐうぜん 一致していたら ずらす
+  if(setH===setTargetTime.h && setM===setTargetTime.m){ setH = (setH%12)+1; }
+  setDone = false;
+  document.getElementById("setTarget").textContent = fmt(setTargetTime) + " に あわせてね";
+  document.getElementById("setClockBox").innerHTML = buildClock("s");
+  document.getElementById("setFeedback").textContent = "";
+  document.getElementById("setFeedback").className = "feedback";
+  document.getElementById("setNextBtn").style.display = "none";
+  refreshSet();
+  enableDrag();
+  show("setclock");
+}
+function refreshSet(){
+  setClockHands("s", setH, setM);
+  document.getElementById("setNow").textContent = "いま： " + setH + "時" + setM + "分";
+}
+function adjust(kind, d){
+  if(setDone) return;
+  if(kind==="h"){
+    setH = ((setH - 1 + d) % 12 + 12) % 12 + 1;
+  } else {
+    var t = addMin(setH, setM, d);
+    setH = t.h; setM = t.m;   // 分のくり上がり・くり下がりで「時」も動く
+  }
+  refreshSet();
+}
+function judgeSet(){
+  var fb = document.getElementById("setFeedback");
+  if(setH===setTargetTime.h && setM===setTargetTime.m){
+    setDone = true;
+    fb.className = "feedback ok";
+    fb.textContent = "せいかい！🎉";
+    celebrate();
+    document.getElementById("setNextBtn").style.display = "block";
+  } else {
+    fb.className = "feedback ng";
+    fb.textContent = "もうすこし！😊";
+  }
+}
+
+/* ながいはりを ドラッグ（マウス＆タッチ対応） */
+function enableDrag(){
+  var svg = document.getElementById("ssvg");
+  if(!svg) return;
+  var dragging = false;
+  function setByPoint(clientX, clientY){
+    if(setDone) return;
+    var rect = svg.getBoundingClientRect();
+    var cx = rect.left + rect.width/2;
+    var cy = rect.top + rect.height/2;
+    var dx = clientX - cx, dy = clientY - cy;
+    var deg = Math.atan2(dx, -dy) * 180/Math.PI;
+    if(deg<0) deg += 360;
+    var m = Math.round(deg/6);          // 0..60
+    m = Math.round(m/STEP)*STEP;        // STEPきざみにスナップ
+    m = ((m % 60) + 60) % 60;
+    setM = m;
+    refreshSet();
+  }
+  svg.addEventListener("pointerdown", function(e){ dragging=true; setByPoint(e.clientX,e.clientY); e.preventDefault(); });
+  svg.addEventListener("pointermove", function(e){ if(dragging){ setByPoint(e.clientX,e.clientY); e.preventDefault(); } });
+  window.addEventListener("pointerup", function(){ dragging=false; });
+  // pointer非対応の保険（古い端末）
+  svg.addEventListener("touchstart", function(e){ var t=e.touches[0]; if(t){ setByPoint(t.clientX,t.clientY); } e.preventDefault(); }, {passive:false});
+  svg.addEventListener("touchmove", function(e){ var t=e.touches[0]; if(t){ setByPoint(t.clientX,t.clientY); } e.preventDefault(); }, {passive:false});
+}
+
+/* ====== Enterキー対応 ====== */
+document.addEventListener("keydown", function(e){
+  if(e.key!=="Enter") return;
+  if(document.getElementById("quiz").classList.contains("active") && answered){ nextQuestion(); }
+  else if(document.getElementById("setclock").classList.contains("active")){
+    if(setDone){ startSet(); } else { judgeSet(); }
+  }
+});
+
+/* ====== 紙吹雪 ====== */
+function celebrate(){
+  var marks=["🎉","✨","🌟","🎊","💖","⭐"];
+  for(var i=0;i<14;i++){
+    var c=document.createElement("div");
+    c.className="confetti";
+    c.textContent=marks[rnd(0,marks.length-1)];
+    c.style.left=rnd(0,100)+"vw";
+    c.style.animationDuration=(1+Math.random()*1.2)+"s";
+    c.style.fontSize=rnd(18,34)+"px";
+    document.body.appendChild(c);
+    (function(el){ setTimeout(function(){ el.remove(); },2400); })(c);
+  }
+}
+</script>
+</body>
+</html>

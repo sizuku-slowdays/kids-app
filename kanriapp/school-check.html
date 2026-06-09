@@ -970,7 +970,7 @@ function renderCard(item) {
 // ミティキュアリンクカード：タップでゲームに飛び、戻ったら自動チェック
 if (item._mitiqua_link) {
 const returnUrl = new URL(location.href);
-returnUrl.searchParams.set('child', currentChild);
+returnUrl.searchParams.set('kid', currentKid);
 returnUrl.searchParams.set('mitiqua', 'done');
 
 const gameUrl = `https://cetus.fun/kids-app/medicine-game.html?return=${encodeURIComponent(returnUrl.toString())}`;
@@ -1406,12 +1406,19 @@ window.addEventListener('load', async () => {
   // medicine-game.html から戻ってきたとき ?mitiqua=done を検知して自動チェック
   const urlParams = new URLSearchParams(location.search);
   const mitiDone = urlParams.get('mitiqua') === 'done';
+  const returnKid = urlParams.get('kid');
+
+  if (returnKid === 'elder' || returnKid === 'younger') {
+    currentKid = returnKid;
+    document.querySelectorAll('.kid-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.kid === currentKid);
+    });
+  }
 
   await loadSchoolState();
 
   if (mitiDone) {
     checkedIds.add('mit_main');
-    // URLパラメータを消してきれいにする（履歴は変えない）
     history.replaceState({}, '', location.pathname);
     scheduleSchoolSave();
   }

@@ -969,10 +969,11 @@ function renderCard(item) {
 
 // ミティキュアリンクカード：タップでゲームに飛び、戻ったら自動チェック
 if (item._mitiqua_link) {
-  const returnUrl = new URL(location.href);
-  returnUrl.searchParams.set('mitiqua', 'done');
+const returnUrl = new URL(location.href);
+returnUrl.searchParams.set('child', currentChild);
+returnUrl.searchParams.set('mitiqua', 'done');
 
-  const gameUrl = `https://cetus.fun/kids-app/medicine-game.html?return=${encodeURIComponent(returnUrl.toString())}`;
+const gameUrl = `https://cetus.fun/kids-app/medicine-game.html?return=${encodeURIComponent(returnUrl.toString())}`;
 
   return `<a class="check-card full mitiqua-link-card${done ? ' done' : ''}"
              id="card-${item.id}"

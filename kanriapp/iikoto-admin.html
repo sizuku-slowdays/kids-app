@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>いいことポイント 管理画面</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #fff7fb;
+    margin: 0;
+    padding: 16px;
+    color: #444;
+  }
+
+  h1 {
+    text-align: center;
+    color: #d36b9d;
+    font-size: 24px;
+  }
+
+  .top-buttons {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  button {
+    border: none;
+    border-radius: 14px;
+    background: #d36b9d;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  .top-buttons button {
+    flex: 1;
+  }
+
+  .kid-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 16px;
+  }
+
+  .kid-tab {
+    flex: 1;
+    background: #f0d7e5;
+    color: #9a5b7b;
+  }
+
+  .kid-tab.active {
+    background: #d36b9d;
+    color: white;
+  }
+
+  .summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .summary-card {
+    background: white;
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  .summary-card.wide {
+    grid-column: 1 / -1;
+  }
+
+  .label {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+
+  .value {
+    font-size: 26px;
+    font-weight: bold;
+    color: #d36b9d;
+  }
+
+  .section-title {
+    margin: 22px 0 10px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #9a5b7b;
+  }
+
+  .record-card {
+    background: white;
+    border-radius: 18px;
+    padding: 14px;
+    margin: 10px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  .record-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .record-title {
+    font-size: 17px;
+    font-weight: bold;
+  }
+
+  .point {
+    color: #d36b9d;
+    font-size: 20px;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .memo {
+    margin-top: 8px;
+    background: #f7f2ff;
+    border-radius: 12px;
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .time {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #888;
+  }
+
+  .delete-btn {
+    margin-top: 10px;
+    background: #aaa;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .empty {
+    text-align: center;
+    color: #999;
+    padding: 30px 0;
+  }
+
+  .status {
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    min-height: 1.4em;
+  }
+</style>
+</head>
+<body>
+
+<h1>🌸🦄 いいことポイント管理</h1>
+
+<div class="status" id="status">読み込み中...</div>
+
+<div class="top-buttons">
+  <button onclick="loadAll()">🔄 最新にする</button>
+</div>
+
+<div class="kid-tabs">
+  <button class="kid-tab active" id="tab-saru" onclick="showKid('saru')">🌸 長女</button>
+  <button class="kid-tab" id="tab-unicorn" onclick="showKid('unicorn')">🦄 次女</button>
+</div>
+
+<div class="summary">
+  <div class="summary-card wide">
+    <div class="label">合計ポイント</div>
+    <div class="value" id="total-point">— pt</div>
+  </div>
+  <div class="summary-card">
+    <div class="label">今日</div>
+    <div class="value" id="today-point">— pt</div>
+  </div>
+  <div class="summary-card">
+    <div class="label">今月</div>
+    <div class="value" id="month-point">— pt</div>
+  </div>
+  <div class="summary-card">
+    <div class="label">記録数</div>
+    <div class="value" id="record-count">— 回</div>
+  </div>
+</div>
+
+<div class="section-title">📋 記録一覧</div>
+<div id="records"></div>
+
+<script>
+const API_BASE = "https://iikoto-api.sslowdayss.workers.dev";
+
+const KIDS = {
+  saru: {
+    name: "長女",
+    icon: "🌸"
+  },
+  unicorn: {
+    name: "次女",
+    icon: "🦄"
+  }
+};
+
+let currentOwner = "saru";
+let allData = {
+  saru: [],
+  unicorn: []
+};
+
+function setStatus(text) {
+  document.getElementById("status").textContent = text;
+}
+
+function fmt(num) {
+  return Number(num || 0).toLocaleString("ja-JP");
+}
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function isToday(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear()
+    && d.getMonth() === now.getMonth()
+    && d.getDate() === now.getDate();
+}
+
+function isThisMonth(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear()
+    && d.getMonth() === now.getMonth();
+}
+
+function esc(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function fetchRecords(owner) {
+  const res = await fetch(`${API_BASE}/api/iikoto?owner=${owner}`);
+  if (!res.ok) throw new Error(`${owner} の読み込み失敗`);
+  const data = await res.json();
+  return data.records || [];
+}
+
+async function loadAll() {
+  setStatus("読み込み中...");
+
+  try {
+    const [saruRecords, unicornRecords] = await Promise.all([
+      fetchRecords("saru"),
+      fetchRecords("unicorn")
+    ]);
+
+    allData.saru = saruRecords;
+    allData.unicorn = unicornRecords;
+
+    setStatus("読み込み完了");
+    render();
+
+  } catch (e) {
+    console.error(e);
+    setStatus("⚠️ 読み込みに失敗しました");
+    document.getElementById("records").innerHTML = `<div class="empty">データを読み込めませんでした。</div>`;
+  }
+}
+
+function showKid(owner) {
+  currentOwner = owner;
+
+  document.getElementById("tab-saru").classList.toggle("active", owner === "saru");
+  document.getElementById("tab-unicorn").classList.toggle("active", owner === "unicorn");
+
+  render();
+}
+
+function render() {
+  const records = allData[currentOwner] || [];
+
+  const total = records.reduce((sum, r) => sum + Number(r.point || 0), 0);
+  const today = records
+    .filter(r => isToday(r.created_at))
+    .reduce((sum, r) => sum + Number(r.point || 0), 0);
+  const month = records
+    .filter(r => isThisMonth(r.created_at))
+    .reduce((sum, r) => sum + Number(r.point || 0), 0);
+
+  document.getElementById("total-point").textContent = `${fmt(total)} pt`;
+  document.getElementById("today-point").textContent = `${fmt(today)} pt`;
+  document.getElementById("month-point").textContent = `${fmt(month)} pt`;
+  document.getElementById("record-count").textContent = `${records.length} 回`;
+
+  const box = document.getElementById("records");
+
+  if (!records.length) {
+    box.innerHTML = `<div class="empty">${KIDS[currentOwner].icon} まだ記録がありません。</div>`;
+    return;
+  }
+
+  box.innerHTML = records.map(r => {
+    return `
+      <div class="record-card">
+        <div class="record-head">
+          <div class="record-title">${esc(r.title)}</div>
+          <div class="point">${fmt(r.point)} pt</div>
+        </div>
+        ${r.memo ? `<div class="memo">💬 ${esc(r.memo)}</div>` : ""}
+        <div class="time">記録：${formatTime(r.created_at)}</div>
+        <button class="delete-btn" onclick="deleteRecord(${r.id})">🗑️ 削除</button>
+      </div>
+    `;
+  }).join("");
+}
+
+async function deleteRecord(id) {
+  const kid = KIDS[currentOwner];
+
+  if (!confirm(`${kid.icon} ${kid.name} のこの記録を削除しますか？`)) {
+    return;
+  }
+
+  try {
+    setStatus("削除中...");
+
+    const res = await fetch(`${API_BASE}/api/iikoto/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ owner: currentOwner })
+    });
+
+    if (!res.ok) {
+      throw new Error("削除失敗");
+    }
+
+    setStatus("削除しました");
+    await loadAll();
+
+  } catch (e) {
+    console.error(e);
+    setStatus("⚠️ 削除に失敗しました");
+    alert("削除に失敗しました。");
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>

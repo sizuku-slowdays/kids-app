@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>草原のレイン v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+  :root {
+    --sky: #bfe8ff;
+    --sky2: #edf9ff;
+    --grass: #9fce70;
+    --cream: rgba(255, 252, 236, 0.9);
+    --text: #2d3324;
+    --muted: #69725c;
+    --rain: #2d6f77;
+    --rain2: #5ea0a6;
+    --shadow: 0 16px 40px rgba(54, 92, 44, 0.22);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    min-height: 100%;
+    overflow-y: auto;
+  }
+
+  body {
+    min-height: 100dvh;
+    color: var(--text);
+    font-family: 'Noto Sans JP', system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    background:
+      linear-gradient(rgba(255,255,255,0.18), rgba(255,255,255,0.45)),
+      url("./sougen.png") center / cover fixed no-repeat,
+      linear-gradient(180deg, var(--sky2) 0%, var(--sky) 43%, #dff0b9 64%, var(--grass) 100%);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .app {
+    width: min(100%, 900px);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding: 12px clamp(10px, 3vw, 22px) calc(12px + var(--safe-bottom));
+  }
+
+  .hero {
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.68);
+    border-radius: 26px;
+    padding: 16px;
+    background: rgba(255, 255, 246, 0.62);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(8px);
+  }
+
+  .hero-main {
+    display: grid;
+    grid-template-columns: 78px 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .rain-icon {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid rgba(255, 249, 217, 0.95);
+    box-shadow: 0 8px 22px rgba(57, 107, 61, 0.32);
+    background: #e9f4d3;
+  }
+
+  .rain-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 25%;
+    display: block;
+  }
+
+  .title-kicker {
+    font-size: 0.76rem;
+    color: var(--rain);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+
+  h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: clamp(1.55rem, 6vw, 2.2rem);
+    color: #285c39;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-shadow: 0 2px 0 rgba(255,255,255,0.55);
+  }
+
+  .subtitle {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.86rem;
+  }
+
+  .status-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .status-card {
+    background: rgba(255, 252, 235, 0.72);
+    border: 1px solid rgba(103, 141, 78, 0.28);
+    border-radius: 16px;
+    padding: 9px 10px;
+  }
+
+  .status-card .label {
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+
+  .status-card .value {
+    margin-top: 2px;
+    font-weight: 700;
+    color: #315b35;
+  }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .mini-btn {
+    appearance: none;
+    border: 1px solid rgba(82, 123, 70, 0.32);
+    background: rgba(255,255,255,0.58);
+    color: #3d6842;
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  #save-status {
+    margin-left: auto;
+    align-self: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  #chat-card {
+    flex: 1;
+    min-height: 430px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 24px;
+    background: var(--cream);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+  }
+
+  #chat {
+    flex: 1;
+    min-height: 300px;
+    max-height: calc(100dvh - 310px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 88%;
+    animation: fadeIn 0.25s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  .msg.rain {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+
+  .msg.system {
+    align-self: center;
+    max-width: 96%;
+  }
+
+  .bubble {
+    padding: 10px 13px;
+    border-radius: 17px;
+    line-height: 1.7;
+    font-size: 0.95rem;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .msg.user .bubble {
+    background: rgba(255, 227, 153, 0.84);
+    border: 1px solid rgba(170, 127, 34, 0.22);
+    border-bottom-right-radius: 5px;
+  }
+
+  .msg.rain .bubble {
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(70, 129, 128, 0.22);
+    border-top-left-radius: 5px;
+  }
+
+  .msg.system .bubble {
+    padding: 6px 10px;
+    background: rgba(83, 140, 83, 0.08);
+    color: #547050;
+    border: 1px dashed rgba(77, 122, 74, 0.22);
+    text-align: center;
+    font-size: 0.78rem;
+  }
+
+  .label {
+    margin: 0 4px 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .msg.rain .label {
+    color: var(--rain);
+  }
+
+  .msg.error .bubble {
+    background: rgba(255, 231, 231, 0.86);
+    border: 1px solid rgba(190, 55, 55, 0.22);
+    color: #9f3030;
+  }
+
+  .typing {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding: 5px 2px;
+  }
+
+  .typing span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--rain2);
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing span:nth-child(2) {
+    animation-delay: 0.16s;
+  }
+
+  .typing span:nth-child(3) {
+    animation-delay: 0.32s;
+  }
+
+  @keyframes bounce {
+    0%, 80%, 100% {
+      transform: translateY(0);
+      opacity: 0.45;
+    }
+    40% {
+      transform: translateY(-5px);
+      opacity: 1;
+    }
+  }
+
+  footer {
+    flex-shrink: 0;
+    padding: 11px 12px 12px;
+    background: rgba(255, 250, 225, 0.72);
+    border-top: 1px solid rgba(100, 132, 69, 0.18);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 9px;
+    align-items: flex-end;
+  }
+
+  textarea {
+    flex: 1;
+    min-height: 46px;
+    max-height: 126px;
+    resize: none;
+    outline: none;
+    border: 1px solid rgba(72, 117, 92, 0.28);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.84);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.55;
+    padding: 11px 13px;
+  }
+
+  textarea:focus {
+    border-color: rgba(45, 111, 119, 0.58);
+    box-shadow: 0 0 0 3px rgba(45, 111, 119, 0.10);
+  }
+
+  #send {
+    appearance: none;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #6dbb6b, #2d8b68);
+    color: white;
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 700;
+    font-size: 0.94rem;
+    height: 46px;
+    padding: 0 18px;
+    cursor: pointer;
+    box-shadow: 0 6px 14px rgba(45, 139, 104, 0.28);
+    white-space: nowrap;
+  }
+
+  #send:disabled {
+    opacity: 0.48;
+    cursor: default;
+    box-shadow: none;
+  }
+
+  .hint {
+    text-align: center;
+    margin-top: 7px;
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+
+  @media (min-width: 720px) {
+    .app {
+      padding-top: 20px;
+      padding-bottom: 20px;
+    }
+
+    .hero {
+      padding: 20px;
+    }
+
+    .hero-main {
+      grid-template-columns: 96px 1fr;
+    }
+
+    .rain-icon {
+      width: 96px;
+      height: 96px;
+    }
+
+    #chat {
+      padding: 22px;
+      min-height: 360px;
+      max-height: calc(100dvh - 340px);
+    }
+
+    .bubble {
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-width: 430px) {
+    .app {
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .hero {
+      border-radius: 22px;
+      padding: 13px;
+    }
+
+    .hero-main {
+      grid-template-columns: 66px 1fr;
+      gap: 10px;
+    }
+
+    .rain-icon {
+      width: 66px;
+      height: 66px;
+    }
+
+    .subtitle {
+      font-size: 0.78rem;
+    }
+
+    .status-row {
+      grid-template-columns: 1fr;
+    }
+
+    #save-status {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    #chat-card {
+      min-height: 430px;
+      border-radius: 22px;
+    }
+
+    #chat {
+      min-height: 300px;
+      max-height: 58dvh;
+      padding: 13px 10px;
+    }
+
+    .msg {
+      max-width: 94%;
+    }
+
+    #send {
+      padding: 0 15px;
+    }
+  }
+</style>
+</head>
+
+<body>
+<div class="app">
+  <section class="hero" aria-label="草原のレイン v2">
+    <div class="hero-main">
+      <div class="rain-icon">
+        <img src="./sougen.png" alt="レイン">
+      </div>
+      <div>
+        <div class="title-kicker">Gemini直呼び版 / v2</div>
+        <h1>草原のレイン</h1>
+        <p class="subtitle">旅の途中、風の通る丘で</p>
+      </div>
+    </div>
+
+    <div class="status-row">
+      <div class="status-card">
+        <div class="label">今日の気分</div>
+        <div id="mood" class="value">穏やか</div>
+      </div>
+      <div class="status-card">
+        <div class="label">好感度</div>
+        <div id="affection" class="value">0</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button id="save-password" class="mini-btn" type="button">APIパスワード保存</button>
+      <button id="reload-state" class="mini-btn" type="button">読み込み直す</button>
+      <button id="clear-local" class="mini-btn" type="button">この端末の表示を消す</button>
+      <a class="mini-btn" href="./index.html" style="text-decoration:none;">入口へ戻る</a>
+      <span id="save-status">起動中…</span>
+    </div>
+  </section>
+
+  <main id="chat-card">
+    <div id="chat" aria-live="polite"></div>
+    <footer>
+      <div class="input-row">
+        <textarea id="input" placeholder="レインに話しかけてみよう" rows="1"></textarea>
+        <button id="send" type="button">話す</button>
+      </div>
+      <div class="hint">Enterで送信 / Shift+Enterで改行</div>
+    </footer>
+  </main>
+</div>
+
+<script>
+const API_BASE = 'https://rain-v2-proxy.sslowdayss.workers.dev';
+const OWNER = 'default';
+const CHARACTER = 'rain-v2';
+const PASSWORD_KEY = 'rain-v2-api-password';
+
+const state = {
+  owner: OWNER,
+  character: CHARACTER,
+  affection: 0,
+  conversationHistory: [],
+  lastTalkedAt: '',
+  memo: {
+    mood: '穏やか'
+  }
+};
+
+const chatEl = document.getElementById('chat');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const affectionEl = document.getElementById('affection');
+const moodEl = document.getElementById('mood');
+const saveStatusEl = document.getElementById('save-status');
+const savePasswordBtn = document.getElementById('save-password');
+const reloadStateBtn = document.getElementById('reload-state');
+const clearLocalBtn = document.getElementById('clear-local');
+
+init();
+
+async function init() {
+  bindEvents();
+  renderFreshOpening();
+  await loadState();
+}
+
+function bindEvents() {
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 126) + 'px';
+  });
+
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      doSend();
+    }
+  });
+
+  sendBtn.addEventListener('click', doSend);
+  reloadStateBtn.addEventListener('click', loadState);
+  savePasswordBtn.addEventListener('click', saveApiPassword);
+  clearLocalBtn.addEventListener('click', clearLocalConversation);
+}
+
+function renderFreshOpening() {
+  chatEl.innerHTML = '';
+  addSystemMsg('——— 草原の丘に、やわらかな風が吹いている ———');
+  addRainMsg('来てくれてありがとう。少し休んでいくか？\n旅の話でも、今日あったことでも、なんでも聞くよ。');
+  updateStatus();
+}
+
+async function loadState() {
+  setStatus('読み込み中…');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/rain-v2-state?owner=${encodeURIComponent(OWNER)}`, {
+      method: 'GET',
+      headers: authHeaders()
+    });
+
+    if (res.status === 404) {
+      setStatus('新しい会話です');
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    const loaded = data.data || data;
+
+    applyLoadedState(loaded);
+    renderHistory();
+    setStatus('読み込みました');
+  } catch (err) {
+    console.error(err);
+    setStatus('読み込み失敗');
+    addErrorMsg(`保存データを読み込めませんでした。\n${err.message}`);
+  }
+}
+
+function applyLoadedState(loaded) {
+  if (!loaded || typeof loaded !== 'object') return;
+
+  state.owner = loaded.owner || OWNER;
+  state.character = loaded.character || CHARACTER;
+  state.affection = Number.isFinite(Number(loaded.affection)) ? Number(loaded.affection) : 0;
+  state.conversationHistory = Array.isArray(loaded.conversationHistory)
+    ? loaded.conversationHistory
+    : [];
+  state.lastTalkedAt = loaded.lastTalkedAt || '';
+  state.memo = loaded.memo && typeof loaded.memo === 'object'
+    ? loaded.memo
+    : { mood: '穏やか' };
+
+  if (!state.memo.mood) state.memo.mood = '穏やか';
+
+  updateStatus();
+}
+
+function renderHistory() {
+  chatEl.innerHTML = '';
+  addSystemMsg('——— 保存していた会話を開きました ———');
+
+  if (!state.conversationHistory.length) {
+    addRainMsg('また会えたな。今日はどんな話をしようか。');
+    return;
+  }
+
+  for (const item of state.conversationHistory) {
+    if (item.role === 'user') addUserMsg(item.content || '');
+    if (item.role === 'assistant') addRainMsg(item.content || '');
+    if (item.role === 'system') addSystemMsg(item.content || '');
+  }
+
+  updateStatus();
+  scrollBottom();
+}
+
+async function doSend() {
+  const text = inputEl.value.trim();
+  if (!text || sendBtn.disabled) return;
+
+  addUserMsg(text);
+
+  state.conversationHistory.push({
+    role: 'user',
+    content: text,
+    at: new Date().toISOString()
+  });
+
+  state.conversationHistory = state.conversationHistory.slice(-120);
+  state.lastTalkedAt = new Date().toISOString();
+  state.affection += calcAffection(text);
+  updateMood(text);
+  updateStatus();
+
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+
+  const loadingEl = addLoading();
+
+  try {
+    const res = await fetch(`${API_BASE}/api/rain-v2-talk`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        owner: OWNER,
+        character: CHARACTER,
+        message: text,
+        history: state.conversationHistory.slice(-16)
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    const reply = cleanRainReply(data.reply || '');
+
+    if (!reply) {
+      throw new Error('AIから空の返事が返りました');
+    }
+
+    loadingEl.remove();
+    addRainMsg(reply);
+
+    state.conversationHistory.push({
+      role: 'assistant',
+      content: reply,
+      at: new Date().toISOString()
+    });
+
+    state.conversationHistory = state.conversationHistory.slice(-120);
+    state.lastTalkedAt = new Date().toISOString();
+
+    await saveState('保存しました');
+  } catch (err) {
+    console.error(err);
+    loadingEl.remove();
+    addErrorMsg(`レインの返事を取得できませんでした。\n${err.message}`);
+    setStatus('返答取得失敗');
+  } finally {
+    sendBtn.disabled = false;
+    inputEl.focus();
+    scrollBottom();
+  }
+}
+
+async function saveState(message = '保存しました') {
+  try {
+    const res = await fetch(`${API_BASE}/api/rain-v2-state`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify(state)
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    setStatus(message);
+  } catch (err) {
+    console.error(err);
+    setStatus('保存失敗');
+    addErrorMsg(`D1への保存に失敗しました。\n${err.message}`);
+  }
+}
+
+function authHeaders() {
+  const password = localStorage.getItem(PASSWORD_KEY) || '';
+  return password ? { 'X-App-Password': password } : {};
+}
+
+function saveApiPassword() {
+  const current = localStorage.getItem(PASSWORD_KEY) || '';
+  const next = prompt('Cloudflare WorkerのAPIパスワードを入力してください。空欄で削除します。', current);
+
+  if (next === null) return;
+
+  if (next.trim()) {
+    localStorage.setItem(PASSWORD_KEY, next.trim());
+    setStatus('APIパスワードを保存しました');
+  } else {
+    localStorage.removeItem(PASSWORD_KEY);
+    setStatus('APIパスワードを削除しました');
+  }
+}
+
+function clearLocalConversation() {
+  if (!confirm('この画面の表示中会話を消しますか？ D1側の保存データは消しません。')) return;
+
+  state.affection = 0;
+  state.conversationHistory = [];
+  state.lastTalkedAt = '';
+  state.memo = {
+    mood: '穏やか'
+  };
+
+  renderFreshOpening();
+  setStatus('この端末の表示を消しました');
+}
+
+function calcAffection(text) {
+  if (/ありがとう|ありがと|助かる|うれしい|好き|すき|また来た|会いたかった/.test(text)) return 2;
+  if (text.length >= 20) return 1;
+  return 0;
+}
+
+function updateMood(text) {
+  if (/疲れ|つかれ|しんど|かなしい|悲しい|つらい/.test(text)) {
+    state.memo.mood = '心配している';
+  } else if (/うれしい|楽しい|たのしい|やった|成功|できた/.test(text)) {
+    state.memo.mood = 'うれしそう';
+  } else {
+    state.memo.mood = state.memo.mood || '穏やか';
+  }
+}
+
+function updateStatus() {
+  affectionEl.textContent = String(state.affection || 0);
+  moodEl.textContent = state.memo?.mood || '穏やか';
+}
+
+function setStatus(text) {
+  saveStatusEl.textContent = text;
+}
+
+function cleanRainReply(reply) {
+  return String(reply)
+    .replace(/^レイン[：:]\s*/i, '')
+    .trim();
+}
+
+function addSystemMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg system';
+  div.innerHTML = `<div class="bubble">${escHtml(text)}</div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+}
+
+function addUserMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `<div class="label">あなた</div><div class="bubble">${escHtml(text)}</div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+}
+
+function addRainMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg rain';
+  div.innerHTML = `<div class="label">レイン</div><div class="bubble">${escHtml(text)}</div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+}
+
+function addErrorMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg error rain';
+  div.innerHTML = `<div class="label">エラー</div><div class="bubble">${escHtml(text)}</div>`;
+  chatEl.appendChild(div);
+  scrollBottom();
+}
+
+function addLoading() {
+  const div = document.createElement('div');
+  div.className = 'msg rain';
+  div.innerHTML = '<div class="label">レイン</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+  chatEl.appendChild(div);
+  scrollBottom();
+  return div;
+}
+
+function scrollBottom() {
+  requestAnimationFrame(() => {
+    chatEl.scrollTop = chatEl.scrollHeight;
+  });
+}
+
+function escHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/\n/g, '<br>');
+}
+</script>
+</body>
+</html>

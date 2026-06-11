@@ -155,6 +155,18 @@
     transition: all 0.15s;
   }
   .logout-btn:hover { background: var(--wood-mid); color: var(--wood-cream); }
+  .reset-btn {
+    background: none;
+    border: 2px solid #b94040;
+    color: #b94040;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .reset-btn:hover { background: #b94040; color: var(--wood-cream); }
 
   /* チャットエリア */
   .chat-area {
@@ -418,6 +430,7 @@
   <div class="top-bar">
     <div class="top-bar-title">🌾 こうみんかん</div>
     <div class="top-bar-player" id="top-player-name"></div>
+    <button class="reset-btn" onclick="confirmResetHistory()">リセット</button>
     <button class="logout-btn" onclick="logout()">でる</button>
   </div>
 
@@ -515,6 +528,67 @@ let recognition = null;
 let isListening = false;
 let conversationHistory = [];
 
+// ===== localStorage 保存・読み込み =====
+const LS = {
+  PLAYER:      'hello-kominkan-player',
+  HISTORY:     'hello-kominkan-history',
+  TODAY_EVENT: 'hello-kominkan-today-event',
+  AFFECTION:   'hello-kominkan-affection',
+};
+
+function savePlayer(player) {
+  try { localStorage.setItem(LS.PLAYER, JSON.stringify(player)); } catch(e) {}
+}
+function loadPlayer() {
+  try { return JSON.parse(localStorage.getItem(LS.PLAYER)) || null; } catch(e) { return null; }
+}
+
+function saveHistory(history) {
+  try {
+    const limited = history.slice(-50); // 最新50件に制限
+    localStorage.setItem(LS.HISTORY, JSON.stringify(limited));
+  } catch(e) {}
+}
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(LS.HISTORY)) || []; } catch(e) { return []; }
+}
+function clearHistory() {
+  try { localStorage.removeItem(LS.HISTORY); } catch(e) {}
+}
+
+function saveTodayEvent(date, eventHtml) {
+  try { localStorage.setItem(LS.TODAY_EVENT, JSON.stringify({ date, eventHtml })); } catch(e) {}
+}
+function loadTodayEvent(date) {
+  try {
+    const data = JSON.parse(localStorage.getItem(LS.TODAY_EVENT));
+    if (data && data.date === date) return data.eventHtml;
+    return null;
+  } catch(e) { return null; }
+}
+
+function saveAffection(affection) {
+  try { localStorage.setItem(LS.AFFECTION, JSON.stringify(affection)); } catch(e) {}
+}
+function loadAffection() {
+  try {
+    return JSON.parse(localStorage.getItem(LS.AFFECTION)) || { elliott: 0, alex: 0, sam: 0 };
+  } catch(e) { return { elliott: 0, alex: 0, sam: 0 }; }
+}
+
+// 好感度マップ（キャラ名 → affectionキー）
+const AFFECTION_KEY = { 'エリオット':'elliott', 'アレックス':'alex', 'サム':'sam' };
+
+// 会話履歴リセット確認
+function confirmResetHistory() {
+  if (confirm('かいわ りれきを けします。\nよろしいですか？')) {
+    clearHistory();
+    conversationHistory = [];
+    document.getElementById('chat-area').innerHTML = '';
+    addSystem('かいわ りれきを リセットしました');
+  }
+}
+
 // ===== ユーティリティ =====
 function showLoading(text = 'よみこみちゅう…') {
   document.getElementById('loading-text').textContent = text;
@@ -542,6 +616,13 @@ function addMsg(type, name, icon, lines) {
     </div>`;
   area.appendChild(div);
   scrollChat();
+
+  // NPCのメッセージで好感度+1
+  if (type === 'npc' && AFFECTION_KEY[name]) {
+    const aff = loadAffection();
+    aff[AFFECTION_KEY[name]] = (aff[AFFECTION_KEY[name]] || 0) + 1;
+    saveAffection(aff);
+  }
 }
 
 function addSystem(text) {
@@ -612,7 +693,8 @@ async function login(playerId) {
   const p = CHARS[playerId];
   document.getElementById('top-player-name').textContent = `${p.icon} ${p.name}`;
   document.getElementById('chat-area').innerHTML = '';
-  conversationHistory = [];
+  conversationHistory = loadHistory(); // 履歴ロード
+  savePlayer(playerId);               // プレイヤー保存
   phase = 'return';
 
   document.getElementById('login-screen').classList.remove('active');
@@ -676,14 +758,16 @@ async function handleReturnChoice(choice) {
   showLoading(`${husband} が こたえています…`);
 
   const labelText = choice.label.replace(/^[①-⑥] /, '');
-  conversationHistory.push({ role: 'user', content: `きょうは「${labelText}」に いってきたよ` });
+  conversationHistory.push({ role: 'user', content: `きょうは「${labelText}」に いってきたよ`, time: new Date().toISOString() });
+  saveHistory(conversationHistory);
 
   const response = await callClaude(sys, [
     ...conversationHistory,
   ]);
   hideLoading();
 
-  conversationHistory.push({ role: 'assistant', content: response });
+  conversationHistory.push({ role: 'assistant', content: response, time: new Date().toISOString() });
+  saveHistory(conversationHistory);
 
   const lines = response.split('\n').filter(l => l.trim());
   for (const line of lines) {
@@ -737,11 +821,13 @@ async function handleTalkChoice(choice) {
 
   showLoading(`${husband} が こたえています…`);
 
-  conversationHistory.push({ role: 'user', content: talkMap[choice.id] || userText });
+  conversationHistory.push({ role: 'user', content: talkMap[choice.id] || userText, time: new Date().toISOString() });
+  saveHistory(conversationHistory);
   const response = await callClaude(sys, [...conversationHistory]);
   hideLoading();
 
-  conversationHistory.push({ role: 'assistant', content: response });
+  conversationHistory.push({ role: 'assistant', content: response, time: new Date().toISOString() });
+  saveHistory(conversationHistory);
 
   const lines = response.split('\n').filter(l => l.trim());
   for (const line of lines) {
@@ -767,11 +853,13 @@ async function sendMessage() {
   disableChoices();
 
   showLoading(`${p.husband} が こたえています…`);
-  conversationHistory.push({ role: 'user', content: text });
+  conversationHistory.push({ role: 'user', content: text, time: new Date().toISOString() });
+  saveHistory(conversationHistory);
   const response = await callClaude(sys, [...conversationHistory]);
   hideLoading();
 
-  conversationHistory.push({ role: 'assistant', content: response });
+  conversationHistory.push({ role: 'assistant', content: response, time: new Date().toISOString() });
+  saveHistory(conversationHistory);
 
   const lines = response.split('\n').filter(l => l.trim());
   for (const line of lines) {
@@ -825,6 +913,15 @@ function toggleMic() {
 
 // ===== 今日のこうみんかん =====
 async function generateDailyEvent() {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // 同じ日のキャッシュがあればそれを使う
+  const cached = loadTodayEvent(today);
+  if (cached) {
+    document.getElementById('daily-content').innerHTML = cached;
+    return;
+  }
+
   const combo = DAILY_COMBOS[Math.floor(Math.random() * DAILY_COMBOS.length)];
   const [char1, char2] = combo.chars;
   const sys = `あなたは${char1}と${char2}の会話を書くナレーターです。
@@ -840,11 +937,14 @@ ${char2}「セリフ」
     content: `${char1}と${char2}が「${combo.topic}」について話しています。会話を書いてください。`
   }]);
 
-  document.getElementById('daily-content').innerHTML = response
+  const html = response
     .split('\n')
     .filter(l => l.trim())
     .map(l => l.trim())
     .join('<br>');
+
+  document.getElementById('daily-content').innerHTML = html;
+  saveTodayEvent(today, html); // 日付とセットで保存
 }
 
 // ===== ログアウト =====

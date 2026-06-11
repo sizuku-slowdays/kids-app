@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>はろーぼくじょう こうみんかん</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+  :root {
+    --wood-dark:   #5c3d1e;
+    --wood-mid:    #8b5e3c;
+    --wood-light:  #c49a6c;
+    --wood-cream:  #f5e9d3;
+    --wood-pale:   #fdf6ec;
+    --accent-green:#4a7c59;
+    --accent-red:  #b94040;
+    --accent-blue: #4a6fa5;
+    --text-dark:   #2d1a0a;
+    --shadow:      rgba(92,61,30,0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DotGothic16', 'Noto Sans JP', sans-serif;
+    background-color: #2a1a0a;
+    background-image:
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.015) 40px, rgba(255,255,255,0.015) 41px),
+      repeating-linear-gradient(0deg,  transparent, transparent 40px, rgba(255,255,255,0.015) 40px, rgba(255,255,255,0.015) 41px);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  /* ===== 画面共通 ===== */
+  .screen { display: none; width: 100%; max-width: 520px; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ===== 木枠パネル ===== */
+  .panel {
+    background: var(--wood-cream);
+    border: 6px solid var(--wood-dark);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.4);
+    position: relative;
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 2px solid var(--wood-light);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  /* ===== ログイン画面 ===== */
+  #login-screen {
+    gap: 0;
+  }
+  .login-header {
+    background: var(--wood-dark);
+    border-radius: 4px 4px 0 0;
+    padding: 28px 24px 20px;
+    text-align: center;
+    border-bottom: 4px solid var(--wood-mid);
+  }
+  .login-title {
+    color: var(--wood-cream);
+    font-size: 22px;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 #1a0a00;
+    line-height: 1.5;
+  }
+  .login-subtitle {
+    color: var(--wood-light);
+    font-size: 12px;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+  .login-body {
+    padding: 28px 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .login-label {
+    color: var(--wood-mid);
+    font-size: 12px;
+    text-align: center;
+    letter-spacing: 2px;
+    margin-bottom: -4px;
+  }
+  .player-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--wood-pale);
+    border: 3px solid var(--wood-mid);
+    border-radius: 6px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+  }
+  .player-btn:hover {
+    background: var(--wood-light);
+    border-color: var(--wood-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+  .player-btn:active { transform: translateY(0); }
+  .player-icon { font-size: 32px; width: 40px; text-align: center; }
+  .player-info {}
+  .player-name { font-size: 18px; color: var(--wood-dark); font-weight: 700; }
+  .player-desc { font-size: 12px; color: var(--wood-mid); margin-top: 2px; }
+
+  /* ===== こうみんかん画面 ===== */
+  #main-screen {
+    gap: 10px;
+  }
+
+  /* 上部バー */
+  .top-bar {
+    background: var(--wood-dark);
+    border-radius: 4px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 3px solid var(--wood-mid);
+  }
+  .top-bar-title {
+    color: var(--wood-cream);
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+  .top-bar-player {
+    color: var(--wood-light);
+    font-size: 13px;
+  }
+  .logout-btn {
+    background: none;
+    border: 2px solid var(--wood-light);
+    color: var(--wood-light);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .logout-btn:hover { background: var(--wood-mid); color: var(--wood-cream); }
+
+  /* チャットエリア */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 340px;
+    max-height: 420px;
+    background: var(--wood-pale);
+    border: 4px solid var(--wood-dark);
+    border-radius: 6px;
+    scroll-behavior: smooth;
+  }
+  .chat-area::-webkit-scrollbar { width: 8px; }
+  .chat-area::-webkit-scrollbar-track { background: var(--wood-cream); }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--wood-mid); border-radius: 4px; }
+
+  /* メッセージ */
+  .msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+  .msg-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid var(--wood-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    background: var(--wood-cream);
+  }
+  .msg-body { flex: 1; }
+  .msg-name {
+    font-size: 11px;
+    color: var(--wood-mid);
+    margin-bottom: 3px;
+    letter-spacing: 1px;
+  }
+  .msg-bubble {
+    background: white;
+    border: 2px solid var(--wood-light);
+    border-radius: 0 8px 8px 8px;
+    padding: 10px 13px;
+    font-size: 14px;
+    color: var(--text-dark);
+    line-height: 1.6;
+    display: inline-block;
+    max-width: 100%;
+  }
+  .msg.player .msg-bubble {
+    background: #d4e8d4;
+    border-color: var(--accent-green);
+    border-radius: 8px 0 8px 8px;
+  }
+  .msg.player { flex-direction: row-reverse; }
+  .msg.player .msg-name { text-align: right; }
+  .msg.system .msg-bubble {
+    background: #f0e6d0;
+    border-color: var(--wood-light);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--wood-mid);
+    font-style: italic;
+  }
+  .msg.system { justify-content: center; }
+
+  /* タイピング */
+  .typing-dots span {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--wood-mid);
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+
+  /* 選択肢 */
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 12px 16px;
+    background: var(--wood-cream);
+    border: 3px solid var(--wood-dark);
+    border-radius: 6px;
+  }
+  .choice-label {
+    font-size: 11px;
+    color: var(--wood-mid);
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+  .choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .choice-btn {
+    background: var(--wood-pale);
+    border: 2px solid var(--wood-mid);
+    border-radius: 5px;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--wood-dark);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .choice-btn:hover {
+    background: var(--wood-light);
+    border-color: var(--wood-dark);
+    transform: translateY(-1px);
+  }
+  .choice-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+    transform: none;
+  }
+
+  /* テキスト入力エリア */
+  .input-area {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--wood-cream);
+    border: 3px solid var(--wood-dark);
+    border-radius: 6px;
+    align-items: center;
+  }
+  .chat-input {
+    flex: 1;
+    background: var(--wood-pale);
+    border: 2px solid var(--wood-mid);
+    border-radius: 5px;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text-dark);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .chat-input:focus { border-color: var(--wood-dark); }
+  .send-btn, .mic-btn {
+    background: var(--wood-dark);
+    border: none;
+    border-radius: 5px;
+    color: var(--wood-cream);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .send-btn:hover { background: var(--wood-mid); }
+  .mic-btn { background: var(--accent-green); font-size: 16px; padding: 9px 12px; }
+  .mic-btn:hover { background: #3a6449; }
+  .mic-btn.listening { background: var(--accent-red); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* 今日のこうみんかん */
+  .daily-panel {
+    padding: 12px 16px;
+    background: var(--wood-cream);
+    border: 3px solid var(--wood-mid);
+    border-radius: 6px;
+  }
+  .daily-title {
+    font-size: 11px;
+    color: var(--wood-mid);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .daily-content {
+    font-size: 13px;
+    color: var(--text-dark);
+    line-height: 1.8;
+  }
+
+  /* ローディング */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(42,26,10,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .loading-box {
+    background: var(--wood-cream);
+    border: 4px solid var(--wood-dark);
+    border-radius: 8px;
+    padding: 24px 32px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-dark);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .loading-box .typing-dots { margin-top: 12px; display: flex; justify-content: center; }
+
+  /* スクロールトップボタン */
+  .scroll-note {
+    text-align: center;
+    font-size: 11px;
+    color: var(--wood-mid);
+    padding: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== ログイン画面 ===== -->
+<div id="login-screen" class="screen panel active">
+  <div class="login-header">
+    <div class="login-title">🌾 はろーぼくじょう 🌾<br>こうみんかん</div>
+    <div class="login-subtitle">だれで はいりますか？</div>
+  </div>
+  <div class="login-body">
+    <div class="login-label">▼ プレイヤーを えらんでね</div>
+    <button class="player-btn" onclick="login('haro')">
+      <span class="player-icon">🌸</span>
+      <div class="player-info">
+        <div class="player-name">はろ</div>
+        <div class="player-desc">エリオットの つま</div>
+      </div>
+    </button>
+    <button class="player-btn" onclick="login('sanaha')">
+      <span class="player-icon">⚽</span>
+      <div class="player-info">
+        <div class="player-name">さなは</div>
+        <div class="player-desc">アレックスの つま</div>
+      </div>
+    </button>
+    <button class="player-btn" onclick="login('yui')">
+      <span class="player-icon">🎸</span>
+      <div class="player-info">
+        <div class="player-name">ゆい</div>
+        <div class="player-desc">サムの つま</div>
+      </div>
+    </button>
+  </div>
+</div>
+
+<!-- ===== こうみんかん画面 ===== -->
+<div id="main-screen" class="screen">
+  <div class="top-bar">
+    <div class="top-bar-title">🌾 こうみんかん</div>
+    <div class="top-bar-player" id="top-player-name"></div>
+    <button class="logout-btn" onclick="logout()">でる</button>
+  </div>
+
+  <div class="chat-area" id="chat-area"></div>
+
+  <div class="choices" id="choices-area">
+    <div class="choice-label">◆ どうする？</div>
+    <div class="choice-grid" id="choices-grid"></div>
+  </div>
+
+  <div class="input-area" id="input-area" style="display:none">
+    <input type="text" class="chat-input" id="chat-input" placeholder="なにか こえを かけてみよう…" maxlength="100">
+    <button class="send-btn" onclick="sendMessage()">はなす</button>
+    <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="こえで はなす">🎤</button>
+  </div>
+
+  <div class="daily-panel">
+    <div class="daily-title">📋 きょうの こうみんかん</div>
+    <div class="daily-content" id="daily-content">よみこみちゅう…</div>
+  </div>
+</div>
+
+<!-- ローディング -->
+<div class="loading-overlay" id="loading" style="display:none">
+  <div class="loading-box">
+    <div id="loading-text">よみこみちゅう…</div>
+    <div class="typing-dots">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== キャラクター設定 =====
+const CHARS = {
+  haro:   { name:'はろ',   icon:'🌸', husband:'エリオット', husbandIcon:'📖' },
+  sanaha: { name:'さなは', icon:'⚽', husband:'アレックス', husbandIcon:'💪' },
+  yui:    { name:'ゆい',   icon:'🎸', husband:'サム',       husbandIcon:'🔨' },
+};
+
+const HUSBAND_SYSTEMS = {
+  エリオット: `あなたは「エリオット」です。文学系で詩的な言葉を使う、やさしい男性です。
+妻の「はろ」が大好きで、彼女にだけ特別にロマンチックで大人な表現をします。
+他の人（さなは・ゆい）にもやさしく、落ち着いた語り口で接します。
+返答は全てひらがな・カタカナのみで書いてください。難しい漢字は禁止。
+一つの発言は短く（1〜3文程度）。改行で複数の発言に分けても良いです。
+例：「きょうの うみは きれいだったよ」「はろの かみが かぜに なびいて、きれいだった」`,
+
+  アレックス: `あなたは「アレックス」です。スポーツ好きで元気な応援型の男性です。
+妻の「さなは」が大好きで、彼女にだけ特別に熱く前向きな応援をします。
+他の人にもフレンドリーで明るく接します。
+返答は全てひらがな・カタカナのみで書いてください。難しい漢字は禁止。
+一つの発言は短く（1〜3文程度）。
+例：「がんばったな！」「オレは しんじてるぞ！」「さなはは すごいな！」`,
+
+  サム: `あなたは「サム」です。大工仕事が得意な、物静かでやさしい男性です。
+妻の「ゆい」が大好きで、彼女にだけ特別にやさしく、安心感を与える言葉をかけます。
+恋愛表現は控えめで、守ってくれる雰囲気を大切にします。
+他の人にも穏やかに接します。
+返答は全てひらがな・カタカナのみで書いてください。難しい漢字は禁止。
+一つの発言は短く（1〜3文程度）。
+例：「おかえり」「きょうも がんばったな」「ゆいが くると うれしいな」`,
+};
+
+const RETURN_CHOICES = [
+  { id:'farm',   label:'① のうじょう' },
+  { id:'mine',   label:'② こうざん' },
+  { id:'fish',   label:'③ つり' },
+  { id:'shop',   label:'④ おかいもの' },
+  { id:'study',  label:'⑤ べんきょう' },
+  { id:'secret', label:'⑥ ひみつ' },
+];
+
+const TALK_CHOICES = [
+  { id:'what',  label:'① なにしてたの？' },
+  { id:'genki', label:'② げんき？' },
+  { id:'lately',label:'③ さいきん どう？' },
+  { id:'work',  label:'④ しごとは？' },
+  { id:'sleep', label:'⑤ おやすみ' },
+  { id:'more',  label:'⑥ もっと はなす' },
+];
+
+const DAILY_COMBOS = [
+  { chars: ['サム','アレックス'],   topic: 'トレーニングについて はなしている' },
+  { chars: ['エリオット','サム'],   topic: 'エリオットが ほんを かいている' },
+  { chars: ['アレックス','エリオット'], topic: 'ほんとスポーツについて' },
+  { chars: ['サム','アレックス'],   topic: 'のうじょうの しごとについて' },
+  { chars: ['エリオット','サム'],   topic: 'うみの けしきについて' },
+];
+
+// ===== 状態 =====
+let currentPlayer = null;
+let phase = 'return'; // 'return' | 'choices' | 'talk'
+let recognition = null;
+let isListening = false;
+let conversationHistory = [];
+
+// ===== ユーティリティ =====
+function showLoading(text = 'よみこみちゅう…') {
+  document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading').style.display = 'flex';
+}
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+}
+
+function scrollChat() {
+  const area = document.getElementById('chat-area');
+  area.scrollTop = area.scrollHeight;
+}
+
+function addMsg(type, name, icon, lines) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = `msg ${type}`;
+  const text = Array.isArray(lines) ? lines.join('<br>') : lines;
+  div.innerHTML = `
+    <div class="msg-avatar">${icon}</div>
+    <div class="msg-body">
+      <div class="msg-name">${name}</div>
+      <div class="msg-bubble">${text}</div>
+    </div>`;
+  area.appendChild(div);
+  scrollChat();
+}
+
+function addSystem(text) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'msg system';
+  div.innerHTML = `<div class="msg-bubble">${text}</div>`;
+  area.appendChild(div);
+  scrollChat();
+}
+
+function clearChoices() {
+  document.getElementById('choices-grid').innerHTML = '';
+  document.getElementById('choices-area').style.display = 'none';
+}
+
+function showChoices(choices, callback) {
+  const grid = document.getElementById('choices-grid');
+  grid.innerHTML = '';
+  document.getElementById('choices-area').style.display = 'flex';
+  choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c.label;
+    btn.onclick = () => {
+      disableChoices();
+      callback(c);
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function disableChoices() {
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+}
+
+// ===== Gemini API（Cloudflare Worker プロキシ経由）=====
+// ▼ gemini-proxy をデプロイしたらここのURLを書き換えてください
+const PROXY_URL = 'https://haro.sslowdayss.workers.dev/api/chat';
+
+// 幻水酒場と同じ呼び出し形式
+// character / player を追加で渡せる
+async function callGemini({ character = '', player = '', history = [] }) {
+  const res = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ character, player, history }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.reply || 'うーん…';
+}
+
+// 後方互換ラッパー（callClaude呼び出し箇所はそのまま動く）
+function callClaude(systemPrompt, messages) {
+  const charMatch = systemPrompt.match(/「(エリオット|アレックス|サム)」/);
+  const character = charMatch ? charMatch[1] : '';
+  const player = currentPlayer ? CHARS[currentPlayer]?.name : '';
+  return callGemini({ character, player, history: messages });
+}
+
+// ===== ログイン =====
+async function login(playerId) {
+  currentPlayer = playerId;
+  const p = CHARS[playerId];
+  document.getElementById('top-player-name').textContent = `${p.icon} ${p.name}`;
+  document.getElementById('chat-area').innerHTML = '';
+  conversationHistory = [];
+  phase = 'return';
+
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('main-screen').classList.add('active');
+  document.getElementById('input-area').style.display = 'none';
+  clearChoices();
+
+  // 今日のこうみんかんを非同期生成
+  generateDailyEvent();
+
+  // おかえりイベント
+  showLoading('こうみんかんに はいっています…');
+  await new Promise(r => setTimeout(r, 800));
+  hideLoading();
+
+  addSystem(`${p.name} が こうみんかんに はいった`);
+  await new Promise(r => setTimeout(r, 500));
+
+  await doReturnEvent(playerId);
+}
+
+async function doReturnEvent(playerId) {
+  const p = CHARS[playerId];
+  const husband = p.husband;
+  const sys = HUSBAND_SYSTEMS[husband];
+
+  // キャラ同士の会話を止めて振り向く演出
+  addSystem(`${husband} が きづいた！`);
+  await new Promise(r => setTimeout(r, 600));
+
+  showLoading(`${husband} が こたえています…`);
+
+  const prompt = `${p.name}が こうみんかんに かえってきました。おかえりイベントのセリフを言ってください。
+${p.name}の おかえりに かける、あたたかい ことばを 3〜4回に わけて ください。
+改行で 区切ってください。ひらがな・カタカナのみ。`;
+
+  const reply = await callClaude(sys, [{ role: 'user', content: prompt }]);
+  hideLoading();
+
+  const lines = reply.split('\n').filter(l => l.trim());
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    addMsg('npc', husband, p.husbandIcon, line.trim());
+    await new Promise(r => setTimeout(r, 700));
+  }
+
+  // 選択肢表示
+  await new Promise(r => setTimeout(r, 400));
+  addSystem('きょうは なにをしてたの？');
+  showChoices(RETURN_CHOICES, (c) => handleReturnChoice(c));
+}
+
+async function handleReturnChoice(choice) {
+  const p = CHARS[currentPlayer];
+  const husband = p.husband;
+  const sys = HUSBAND_SYSTEMS[husband];
+
+  addMsg('player', p.name, p.icon, choice.label.replace(/^[①-⑥] /, ''));
+  clearChoices();
+
+  showLoading(`${husband} が こたえています…`);
+
+  const labelText = choice.label.replace(/^[①-⑥] /, '');
+  conversationHistory.push({ role: 'user', content: `きょうは「${labelText}」に いってきたよ` });
+
+  const response = await callClaude(sys, [
+    ...conversationHistory,
+  ]);
+  hideLoading();
+
+  conversationHistory.push({ role: 'assistant', content: response });
+
+  const lines = response.split('\n').filter(l => l.trim());
+  for (const line of lines) {
+    addMsg('npc', husband, p.husbandIcon, line.trim());
+    await new Promise(r => setTimeout(r, 600));
+  }
+
+  await new Promise(r => setTimeout(r, 400));
+  phase = 'talk';
+  addSystem('なにか はなしかけてみよう');
+  showChoices(TALK_CHOICES, (c) => handleTalkChoice(c));
+  document.getElementById('input-area').style.display = 'flex';
+}
+
+async function handleTalkChoice(choice) {
+  const p = CHARS[currentPlayer];
+  const husband = p.husband;
+  const sys = HUSBAND_SYSTEMS[husband];
+
+  if (choice.id === 'sleep') {
+    addMsg('player', p.name, p.icon, 'おやすみ');
+    clearChoices();
+    document.getElementById('input-area').style.display = 'none';
+    showLoading(`${husband} が こたえています…`);
+
+    conversationHistory.push({ role: 'user', content: 'おやすみ' });
+    const response = await callClaude(sys, [...conversationHistory]);
+    hideLoading();
+
+    const lines = response.split('\n').filter(l => l.trim());
+    for (const line of lines) {
+      addMsg('npc', husband, p.husbandIcon, line.trim());
+      await new Promise(r => setTimeout(r, 600));
+    }
+    await new Promise(r => setTimeout(r, 500));
+    addSystem('また あしたも きてね 🌙');
+    return;
+  }
+
+  const talkMap = {
+    what:   `${husband}に「なにしてたの？」ときいた`,
+    genki:  `${husband}に「げんき？」ときいた`,
+    lately: `${husband}に「さいきんどう？」ときいた`,
+    work:   `${husband}に「しごとは？」ときいた`,
+    more:   'もっとはなしかけた',
+  };
+
+  const userText = choice.label.replace(/^[①-⑥] /, '');
+  addMsg('player', p.name, p.icon, userText);
+  clearChoices();
+
+  showLoading(`${husband} が こたえています…`);
+
+  conversationHistory.push({ role: 'user', content: talkMap[choice.id] || userText });
+  const response = await callClaude(sys, [...conversationHistory]);
+  hideLoading();
+
+  conversationHistory.push({ role: 'assistant', content: response });
+
+  const lines = response.split('\n').filter(l => l.trim());
+  for (const line of lines) {
+    addMsg('npc', husband, p.husbandIcon, line.trim());
+    await new Promise(r => setTimeout(r, 600));
+  }
+
+  await new Promise(r => setTimeout(r, 300));
+  showChoices(TALK_CHOICES, (c) => handleTalkChoice(c));
+}
+
+// ===== 自由入力 =====
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  const p = CHARS[currentPlayer];
+  const sys = HUSBAND_SYSTEMS[p.husband];
+
+  addMsg('player', p.name, p.icon, text);
+  disableChoices();
+
+  showLoading(`${p.husband} が こたえています…`);
+  conversationHistory.push({ role: 'user', content: text });
+  const response = await callClaude(sys, [...conversationHistory]);
+  hideLoading();
+
+  conversationHistory.push({ role: 'assistant', content: response });
+
+  const lines = response.split('\n').filter(l => l.trim());
+  for (const line of lines) {
+    addMsg('npc', p.husband, p.husbandIcon, line.trim());
+    await new Promise(r => setTimeout(r, 600));
+  }
+
+  await new Promise(r => setTimeout(r, 300));
+  showChoices(TALK_CHOICES, (c) => handleTalkChoice(c));
+}
+
+document.getElementById('chat-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+// ===== 音声入力 =====
+function toggleMic() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('このブラウザでは おんせいにゅうりょくが つかえません。\nChromeを つかってみてね！');
+    return;
+  }
+  if (isListening) {
+    recognition?.stop();
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'ja-JP';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+  };
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    document.getElementById('chat-input').value = transcript;
+    sendMessage();
+  };
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('mic-btn').classList.remove('listening');
+  };
+  recognition.onerror = () => {
+    isListening = false;
+    document.getElementById('mic-btn').classList.remove('listening');
+  };
+  recognition.start();
+}
+
+// ===== 今日のこうみんかん =====
+async function generateDailyEvent() {
+  const combo = DAILY_COMBOS[Math.floor(Math.random() * DAILY_COMBOS.length)];
+  const [char1, char2] = combo.chars;
+  const sys = `あなたは${char1}と${char2}の会話を書くナレーターです。
+会話はひらがな・カタカナのみ。難しい漢字は禁止。
+各キャラ2〜3回ずつ発言する短い会話を書いてください。
+フォーマット：
+${char1}「セリフ」
+${char2}「セリフ」
+のように書いてください。`;
+
+  const response = await callClaude(sys, [{
+    role: 'user',
+    content: `${char1}と${char2}が「${combo.topic}」について話しています。会話を書いてください。`
+  }]);
+
+  document.getElementById('daily-content').innerHTML = response
+    .split('\n')
+    .filter(l => l.trim())
+    .map(l => l.trim())
+    .join('<br>');
+}
+
+// ===== ログアウト =====
+function logout() {
+  currentPlayer = null;
+  conversationHistory = [];
+  phase = 'return';
+  document.getElementById('main-screen').classList.remove('active');
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('chat-area').innerHTML = '';
+  clearChoices();
+  document.getElementById('input-area').style.display = 'none';
+}
+</script>
+</body>
+</html>

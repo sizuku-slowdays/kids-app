@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>草原のレイン v2</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background:
+        linear-gradient(rgba(255,255,255,0.25), rgba(255,255,255,0.55)),
+        url("./sougen.png") center / cover fixed no-repeat;
+      color: #2d3324;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      width: min(92vw, 520px);
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(255, 252, 236, 0.88);
+      box-shadow: 0 16px 40px rgba(54, 92, 44, 0.24);
+      text-align: center;
+      backdrop-filter: blur(8px);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      color: #285c39;
+      font-size: 1.8rem;
+      letter-spacing: 0.08em;
+    }
+
+    p {
+      margin: 0 0 18px;
+      color: #5d6956;
+      line-height: 1.7;
+    }
+
+    .links {
+      display: grid;
+      gap: 12px;
+    }
+
+    a {
+      display: block;
+      text-decoration: none;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #6dbb6b, #2d8b68);
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(45, 139, 104, 0.26);
+    }
+
+    .sub {
+      background: rgba(255,255,255,0.7);
+      color: #3d6842;
+      border: 1px solid rgba(82, 123, 70, 0.25);
+      box-shadow: none;
+    }
+
+    .note {
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: #72806a;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>草原のレイン</h1>
+    <p>
+      旅の途中、風の通る丘で。<br>
+      こちらは Gemini 直呼び版の実験場です。
+    </p>
+
+    <div class="links">
+      <a href="./rain-v2.html">レイン v2 と話す</a>
+      <a class="sub" href="../bar2/rain.html">レイン v1（Dify版）へ</a>
+      <a class="sub" href="../">トップへ戻る</a>
+    </div>
+
+    <div class="note">
+      v1はDify版、v2はGemini直呼び版として分けて管理します。
+    </div>
+  </main>
+</body>
+</html>

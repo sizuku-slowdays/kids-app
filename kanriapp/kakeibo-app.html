@@ -175,7 +175,7 @@
     const PINK_GOAL = 50000;
     const PINK_WARNING = 100000;
     const payments = ["楽天pink","楽天visa","auじぶん銀行","ゆうちょ","福岡銀行","福岡中央銀行","現金","立替","その他"];
-    const categories = ["食費","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","仕事立替","固定費","特別費","収入","その他"];
+    const categories = ["食費","日用品","祖母（医療費）","祖母","祖母（立替）","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","仕事立替","固定費","特別費","収入","その他"];
 
     let entries = [];
     let currentMonth = new Date();
@@ -538,7 +538,7 @@
       $("balanceTotal").style.color=balance >= 0 ? "var(--safe)" : "var(--danger)";
 
       const basis=viewMode() === "use" ? "利用日ベース" : "引落・反映月ベース";
-      $("incomeNote").textContent = basis + "で集計中。クラウド保存をONにすると、保存するたびにCloudflareへ記録します。";
+      $("incomeNote").textContent = basis + "で集計中。";
 
       renderPink(monthEntries);
       renderSummaries(monthEntries);

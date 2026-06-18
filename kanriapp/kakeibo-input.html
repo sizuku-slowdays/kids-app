@@ -88,7 +88,7 @@
       min-height:56px;resize:vertical;font-family:inherit}
     #memo:focus{outline:none;border-color:var(--main)}
 
-    /* クイックメモボタン */
+    /* クイックカテゴリボタン */
     .quick-label{font-size:.8rem;color:var(--muted);margin:8px 0 6px;font-weight:700}
     .quick-btns{display:flex;flex-wrap:wrap;gap:6px}
     .quick-btn{border:1px solid var(--line);border-radius:999px;padding:6px 12px;
@@ -193,26 +193,35 @@
       </div>
     </div>
 
-    <!-- メモ（クイックボタン付き） -->
+    <!-- よく使うカテゴリ -->
+    <div class="card">
+      <div class="quick-label">🗂 よく使うカテゴリ：</div>
+      <div class="quick-btns">
+        <button type="button" class="quick-btn" data-category="日用品">日用品</button>
+        <button type="button" class="quick-btn" data-category="食費">食費</button>
+        <button type="button" class="quick-btn" data-category="交通・ガソリン">ガソリン</button>
+        <button type="button" class="quick-btn" data-category="学校">学校</button>
+        <button type="button" class="quick-btn" data-category="子ども">子ども</button>
+        <button type="button" class="quick-btn" data-category="医療費">病院</button>
+        <button type="button" class="quick-btn" data-category="外食">外食</button>
+        <button type="button" class="quick-btn" data-category="仕事立替">立替-仕事</button>
+        <button type="button" class="quick-btn" data-category="ゲーム・娯楽">ゲーム・娯楽</button>
+        <button type="button" class="quick-btn" data-category="美容">美容</button>
+        <button type="button" class="quick-btn" data-category="犬">犬</button>
+        <button type="button" class="quick-btn" data-category="固定費">固定費</button>
+        <button type="button" class="quick-btn" data-category="特別費">特別費</button>
+        <button type="button" class="quick-btn" data-category="祖母（医療費）">祖母（医療費）</button>
+        <button type="button" class="quick-btn" data-category="祖母（立替）">祖母（立替）</button>
+        <button type="button" class="quick-btn" data-category="祖母">祖母</button>
+        <button type="button" class="quick-btn" data-category="その他">その他</button>
+      </div>
+      <div class="settle-hint" id="categoryHint">カテゴリ：その他</div>
+    </div>
+
+    <!-- メモ -->
     <div class="card">
       <div class="memo-label">📝 メモ（任意）</div>
-      <textarea id="memo" placeholder="例：日用品・外食・学校など"></textarea>
-      <div class="quick-label">よく使うメモ：</div>
-      <div class="quick-btns">
-        <button type="button" class="quick-btn" data-memo="立替">立替</button>
-        <button type="button" class="quick-btn" data-memo="祖母">祖母</button>
-        <button type="button" class="quick-btn" data-memo="祖母（立替）">祖母（立替）</button>
-        <button type="button" class="quick-btn" data-memo="祖母（医療費）">祖母（医療費）</button>
-        <button type="button" class="quick-btn" data-memo="日用品">日用品</button>
-        <button type="button" class="quick-btn" data-memo="食費">食費</button>
-        <button type="button" class="quick-btn" data-memo="ガソリン">ガソリン</button>
-        <button type="button" class="quick-btn" data-memo="学校">学校</button>
-        <button type="button" class="quick-btn" data-memo="子ども">子ども</button>
-        <button type="button" class="quick-btn" data-memo="病院">病院</button>
-        <button type="button" class="quick-btn" data-memo="外食">外食</button>
-        <button type="button" class="quick-btn" data-memo="立替-仕事">立替-仕事</button>
-        <button type="button" class="quick-btn" data-memo="楽天">楽天</button>
-      </div>
+      <textarea id="memo" placeholder="例：買ったもの・店名・補足など"></textarea>
     </div>
 
     <!-- カテゴリ（折りたたみ・任意） -->
@@ -224,6 +233,9 @@
           <option value="食費">食費</option>
           <option value="日用品">日用品</option>
           <option value="医療費">医療費</option>
+          <option value="祖母（医療費）">祖母（医療費）</option>
+          <option value="祖母（立替）">祖母（立替）</option>
+          <option value="祖母">祖母</option>
           <option value="子ども">子ども</option>
           <option value="学校">学校</option>
           <option value="習い事">習い事</option>
@@ -344,9 +356,10 @@
       syncSettle();
     }
 
-    /* ── クイックメモ ── */
-    function applyQuickMemo(memo){
-      $("memo").value = memo;
+    /* ── クイックカテゴリ ── */
+    function applyQuickCategory(category){
+      $("category").value = category;
+      $("categoryHint").textContent = "カテゴリ：" + category;
     }
 
     /* ── トースト表示 ── */
@@ -363,6 +376,7 @@
       $("date").value = todayString();
       $("memo").value = "";
       $("category").value = "その他";
+      if($("categoryHint")) $("categoryHint").textContent = "カテゴリ：その他";
       selectedPayment = "";
       document.querySelectorAll(".pay-btn").forEach(btn => btn.classList.remove("selected"));
       syncSettle();
@@ -419,9 +433,14 @@
         btn.addEventListener("click", () => selectPayment(btn.dataset.payment));
       });
 
-      // クイックメモ
+      // よく使うカテゴリ
       document.querySelectorAll(".quick-btn").forEach(btn => {
-        btn.addEventListener("click", () => applyQuickMemo(btn.dataset.memo));
+        btn.addEventListener("click", () => applyQuickCategory(btn.dataset.category));
+      });
+
+      // セレクトでカテゴリを変えた時も表示を更新
+      $("category").addEventListener("change", () => {
+        $("categoryHint").textContent = "カテゴリ：" + $("category").value;
       });
 
       // 日付変更で引落月を再計算

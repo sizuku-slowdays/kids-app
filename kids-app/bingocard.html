@@ -5,13 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎱 ビンゴカード</title>
 <link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
-  <link rel="icon" href="images/bingocard.png">
-<link rel="apple-touch-icon" href="images/bingocard.png">
-
-<meta property="og:title" content="ビンゴカード生成">
-<meta property="og:description" content="ビンゴカードをかんたん作成">
-<meta property="og:image" content="images/bingocard.png">
-  
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -282,10 +275,7 @@ function newCard(){
   renderHeader();
   renderGrid();
   document.getElementById('statusBar').textContent = '抽選アプリの番号を入力してね！';
-  // 連携モード：URLにルームIDがない場合は新ルームを作成
-  if(!getRoomIdFromURL()){
-    createRoom();
-  }
+
 }
 
 function renderHeader(){
@@ -613,48 +603,44 @@ let roomId = null;
 let pollTimer = null;
 let lastNumbers = [];
 
-// URLからルームIDを取得（?room=XXXX）
-function getRoomIdFromURL(){
-  const p = new URLSearchParams(location.search);
-  return p.get('room') || null;
+// アクティブルームをサーバーから取得して参加
+async function initSyncMode(){
+  // まず5秒ごとにアクティブルームを確認するポーリング開始
+  checkActiveRoom();
+  setInterval(checkActiveRoom, 5000);
 }
 
-// ルームIDをランダム生成（4桁英数大文字）
-function genRoomId(){
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({length:4}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
-}
+async function checkActiveRoom(){
+  try {
+    const res = await fetch(`${API_BASE}/api/bingo/active`);
+    if(!res.ok) return;
+    const data = await res.json();
+    const newRoomId = data.room_id || null;
 
-// ルームを作成してAPIに登録
-async function createRoom(){
-  roomId = genRoomId();
-  await fetch(`${API_BASE}/api/bingo/room`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ room_id: roomId })
-  });
-  updateRoomUI();
-  startPolling();
-}
+    if(!newRoomId){
+      // 連携なし状態
+      if(roomId){
+        // 連携が切れた
+        roomId = null;
+        lastNumbers = [];
+        document.getElementById('roomInfo').style.display = 'none';
+        document.getElementById('modeHint').textContent = '抽選アプリで出た番号を入力 → カードに色がつく → タップで破る';
+        if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+      }
+      return;
+    }
 
-// URLにルームIDがある場合は参加
-async function joinRoomFromURL(){
-  const rid = getRoomIdFromURL();
-  if(!rid) return false;
-  roomId = rid;
-  updateRoomUI();
-  startPolling();
-  return true;
-}
-
-function updateRoomUI(){
-  if(!roomId) return;
-  document.getElementById('roomInfo').style.display = 'block';
-  document.getElementById('roomIdDisp').textContent = roomId;
-  document.getElementById('modeHint').textContent =
-    getRoomIdFromURL()
-      ? `ルーム「${roomId}」に参加中 — 番号が出たら自動でひかる！`
-      : `ルーム「${roomId}」を作成 — bingo.html?room=${roomId} を友達に共有してね`;
+    if(newRoomId !== roomId){
+      // 新しいルームが始まった！
+      roomId = newRoomId;
+      lastNumbers = [];
+      document.getElementById('roomInfo').style.display = 'block';
+      document.getElementById('roomIdDisp').textContent = roomId;
+      document.getElementById('modeHint').textContent = `ルーム「${roomId}」に参加中 🎯 番号が出たら自動でひかる！`;
+      document.getElementById('statusBar').textContent = '連携スタート！番号を待ってね🎱';
+      startPolling();
+    }
+  } catch(e) {}
 }
 
 // ポーリング（2秒ごとにAPIから番号取得）
@@ -671,7 +657,6 @@ async function fetchNumbers(){
     if(!res.ok) return;
     const data = await res.json();
     const nums = data.numbers || [];
-    // 新しく追加された番号だけハイライト
     const newNums = nums.filter(n => !lastNumbers.includes(n));
     newNums.forEach(n => {
       calledSet.add(n);
@@ -684,15 +669,6 @@ async function fetchNumbers(){
     }
     lastNumbers = nums;
   } catch(e) {}
-}
-
-// 初期化時に連携モード判定
-async function initSyncMode(){
-  const joined = await joinRoomFromURL();
-  if(!joined){
-    // 進行役として新ルーム作成
-    // ※カード作成ボタンを押したときに作成する
-  }
 }
 
 /* Enterキーでも入力 */

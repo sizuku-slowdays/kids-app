@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎱 ビンゴカード</title>
 <link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
-<link rel="icon" href="images/bingocard.png">
+  <link rel="icon" href="images/bingocard.png">
 <link rel="apple-touch-icon" href="images/bingocard.png">
 
 <meta property="og:title" content="ビンゴカード生成">
 <meta property="og:description" content="ビンゴカードをかんたん作成">
 <meta property="og:image" content="images/bingocard.png">
   
-  <style>
+<style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Noto Sans JP', sans-serif;
@@ -226,6 +226,10 @@ body {
   <div class="bingo-header" id="bingoHeader"></div>
   <div class="bingo-grid"  id="bingoGrid"></div>
 
+  <div id="roomInfo" style="display:none;margin-bottom:.5rem;">
+    <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:.06em;margin-bottom:3px;">ルームID</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:22px;color:#FFD700;letter-spacing:3px;" id="roomIdDisp"></div>
+  </div>
   <div class="status-bar" id="statusBar">まず新しいカードを作ってね！</div>
 
   <div class="btn-row">
@@ -237,7 +241,7 @@ body {
     <input class="manual-input" type="number" id="manualNum" min="1" max="75" placeholder="番号" />
     <button class="btn-call" onclick="callManual()">✓ 入力</button>
   </div>
-  <div class="hint">抽選アプリで出た番号を入力 → カードに色がつく → タップで破る</div>
+  <div class="hint" id="modeHint">抽選アプリで出た番号を入力 → カードに色がつく → タップで破る</div>
 
   <div class="called-nums" id="calledNums"></div>
 </div>
@@ -278,6 +282,10 @@ function newCard(){
   renderHeader();
   renderGrid();
   document.getElementById('statusBar').textContent = '抽選アプリの番号を入力してね！';
+  // 連携モード：URLにルームIDがない場合は新ルームを作成
+  if(!getRoomIdFromURL()){
+    createRoom();
+  }
 }
 
 function renderHeader(){
@@ -598,8 +606,98 @@ function closeOverlay(){
   document.getElementById('bingoOverlay').classList.remove('show');
 }
 
+
+// ── 連携モード ──────────────────────────────────────
+const API_BASE = 'https://api.cetus.fun';
+let roomId = null;
+let pollTimer = null;
+let lastNumbers = [];
+
+// URLからルームIDを取得（?room=XXXX）
+function getRoomIdFromURL(){
+  const p = new URLSearchParams(location.search);
+  return p.get('room') || null;
+}
+
+// ルームIDをランダム生成（4桁英数大文字）
+function genRoomId(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:4}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+// ルームを作成してAPIに登録
+async function createRoom(){
+  roomId = genRoomId();
+  await fetch(`${API_BASE}/api/bingo/room`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ room_id: roomId })
+  });
+  updateRoomUI();
+  startPolling();
+}
+
+// URLにルームIDがある場合は参加
+async function joinRoomFromURL(){
+  const rid = getRoomIdFromURL();
+  if(!rid) return false;
+  roomId = rid;
+  updateRoomUI();
+  startPolling();
+  return true;
+}
+
+function updateRoomUI(){
+  if(!roomId) return;
+  document.getElementById('roomInfo').style.display = 'block';
+  document.getElementById('roomIdDisp').textContent = roomId;
+  document.getElementById('modeHint').textContent =
+    getRoomIdFromURL()
+      ? `ルーム「${roomId}」に参加中 — 番号が出たら自動でひかる！`
+      : `ルーム「${roomId}」を作成 — bingo.html?room=${roomId} を友達に共有してね`;
+}
+
+// ポーリング（2秒ごとにAPIから番号取得）
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(fetchNumbers, 2000);
+  fetchNumbers();
+}
+
+async function fetchNumbers(){
+  if(!roomId) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/bingo/room/${roomId}`);
+    if(!res.ok) return;
+    const data = await res.json();
+    const nums = data.numbers || [];
+    // 新しく追加された番号だけハイライト
+    const newNums = nums.filter(n => !lastNumbers.includes(n));
+    newNums.forEach(n => {
+      calledSet.add(n);
+      addCalledChip(n);
+    });
+    if(newNums.length > 0){
+      highlightCells();
+      document.getElementById('statusBar').textContent =
+        `${nums[nums.length-1]} が出た！カードにあったらタップして破ろう！`;
+    }
+    lastNumbers = nums;
+  } catch(e) {}
+}
+
+// 初期化時に連携モード判定
+async function initSyncMode(){
+  const joined = await joinRoomFromURL();
+  if(!joined){
+    // 進行役として新ルーム作成
+    // ※カード作成ボタンを押したときに作成する
+  }
+}
+
 /* Enterキーでも入力 */
 document.addEventListener('DOMContentLoaded', ()=>{
+  initSyncMode();
   document.getElementById('manualNum').addEventListener('keydown', e=>{
     if(e.key==='Enter') callManual();
   });

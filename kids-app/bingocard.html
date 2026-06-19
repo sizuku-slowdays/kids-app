@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎱 ビンゴカード</title>
+<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.wrap {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 24px;
+  padding: 1.5rem 1.25rem 1.25rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.top-title {
+  font-family: 'Boogaloo', cursive;
+  font-size: 38px; letter-spacing: 3px; color: #fff;
+  text-shadow: 0 0 20px rgba(247,194,53,0.5);
+  margin-bottom: 2px;
+}
+.top-sub { font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 1rem; letter-spacing: .08em; }
+
+/* BINGO header */
+.bingo-header {
+  display: grid; grid-template-columns: repeat(5,1fr); gap: 5px;
+  margin-bottom: 5px; max-width: 340px; margin-left: auto; margin-right: auto;
+}
+.bh {
+  height: 46px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Boogaloo', cursive; font-size: 28px; color: #fff;
+}
+
+/* GRID */
+.bingo-grid {
+  display: grid; grid-template-columns: repeat(5,1fr); gap: 5px;
+  max-width: 340px; margin: 0 auto 1.25rem;
+}
+.cell {
+  aspect-ratio: 1; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Boogaloo', cursive; font-size: 22px;
+  color: #fff; cursor: pointer;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.18);
+  position: relative; overflow: hidden;
+  transition: transform .1s;
+  user-select: none;
+}
+.cell:active { transform: scale(.91); }
+
+/* 色ハイライト（番号が出た） */
+.cell.called {
+  background: rgba(255,160,0,0.35) !important;
+  border: 2.5px solid #FFD700 !important;
+  box-shadow: 0 0 12px rgba(255,210,0,0.7);
+  animation: pulse 1s ease infinite alternate;
+}
+@keyframes pulse {
+  from { box-shadow: 0 0 8px rgba(255,210,0,0.5); }
+  to   { box-shadow: 0 0 20px rgba(255,210,0,1); }
+}
+
+/* 破れエフェクト（タップ済み） */
+.cell.torn { cursor: default; }
+.cell.torn::before { display: none; }
+.cell.torn .tear-overlay {
+  display: flex;
+}
+.tear-overlay {
+  display: none;
+  position: absolute; inset: 0;
+  align-items: center; justify-content: center;
+  z-index: 3;
+  background: rgba(0,0,0,0.6);
+  border-radius: 9px;
+}
+.tear-svg {
+  width: 70%; height: 70%;
+}
+
+/* フリーマス */
+.cell.free { cursor: default; }
+.free-star {
+  font-size: 26px; z-index: 1;
+}
+
+/* ライン・ビンゴ表示 */
+.bingo-flash {
+  font-family: 'Boogaloo', cursive; font-size: 48px; letter-spacing: 4px;
+  color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,0.7);
+  display: none; margin-bottom: .5rem;
+  animation: flashIn .4s ease;
+}
+@keyframes flashIn { 0%{transform:scale(.5);opacity:0} 60%{transform:scale(1.2)} 100%{transform:scale(1);opacity:1} }
+.bingo-flash.show { display: block; }
+
+/* 紙吹雪キャンバス */
+#confetti-canvas {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 999;
+}
+/* ビンゴオーバーレイ */
+.bingo-overlay {
+  display: none; position: fixed; inset: 0; z-index: 998;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.55);
+}
+.bingo-overlay.show { display: flex; }
+.bingo-overlay-inner {
+  text-align: center; animation: overlayPop .45s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes overlayPop {
+  0%  { transform: scale(.3) rotate(-8deg); opacity:0; }
+  100%{ transform: scale(1)  rotate(0deg);  opacity:1; }
+}
+.bingo-big {
+  font-family: 'Boogaloo', cursive;
+  font-size: 88px; line-height: 1;
+  color: #FFD700;
+  text-shadow: 0 0 40px rgba(255,215,0,.9), 0 4px 0 #cc8800;
+  letter-spacing: 6px;
+}
+.bingo-line-txt {
+  font-family: 'Boogaloo', cursive;
+  font-size: 28px; color: #fff;
+  margin-top: 8px; letter-spacing: 2px;
+}
+.bingo-tap-close {
+  font-size: 13px; color: rgba(255,255,255,0.55);
+  margin-top: 18px; letter-spacing: .06em;
+}
+
+.line-badge {
+  display: inline-block;
+  background: linear-gradient(135deg,#534AB7,#8844DD);
+  color: #fff; font-family: 'Boogaloo', cursive; font-size: 16px;
+  padding: 3px 18px; border-radius: 99px; margin-bottom: .6rem;
+  opacity: 0; transition: opacity .3s;
+}
+.line-badge.show { opacity: 1; }
+
+/* status */
+.status-bar {
+  font-size: 13px; color: rgba(255,255,255,0.5);
+  margin-bottom: .75rem; min-height: 20px; letter-spacing: .04em;
+}
+
+/* buttons */
+.btn-row { display: flex; gap: 10px; justify-content: center; margin-bottom: .5rem; }
+.btn-new {
+  font-family: 'Boogaloo', cursive; font-size: 18px;
+  padding: 10px 30px; border-radius: 99px; border: none; cursor: pointer;
+  background: linear-gradient(135deg,#FF6B35,#F7C235); color: #fff;
+  box-shadow: 0 3px 12px rgba(247,120,53,.4);
+  transition: transform .12s;
+}
+.btn-new:hover { transform: scale(1.04); }
+.btn-new:active { transform: scale(.97); }
+
+/* 手動入力 */
+.manual-row {
+  display: flex; gap: 8px; justify-content: center; align-items: center;
+  margin-bottom: .5rem;
+}
+.manual-input {
+  font-family: 'Boogaloo', cursive; font-size: 20px;
+  width: 72px; padding: 6px 8px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.1); color: #fff;
+  text-align: center;
+}
+.manual-input::placeholder { color: rgba(255,255,255,0.3); }
+.btn-call {
+  font-family: 'Boogaloo', cursive; font-size: 17px;
+  padding: 8px 20px; border-radius: 99px; border: none; cursor: pointer;
+  background: rgba(255,255,255,0.15); color: #fff;
+  transition: background .15s;
+}
+.btn-call:hover { background: rgba(255,255,255,0.25); }
+.hint { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: .4rem; letter-spacing: .04em; }
+
+/* called history */
+.called-nums {
+  display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;
+  max-height: 80px; overflow-y: auto; margin-top: .75rem; padding: 2px;
+}
+.cnum {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Boogaloo', cursive; font-size: 12px; color: #fff;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+<div class="bingo-overlay" id="bingoOverlay" onclick="closeOverlay()"><div class="bingo-overlay-inner"><div class="bingo-big" id="overlayText">🎉 BINGO!!</div><div class="bingo-line-txt" id="overlayLine"></div><div class="bingo-tap-close">タップして閉じる</div></div></div>
+<div class="wrap">
+  <div class="top-title">🎱 BINGO</div>
+  <div class="top-sub">出た数字をタップして破ろう！</div>
+
+  <div class="bingo-flash" id="bingoFlash">🎉 BINGO!!</div>
+  <div class="line-badge" id="lineBadge"></div>
+
+  <div class="bingo-header" id="bingoHeader"></div>
+  <div class="bingo-grid"  id="bingoGrid"></div>
+
+  <div class="status-bar" id="statusBar">まず新しいカードを作ってね！</div>
+
+  <div class="btn-row">
+    <button class="btn-new" onclick="newCard()">🎲 新しいカード</button>
+  </div>
+
+  <!-- 手動番号入力（連携前のお手軽モード） -->
+  <div class="manual-row">
+    <input class="manual-input" type="number" id="manualNum" min="1" max="75" placeholder="番号" />
+    <button class="btn-call" onclick="callManual()">✓ 入力</button>
+  </div>
+  <div class="hint">抽選アプリで出た番号を入力 → カードに色がつく → タップで破る</div>
+
+  <div class="called-nums" id="calledNums"></div>
+</div>
+
+<script>
+const COLS        = ['B','I','N','G','O'];
+const COL_COLORS  = ['#FF4C4C','#FF8C00','#4C8EFF','#4CCC55','#CC44CC'];
+const COL_RANGES  = [[1,15],[16,30],[31,45],[46,60],[61,75]];
+const BALL_COLORS = [
+  '#FF4C4C','#FF6B35','#FF8C00','#FFD700','#4CCC55',
+  '#00BBBB','#4C8EFF','#8844DD','#FF66BB','#CC44CC'
+];
+
+function rnd(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function ballColor(n){ return BALL_COLORS[Math.floor((n-1)/8) % BALL_COLORS.length]; }
+
+let card = [];          // card[col][row] = number
+let calledSet = new Set();
+let lines = 0;
+
+/* ── カード生成 ── */
+function newCard(){
+  card = [];
+  for(let c=0;c<5;c++){
+    const [lo,hi] = COL_RANGES[c];
+    const nums = [];
+    while(nums.length < 5){
+      const n = rnd(lo,hi);
+      if(!nums.includes(n)) nums.push(n);
+    }
+    card.push(nums);
+  }
+  calledSet = new Set();
+  lines = 0;
+  document.getElementById('bingoFlash').classList.remove('show');
+  document.getElementById('lineBadge').classList.remove('show');
+  document.getElementById('calledNums').innerHTML = '';
+  renderHeader();
+  renderGrid();
+  document.getElementById('statusBar').textContent = '抽選アプリの番号を入力してね！';
+}
+
+function renderHeader(){
+  const h = document.getElementById('bingoHeader');
+  h.innerHTML = '';
+  COLS.forEach((c,i)=>{
+    const d = document.createElement('div');
+    d.className = 'bh';
+    d.style.background = COL_COLORS[i];
+    d.textContent = c;
+    h.appendChild(d);
+  });
+}
+
+function renderGrid(){
+  const g = document.getElementById('bingoGrid');
+  g.innerHTML = '';
+  for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+      const el = document.createElement('div');
+      el.className = 'cell';
+          el.dataset.col = c;
+      el.dataset.row = r;
+
+      // 破れオーバーレイ
+      const overlay = document.createElement('div');
+      overlay.className = 'tear-overlay';
+      overlay.innerHTML = tearSVG();
+      el.appendChild(overlay);
+
+      if(r===2 && c===2){
+        // フリーマス
+        el.classList.add('free','torn');
+        overlay.style.display = 'flex';
+        el.innerHTML = '';
+        const freeOverlay = document.createElement('div');
+        freeOverlay.className = 'tear-overlay';
+        freeOverlay.style.display = 'flex';
+        freeOverlay.innerHTML = '<span style="font-size:26px;z-index:3;">⭐</span>';
+        el.appendChild(freeOverlay);
+      } else {
+        const num = document.createElement('span');
+        num.textContent = card[c][r];
+        num.style.cssText = 'position:relative;z-index:1;';
+        el.appendChild(overlay);
+        el.appendChild(num);
+        el.onclick = () => tapCell(el, c, r);
+      }
+      g.appendChild(el);
+    }
+  }
+}
+
+/* 破れSVG */
+function tearSVG(){
+  return `<svg class="tear-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+    <path d="M40 10 L46 32 L68 28 L52 44 L62 66 L40 54 L18 66 L28 44 L12 28 L34 32 Z"
+      fill="rgba(255,255,255,0.85)" />
+  </svg>`;
+}
+
+/* ── 番号入力 ── */
+function callManual(){
+  const inp = document.getElementById('manualNum');
+  const n = parseInt(inp.value);
+  if(!n || n<1 || n>75){ inp.value=''; inp.focus(); return; }
+  if(calledSet.has(n)){
+    document.getElementById('statusBar').textContent = `${n} はもう出てるよ！`;
+    inp.value=''; inp.focus(); return;
+  }
+  callNumber(n);
+  inp.value='';
+  inp.focus();
+}
+
+function callNumber(n){
+  calledSet.add(n);
+  // カードの該当マスをハイライト
+  highlightCells();
+  // 履歴に追加
+  addCalledChip(n);
+  document.getElementById('statusBar').textContent = `${n} が出た！カードにあったらタップして破ろう！`;
+}
+
+function highlightCells(){
+  if(!card.length) return;
+  const cells = document.querySelectorAll('.cell');
+  cells.forEach(el => {
+    const c = parseInt(el.dataset.col);
+    const r = parseInt(el.dataset.row);
+    if(isNaN(c)||isNaN(r)) return;
+    if(el.classList.contains('torn')) return;
+    const num = card[c][r];
+    if(calledSet.has(num)){
+      el.classList.add('called');
+    }
+  });
+}
+
+/* ── タップで破る ── */
+function tapCell(el, c, r){
+  if(el.classList.contains('torn')) return;
+  const num = card[c][r];
+  if(!calledSet.has(num)){
+    // まだ呼ばれていない番号はタップ不可
+    el.style.transform = 'scale(.95)';
+    setTimeout(()=>{ el.style.transform=''; }, 150);
+    document.getElementById('statusBar').textContent = `${num} はまだ出てないよ！`;
+    return;
+  }
+  playSparkle();
+  el.classList.remove('called');
+  el.classList.add('torn');
+  const overlay = el.querySelector('.tear-overlay');
+  if(overlay) overlay.style.display = 'flex';
+  checkLines();
+}
+
+/* ── ライン判定 ── */
+function isTorn(c,r){
+  if(r===2&&c===2) return true;
+  const cells = document.querySelectorAll('.cell');
+  for(const el of cells){
+    if(parseInt(el.dataset.col)===c && parseInt(el.dataset.row)===r){
+      return el.classList.contains('torn');
+    }
+  }
+  return false;
+}
+
+function checkLines(){
+  let n = 0;
+  for(let r=0;r<5;r++){ let ok=true; for(let c=0;c<5;c++) if(!isTorn(c,r)){ok=false;break;} if(ok)n++; }
+  for(let c=0;c<5;c++){ let ok=true; for(let r=0;r<5;r++) if(!isTorn(c,r)){ok=false;break;} if(ok)n++; }
+  let d1=true,d2=true;
+  for(let i=0;i<5;i++){ if(!isTorn(i,i))d1=false; if(!isTorn(i,4-i))d2=false; }
+  if(d1)n++; if(d2)n++;
+
+  if(n > lines){
+    lines = n;
+    const badge = document.getElementById('lineBadge');
+    badge.textContent = `${lines}ライン！`;
+    badge.classList.add('show');
+    playFanfare();
+    showBingoOverlay(lines);
+    const flash = document.getElementById('bingoFlash');
+    flash.classList.remove('show');
+    void flash.offsetWidth;
+    flash.classList.add('show');
+    document.getElementById('statusBar').textContent = `🎊 ${lines}ライン達成！すごい！`;
+  }
+}
+
+/* ── 履歴チップ ── */
+function addCalledChip(n){
+  const wrap = document.getElementById('calledNums');
+  const ch = document.createElement('div');
+  ch.className = 'cnum';
+  ch.style.background = ballColor(n);
+  ch.textContent = n;
+  wrap.prepend(ch);
+}
+
+
+// ── Audio (Web Audio API) ──────────────────────────
+let audioCtx = null;
+let masterGain = null;
+
+function getCtx(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.7;
+    masterGain.connect(audioCtx.destination);
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// キラキラ音（タップヒット時）
+function playSparkle(){
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  // 上昇するアルペジオ
+  const notes = [1047, 1319, 1568, 2093, 2637];
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const t = now + i * 0.07;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.22, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(t); osc.stop(t + 0.3);
+  });
+  // キラキラノイズ
+  const bufSize = ctx.sampleRate * 0.25;
+  const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for(let i=0;i<bufSize;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/bufSize,2)*0.15;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const hpf = ctx.createBiquadFilter();
+  hpf.type='highpass'; hpf.frequency.value=8000;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.5, now); ng.gain.exponentialRampToValueAtTime(0.001, now+0.25);
+  src.connect(hpf); hpf.connect(ng); ng.connect(masterGain);
+  src.start(now);
+}
+
+// ファンファーレ（ビンゴ時）
+function playFanfare(){
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  // 和音
+  [523.25, 659.25, 783.99, 1046.5].forEach((freq,i)=>{
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.2, now+0.03+i*0.03);
+    g.gain.setValueAtTime(0.2, now+0.35);
+    g.gain.exponentialRampToValueAtTime(0.001, now+1.1);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(now); osc.stop(now+1.2);
+  });
+  // シンバル
+  const bufSize = ctx.sampleRate * 1.0;
+  const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for(let i=0;i<bufSize;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/bufSize,1.3);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const hpf = ctx.createBiquadFilter();
+  hpf.type='highpass'; hpf.frequency.value=7000;
+  const cg = ctx.createGain();
+  cg.gain.setValueAtTime(0.6, now); cg.gain.exponentialRampToValueAtTime(0.001, now+1.0);
+  src.connect(hpf); hpf.connect(cg); cg.connect(masterGain);
+  src.start(now);
+  // キック
+  const kick = ctx.createOscillator();
+  const kg   = ctx.createGain();
+  kick.type='sine'; kick.frequency.setValueAtTime(150,now); kick.frequency.exponentialRampToValueAtTime(40,now+0.15);
+  kg.gain.setValueAtTime(0.9,now); kg.gain.exponentialRampToValueAtTime(0.001,now+0.25);
+  kick.connect(kg); kg.connect(masterGain);
+  kick.start(now); kick.stop(now+0.25);
+}
+
+
+// ── 紙吹雪 ──────────────────────────────────────────
+const CONFETTI_COLORS = [
+  '#FF4C4C','#FF8C00','#FFD700','#4CCC55','#4C8EFF',
+  '#CC44CC','#FF66BB','#00BBBB','#fff','#FFE066'
+];
+let confettiParticles = [];
+let confettiRAF = null;
+
+function launchConfetti(){
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  confettiParticles = [];
+
+  for(let i=0; i<180; i++){
+    confettiParticles.push({
+      x:  Math.random() * canvas.width,
+      y:  Math.random() * canvas.height - canvas.height,
+      w:  Math.random() * 10 + 6,
+      h:  Math.random() * 5  + 4,
+      color: CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],
+      rot:   Math.random() * Math.PI * 2,
+      rotV:  (Math.random() - 0.5) * 0.18,
+      vx:    (Math.random() - 0.5) * 3,
+      vy:    Math.random() * 4 + 2,
+      opacity: 1,
+    });
+  }
+
+  if(confettiRAF) cancelAnimationFrame(confettiRAF);
+
+  function draw(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    confettiParticles.forEach(p => {
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.rot+= p.rotV;
+      p.vy += 0.07; // 重力
+      if(p.y > canvas.height * 0.7) p.opacity -= 0.018;
+      if(p.opacity > 0) alive = true;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.opacity);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    if(alive) confettiRAF = requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+
+function showBingoOverlay(lines){
+  document.getElementById('overlayText').textContent = lines === 1 ? '🎉 BINGO!!' : `🎊 ${lines}ライン!!`;
+  document.getElementById('overlayLine').textContent = lines > 1 ? 'すごすぎる！！' : 'やったー！！';
+  document.getElementById('bingoOverlay').classList.add('show');
+  launchConfetti();
+}
+
+function closeOverlay(){
+  document.getElementById('bingoOverlay').classList.remove('show');
+}
+
+/* Enterキーでも入力 */
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('manualNum').addEventListener('keydown', e=>{
+    if(e.key==='Enter') callManual();
+  });
+});
+</script>
+</body>
+</html>

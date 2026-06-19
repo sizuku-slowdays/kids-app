@@ -498,6 +498,49 @@ function nextNumber() {
 
 function resetAll() { init(); }
 init();
+
+// ── 連携モード（進行役） ────────────────────────────
+const API_BASE = 'https://api.cetus.fun';
+let hostRoomId = null;
+
+function genRoomId(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:4}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+async function startRoom(){
+  hostRoomId = genRoomId();
+  try {
+    // ルーム作成
+    await fetch(`${API_BASE}/api/bingo/room`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ room_id: hostRoomId })
+    });
+    // アクティブルームとして登録（カード側がパラメータなしで参加できるように）
+    await fetch(`${API_BASE}/api/bingo/active`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ room_id: hostRoomId })
+    });
+  } catch(e) {}
+  document.getElementById('hostRoomId').textContent = hostRoomId;
+  document.getElementById('roomPanel').style.display = 'block';
+  document.getElementById('startRoomBtn').textContent = '✅ 連携中';
+  document.getElementById('startRoomBtn').disabled = true;
+}
+
+async function sendNumberToRoom(n){
+  if(!hostRoomId) return;
+  try {
+    await fetch(`${API_BASE}/api/bingo/room/${hostRoomId}/number`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ number: n })
+    });
+  } catch(e) {}
+}
+
 </script>
 </body>
 </html>

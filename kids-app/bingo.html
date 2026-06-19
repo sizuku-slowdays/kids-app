@@ -236,6 +236,16 @@
     <div class="prog-label" id="progLabel">0 / 75</div>
   </div>
 
+  <!-- 連携モード UI -->
+  <div id="roomPanel" style="margin:.75rem 0;display:none;">
+    <div style="font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:.08em;margin-bottom:4px;">ルームID</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:30px;color:#FFD700;letter-spacing:4px;margin-bottom:6px;" id="hostRoomId"></div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.4);word-break:break-all;" id="roomShareUrl"></div>
+  </div>
+  <div id="roomBtnRow" style="display:flex;gap:8px;justify-content:center;margin-bottom:.75rem;">
+    <button class="btn-reset" onclick="startRoom()" id="startRoomBtn">🔗 連携スタート</button>
+  </div>
+
   <div class="hist-wrap" id="histWrap" style="display:none">
     <div class="hist-title">▼ これまでの番号</div>
     <div class="hist-grid" id="histGrid"></div>
@@ -460,6 +470,7 @@ function nextNumber() {
         prev.appendChild(d);
       });
 
+      sendNumberToRoom(n);
       document.getElementById('calledText').textContent = `${called.length}番目: ${n}`;
       document.getElementById('bar').style.width = `${called.length/75*100}%`;
       document.getElementById('progLabel').textContent = `${called.length} / 75`;

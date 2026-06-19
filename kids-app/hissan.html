@@ -412,28 +412,36 @@ const TOTAL_QUESTIONS = 10;
 const answerTens = document.getElementById("answer-tens");
 const answerOnes = document.getElementById("answer-ones");
 
-answerTens.addEventListener("input", () => {
-  answerTens.value = answerTens.value.replace(/[^0-9]/g, "");
-  if (answerTens.value.length === 1) {
-    answerOnes.focus();
-  }
-});
-
+// ── 1の位：入力したら10の位へ移動 ──
 answerOnes.addEventListener("input", () => {
   answerOnes.value = answerOnes.value.replace(/[^0-9]/g, "");
+  if (answerOnes.value.length === 1) {
+    answerTens.focus();
+    answerTens.select();
+  }
 });
 
-answerTens.addEventListener("keydown", event => {
-  if (event.key === "Backspace" && answerTens.value === "") {
-    answerOnes.focus();
-  }
+// ── 10の位：Backspaceで空なら1の位へ戻る ──
+answerTens.addEventListener("input", () => {
+  answerTens.value = answerTens.value.replace(/[^0-9]/g, "");
 });
 
 answerOnes.addEventListener("keydown", event => {
   if (event.key === "Backspace" && answerOnes.value === "") {
     answerTens.focus();
   }
+  if (event.key === "Enter") {
+    checkAnswer();
+  }
+});
 
+answerTens.addEventListener("keydown", event => {
+  if (event.key === "Backspace" && answerTens.value === "") {
+    answerOnes.focus();
+    // カーソルを末尾に移動
+    const len = answerOnes.value.length;
+    answerOnes.setSelectionRange(len, len);
+  }
   if (event.key === "Enter") {
     checkAnswer();
   }
@@ -499,8 +507,9 @@ function makeQuestion() {
 
   setNumbersOnScreen();
 
+  // ── 初期フォーカスは1の位（一番右）──
   setTimeout(() => {
-    answerTens.focus();
+    answerOnes.focus();
   }, 100);
 }
 

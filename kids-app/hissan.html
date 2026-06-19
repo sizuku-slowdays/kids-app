@@ -305,6 +305,64 @@ h1 {
     font-size: 21px;
   }
 }
+
+.carry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.carry-btn {
+  border: none;
+  border-radius: 20px;
+  padding: 18px 6px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ffe28a, #ffb347);
+  color: #7a4400;
+  box-shadow: 0 5px 0 #c47d10;
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+.carry-btn.carry-mix {
+  background: linear-gradient(135deg, #c8a8f8, #9b72e8);
+  color: #3a1a7a;
+  box-shadow: 0 5px 0 #6b3ab8;
+}
+
+.carry-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #c47d10;
+}
+
+.carry-btn.carry-mix:active {
+  box-shadow: 0 2px 0 #6b3ab8;
+}
+
+.carry-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.carry-label {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.back-link {
+  border: none;
+  background: none;
+  color: #aaa;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-family: inherit;
+  text-decoration: underline;
+}
 </style>
 </head>
 
@@ -314,23 +372,42 @@ h1 {
   <h1>ひっ算れんしゅう</h1>
   <p class="subtitle">たし算・ひき算を れんしゅうしよう！</p>
 
-  <div class="card">
+  <!-- ステップ1：たし算／ひき算 -->
+  <div id="step-mode" class="card">
     <p style="font-size:20px; font-weight:bold;">どっちを やる？</p>
-
     <div class="mode-grid">
-      <button class="mode-btn add" onclick="startQuiz('add')">
+      <button class="mode-btn add" onclick="selectMode('add')">
         ＋<br>たし算
       </button>
-
-      <button class="mode-btn sub" onclick="startQuiz('sub')">
+      <button class="mode-btn sub" onclick="selectMode('sub')">
         －<br>ひき算
       </button>
     </div>
-
     <p class="note">
       2けたのひっ算がでるよ。<br>
       こたえを 1けたずつ 入れてね。
     </p>
+  </div>
+
+  <!-- ステップ2：くりあがり選択 -->
+  <div id="step-carry" class="card" style="display:none;">
+    <p style="font-size:18px; font-weight:bold; margin-bottom:4px;" id="carry-heading">くりあがり は どうする？</p>
+    <p style="font-size:13px; color:#888; margin-bottom:16px;" id="carry-note">たし算のくりあがりをえらんでね</p>
+    <div class="carry-grid">
+      <button class="carry-btn" onclick="startQuiz('no')">
+        <span class="carry-icon">🌱</span><br>
+        <span class="carry-label" id="label-no">くりあがり<br>なし</span>
+      </button>
+      <button class="carry-btn" onclick="startQuiz('yes')">
+        <span class="carry-icon">⭐</span><br>
+        <span class="carry-label" id="label-yes">くりあがり<br>あり</span>
+      </button>
+      <button class="carry-btn carry-mix" onclick="startQuiz('mix')">
+        <span class="carry-icon">🎲</span><br>
+        <span class="carry-label">ミックス</span>
+      </button>
+    </div>
+    <button class="back-link" onclick="backToModeSelect()">← もどる</button>
   </div>
 </div>
 
@@ -398,7 +475,8 @@ h1 {
 </div>
 
 <script>
-let mode = "add";
+let mode = "add";   // "add" | "sub"
+let carry = "mix";  // "yes" | "no" | "mix"
 let currentQuestion = 0;
 let score = 0;
 let answered = false;
@@ -438,7 +516,6 @@ answerOnes.addEventListener("keydown", event => {
 answerTens.addEventListener("keydown", event => {
   if (event.key === "Backspace" && answerTens.value === "") {
     answerOnes.focus();
-    // カーソルを末尾に移動
     const len = answerOnes.value.length;
     answerOnes.setSelectionRange(len, len);
   }
@@ -447,19 +524,47 @@ answerTens.addEventListener("keydown", event => {
   }
 });
 
+// ── トップ画面：ステップ1でたし算/ひき算を選ぶ ──
+function selectMode(selectedMode) {
+  mode = selectedMode;
+  document.getElementById("step-mode").style.display = "none";
+  document.getElementById("step-carry").style.display = "block";
+
+  if (selectedMode === "add") {
+    document.getElementById("carry-heading").textContent = "くりあがり は どうする？";
+    document.getElementById("carry-note").textContent = "たし算のくりあがりをえらんでね";
+    document.getElementById("label-no").innerHTML = "くりあがり<br>なし";
+    document.getElementById("label-yes").innerHTML = "くりあがり<br>あり";
+  } else {
+    document.getElementById("carry-heading").textContent = "くりさがり は どうする？";
+    document.getElementById("carry-note").textContent = "ひき算のくりさがりをえらんでね";
+    document.getElementById("label-no").innerHTML = "くりさがり<br>なし";
+    document.getElementById("label-yes").innerHTML = "くりさがり<br>あり";
+  }
+}
+
+function backToModeSelect() {
+  document.getElementById("step-carry").style.display = "none";
+  document.getElementById("step-mode").style.display = "block";
+}
+
 function showScreen(name) {
   document.querySelectorAll(".screen").forEach(screen => {
     screen.classList.remove("active");
   });
-
   document.getElementById("screen-" + name).classList.add("active");
   window.scrollTo(0, 0);
 }
 
-function startQuiz(selectedMode) {
-  mode = selectedMode;
+// ── ステップ2でくりあがりを選んでスタート ──
+function startQuiz(selectedCarry) {
+  carry = selectedCarry;
   currentQuestion = 0;
   score = 0;
+
+  // トップに戻ったとき用にステップ1を見えるように戻しておく
+  document.getElementById("step-carry").style.display = "none";
+  document.getElementById("step-mode").style.display = "block";
 
   showScreen("quiz");
   makeQuestion();
@@ -468,7 +573,6 @@ function startQuiz(selectedMode) {
 function restartSameMode() {
   currentQuestion = 0;
   score = 0;
-
   showScreen("quiz");
   makeQuestion();
 }
@@ -495,53 +599,69 @@ function makeQuestion() {
   answerTens.disabled = false;
   answerOnes.disabled = false;
 
+  // ミックスのときはこの問題でくりあがりありにするかランダム決定
+  const useCarry = carry === "mix" ? (Math.random() < 0.5 ? "yes" : "no") : carry;
+
   if (mode === "add") {
-    document.getElementById("mode-label").textContent = "たし算";
+    const carryLabel = useCarry === "yes" ? "たし算（くりあがりあり）" : "たし算（くりあがりなし）";
+    document.getElementById("mode-label").textContent = carry === "mix" ? "たし算" : carryLabel;
     document.getElementById("operator").textContent = "+";
-    makeAddQuestion();
+    makeAddQuestion(useCarry === "yes");
   } else {
-    document.getElementById("mode-label").textContent = "ひき算";
+    const carryLabel = useCarry === "yes" ? "ひき算（くりさがりあり）" : "ひき算（くりさがりなし）";
+    document.getElementById("mode-label").textContent = carry === "mix" ? "ひき算" : carryLabel;
     document.getElementById("operator").textContent = "-";
-    makeSubQuestion();
+    makeSubQuestion(useCarry === "yes");
   }
 
   setNumbersOnScreen();
 
-  // ── 初期フォーカスは1の位（一番右）──
   setTimeout(() => {
     answerOnes.focus();
   }, 100);
 }
 
-function makeAddQuestion() {
+// ── たし算問題生成 ──
+// needCarry=true  → 1の位の和が10以上（くりあがりあり）
+// needCarry=false → 1の位の和が9以下（くりあがりなし）
+function makeAddQuestion(needCarry) {
   let a, b, sum;
-
+  let tries = 0;
   do {
     a = randomTwoDigit();
     b = randomTwoDigit();
     sum = a + b;
-  } while (sum > 99 || sum < 10);
+    tries++;
+    if (tries > 1000) break;
+  } while (
+    sum > 99 || sum < 10 ||
+    (needCarry  && (a % 10) + (b % 10) < 10) ||
+    (!needCarry && (a % 10) + (b % 10) >= 10)
+  );
 
   num1 = a;
   num2 = b;
   correctAnswer = sum;
 }
 
-function makeSubQuestion() {
+// ── ひき算問題生成 ──
+// needCarry=true  → 1の位で引けない（くりさがりあり）
+// needCarry=false → 1の位で引ける（くりさがりなし）
+function makeSubQuestion(needCarry) {
   let a, b, answer;
-
+  let tries = 0;
   do {
     a = randomTwoDigit();
     b = randomTwoDigit();
-
-    if (b > a) {
-      const temp = a;
-      a = b;
-      b = temp;
-    }
-
+    if (b > a) { const t = a; a = b; b = t; }
     answer = a - b;
-  } while (answer < 10 || answer > 99);
+    tries++;
+    if (tries > 1000) break;
+  } while (
+    answer < 10 || answer > 99 ||
+    (needCarry  && (a % 10) >= (b % 10)) ||
+    (!needCarry && (a % 10) <  (b % 10))
+  );
 
   num1 = a;
   num2 = b;
@@ -555,7 +675,6 @@ function randomTwoDigit() {
 function setNumbersOnScreen() {
   document.getElementById("num1-tens").textContent = Math.floor(num1 / 10);
   document.getElementById("num1-ones").textContent = num1 % 10;
-
   document.getElementById("num2-tens").textContent = Math.floor(num2 / 10);
   document.getElementById("num2-ones").textContent = num2 % 10;
 }

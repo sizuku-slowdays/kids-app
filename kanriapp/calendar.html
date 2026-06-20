@@ -267,21 +267,42 @@
 </div>
 
 <!-- 予定追加/編集モーダル -->
+<!-- 予定追加/編集モーダル -->
 <div class="overlay" id="ev-overlay" onclick="closeEvModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h2 id="ev-modal-title">予定を追加</h2>
     <input type="hidden" id="ev-id">
     <div class="frow"><label>タイトル *</label><input type="text" id="ev-title" placeholder="予定のタイトル"></div>
     <div class="frow"><label class="cb-row"><input type="checkbox" id="ev-allday" onchange="toggleAllDay()"> 終日</label></div>
-    <div id="ev-dt-row" class="frow">
-      <label>開始</label><input type="datetime-local" id="ev-start">
-      <label style="margin-top:6px">終了</label><input type="datetime-local" id="ev-end">
+    <div id="ev-dt-row">
+      <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label>開始日</label><input type="date" id="ev-start-date"></div>
+        <div><label>開始時刻</label><input type="time" id="ev-start-time" value="09:00"></div>
+      </div>
+      <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label>終了日</label><input type="date" id="ev-end-date"></div>
+        <div><label>終了時刻</label><input type="time" id="ev-end-time" value="10:00"></div>
+      </div>
     </div>
-    <div id="ev-d-row" class="frow" style="display:none">
-      <label>開始日</label><input type="date" id="ev-start-d">
-      <label style="margin-top:6px">終了日</label><input type="date" id="ev-end-d">
+    <div id="ev-d-row" style="display:none">
+      <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label>開始日</label><input type="date" id="ev-start-d"></div>
+        <div><label>終了日</label><input type="date" id="ev-end-d"></div>
+      </div>
     </div>
     <div class="frow"><label>カレンダー *</label><select id="ev-cal"></select></div>
+    <div class="frow">
+      <label>通知</label>
+      <select id="ev-notify">
+        <option value="-1">通知なし</option>
+        <option value="0">開始時刻</option>
+        <option value="5">5分前</option>
+        <option value="10">10分前</option>
+        <option value="30">30分前</option>
+        <option value="60">1時間前</option>
+        <option value="1440">1日前</option>
+      </select>
+    </div>
     <div class="frow"><label>メモ</label><textarea id="ev-desc" placeholder="詳細・メモ"></textarea></div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeEvModal()">キャンセル</button>

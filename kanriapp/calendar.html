@@ -402,8 +402,17 @@ window.onload = () => {
     { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ja' }
   );
   // セッション復元
-  const saved = sessionStorage.getItem('id_token');
-  if (saved) { idToken = saved; initApp(); }
+const saved = sessionStorage.getItem('id_token');
+if (saved) { 
+  idToken = saved;
+  initApp().catch(() => {
+    // トークン期限切れなら自動再認証
+    sessionStorage.removeItem('id_token');
+    google.accounts.id.prompt();
+  });
+} else {
+  google.accounts.id.prompt();
+}
 };
 
 async function onGoogleSignIn(response) {

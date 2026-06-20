@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>おてつだいポイント</title>
+<style>
+  :root {
+    --bg: #f0f8ff;
+    --card: #ffffff;
+    --star: #f5a623;
+    --green: #5cb85c;
+    --pink: #ff6b9d;
+    --purple: #9b59b6;
+    --text: #333;
+    --muted: #888;
+    --border: #e0ecf8;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Hiragino Maru Gothic ProN', 'BIZ UDPGothic', sans-serif; min-height: 100vh; }
+
+  /* ヘッダー */
+  header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 20px; text-align: center; border-radius: 0 0 28px 28px; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
+
+  /* メンバー選択 */
+  .member-select { display: flex; gap: 12px; padding: 20px 16px 0; }
+  .member-tab { flex: 1; background: var(--card); border: 3px solid var(--border); border-radius: var(--radius); padding: 16px 8px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .member-tab .mt-icon { font-size: 2.2rem; }
+  .member-tab .mt-name { font-size: 0.9rem; font-weight: 700; margin-top: 6px; color: var(--muted); }
+  .member-tab.active-ane { border-color: var(--pink); background: #fff0f5; }
+  .member-tab.active-ane .mt-name { color: var(--pink); }
+  .member-tab.active-imouto { border-color: var(--purple); background: #f8f0ff; }
+  .member-tab.active-imouto .mt-name { color: var(--purple); }
+
+  /* コンテンツ */
+  .content { padding: 16px; }
+
+  /* ポイントバナー */
+  .point-banner { border-radius: var(--radius); padding: 24px 20px; text-align: center; margin-bottom: 16px; color: #fff; }
+  .point-banner.ane-color { background: linear-gradient(135deg, #ff6b9d, #ff8fab); }
+  .point-banner.imouto-color { background: linear-gradient(135deg, #9b59b6, #a78bfa); }
+  .pb-stars { font-size: 1.8rem; margin-bottom: 8px; }
+  .pb-pts { font-size: 3rem; font-weight: 700; line-height: 1; }
+  .pb-unit { font-size: 1rem; opacity: 0.9; }
+  .pb-sub { font-size: 0.85rem; opacity: 0.85; margin-top: 6px; }
+
+  /* セクション */
+  .section { margin-bottom: 16px; }
+  .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+  /* カード */
+  .card { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+  /* 履歴ログ */
+  .log-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .log-item:last-child { border-bottom: none; }
+  .log-icon { font-size: 1.8rem; flex-shrink: 0; width: 42px; height: 42px; background: var(--bg); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+  .log-main { flex: 1; }
+  .log-name { font-weight: 700; font-size: 0.95rem; }
+  .log-date { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .log-pts { font-weight: 700; font-size: 1.1rem; color: var(--star); }
+
+  /* ごほうびカード */
+  .reward-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--bg); border-radius: 14px; margin-bottom: 8px; }
+  .reward-icon { font-size: 1.8rem; }
+  .reward-main { flex: 1; }
+  .reward-name { font-weight: 700; font-size: 0.95rem; }
+  .reward-pts { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  .reward-pts strong { color: var(--star); }
+  .btn-request { background: linear-gradient(135deg, #f5a623, #f39c12); color: #fff; border: none; border-radius: 12px; padding: 8px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .btn-request:disabled { background: #ccc; cursor: default; }
+
+  .loading { text-align: center; padding: 30px; color: var(--muted); font-size: 1rem; }
+  .empty { text-align: center; padding: 20px; color: var(--muted); }
+
+  /* モーダル */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: flex-end; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 28px 28px 0 0; width: 100%; max-width: 480px; padding: 28px 20px 40px; text-align: center; }
+  .modal h2 { font-size: 1.2rem; margin-bottom: 16px; }
+  .modal .reward-confirm { font-size: 2.5rem; margin: 10px 0; }
+  .modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+  .modal-btns { display: flex; gap: 10px; }
+  .btn-cancel { flex: 1; padding: 14px; border: 2px solid var(--border); border-radius: 14px; background: #fff; font-size: 1rem; cursor: pointer; font-weight: 700; }
+  .btn-ok { flex: 2; padding: 14px; border: none; border-radius: 14px; background: linear-gradient(135deg, #f5a623, #f39c12); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
+
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⭐ おてつだいポイント</h1>
+  <p>みんなのがんばりをチェック！</p>
+</header>
+
+<div class="member-select">
+  <div class="member-tab" id="tab-ane" onclick="selectMember('ane')">
+    <div class="mt-icon">🌸</div>
+    <div class="mt-name">あね</div>
+  </div>
+  <div class="member-tab" id="tab-imouto" onclick="selectMember('imouto')">
+    <div class="mt-icon">🦄</div>
+    <div class="mt-name">いもうと</div>
+  </div>
+</div>
+
+<div class="content" id="mainContent">
+  <div class="loading">よみこみ中…</div>
+</div>
+
+<!-- こうかんモーダル -->
+<div class="modal-overlay" id="reqModal">
+  <div class="modal">
+    <h2>こうかんしたい！</h2>
+    <div class="reward-confirm" id="reqIcon">🎁</div>
+    <div style="font-size:1.2rem;font-weight:700;margin-bottom:6px;" id="reqName"></div>
+    <p>ママにおねがいするよ。<br>ほんとうにこうかんする？</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">やめる</button>
+      <button class="btn-ok" onclick="confirmRequest()">おねがいする！</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://otetsudai-api.sslowdayss.workers.dev';
+let currentMember = null;
+let pendingReward = null;
+let rewards = [];
+let memberData = null;
+let chores = [];
+
+const today = new Date();
+const monthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+
+async function init() {
+  // chore情報を先に取得（アイコン表示用）
+  try {
+    const r = await fetch(`${API}/api/chores/today`);
+    chores = await r.json();
+  } catch(e) {}
+  // 前回選択を復元
+  const saved = localStorage.getItem('otetsuday-member');
+  selectMember(saved || 'ane');
+}
+
+async function selectMember(id) {
+  currentMember = id;
+  localStorage.setItem('otetsuday-member', id);
+
+  // タブのスタイル
+  document.getElementById('tab-ane').className = 'member-tab' + (id==='ane' ? ' active-ane' : '');
+  document.getElementById('tab-imouto').className = 'member-tab' + (id==='imouto' ? ' active-imouto' : '');
+
+  document.getElementById('mainContent').innerHTML = '<div class="loading">よみこみ中…⭐</div>';
+  await loadMemberData(id);
+  await loadRewards();
+  renderAll();
+}
+
+async function loadMemberData(id) {
+  try {
+    const r = await fetch(`${API}/api/points/member/${id}?month=${monthStr}`);
+    memberData = await r.json();
+  } catch(e) {
+    memberData = { balance: 0, total_points: 0, used_points: 0, month_points: 0, recent_logs: [] };
+  }
+}
+
+async function loadRewards() {
+  try {
+    const r = await fetch(`${API}/api/rewards`);
+    rewards = await r.json();
+  } catch(e) {
+    rewards = [];
+  }
+}
+
+function renderAll() {
+  const isAne = currentMember === 'ane';
+  const colorClass = isAne ? 'ane-color' : 'imouto-color';
+  const icon = isAne ? '🌸' : '🦄';
+  const balance = memberData?.balance ?? 0;
+  const monthPts = memberData?.month_points ?? 0;
+  const usedPts = memberData?.used_points ?? 0;
+
+  const html = `
+    <!-- ポイントバナー -->
+    <div class="point-banner ${colorClass}">
+      <div class="pb-stars">⭐⭐⭐</div>
+      <div class="pb-pts">${balance.toLocaleString()}<span class="pb-unit"> pt</span></div>
+      <div class="pb-sub">今月：${monthPts}pt ／ つかった：${usedPts}pt</div>
+    </div>
+
+    <!-- 履歴 -->
+    <div class="section">
+      <div class="section-title">📋 さいきんのおてつだい</div>
+      <div class="card">
+        ${(memberData?.recent_logs||[]).length ? (memberData.recent_logs).map(l => {
+          const chore = chores.find(c => c.id === l.chore_id);
+          return `<div class="log-item">
+            <div class="log-icon">${chore?.icon||'📋'}</div>
+            <div class="log-main">
+              <div class="log-name">${l.chore_name}</div>
+              <div class="log-date">${l.completed_date}</div>
+            </div>
+            <div class="log-pts">+${l.points}pt</div>
+          </div>`;
+        }).join('') : '<div class="empty">まだおてつだいなし！<br>がんばろう💪</div>'}
+      </div>
+    </div>
+
+    <!-- ごほうび -->
+    <div class="section">
+      <div class="section-title">🎁 ごほうびいちらん</div>
+      ${rewards.length ? rewards.map(r => {
+        const canGet = balance >= r.points;
+        return `<div class="reward-item">
+          <div class="reward-icon">🎁</div>
+          <div class="reward-main">
+            <div class="reward-name">${r.name}</div>
+            <div class="reward-pts"><strong>${r.points.toLocaleString()}pt</strong> ひつよう</div>
+          </div>
+          <button class="btn-request" ${!canGet?'disabled':''} onclick="openRequest(${r.id},'${r.name}',${r.points})">
+            ${canGet ? 'こうかん！' : 'あとすこし'}
+          </button>
+        </div>`;
+      }).join('') : '<div class="empty">ごほうびなし</div>'}
+      <div style="margin-top:8px;font-size:0.78rem;color:var(--muted);text-align:center;">
+        ※こうかんはママがしょうにんしてから！
+      </div>
+    </div>
+  `;
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function openRequest(id, name, pts) {
+  pendingReward = { id, name, pts };
+  document.getElementById('reqName').textContent = `${name}（${pts.toLocaleString()}pt）`;
+  document.getElementById('reqModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('reqModal').classList.remove('open');
+  pendingReward = null;
+}
+
+async function confirmRequest() {
+  if (!pendingReward || !currentMember) return;
+  closeModal();
+  try {
+    const r = await fetch(`${API}/api/rewards/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ member_id: currentMember, reward_id: pendingReward.id })
+    });
+    const data = await r.json();
+    showToast(data.message || 'リクエストしました！');
+  } catch(e) {
+    showToast('エラーがおきたよ…もういちどためしてね');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+init();
+</script>
+</body>
+</html>

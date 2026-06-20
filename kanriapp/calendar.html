@@ -580,6 +580,15 @@ function makeLegendItem(id, name, color, isGoogle) {
   } else {
     el.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${name}</span>`;
     el.onclick = () => toggleLegend(id, el);
+    el.oncontextmenu = (e) => {
+      e.preventDefault();
+      if (isGoogle) return;
+      if (confirm(`「${name}」を削除しますか？予定もすべて削除されます`)) {
+        api(`/calendars/${id}`, 'DELETE')
+          .then(() => loadAll())
+          .catch(e => alert('削除失敗: ' + e.message));
+      }
+    };
   }
   return el;
 }

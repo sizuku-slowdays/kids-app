@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家族カレンダー</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --border: #e8e4de;
+    --text: #2c2825;
+    --text-sub: #8a847c;
+    --accent: #5b8dee;
+    --today-bg: #fff8e1;
+    --today-border: #ffb300;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── ログイン画面 ── */
+  #login-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 24px; padding: 24px;
+  }
+  #login-screen h1 { font-size: 28px; font-weight: 700; }
+  #login-screen p { color: var(--text-sub); font-size: 15px; }
+  #login-screen .logo { font-size: 48px; }
+
+  /* ── 表示名設定画面 ── */
+  #setup-screen {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 16px; padding: 24px;
+  }
+  #setup-screen h2 { font-size: 22px; font-weight: 700; }
+  #setup-screen p { color: var(--text-sub); font-size: 14px; text-align: center; }
+  .setup-input {
+    width: min(360px, 100%); border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-size: 16px; font-family: inherit; background: var(--surface);
+    outline: none;
+  }
+  .setup-input:focus { border-color: var(--accent); }
+  .color-picker-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .color-swatch {
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+    transition: box-shadow 0.15s; border: 2px solid transparent;
+  }
+  .color-swatch.selected { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent); }
+
+  /* ── アプリ本体 ── */
+  #app { display: none; }
+
+  /* ── ヘッダー ── */
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow);
+  }
+  .nav-btn {
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 11px; font-size: 14px; cursor: pointer; color: var(--text);
+    transition: background 0.15s;
+  }
+  .nav-btn:hover { background: var(--bg); }
+  .nav-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .month-label { font-size: 17px; font-weight: 700; min-width: 130px; text-align: center; }
+  .spacer { flex: 1; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; color: #fff; font-size: 13px; font-weight: 700;
+    cursor: pointer; flex-shrink: 0;
+  }
+
+  /* ── 凡例 ── */
+  #legend {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 8px 14px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer;
+    padding: 3px 8px; border-radius: 20px; border: 1.5px solid transparent;
+    transition: opacity 0.15s; user-select: none;
+  }
+  .legend-item.hidden { opacity: 0.35; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .legend-add { background: none; border: 1px dashed var(--border); border-radius: 20px;
+    padding: 3px 10px; font-size: 12px; cursor: pointer; color: var(--text-sub); }
+
+  /* ── 月グリッド ── */
+  #month-view { padding: 10px; }
+  .week-header { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 3px; }
+  .week-header div { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-sub); padding: 3px 0; }
+  .week-header div:first-child { color: #e53935; }
+  .week-header div:last-child  { color: #1565c0; }
+  .month-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+  .day-cell {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    min-height: 88px; padding: 4px; cursor: pointer; overflow: hidden;
+    transition: box-shadow 0.15s;
+  }
+  .day-cell:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .day-cell.other-month { opacity: 0.4; }
+  .day-cell.today { background: var(--today-bg); border-color: var(--today-border); }
+  .day-num {
+    font-size: 12px; font-weight: 600; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-bottom: 2px;
+  }
+  .day-cell.today .day-num { background: var(--today-border); color: #fff; }
+  .sun .day-num { color: #e53935; }
+  .sat .day-num { color: #1565c0; }
+  .event-chip {
+    font-size: 10px; padding: 1px 4px; border-radius: 3px; margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; cursor: pointer;
+  }
+  .more-label { font-size: 10px; color: var(--text-sub); padding-left: 2px; }
+
+  /* ── 週表示 ── */
+  #week-view { display: none; padding: 10px; overflow-x: auto; }
+  .week-grid { display: grid; grid-template-columns: 44px repeat(7,1fr); gap: 3px; min-width: 480px; }
+  .week-col-header {
+    text-align: center; font-size: 12px; padding: 6px 3px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+  }
+  .week-col-header.today { background: var(--today-bg); border-color: var(--today-border); }
+  .week-col-header .dow { font-weight: 600; font-size: 10px; color: var(--text-sub); }
+  .week-col-header .dnum { font-size: 15px; font-weight: 700; }
+  .week-time-col { display: flex; flex-direction: column; }
+  .time-label { height: 44px; font-size: 10px; color: var(--text-sub); text-align: right; padding-right: 5px; padding-top: 2px; }
+  .week-day-col { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .week-day-col.today { background: var(--today-bg); }
+  .hour-line { position: absolute; left: 0; right: 0; height: 1px; background: var(--border); }
+  .week-event {
+    position: absolute; left: 2px; right: 2px; border-radius: 4px;
+    padding: 2px 4px; font-size: 10px; color: #fff; overflow: hidden;
+    cursor: pointer; z-index: 2; min-height: 18px;
+  }
+
+  /* ── モーダル共通 ── */
+  .overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.38);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius); padding: 22px;
+    width: min(460px, 95vw); max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  }
+  .modal h2 { font-size: 17px; margin-bottom: 14px; }
+  .frow { margin-bottom: 12px; }
+  .frow label { display: block; font-size: 11px; color: var(--text-sub); margin-bottom: 3px; font-weight: 600; }
+  .frow input, .frow select, .frow textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 14px; font-family: inherit;
+    background: var(--bg); color: var(--text); outline: none;
+  }
+  .frow input:focus, .frow select:focus, .frow textarea:focus { border-color: var(--accent); }
+  .frow textarea { min-height: 56px; resize: vertical; }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .btn { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-danger  { background: #e53935; color: #fff; }
+  .btn-ghost   { background: none; border: 1px solid var(--border); color: var(--text); }
+  .cb-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .cb-row input { width: auto; }
+
+  /* ── 詳細モーダル ── */
+  .detail-bar { height: 5px; border-radius: 3px; margin-bottom: 12px; }
+  .detail-title { font-size: 19px; font-weight: 700; margin-bottom: 6px; }
+  .detail-meta { font-size: 13px; color: var(--text-sub); margin-bottom: 4px; }
+  .detail-desc { font-size: 13px; color: var(--text-sub); white-space: pre-wrap; margin-top: 8px; }
+  .google-badge {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
+    background: #e8f0fe; color: #1a73e8; border-radius: 4px; padding: 2px 7px; margin-bottom: 8px;
+  }
+
+  /* ── ユーザーメニュー ── */
+  #user-menu {
+    position: absolute; top: 52px; right: 12px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px 0;
+    box-shadow: var(--shadow); z-index: 300; min-width: 180px; display: none;
+  }
+  #user-menu.open { display: block; }
+  .menu-item { padding: 9px 16px; font-size: 13px; cursor: pointer; }
+  .menu-item:hover { background: var(--bg); }
+  .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+  .menu-name { padding: 8px 16px; font-size: 12px; color: var(--text-sub); font-weight: 600; }
+
+  /* ── FAB ── */
+  #fab {
+    position: fixed; bottom: 22px; right: 22px; width: 52px; height: 52px;
+    border-radius: 50%; background: var(--accent); color: #fff; border: none;
+    font-size: 26px; cursor: pointer; box-shadow: 0 4px 16px rgba(91,141,238,0.45);
+    display: flex; align-items: center; justify-content: center; z-index: 150;
+    transition: transform 0.15s;
+  }
+  #fab:hover { transform: scale(1.08); }
+
+  @media (max-width: 580px) {
+    .day-cell { min-height: 58px; padding: 2px; }
+    .event-chip { font-size: 9px; }
+    .day-num { font-size: 11px; width: 18px; height: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <div class="logo">📅</div>
+  <h1>家族カレンダー</h1>
+  <p>Googleアカウントでログインしてください</p>
+  <div id="g_signin_btn"></div>
+</div>
+
+<!-- 表示名設定画面 -->
+<div id="setup-screen">
+  <div class="logo">👤</div>
+  <h2>はじめまして！</h2>
+  <p>カレンダーに表示される名前を設定してください<br>本名でなくてもOKです</p>
+  <input class="setup-input" id="setup-name" type="text" placeholder="ニックネーム（例: ママ、パパ）" maxlength="20">
+  <p style="font-size:13px;color:var(--text-sub)">アバターの色</p>
+  <div class="color-picker-row" id="setup-colors"></div>
+  <button class="btn btn-primary" style="padding:10px 32px;font-size:15px" onclick="finishSetup()">はじめる</button>
+</div>
+
+<!-- アプリ本体 -->
+<div id="app">
+  <header>
+    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+    <button class="nav-btn" onclick="goToday()">今日</button>
+    <button class="nav-btn" onclick="changeMonth(1)">›</button>
+    <span class="month-label" id="month-label"></span>
+    <div class="spacer"></div>
+    <button class="nav-btn" id="btn-month" onclick="setView('month')">月</button>
+    <button class="nav-btn" id="btn-week"  onclick="setView('week')">週</button>
+    <div class="avatar" id="avatar-btn" onclick="toggleUserMenu()"></div>
+  </header>
+
+  <div id="user-menu">
+    <div class="menu-name" id="menu-name"></div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" onclick="openNameEdit()">表示名を変更</div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" onclick="signOut()" style="color:#e53935">ログアウト</div>
+  </div>
+
+  <div id="legend">
+    <button class="legend-add" onclick="openCalModal()">＋ カレンダーを追加</button>
+  </div>
+
+  <!-- 月表示 -->
+  <div id="month-view">
+    <div class="week-header">
+      <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+    </div>
+    <div class="month-grid" id="month-grid"></div>
+  </div>
+
+  <!-- 週表示 -->
+  <div id="week-view"></div>
+
+  <button id="fab" onclick="openEvModal(null,null)">＋</button>
+</div>
+
+<!-- 予定追加/編集モーダル -->
+<div class="overlay" id="ev-overlay" onclick="closeEvModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="ev-modal-title">予定を追加</h2>
+    <input type="hidden" id="ev-id">
+    <div class="frow"><label>タイトル *</label><input type="text" id="ev-title" placeholder="予定のタイトル"></div>
+    <div class="frow"><label class="cb-row"><input type="checkbox" id="ev-allday" onchange="toggleAllDay()"> 終日</label></div>
+    <div id="ev-dt-row" class="frow">
+      <label>開始</label><input type="datetime-local" id="ev-start">
+      <label style="margin-top:6px">終了</label><input type="datetime-local" id="ev-end">
+    </div>
+    <div id="ev-d-row" class="frow" style="display:none">
+      <label>開始日</label><input type="date" id="ev-start-d">
+      <label style="margin-top:6px">終了日</label><input type="date" id="ev-end-d">
+    </div>
+    <div class="frow"><label>カレンダー *</label><select id="ev-cal"></select></div>
+    <div class="frow"><label>メモ</label><textarea id="ev-desc" placeholder="詳細・メモ"></textarea></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeEvModal()">キャンセル</button>
+      <button class="btn btn-danger" id="ev-del-btn" style="display:none" onclick="deleteEvent()">削除</button>
+      <button class="btn btn-primary" onclick="saveEvent()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 予定詳細モーダル -->
+<div class="overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="detail-bar" id="detail-bar"></div>
+    <div id="detail-gbadge" class="google-badge" style="display:none">
+      <svg width="12" height="12" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Googleカレンダー
+    </div>
+    <div class="detail-title" id="detail-title"></div>
+    <div class="detail-meta" id="detail-time"></div>
+    <div class="detail-meta" id="detail-cal"></div>
+    <div class="detail-desc" id="detail-desc"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeDetail()">閉じる</button>
+      <button class="btn btn-primary" id="detail-edit-btn" onclick="editFromDetail()">編集</button>
+    </div>
+  </div>
+</div>
+
+<!-- カレンダー追加モーダル -->
+<div class="overlay" id="cal-overlay" onclick="closeCalModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>カレンダーを追加</h2>
+    <div class="frow"><label>名前 *</label><input type="text" id="cal-name" placeholder="例: 家族共通、私の予定"></div>
+    <div class="frow">
+      <label>色</label>
+      <div id="cal-color-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+    </div>
+    <div class="frow"><label class="cb-row"><input type="checkbox" id="cal-shared" checked> 全員で共有する（オフにすると自分だけ）</label></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeCalModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveCalendar()">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 表示名変更モーダル -->
+<div class="overlay" id="name-overlay" onclick="closeNameEdit(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>表示名を変更</h2>
+    <div class="frow"><label>新しい表示名</label><input type="text" id="new-name" maxlength="20"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeNameEdit()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveName()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// 設定
+// ══════════════════════════════════════════
+const API = 'https://calendar-worker.sslowdayss.workers.dev';
+const GOOGLE_CLIENT_ID = '17945262543-lgunjio0plc22takcpv29flmvdlo492v.apps.googleusercontent.com'; // ←書き換え
+
+const PALETTE = [
+  '#e53935','#d81b60','#8e24aa','#5e35b1','#3949ab',
+  '#1e88e5','#00acc1','#00897b','#43a047','#f4511e',
+  '#fb8c00','#f6bf26',
+];
+
+// ══════════════════════════════════════════
+// 状態
+// ══════════════════════════════════════════
+let idToken = null;       // GoogleのIDトークン
+let myProfile = null;     // {google_id, display_name, avatar_color}
+let calendars = [];
+let events = [];
+let gEvents = [];
+let hiddenCals = new Set(JSON.parse(localStorage.getItem('hiddenCals') || '[]'));
+let currentDate = new Date();
+let viewMode = 'month';
+let selectedCalColor = PALETTE[0];
+let detailEvent = null;
+
+// ══════════════════════════════════════════
+// API呼び出し
+// ══════════════════════════════════════════
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Google-Token': idToken }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error || res.statusText);
+  }
+  return res.json();
+}
+
+// ══════════════════════════════════════════
+// Google Sign In
+// ══════════════════════════════════════════
+window.onload = () => {
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: onGoogleSignIn,
+    auto_select: true,
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('g_signin_btn'),
+    { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ja' }
+  );
+  // セッション復元
+  const saved = sessionStorage.getItem('id_token');
+  if (saved) { idToken = saved; initApp(); }
+};
+
+async function onGoogleSignIn(response) {
+  idToken = response.credential;
+  sessionStorage.setItem('id_token', idToken);
+  await initApp();
+}
+
+async function initApp() {
+  try {
+    myProfile = await api('/me', 'GET');
+    showApp();
+  } catch(e) {
+    // 未登録ユーザー → 表示名設定画面へ
+    showSetup();
+  }
+}
+
+function signOut() {
+  google.accounts.id.disableAutoSelect();
+  sessionStorage.removeItem('id_token');
+  idToken = null; myProfile = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('user-menu').classList.remove('open');
+}
+
+// ══════════════════════════════════════════
+// 表示名設定
+// ══════════════════════════════════════════
+function showSetup() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+  // 色ピッカー
+  const cp = document.getElementById('setup-colors');
+  cp.innerHTML = PALETTE.map((c, i) =>
+    `<div class="color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectSetupColor(this,'${c}')"></div>`
+  ).join('');
+}
+
+function selectSetupColor(el, color) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCalColor = color;
+}
+
+async function finishSetup() {
+  const name = document.getElementById('setup-name').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  myProfile = await api('/me', 'POST', { display_name: name, avatar_color: selectedCalColor });
+  showApp();
+}
+
+// ══════════════════════════════════════════
+// アプリ表示
+// ══════════════════════════════════════════
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = '';
+  updateAvatar();
+  loadAll();
+}
+
+function updateAvatar() {
+  if (!myProfile) return;
+  const btn = document.getElementById('avatar-btn');
+  btn.style.background = myProfile.avatar_color;
+  btn.textContent = myProfile.display_name.charAt(0);
+  document.getElementById('menu-name').textContent = myProfile.display_name;
+}
+
+async function loadAll() {
+  calendars = await api('/calendars');
+  renderLegend();
+  await loadEvents();
+}
+
+// ══════════════════════════════════════════
+// Googleカレンダー読み込み（gapi）
+// ══════════════════════════════════════════
+let gapiReady = false;
+let gapiAccessToken = null;
+
+function loadGapi() {
+  return new Promise(resolve => {
+    if (gapiReady) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://apis.google.com/js/api.js';
+    s.onload = () => {
+      gapi.load('client', async () => {
+        await gapi.client.init({});
+        gapiReady = true;
+        resolve();
+      });
+    };
+    document.head.appendChild(s);
+  });
+}
+
+async function fetchGoogleEvents() {
+  if (!gapiAccessToken) return;
+  try {
+    await loadGapi();
+    gapi.client.setToken({ access_token: gapiAccessToken });
+    await gapi.client.load('calendar', 'v3');
+    const y = currentDate.getFullYear(), m = currentDate.getMonth();
+    const timeMin = new Date(y, m-1, 1).toISOString();
+    const timeMax = new Date(y, m+2, 0).toISOString();
+    const res = await gapi.client.calendar.events.list({
+      calendarId: 'primary', timeMin, timeMax,
+      singleEvents: true, orderBy: 'startTime', maxResults: 500
+    });
+    gEvents = (res.result.items || []).map(e => ({
+      id: 'g_' + e.id,
+      title: e.summary || '（タイトルなし）',
+      description: e.description || '',
+      start_datetime: e.start.dateTime || e.start.date,
+      end_datetime: e.end.dateTime || e.end.date,
+      all_day: !e.start.dateTime,
+      calendar_id: '__google__',
+      color: '#1a73e8',
+      is_google: true,
+    }));
+    render();
+  } catch(e) { console.warn('Google Calendar fetch error', e); }
+}
+
+// アクセストークンを別途取得（IDトークンとは別物）
+function requestGoogleCalendarAccess() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    callback: (resp) => {
+      if (resp.access_token) {
+        gapiAccessToken = resp.access_token;
+        hiddenCals.delete('__google__');
+        localStorage.setItem('hiddenCals', JSON.stringify([...hiddenCals]));
+        fetchGoogleEvents();
+        renderLegend();
+      }
+    }
+  });
+  client.requestAccessToken();
+}
+
+// ══════════════════════════════════════════
+// 凡例
+// ══════════════════════════════════════════
+function renderLegend() {
+  const leg = document.getElementById('legend');
+  leg.querySelectorAll('.legend-item').forEach(el => el.remove());
+  const addBtn = leg.querySelector('.legend-add');
+
+  // Googleカレンダー
+  const gItem = makeLegendItem('__google__', 'Googleカレンダー', '#1a73e8', true);
+  leg.insertBefore(gItem, addBtn);
+
+  calendars.forEach(cal => {
+    leg.insertBefore(makeLegendItem(cal.id, cal.name, cal.color, false), addBtn);
+  });
+}
+
+function makeLegendItem(id, name, color, isGoogle) {
+  const el = document.createElement('div');
+  el.className = 'legend-item' + (hiddenCals.has(id) ? ' hidden' : '');
+  el.style.borderColor = color;
+  if (isGoogle) {
+    el.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${name}</span>`;
+    el.onclick = () => {
+      if (!gapiAccessToken) { requestGoogleCalendarAccess(); return; }
+      toggleLegend(id, el);
+    };
+  } else {
+    el.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${name}</span>`;
+    el.onclick = () => toggleLegend(id, el);
+  }
+  return el;
+}
+
+function toggleLegend(id, el) {
+  if (hiddenCals.has(id)) { hiddenCals.delete(id); el.classList.remove('hidden'); }
+  else { hiddenCals.add(id); el.classList.add('hidden'); }
+  localStorage.setItem('hiddenCals', JSON.stringify([...hiddenCals]));
+  render();
+}
+
+// ══════════════════════════════════════════
+// データ読み込み
+// ══════════════════════════════════════════
+async function loadEvents() {
+  const y = currentDate.getFullYear(), m = currentDate.getMonth();
+  const from = dateStr(new Date(y, m-1, 1));
+  const to   = dateStr(new Date(y, m+2, 0));
+  events = await api(`/events?from=${from}&to=${to}`);
+  if (gapiAccessToken) await fetchGoogleEvents();
+  else render();
+}
+
+// ══════════════════════════════════════════
+// レンダリング
+// ══════════════════════════════════════════
+function allEvents() {
+  const orig = events.filter(e => !hiddenCals.has(e.calendar_id));
+  const g = hiddenCals.has('__google__') ? [] : gEvents;
+  return [...orig, ...g];
+}
+
+function getColor(e) {
+  if (e.is_google) return '#1a73e8';
+  if (e.color) return e.color;
+  return calendars.find(c => c.id === e.calendar_id)?.color || '#888';
+}
+
+function render() {
+  const y = currentDate.getFullYear(), m = currentDate.getMonth();
+  document.getElementById('month-label').textContent = `${y}年${m+1}月`;
+  if (viewMode === 'month') renderMonth(y, m);
+  else renderWeek();
+}
+
+function renderMonth(y, m) {
+  document.getElementById('month-view').style.display = '';
+  document.getElementById('week-view').style.display = 'none';
+  document.getElementById('btn-month').classList.add('active');
+  document.getElementById('btn-week').classList.remove('active');
+
+  const grid = document.getElementById('month-grid');
+  grid.innerHTML = '';
+  const firstDow = new Date(y, m, 1).getDay();
+  const today = new Date();
+  const ae = allEvents();
+
+  for (let i = 0; i < 42; i++) {
+    const date = new Date(y, m, 1 + i - firstDow);
+    const isThis = date.getMonth() === m;
+    const isToday = date.toDateString() === today.toDateString();
+    const ds = dateStr(date);
+    const dow = date.getDay();
+
+    const cell = document.createElement('div');
+    cell.className = 'day-cell' + (isThis ? '' : ' other-month') + (isToday ? ' today' : '') + (dow===0?' sun':dow===6?' sat':'');
+    cell.onclick = ev => { if (ev.target === cell || ev.target.classList.contains('day-num') || ev.target.classList.contains('more-label')) openEvModal(null, ds); };
+
+    const dn = document.createElement('div');
+    dn.className = 'day-num';
+    dn.textContent = date.getDate();
+    cell.appendChild(dn);
+
+    const dayEvs = ae.filter(e => evOnDate(e, ds));
+    dayEvs.slice(0, 3).forEach(e => {
+      const chip = document.createElement('div');
+      chip.className = 'event-chip';
+      chip.style.background = getColor(e);
+      chip.textContent = e.title;
+      chip.onclick = ev => { ev.stopPropagation(); openDetail(e); };
+      cell.appendChild(chip);
+    });
+    if (dayEvs.length > 3) {
+      const more = document.createElement('div');
+      more.className = 'more-label';
+      more.textContent = `+${dayEvs.length - 3}件`;
+      cell.appendChild(more);
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function renderWeek() {
+  document.getElementById('month-view').style.display = 'none';
+  document.getElementById('week-view').style.display = '';
+  document.getElementById('btn-month').classList.remove('active');
+  document.getElementById('btn-week').classList.add('active');
+
+  const wv = document.getElementById('week-view');
+  const today = new Date();
+  const dow = currentDate.getDay();
+  const ws = new Date(currentDate); ws.setDate(currentDate.getDate() - dow);
+  const DAYS = ['日','月','火','水','木','金','土'];
+  const ae = allEvents();
+
+  let html = `<div class="week-grid">`;
+  // ヘッダー行
+  html += `<div></div>`;
+  for (let d = 0; d < 7; d++) {
+    const dt = new Date(ws); dt.setDate(ws.getDate() + d);
+    const isToday = dt.toDateString() === today.toDateString();
+    html += `<div class="week-col-header${isToday?' today':''}">
+      <div class="dow">${DAYS[d]}</div>
+      <div class="dnum">${dt.getDate()}</div>
+    </div>`;
+  }
+  // 時間列
+  const H = 44;
+  html += `<div class="week-time-col">`;
+  for (let h = 0; h < 24; h++) html += `<div class="time-label">${h}:00</div>`;
+  html += `</div>`;
+  for (let d = 0; d < 7; d++) {
+    const dt = new Date(ws); dt.setDate(ws.getDate() + d);
+    const isToday = dt.toDateString() === today.toDateString();
+    const ds = dateStr(dt);
+    html += `<div class="week-day-col${isToday?' today':''}" style="height:${24*H}px">`;
+    for (let h = 0; h < 24; h++) html += `<div class="hour-line" style="top:${h*H}px"></div>`;
+    ae.filter(e => evOnDate(e, ds) && !e.all_day).forEach(e => {
+      const s = new Date(e.start_datetime), en = new Date(e.end_datetime);
+      const top = (s.getHours()*60 + s.getMinutes()) / 60 * H;
+      const ht  = Math.max(((en - s) / 3600000) * H, 18);
+      const eJson = JSON.stringify(e).replace(/"/g,'&quot;');
+      html += `<div class="week-event" style="top:${top}px;height:${ht}px;background:${getColor(e)}" onclick='openDetail(${eJson})'>${e.title}</div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+  wv.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// ユーティリティ
+// ══════════════════════════════════════════
+function dateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function evOnDate(e, ds) {
+  return (e.start_datetime||'').slice(0,10) <= ds && ds <= (e.end_datetime||'').slice(0,10);
+}
+
+function fmtDt(dt, allDay) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  if (allDay) return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ══════════════════════════════════════════
+// ナビゲーション
+// ══════════════════════════════════════════
+function changeMonth(dir) {
+  if (viewMode === 'month') currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + dir, 1);
+  else { currentDate = new Date(currentDate); currentDate.setDate(currentDate.getDate() + dir * 7); }
+  loadEvents();
+}
+function goToday() { currentDate = new Date(); loadEvents(); }
+function setView(v) { viewMode = v; render(); }
+
+// ══════════════════════════════════════════
+// 予定モーダル
+// ══════════════════════════════════════════
+function openEvModal(ev, defaultDate) {
+  document.getElementById('ev-overlay').classList.add('open');
+  document.getElementById('ev-modal-title').textContent = ev ? '予定を編集' : '予定を追加';
+  document.getElementById('ev-del-btn').style.display = ev ? '' : 'none';
+  document.getElementById('ev-id').value = ev?.id || '';
+
+  const sel = document.getElementById('ev-cal');
+  sel.innerHTML = calendars.map(c => `<option value="${c.id}">${c.name}${c.is_shared ? '（共有）' : '（個人）'}</option>`).join('');
+
+  if (ev) {
+    document.getElementById('ev-title').value = ev.title;
+    document.getElementById('ev-desc').value = ev.description || '';
+    document.getElementById('ev-allday').checked = !!ev.all_day;
+    sel.value = ev.calendar_id;
+    if (ev.all_day) {
+      document.getElementById('ev-start-d').value = ev.start_datetime.slice(0,10);
+      document.getElementById('ev-end-d').value   = ev.end_datetime.slice(0,10);
+    } else {
+      document.getElementById('ev-start').value = ev.start_datetime.slice(0,16);
+      document.getElementById('ev-end').value   = ev.end_datetime.slice(0,16);
+    }
+  } else {
+    document.getElementById('ev-title').value = '';
+    document.getElementById('ev-desc').value = '';
+    document.getElementById('ev-allday').checked = false;
+    const base = defaultDate || dateStr(new Date());
+    document.getElementById('ev-start').value = base + 'T09:00';
+    document.getElementById('ev-end').value   = base + 'T10:00';
+    document.getElementById('ev-start-d').value = base;
+    document.getElementById('ev-end-d').value   = base;
+  }
+  toggleAllDay();
+}
+
+function closeEvModal(e) {
+  if (e && e.target !== document.getElementById('ev-overlay')) return;
+  document.getElementById('ev-overlay').classList.remove('open');
+}
+
+function toggleAllDay() {
+  const checked = document.getElementById('ev-allday').checked;
+  document.getElementById('ev-dt-row').style.display = checked ? 'none' : '';
+  document.getElementById('ev-d-row').style.display  = checked ? '' : 'none';
+}
+
+async function saveEvent() {
+  const title = document.getElementById('ev-title').value.trim();
+  const calId = document.getElementById('ev-cal').value;
+  const allDay = document.getElementById('ev-allday').checked;
+  if (!title) { alert('タイトルを入力してください'); return; }
+  if (!calId) { alert('カレンダーを選択してください'); return; }
+
+  const start = allDay ? document.getElementById('ev-start-d').value : document.getElementById('ev-start').value;
+  const end   = allDay ? document.getElementById('ev-end-d').value   : document.getElementById('ev-end').value;
+  const cal = calendars.find(c => c.id === calId);
+
+  const body = { title, description: document.getElementById('ev-desc').value, start_datetime: start, end_datetime: end, all_day: allDay, calendar_id: calId, color: cal?.color || '#5b8dee' };
+  const editId = document.getElementById('ev-id').value;
+  try {
+    if (editId) await api(`/events/${editId}`, 'PUT', body);
+    else await api('/events', 'POST', body);
+    document.getElementById('ev-overlay').classList.remove('open');
+    await loadEvents();
+  } catch(e) { alert('保存失敗: ' + e.message); }
+}
+
+async function deleteEvent() {
+  const id = document.getElementById('ev-id').value;
+  if (!id || !confirm('この予定を削除しますか？')) return;
+  try {
+    await api(`/events/${id}`, 'DELETE');
+    document.getElementById('ev-overlay').classList.remove('open');
+    await loadEvents();
+  } catch(e) { alert('削除失敗: ' + e.message); }
+}
+
+// ══════════════════════════════════════════
+// 詳細モーダル
+// ══════════════════════════════════════════
+function openDetail(e) {
+  detailEvent = e;
+  document.getElementById('detail-overlay').classList.add('open');
+  document.getElementById('detail-bar').style.background = getColor(e);
+  document.getElementById('detail-title').textContent = e.title;
+  document.getElementById('detail-gbadge').style.display = e.is_google ? '' : 'none';
+  document.getElementById('detail-edit-btn').style.display = e.is_google ? 'none' : '';
+  const s = fmtDt(e.start_datetime, e.all_day), en = fmtDt(e.end_datetime, e.all_day);
+  document.getElementById('detail-time').textContent = e.all_day ? (s === en ? s : s + ' 〜 ' + en) : s + ' 〜 ' + en;
+  const calName = e.is_google ? 'Googleカレンダー' : (calendars.find(c => c.id === e.calendar_id)?.name || '');
+  document.getElementById('detail-cal').innerHTML = `<span style="color:${getColor(e)}">●</span> ${calName}`;
+  document.getElementById('detail-desc').textContent = e.description || '';
+}
+
+function closeDetail(e) {
+  if (e && e.target !== document.getElementById('detail-overlay')) return;
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+function editFromDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+  openEvModal(detailEvent, null);
+}
+
+// ══════════════════════════════════════════
+// カレンダー追加モーダル
+// ══════════════════════════════════════════
+function openCalModal() {
+  document.getElementById('cal-overlay').classList.add('open');
+  document.getElementById('cal-name').value = '';
+  document.getElementById('cal-shared').checked = true;
+  selectedCalColor = PALETTE[calendars.length % PALETTE.length];
+  const cp = document.getElementById('cal-color-picker');
+  cp.innerHTML = PALETTE.map(c =>
+    `<div class="color-swatch${c===selectedCalColor?' selected':''}" style="background:${c}" onclick="selectCalColor(this,'${c}')"></div>`
+  ).join('');
+}
+
+function closeCalModal(e) {
+  if (e && e.target !== document.getElementById('cal-overlay')) return;
+  document.getElementById('cal-overlay').classList.remove('open');
+}
+
+function selectCalColor(el, c) {
+  document.querySelectorAll('#cal-color-picker .color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCalColor = c;
+}
+
+async function saveCalendar() {
+  const name = document.getElementById('cal-name').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  try {
+    await api('/calendars', 'POST', { name, color: selectedCalColor, is_shared: document.getElementById('cal-shared').checked });
+    document.getElementById('cal-overlay').classList.remove('open');
+    await loadAll();
+  } catch(e) { alert('追加失敗: ' + e.message); }
+}
+
+// ══════════════════════════════════════════
+// ユーザーメニュー
+// ══════════════════════════════════════════
+function toggleUserMenu() {
+  document.getElementById('user-menu').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const menu = document.getElementById('user-menu');
+  const btn = document.getElementById('avatar-btn');
+  if (menu && !menu.contains(e.target) && e.target !== btn) menu.classList.remove('open');
+});
+
+function openNameEdit() {
+  document.getElementById('user-menu').classList.remove('open');
+  document.getElementById('new-name').value = myProfile?.display_name || '';
+  document.getElementById('name-overlay').classList.add('open');
+}
+
+function closeNameEdit(e) {
+  if (e && e.target !== document.getElementById('name-overlay')) return;
+  document.getElementById('name-overlay').classList.remove('open');
+}
+
+async function saveName() {
+  const name = document.getElementById('new-name').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  myProfile = await api('/me', 'POST', { display_name: name, avatar_color: myProfile.avatar_color });
+  updateAvatar();
+  document.getElementById('name-overlay').classList.remove('open');
+}
+</script>
+</body>
+</html>

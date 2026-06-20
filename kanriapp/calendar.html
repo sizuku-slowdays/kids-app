@@ -237,6 +237,7 @@
     <div class="spacer"></div>
     <button class="nav-btn" id="btn-month" onclick="setView('month')">月</button>
     <button class="nav-btn" id="btn-week"  onclick="setView('week')">週</button>
+    <button id="notify-permission-btn" onclick="requestNotifyPermission()" style="border:none;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:#fff">🔕 通知を許可する</button>
     <div class="avatar" id="avatar-btn" onclick="toggleUserMenu()"></div>
   </header>
 
@@ -499,6 +500,7 @@ const savedExpire = sessionStorage.getItem('gapi_token_expire');
 if (savedToken && savedExpire && Date.now() < parseInt(savedExpire)) {
   gapiAccessToken = savedToken;
 }
+  updateNotifyBtn();
   updateAvatar();
   loadAll();
 }
@@ -515,6 +517,7 @@ async function loadAll() {
   calendars = await api('/calendars');
   renderLegend();
   await loadEvents();
+  scheduleNotifications();
 }
 
 // ══════════════════════════════════════════
@@ -822,21 +825,29 @@ function openEvModal(ev, defaultDate) {
     document.getElementById('ev-title').value = ev.title;
     document.getElementById('ev-desc').value = ev.description || '';
     document.getElementById('ev-allday').checked = !!ev.all_day;
+    document.getElementById('ev-notify').value = ev.notify_before ?? -1;
     sel.value = ev.calendar_id;
     if (ev.all_day) {
       document.getElementById('ev-start-d').value = ev.start_datetime.slice(0,10);
       document.getElementById('ev-end-d').value   = ev.end_datetime.slice(0,10);
     } else {
-      document.getElementById('ev-start').value = ev.start_datetime.slice(0,16);
-      document.getElementById('ev-end').value   = ev.end_datetime.slice(0,16);
+      const [sd, st] = ev.start_datetime.slice(0,16).split('T');
+      const [ed, et] = ev.end_datetime.slice(0,16).split('T');
+      document.getElementById('ev-start-date').value = sd;
+      document.getElementById('ev-start-time').value = st;
+      document.getElementById('ev-end-date').value   = ed;
+      document.getElementById('ev-end-time').value   = et;
     }
   } else {
     document.getElementById('ev-title').value = '';
     document.getElementById('ev-desc').value = '';
     document.getElementById('ev-allday').checked = false;
+    document.getElementById('ev-notify').value = -1;
     const base = defaultDate || dateStr(new Date());
-    document.getElementById('ev-start').value = base + 'T09:00';
-    document.getElementById('ev-end').value   = base + 'T10:00';
+    document.getElementById('ev-start-date').value = base;
+    document.getElementById('ev-start-time').value = '09:00';
+    document.getElementById('ev-end-date').value   = base;
+    document.getElementById('ev-end-time').value   = '10:00';
     document.getElementById('ev-start-d').value = base;
     document.getElementById('ev-end-d').value   = base;
   }
@@ -852,6 +863,7 @@ function toggleAllDay() {
   const checked = document.getElementById('ev-allday').checked;
   document.getElementById('ev-dt-row').style.display = checked ? 'none' : '';
   document.getElementById('ev-d-row').style.display  = checked ? '' : 'none';
+  document.getElementById('ev-notify').closest('.frow').style.display = checked ? 'none' : '';
 }
 
 async function saveEvent() {
@@ -861,28 +873,42 @@ async function saveEvent() {
   if (!title) { alert('タイトルを入力してください'); return; }
   if (!calId) { alert('カレンダーを選択してください'); return; }
 
-  const start = allDay ? document.getElementById('ev-start-d').value : document.getElementById('ev-start').value;
-  const end   = allDay ? document.getElementById('ev-end-d').value   : document.getElementById('ev-end').value;
-  const cal = calendars.find(c => c.id === calId);
+  let start, end;
+  if (allDay) {
+    start = document.getElementById('ev-start-d').value;
+    end   = document.getElementById('ev-end-d').value;
+  } else {
+    const sd = document.getElementById('ev-start-date').value;
+    const st = document.getElementById('ev-start-time').value;
+    const ed = document.getElementById('ev-end-date').value;
+    const et = document.getElementById('ev-end-time').value;
+    if (!sd || !st || !ed || !et) { alert('日付と時刻を入力してください'); return; }
+    start = `${sd}T${st}`;
+    end   = `${ed}T${et}`;
+  }
 
-  const body = { title, description: document.getElementById('ev-desc').value, start_datetime: start, end_datetime: end, all_day: allDay, calendar_id: calId, color: cal?.color || '#5b8dee' };
+  const cal = calendars.find(c => c.id === calId);
+  const notify_before = parseInt(document.getElementById('ev-notify').value);
+
+  const body = {
+    title,
+    description: document.getElementById('ev-desc').value,
+    start_datetime: start,
+    end_datetime: end,
+    all_day: allDay,
+    calendar_id: calId,
+    color: cal?.color || '#5b8dee',
+    notify_before,
+  };
+
   const editId = document.getElementById('ev-id').value;
   try {
     if (editId) await api(`/events/${editId}`, 'PUT', body);
     else await api('/events', 'POST', body);
     document.getElementById('ev-overlay').classList.remove('open');
+    scheduleNotifications();
     await loadEvents();
   } catch(e) { alert('保存失敗: ' + e.message); }
-}
-
-async function deleteEvent() {
-  const id = document.getElementById('ev-id').value;
-  if (!id || !confirm('この予定を削除しますか？')) return;
-  try {
-    await api(`/events/${id}`, 'DELETE');
-    document.getElementById('ev-overlay').classList.remove('open');
-    await loadEvents();
-  } catch(e) { alert('削除失敗: ' + e.message); }
 }
 
 // ══════════════════════════════════════════
@@ -976,6 +1002,64 @@ async function saveName() {
   myProfile = await api('/me', 'POST', { display_name: name, avatar_color: myProfile.avatar_color });
   updateAvatar();
   document.getElementById('name-overlay').classList.remove('open');
+}
+// ══════════════════════════════════════════
+// 通知
+// ══════════════════════════════════════════
+let notifyTimers = [];
+
+async function requestNotifyPermission() {
+  if (!('Notification' in window)) { alert('このブラウザは通知に対応していません'); return; }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') {
+    alert('通知を許可しました！');
+    scheduleNotifications();
+  } else {
+    alert('通知が拒否されました。ブラウザの設定から許可してください。');
+  }
+  updateNotifyBtn();
+}
+
+function updateNotifyBtn() {
+  const btn = document.getElementById('notify-permission-btn');
+  if (!btn) return;
+  if (!('Notification' in window)) { btn.style.display = 'none'; return; }
+  if (Notification.permission === 'granted') {
+    btn.textContent = '🔔 通知オン';
+    btn.style.background = '#43a047';
+  } else {
+    btn.textContent = '🔕 通知を許可する';
+    btn.style.background = '#fb8c00';
+  }
+}
+
+function scheduleNotifications() {
+  // 既存のタイマーをクリア
+  notifyTimers.forEach(t => clearTimeout(t));
+  notifyTimers = [];
+
+  if (Notification.permission !== 'granted') return;
+
+  const now = Date.now();
+  events.forEach(e => {
+    if (e.all_day) return;
+    const nb = e.notify_before ?? -1;
+    if (nb === -1) return;
+    const startTime = new Date(e.start_datetime).getTime();
+    const notifyTime = startTime - nb * 60 * 1000;
+    const diff = notifyTime - now;
+    if (diff < 0) return; // 過去の通知はスキップ
+    if (diff > 7 * 24 * 60 * 60 * 1000) return; // 1週間以上先はスキップ
+
+    const timer = setTimeout(() => {
+      const label = nb === 0 ? '開始時刻です' : `${nb >= 60 ? nb/60+'時間' : nb+'分'}前です`;
+      new Notification(`📅 ${e.title}`, {
+        body: `${label}\n${fmtDt(e.start_datetime, false)}`,
+        icon: '/kids-app/calendar-icon.png',
+      });
+    }, diff);
+    notifyTimers.push(timer);
+  });
 }
 </script>
 </body>

@@ -473,6 +473,11 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  const savedToken = sessionStorage.getItem('gapi_token');
+const savedExpire = sessionStorage.getItem('gapi_token_expire');
+if (savedToken && savedExpire && Date.now() < parseInt(savedExpire)) {
+  gapiAccessToken = savedToken;
+}
   updateAvatar();
   loadAll();
 }
@@ -543,12 +548,25 @@ async function fetchGoogleEvents() {
 
 // アクセストークンを別途取得（IDトークンとは別物）
 function requestGoogleCalendarAccess() {
+  const saved = sessionStorage.getItem('gapi_token');
+  const expire = sessionStorage.getItem('gapi_token_expire');
+  if (saved && expire && Date.now() < parseInt(expire)) {
+    gapiAccessToken = saved;
+    hiddenCals.delete('__google__');
+    localStorage.setItem('hiddenCals', JSON.stringify([...hiddenCals]));
+    fetchGoogleEvents();
+    renderLegend();
+    return;
+  }
   const client = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/calendar.readonly',
     callback: (resp) => {
       if (resp.access_token) {
         gapiAccessToken = resp.access_token;
+        const expire = Date.now() + (resp.expires_in - 60) * 1000;
+        sessionStorage.setItem('gapi_token', resp.access_token);
+        sessionStorage.setItem('gapi_token_expire', expire.toString());
         hiddenCals.delete('__google__');
         localStorage.setItem('hiddenCals', JSON.stringify([...hiddenCals]));
         fetchGoogleEvents();

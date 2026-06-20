@@ -226,7 +226,7 @@
     <div class="setting-section">
       <div class="setting-title">💸 ママ銀行連携</div>
       <div id="bankPending"></div>
-      <button onclick="loadBankPending()" style="margin-top:8px;padding:8px 14px;border:2px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;">未連携ログを確認</button>
+      <button onclick="loadBankPending()" style="margin-top:8px;padding:10px 18px;border:2px solid var(--border);border-radius:10px;background:#fff;font-weight:700;cursor:pointer;">🔍 未反映ログを確認する</button>
     </div>
   </div>
 </div>
@@ -543,25 +543,182 @@ async function addReward() {
   loadSettings();
 }
 
+// ──────── ママ銀行連携 ────────
+const MAMA_BANK_API = 'https://api.cetus.fun/api';
+const MAMA_BANK_KEYS = ['mama-bank', 'mama-bank-view'];
+
+// completed_by → ママ銀行の口座キー（mama は加算しない）
+const MEMBER_TO_ACCOUNT = { ane: 'usagi', imouto: 'kuma' };
+
 async function loadBankPending() {
+  const el = document.getElementById('bankPending');
+  el.innerHTML = '<div class="empty">よみこみ中…</div>';
+  if (!password) { el.innerHTML = '<div class="empty">先にパスワードをセットしてください</div>'; return; }
+
   const r = await fetch(`${API}/api/bank/pending`, { headers: apiHeaders() });
-  if (!r.ok) { document.getElementById('bankPending').innerHTML = '<div class="empty">認証が必要です</div>'; return; }
+  if (!r.ok) { el.innerHTML = '<div class="empty">認証エラー：パスワードを確認してください</div>'; return; }
   const logs = await r.json();
-  if (!logs.length) { document.getElementById('bankPending').innerHTML = '<div class="empty">未連携ログなし</div>'; return; }
-  const ids = logs.map(l => l.id);
-  document.getElementById('bankPending').innerHTML = `
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">${logs.length}件 / 合計${logs.reduce((s,l)=>s+l.money,0)}円</div>
-    ${logs.map(l=>`<div class="log-row"><div class="lr-main"><div class="lr-name">${l.chore_name}</div><div class="lr-sub">${l.completed_date} / ${l.completed_by}</div></div><div class="lr-pts">💴${l.money}円</div></div>`).join('')}
-    <button onclick="syncBank(${JSON.stringify(ids)})" style="margin-top:10px;padding:10px 20px;background:var(--accent2);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">連携ずみにする</button>
+
+  // mama は対象外
+  const targets = logs.filter(l => MEMBER_TO_ACCOUNT[l.completed_by]);
+
+  if (!targets.length) {
+    el.innerHTML = '<div class="empty">ママ銀行に反映するログがありません</div>';
+    return;
+  }
+
+  const total = targets.reduce((s, l) => s + l.money, 0);
+  const aneTotal = targets.filter(l => l.completed_by === 'ane').reduce((s, l) => s + l.money, 0);
+  const imoutoTotal = targets.filter(l => l.completed_by === 'imouto').reduce((s, l) => s + l.money, 0);
+
+  el.innerHTML = `
+    <div style="background:#fff8f0;border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;">
+      <div style="font-weight:700;margin-bottom:6px;">📋 反映予定 ${targets.length}件 / 合計 ${total}円</div>
+      ${aneTotal > 0 ? `<div style="font-size:0.85rem;">🌸 あね → 🐰 うさぎ口座 ＋${aneTotal}円</div>` : ''}
+      ${imoutoTotal > 0 ? `<div style="font-size:0.85rem;">🦄 いもうと → 🦄 ユニコーン口座 ＋${imoutoTotal}円</div>` : ''}
+    </div>
+    ${targets.map(l => `
+      <div class="log-row">
+        <div class="lr-main">
+          <div class="lr-name">${l.chore_name}</div>
+          <div class="lr-sub">${l.completed_date} / ${l.completed_by === 'ane' ? '🌸→🐰' : '🦄→🦄'}</div>
+        </div>
+        <div class="lr-pts">💴${l.money}円</div>
+      </div>`).join('')}
+    <button onclick="syncBankToMamaBank()" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#ffb347,#e8834a);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;">
+      🏦 ママ銀行に反映する
+    </button>
   `;
+
+  // グローバルに保持して syncBankToMamaBank() で使う
+  window._bankPendingLogs = targets;
 }
 
-async function syncBank(ids) {
-  if (!confirm(`${ids.length}件を連携ずみにしますか？`)) return;
-  await fetch(`${API}/api/bank/sync`, {
-    method: 'POST', headers: apiHeaders(), body: JSON.stringify({ ids })
-  });
-  loadBankPending();
+async function syncBankToMamaBank() {
+  const logs = window._bankPendingLogs;
+  if (!logs || !logs.length) return;
+
+  const total = logs.reduce((s, l) => s + l.money, 0);
+  const aneTotal = logs.filter(l => l.completed_by === 'ane').reduce((s, l) => s + l.money, 0);
+  const imoutoTotal = logs.filter(l => l.completed_by === 'imouto').reduce((s, l) => s + l.money, 0);
+
+  const msg = [
+    `以下の内容をママ銀行に反映します。`,
+    aneTotal > 0 ? `🌸 あね → 🐰 うさぎ口座 ＋${aneTotal}円` : '',
+    imoutoTotal > 0 ? `🦄 いもうと → 🦄 ユニコーン口座 ＋${imoutoTotal}円` : '',
+    `合計 ${total}円 / ${logs.length}件`,
+    `よろしいですか？`
+  ].filter(Boolean).join('\n');
+
+  if (!confirm(msg)) return;
+
+  const el = document.getElementById('bankPending');
+  el.innerHTML = '<div class="empty">ママ銀行データ取得中…</div>';
+
+  try {
+    // ① ママ銀行の app-data を取得
+    const mamaData = await fetchMamaBankData();
+    if (!mamaData) {
+      el.innerHTML = '<div class="empty" style="color:#e05">ママ銀行データの取得に失敗しました。ママ銀行アプリを一度開いて保存してから試してください。</div>';
+      return;
+    }
+
+    // ② 残高・履歴を更新
+    const balances = mamaData.balances || { usagi: 0, kuma: 0 };
+    const history = Array.isArray(mamaData.history) ? mamaData.history : [];
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+
+    for (const log of logs) {
+      const acc = MEMBER_TO_ACCOUNT[log.completed_by];
+      if (!acc) continue;
+      balances[acc] = Number(balances[acc] || 0) + Number(log.money);
+      history.push({
+        acc,
+        type: 'deposit',
+        amount: log.money,
+        memo: `おてつだい：${log.chore_name}`,
+        date: `${dateStr} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+      });
+    }
+
+    // ③ app-data に書き戻し
+    const updatedData = { ...mamaData, balances, history, savedAt: new Date().toISOString() };
+    const saved = await saveMamaBankData(updatedData);
+    if (!saved) {
+      el.innerHTML = '<div class="empty" style="color:#e05">ママ銀行への保存に失敗しました。ログは変更していません。</div>';
+      return;
+    }
+
+    // ④ D1の bank_synced を更新
+    const ids = logs.map(l => l.id);
+    await fetch(`${API}/api/bank/sync`, {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({ ids })
+    });
+
+    el.innerHTML = `<div class="empty" style="color:var(--accent2);font-weight:700;">✅ ママ銀行に反映しました！<br>うさぎ口座 ＋${aneTotal}円 / ユニコーン口座 ＋${imoutoTotal}円</div>`;
+    window._bankPendingLogs = [];
+
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = `<div class="empty" style="color:#e05">エラーが発生しました：${e.message}</div>`;
+  }
+}
+
+// ママ銀行 app-data 取得（複数キー・複数URLを試す）
+async function fetchMamaBankData() {
+  const readPatterns = key => [
+    `${MAMA_BANK_API}/app-data?key=${encodeURIComponent(key)}`,
+    `${MAMA_BANK_API}/app-data?app=${encodeURIComponent(key)}`,
+    `${MAMA_BANK_API}/app-data/${encodeURIComponent(key)}`,
+  ];
+  for (const key of MAMA_BANK_KEYS) {
+    for (const url of readPatterns(key)) {
+      try {
+        const r = await fetch(url, { headers: apiHeaders(), cache: 'no-store' });
+        if (!r.ok) continue;
+        const raw = await r.json();
+        const unwrapped = unwrapMamaBankData(raw);
+        if (unwrapped && unwrapped.balances) return unwrapped;
+      } catch(e) { console.warn('mama-bank fetch failed', url, e.message); }
+    }
+  }
+  return null;
+}
+
+// ママ銀行 app-data 保存（複数パターンを試す）
+async function saveMamaBankData(payload) {
+  const writeTargets = key => [
+    { url: `${MAMA_BANK_API}/app-data`, method: 'POST', body: { key, data: payload } },
+    { url: `${MAMA_BANK_API}/app-data`, method: 'POST', body: { app: key, data: payload } },
+    { url: `${MAMA_BANK_API}/app-data`, method: 'POST', body: { key, value: payload } },
+    { url: `${MAMA_BANK_API}/app-data/${encodeURIComponent(key)}`, method: 'PUT', body: payload },
+    { url: `${MAMA_BANK_API}/app-data/${encodeURIComponent(key)}`, method: 'POST', body: payload },
+  ];
+  for (const key of MAMA_BANK_KEYS) {
+    for (const t of writeTargets(key)) {
+      try {
+        const r = await fetch(t.url, {
+          method: t.method,
+          headers: apiHeaders(),
+          body: JSON.stringify(t.body)
+        });
+        if (r.ok) return true;
+      } catch(e) { console.warn('mama-bank save failed', t.url, e.message); }
+    }
+  }
+  return false;
+}
+
+// ネストされたデータを掘り起こす（ママ銀行と同じロジック）
+function unwrapMamaBankData(data) {
+  if (!data) return null;
+  if (typeof data === 'string') { try { return unwrapMamaBankData(JSON.parse(data)); } catch { return null; } }
+  if (data.balances) return data;
+  for (const key of ['data', 'value', 'payload', 'record']) {
+    if (data[key]) { const u = unwrapMamaBankData(data[key]); if (u && u.balances) return u; }
+  }
+  return null;
 }
 
 // ──────── ポイントビュー ────────

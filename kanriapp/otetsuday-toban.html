@@ -338,8 +338,8 @@ async function loadToday() {
           <div class="chore-name">${c.name}</div>
           <div class="chore-assignee">担当：${c.assignee ? c.assignee.icon + ' ' + c.assignee.name : '—'}</div>
           <div class="chore-meta">
-            <span class="chore-pts">⭐ ${c.points}pt</span>
-            ${c.money > 0 ? `<span class="chore-yen">💴 ${c.money}円</span>` : ''}
+            <span class="chore-pts">⭐ ${c.points.toLocaleString()}pt</span>
+            ${c.money > 0 ? `<span class="chore-yen">💴 ${c.money.toLocaleString()}円</span>` : ''}
           </div>
         </div>
         <button class="btn-yatta" onclick="openYatta('${c.id}')">やった！</button>
@@ -443,7 +443,7 @@ function showCalDetail(ds, logs) {
           <div class="lr-name">${l.chore_name}</div>
           <div class="lr-sub">担当：${assigned?.icon||''}${assigned?.name||l.assigned_to}　実施：${completed?.icon||''}${completed?.name||l.completed_by}</div>
         </div>
-        <div class="lr-pts">⭐${l.points}pt</div>
+        <div class="lr-pts">⭐${l.points.toLocaleString()}pt</div>
       </div>`;
     }).join('');
   }
@@ -467,8 +467,8 @@ async function loadSummary() {
     <div class="summary-card">
       <div class="smicon">${d.member?.icon||'❓'}</div>
       <div class="smname">${d.member?.name||d.completed_by}</div>
-      <div class="smval">⭐ ${d.total_points}pt</div>
-      <div class="smval" style="font-size:0.9rem;color:var(--accent2)">💴 ${d.total_money}円</div>
+      <div class="smval">⭐ ${d.total_points.toLocaleString()}pt</div>
+      <div class="smval" style="font-size:0.9rem;color:var(--accent2)">💴 ${d.total_money.toLocaleString()}円</div>
       <div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">${d.count}回</div>
     </div>
   `).join('')}</div>`;
@@ -489,7 +489,7 @@ async function loadSettings() {
       <span class="sr-icon">${c.icon}</span>
       <div class="sr-main">
         <div class="sr-name">${c.name}</div>
-        <div class="sr-sub">⭐${c.points}pt / 💴${c.money}円</div>
+        <div class="sr-sub">⭐${c.points.toLocaleString()}pt / 💴${c.money.toLocaleString()}円</div>
       </div>
       <div class="toggle ${c.enabled?'on':''}" onclick="toggleChore('${c.id}',${c.enabled}, ${JSON.stringify(c).replace(/"/g,'&quot;')})"></div>
     </div>
@@ -515,7 +515,7 @@ async function loadSettings() {
       <div style="display:flex;align-items:center;gap:10px;">
         ${r.image_url ? `<img src="${r.image_url}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);">` : `<div style="width:48px;height:48px;border-radius:10px;background:var(--bg);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🎁</div>`}
         <span class="rr-name">${r.name}</span>
-        <span class="rr-pts">⭐${r.points}pt</span>
+        <span class="rr-pts">⭐${r.points.toLocaleString()}pt</span>
         <div class="toggle ${r.enabled?'on':''}" onclick="toggleReward(${r.id},${r.enabled},${JSON.stringify(r).replace(/"/g,'&quot;')})"></div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
@@ -605,7 +605,7 @@ async function loadBankPending() {
           <div class="lr-name">${l.chore_name}</div>
           <div class="lr-sub">${l.completed_date} / ${l.completed_by === 'ane' ? '🌸→🐰' : '🦄→🦄'}</div>
         </div>
-        <div class="lr-pts">💴${l.money}円</div>
+        <div class="lr-pts">💴${l.money.toLocaleString()}円</div>
       </div>`).join('')}
     <button onclick="syncBankToMamaBank()" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#ffb347,#e8834a);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;">
       🏦 ママ銀行に反映する
@@ -777,7 +777,7 @@ async function loadPoints() {
             <div class="lr-name">${l.chore_name}</div>
             <div class="lr-sub">${l.completed_date}</div>
           </div>
-          <div class="lr-pts">+${l.points}pt</div>
+          <div class="lr-pts">+${l.points.toLocaleString()}pt</div>
         </div>`;
       }).join('') : '<div class="empty">まだなし</div>'}
     </div>
@@ -800,7 +800,7 @@ async function loadPoints() {
           <strong>${r.reward_name}</strong>
           <span class="rq-status ${r.status}">${{pending:'待ち',approved:'承認',rejected:'NG'}[r.status]||r.status}</span>
           <span style="font-size:0.8rem;color:var(--muted)">${r.requested_at?.slice(0,10)}</span>
-          <span style="color:var(--accent);font-weight:700">⭐${r.points_cost}pt</span>
+          <span style="color:var(--accent);font-weight:700">⭐${r.points_cost.toLocaleString()}pt</span>
         </div>
         ${r.status==='pending' ? `<div style="margin-top:6px"><button class="btn-sm btn-approve" onclick="resolveRequest(${r.id},'approved')">✔ 承認</button><button class="btn-sm btn-reject" onclick="resolveRequest(${r.id},'rejected')">✘ NG</button></div>` : ''}
       </div>

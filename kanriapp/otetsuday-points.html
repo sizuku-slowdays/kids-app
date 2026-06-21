@@ -218,7 +218,7 @@ function renderAll() {
               <div class="log-name">${l.chore_name}</div>
               <div class="log-date">${l.completed_date}</div>
             </div>
-            <div class="log-pts">+${l.points}pt</div>
+            <div class="log-pts">+${l.points.toLocaleString()}pt</div>
           </div>`;
         }).join('') : `<div class="empty">${isMama ? 'まだなし' : 'まだおてつだいなし！<br>がんばろう💪'}</div>`}
       </div>

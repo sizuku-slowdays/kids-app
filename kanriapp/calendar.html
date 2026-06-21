@@ -277,11 +277,11 @@
     <div id="ev-dt-row">
       <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label>開始日</label><input type="date" id="ev-start-date"></div>
-        <div><label>開始時刻</label><input type="text" id="ev-start-time" placeholder="09:00" maxlength="5" oninput="autoSetEndTime()"></div>
+        <div><label>開始時刻</label><input type="text" id="ev-start-time" placeholder="0900" maxlength="5" oninput="autoSetEndTime()" onblur="formatTimeInput(this)"></div>
       </div>
       <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label>終了日</label><input type="date" id="ev-end-date"></div>
-        <div><label>終了時刻</label><input type="text" id="ev-end-time" placeholder="10:00" maxlength="5"></div>
+        <div><label>終了時刻</label><input type="text" id="ev-end-time" placeholder="1000" maxlength="5" onblur="formatTimeInput(this)"></div>
       </div>
     </div>
     <div id="ev-d-row" style="display:none">
@@ -856,6 +856,13 @@ function toggleAllDay() {
   document.getElementById('ev-dt-row').style.display = checked ? 'none' : '';
   document.getElementById('ev-d-row').style.display  = checked ? '' : 'none';
   document.getElementById('ev-notify').closest('.frow').style.display = checked ? 'none' : '';
+}
+
+function formatTimeInput(el) {
+  let val = el.value.replace(/\D/g, '');
+  if (val.length === 3) val = '0' + val;
+  if (val.length === 4) val = val.slice(0,2) + ':' + val.slice(2);
+  el.value = val;
 }
 
 function autoSetEndTime() {

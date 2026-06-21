@@ -189,6 +189,27 @@
   .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
   .menu-name { padding: 8px 16px; font-size: 12px; color: var(--text-sub); font-weight: 600; }
 
+
+  /* ── 選択日パネル ── */
+  #day-panel {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 12px 14px; min-height: 80px;
+  }
+  #day-panel-title {
+    font-size: 13px; font-weight: 700; color: var(--text-sub);
+    margin-bottom: 8px;
+  }
+  .day-panel-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+    background: var(--bg); cursor: pointer;
+  }
+  .day-panel-item:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .day-panel-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .day-panel-time { font-size: 12px; color: var(--text-sub); min-width: 48px; flex-shrink: 0; }
+  .day-panel-name { font-size: 14px; font-weight: 600; flex: 1; }
+  .day-panel-empty { font-size: 13px; color: var(--text-sub); padding: 8px 0; }
+
   /* ── FAB ── */
   #fab {
     position: fixed; bottom: 22px; right: 22px; width: 52px; height: 52px;
@@ -263,6 +284,12 @@
 
   <!-- 週表示 -->
   <div id="week-view"></div>
+
+  <!-- 選択日の予定リスト -->
+  <div id="day-panel">
+    <div id="day-panel-title">日付をタップしてください</div>
+    <div id="day-panel-list"></div>
+  </div>
 
   <button id="fab" onclick="openEvModal(null,null)">＋</button>
 </div>
@@ -391,6 +418,7 @@ let currentDate = new Date();
 let viewMode = 'month';
 let selectedCalColor = PALETTE[0];
 let detailEvent = null;
+let selectedDate = null;
 
 // ══════════════════════════════════════════
 // API呼び出し
@@ -700,7 +728,7 @@ function renderMonth(y, m) {
 
     const cell = document.createElement('div');
     cell.className = 'day-cell' + (isThis ? '' : ' other-month') + (isToday ? ' today' : '') + (dow===0?' sun':dow===6?' sat':'');
-    cell.onclick = ev => { if (ev.target === cell || ev.target.classList.contains('day-num') || ev.target.classList.contains('more-label')) openEvModal(null, ds); };
+    cell.onclick = ev => { renderDayPanel(ds); if (ev.target === cell || ev.target.classList.contains('day-num') || ev.target.classList.contains('more-label')) openEvModal(null, ds); };
 
     const dn = document.createElement('div');
     dn.className = 'day-num';
@@ -724,6 +752,7 @@ function renderMonth(y, m) {
     }
     grid.appendChild(cell);
   }
+  if (selectedDate) renderDayPanel(selectedDate);
 }
 
 function renderWeek() {
@@ -1021,6 +1050,39 @@ async function saveName() {
   myProfile = await api('/me', 'POST', { display_name: name, avatar_color: myProfile.avatar_color });
   updateAvatar();
   document.getElementById('name-overlay').classList.remove('open');
+}
+
+
+// ══════════════════════════════════════════
+// 選択日パネル
+// ══════════════════════════════════════════
+function renderDayPanel(ds) {
+  selectedDate = ds;
+  const d = new Date(ds);
+  const DAYS = ['日','月','火','水','木','金','土'];
+  document.getElementById('day-panel-title').textContent =
+    `${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;
+
+  const ae = allEvents().filter(e => evOnDate(e, ds));
+  const list = document.getElementById('day-panel-list');
+
+  if (ae.length === 0) {
+    list.innerHTML = '<div class="day-panel-empty">予定はありません</div>';
+    return;
+  }
+
+  // 時刻順ソート
+  ae.sort((a, b) => (a.start_datetime || '') < (b.start_datetime || '') ? -1 : 1);
+
+  list.innerHTML = ae.map(e => {
+    const color = getColor(e);
+    const time = e.all_day ? '終日' : (e.start_datetime || '').slice(11, 16);
+    return `<div class="day-panel-item" onclick="openDetail(${JSON.stringify(e).replace(/"/g,'&quot;')})">
+      <div class="day-panel-dot" style="background:${color}"></div>
+      <div class="day-panel-time">${time}</div>
+      <div class="day-panel-name">${e.title}</div>
+    </div>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════

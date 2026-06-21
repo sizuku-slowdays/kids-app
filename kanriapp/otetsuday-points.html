@@ -30,7 +30,9 @@
   .member-tab { flex: 1; background: var(--card); border: 3px solid var(--border); border-radius: var(--radius); padding: 16px 8px; text-align: center; cursor: pointer; transition: all 0.2s; }
   .member-tab .mt-icon { font-size: 2.2rem; }
   .member-tab .mt-name { font-size: 0.9rem; font-weight: 700; margin-top: 6px; color: var(--muted); }
-  .member-tab.active-ane { border-color: var(--pink); background: #fff0f5; }
+  .member-tab.active-mama { border-color: #e8834a; background: #fff5ee; }
+  .member-tab.active-mama .mt-name { color: #e8834a; }
+  .point-banner.mama-color { background: linear-gradient(135deg, #e8834a, #f5a623); }
   .member-tab.active-ane .mt-name { color: var(--pink); }
   .member-tab.active-imouto { border-color: var(--purple); background: #f8f0ff; }
   .member-tab.active-imouto .mt-name { color: var(--purple); }
@@ -99,6 +101,10 @@
 </header>
 
 <div class="member-select">
+  <div class="member-tab" id="tab-mama" onclick="selectMember('mama')">
+    <div class="mt-icon">👩</div>
+    <div class="mt-name">ママ</div>
+  </div>
   <div class="member-tab" id="tab-ane" onclick="selectMember('ane')">
     <div class="mt-icon">🌸</div>
     <div class="mt-name">あね</div>
@@ -156,6 +162,7 @@ async function selectMember(id) {
   localStorage.setItem('otetsuday-member', id);
 
   // タブのスタイル
+  document.getElementById('tab-mama').className = 'member-tab' + (id==='mama' ? ' active-mama' : '');
   document.getElementById('tab-ane').className = 'member-tab' + (id==='ane' ? ' active-ane' : '');
   document.getElementById('tab-imouto').className = 'member-tab' + (id==='imouto' ? ' active-imouto' : '');
 
@@ -184,9 +191,9 @@ async function loadRewards() {
 }
 
 function renderAll() {
+  const isMama = currentMember === 'mama';
   const isAne = currentMember === 'ane';
-  const colorClass = isAne ? 'ane-color' : 'imouto-color';
-  const icon = isAne ? '🌸' : '🦄';
+  const colorClass = isMama ? 'mama-color' : isAne ? 'ane-color' : 'imouto-color';
   const balance = memberData?.balance ?? 0;
   const monthPts = memberData?.month_points ?? 0;
   const usedPts = memberData?.used_points ?? 0;
@@ -194,9 +201,9 @@ function renderAll() {
   const html = `
     <!-- ポイントバナー -->
     <div class="point-banner ${colorClass}">
-      <div class="pb-stars">⭐⭐⭐</div>
+      <div class="pb-stars">${isMama ? '👩💪✨' : '⭐⭐⭐'}</div>
       <div class="pb-pts">${balance.toLocaleString()}<span class="pb-unit"> pt</span></div>
-      <div class="pb-sub">今月：${monthPts}pt ／ つかった：${usedPts}pt</div>
+      <div class="pb-sub">今月：${monthPts}pt${isMama ? '' : ` ／ つかった：${usedPts}pt`}</div>
     </div>
 
     <!-- 履歴 -->
@@ -213,11 +220,19 @@ function renderAll() {
             </div>
             <div class="log-pts">+${l.points}pt</div>
           </div>`;
-        }).join('') : '<div class="empty">まだおてつだいなし！<br>がんばろう💪</div>'}
+        }).join('') : `<div class="empty">${isMama ? 'まだなし' : 'まだおてつだいなし！<br>がんばろう💪'}</div>`}
       </div>
     </div>
 
-    <!-- ごほうび -->
+    <!-- ごほうび（ママには表示しない） -->
+    ${isMama ? `
+    <div class="section">
+      <div class="card" style="text-align:center;padding:20px;color:var(--muted);">
+        👩 ママはいつもありがとう！<br>
+        <span style="font-size:0.85rem;">ポイントは記録されています</span>
+      </div>
+    </div>
+    ` : `
     <div class="section">
       <div class="section-title">🎁 ごほうびいちらん</div>
       ${rewards.length ? rewards.map(r => {
@@ -237,6 +252,7 @@ function renderAll() {
         ※こうかんはママがしょうにんしてから！
       </div>
     </div>
+    `}
   `;
   document.getElementById('mainContent').innerHTML = html;
 }

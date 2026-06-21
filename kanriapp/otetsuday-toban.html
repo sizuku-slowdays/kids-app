@@ -234,6 +234,7 @@
 <!-- ======================== ポイント ======================== -->
 <div class="page" id="page-points">
   <div class="pv-header">
+    <div class="pv-btn" data-member="mama" onclick="selectPointMember('mama')">👩 ママ</div>
     <div class="pv-btn active" data-member="ane" onclick="selectPointMember('ane')">🌸 あね</div>
     <div class="pv-btn" data-member="imouto" onclick="selectPointMember('imouto')">🦄 いもうと</div>
   </div>
@@ -761,7 +762,13 @@ async function loadPoints() {
     </div>
   `;
 
-  // ごほうびリクエスト一覧
+  // ごほうびリクエスト一覧（ママには表示しない）
+  const reqCard = document.querySelector('#page-points .card:last-of-type');
+  if (currentPointMember === 'mama') {
+    if (reqCard) reqCard.style.display = 'none';
+    return;
+  }
+  if (reqCard) reqCard.style.display = '';
   const rl = await fetch(`${API}/api/rewards/requests`, { headers: apiHeaders() });
   if (rl.ok) {
     const rqs = await rl.json();

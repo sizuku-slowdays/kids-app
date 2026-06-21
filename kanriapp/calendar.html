@@ -268,7 +268,6 @@
 </div>
 
 <!-- 予定追加/編集モーダル -->
-<!-- 予定追加/編集モーダル -->
 <div class="overlay" id="ev-overlay" onclick="closeEvModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h2 id="ev-modal-title">予定を追加</h2>
@@ -278,11 +277,11 @@
     <div id="ev-dt-row">
       <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label>開始日</label><input type="date" id="ev-start-date"></div>
-        <div><label>開始時刻</label><input type="time" id="ev-start-time" value="09:00"></div>
+        <div><label>開始時刻</label><input type="text" id="ev-start-time" placeholder="09:00" maxlength="5" oninput="autoSetEndTime()"></div>
       </div>
       <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label>終了日</label><input type="date" id="ev-end-date"></div>
-        <div><label>終了時刻</label><input type="time" id="ev-end-time" value="10:00"></div>
+        <div><label>終了時刻</label><input type="text" id="ev-end-time" placeholder="10:00" maxlength="5"></div>
       </div>
     </div>
     <div id="ev-d-row" style="display:none">
@@ -371,7 +370,7 @@
 // 設定
 // ══════════════════════════════════════════
 const API = 'https://calendar-worker.sslowdayss.workers.dev';
-const GOOGLE_CLIENT_ID = '17945262543-lgunjio0plc22takcpv29flmvdlo492v.apps.googleusercontent.com'; // ←書き換え
+const GOOGLE_CLIENT_ID = '17945262543-lgunjio0plc22takcpv29flmvdlo492v.apps.googleusercontent.com';
 
 const PALETTE = [
   '#e53935','#d81b60','#8e24aa','#5e35b1','#3949ab',
@@ -382,8 +381,8 @@ const PALETTE = [
 // ══════════════════════════════════════════
 // 状態
 // ══════════════════════════════════════════
-let idToken = null;       // GoogleのIDトークン
-let myProfile = null;     // {google_id, display_name, avatar_color}
+let idToken = null;
+let myProfile = null;
 let calendars = [];
 let events = [];
 let gEvents = [];
@@ -424,17 +423,16 @@ window.onload = () => {
     { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ja' }
   );
   // セッション復元
-const saved = sessionStorage.getItem('id_token');
-if (saved) { 
-  idToken = saved;
-  initApp().catch(() => {
-    // トークン期限切れなら自動再認証
-    sessionStorage.removeItem('id_token');
+  const saved = sessionStorage.getItem('id_token');
+  if (saved) {
+    idToken = saved;
+    initApp().catch(() => {
+      sessionStorage.removeItem('id_token');
+      google.accounts.id.prompt();
+    });
+  } else {
     google.accounts.id.prompt();
-  });
-} else {
-  google.accounts.id.prompt();
-}
+  }
 };
 
 async function onGoogleSignIn(response) {
@@ -448,7 +446,6 @@ async function initApp() {
     myProfile = await api('/me', 'GET');
     showApp();
   } catch(e) {
-    // 未登録ユーザー → 表示名設定画面へ
     showSetup();
   }
 }
@@ -468,7 +465,6 @@ function signOut() {
 function showSetup() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'flex';
-  // 色ピッカー
   const cp = document.getElementById('setup-colors');
   cp.innerHTML = PALETTE.map((c, i) =>
     `<div class="color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectSetupColor(this,'${c}')"></div>`
@@ -496,10 +492,10 @@ function showApp() {
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   const savedToken = sessionStorage.getItem('gapi_token');
-const savedExpire = sessionStorage.getItem('gapi_token_expire');
-if (savedToken && savedExpire && Date.now() < parseInt(savedExpire)) {
-  gapiAccessToken = savedToken;
-}
+  const savedExpire = sessionStorage.getItem('gapi_token_expire');
+  if (savedToken && savedExpire && Date.now() < parseInt(savedExpire)) {
+    gapiAccessToken = savedToken;
+  }
   updateNotifyBtn();
   updateAvatar();
   loadAll();
@@ -570,7 +566,6 @@ async function fetchGoogleEvents() {
   } catch(e) { console.warn('Google Calendar fetch error', e); }
 }
 
-// アクセストークンを別途取得（IDトークンとは別物）
 function requestGoogleCalendarAccess() {
   const saved = sessionStorage.getItem('gapi_token');
   const expire = sessionStorage.getItem('gapi_token_expire');
@@ -609,7 +604,6 @@ function renderLegend() {
   leg.querySelectorAll('.legend-item').forEach(el => el.remove());
   const addBtn = leg.querySelector('.legend-add');
 
-  // Googleカレンダー
   const gItem = makeLegendItem('__google__', 'Googleカレンダー', '#1a73e8', true);
   leg.insertBefore(gItem, addBtn);
 
@@ -746,7 +740,6 @@ function renderWeek() {
   const ae = allEvents();
 
   let html = `<div class="week-grid">`;
-  // ヘッダー行
   html += `<div></div>`;
   for (let d = 0; d < 7; d++) {
     const dt = new Date(ws); dt.setDate(ws.getDate() + d);
@@ -756,7 +749,6 @@ function renderWeek() {
       <div class="dnum">${dt.getDate()}</div>
     </div>`;
   }
-  // 時間列
   const H = 44;
   html += `<div class="week-time-col">`;
   for (let h = 0; h < 24; h++) html += `<div class="time-label">${h}:00</div>`;
@@ -866,6 +858,16 @@ function toggleAllDay() {
   document.getElementById('ev-notify').closest('.frow').style.display = checked ? 'none' : '';
 }
 
+function autoSetEndTime() {
+  const val = document.getElementById('ev-start-time').value;
+  if (!/^\d{2}:\d{2}$/.test(val)) return;
+  const [h, m] = val.split(':').map(Number);
+  const endH = (h + 1) % 24;
+  document.getElementById('ev-end-time').value = `${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  const startDate = document.getElementById('ev-start-date').value;
+  if (startDate) document.getElementById('ev-end-date').value = startDate;
+}
+
 async function saveEvent() {
   const title = document.getElementById('ev-title').value.trim();
   const calId = document.getElementById('ev-cal').value;
@@ -909,6 +911,16 @@ async function saveEvent() {
     scheduleNotifications();
     await loadEvents();
   } catch(e) { alert('保存失敗: ' + e.message); }
+}
+
+async function deleteEvent() {
+  const id = document.getElementById('ev-id').value;
+  if (!id || !confirm('この予定を削除しますか？')) return;
+  try {
+    await api(`/events/${id}`, 'DELETE');
+    document.getElementById('ev-overlay').classList.remove('open');
+    await loadEvents();
+  } catch(e) { alert('削除失敗: ' + e.message); }
 }
 
 // ══════════════════════════════════════════
@@ -1003,13 +1015,17 @@ async function saveName() {
   updateAvatar();
   document.getElementById('name-overlay').classList.remove('open');
 }
+
 // ══════════════════════════════════════════
 // 通知
 // ══════════════════════════════════════════
 let notifyTimers = [];
 
 async function requestNotifyPermission() {
-  if (!('Notification' in window)) { alert('このブラウザは通知に対応していません'); return; }
+  if (!('Notification' in window)) {
+    alert('このブラウザ（Safari/iOS）はWeb通知に対応していません。\nPWAとしてホーム画面に追加すると通知が使えるようになります。');
+    return;
+  }
   const result = await Notification.requestPermission();
   if (result === 'granted') {
     alert('通知を許可しました！');
@@ -1034,10 +1050,9 @@ function updateNotifyBtn() {
 }
 
 function scheduleNotifications() {
-  // 既存のタイマーをクリア
   notifyTimers.forEach(t => clearTimeout(t));
   notifyTimers = [];
-
+  if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
 
   const now = Date.now();
@@ -1048,8 +1063,8 @@ function scheduleNotifications() {
     const startTime = new Date(e.start_datetime).getTime();
     const notifyTime = startTime - nb * 60 * 1000;
     const diff = notifyTime - now;
-    if (diff < 0) return; // 過去の通知はスキップ
-    if (diff > 7 * 24 * 60 * 60 * 1000) return; // 1週間以上先はスキップ
+    if (diff < 0) return;
+    if (diff > 7 * 24 * 60 * 60 * 1000) return;
 
     const timer = setTimeout(() => {
       const label = nb === 0 ? '開始時刻です' : `${nb >= 60 ? nb/60+'時間' : nb+'分'}前です`;

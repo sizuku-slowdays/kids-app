@@ -238,7 +238,9 @@ function renderAll() {
       ${rewards.length ? rewards.map(r => {
         const canGet = balance >= r.points;
         return `<div class="reward-item">
-          <div class="reward-icon">🎁</div>
+          ${r.image_url
+            ? `<img src="${r.image_url}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;flex-shrink:0;">`
+            : `<div class="reward-icon">🎁</div>`}
           <div class="reward-main">
             <div class="reward-name">${r.name}</div>
             <div class="reward-pts"><strong>${r.points.toLocaleString()}pt</strong> ひつよう</div>

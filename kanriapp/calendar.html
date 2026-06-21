@@ -691,11 +691,21 @@ async function fetchGoogleEvents() {
     const y = currentDate.getFullYear(), m = currentDate.getMonth();
     const timeMin = new Date(y, m-1, 1).toISOString();
     const timeMax = new Date(y, m+2, 0).toISOString();
-    const res = await gapi.client.calendar.events.list({
-      calendarId: 'primary', timeMin, timeMax,
-      singleEvents: true, orderBy: 'startTime', maxResults: 500
-    });
-    gEvents = (res.result.items || []).map(e => ({
+
+    // 個人カレンダーと祝日カレンダーを並行取得
+    const [personalRes, holidayRes] = await Promise.all([
+      gapi.client.calendar.events.list({
+        calendarId: 'primary', timeMin, timeMax,
+        singleEvents: true, orderBy: 'startTime', maxResults: 500
+      }),
+      gapi.client.calendar.events.list({
+        calendarId: 'ja.japanese#holiday@group.v.calendar.google.com',
+        timeMin, timeMax,
+        singleEvents: true, orderBy: 'startTime', maxResults: 100
+      }).catch(() => ({ result: { items: [] } }))
+    ]);
+
+    const personalEvents = (personalRes.result.items || []).map(e => ({
       id: 'g_' + e.id,
       title: e.summary || '（タイトルなし）',
       description: e.description || '',
@@ -706,6 +716,21 @@ async function fetchGoogleEvents() {
       color: '#1a73e8',
       is_google: true,
     }));
+
+    const holidayEvents = (holidayRes.result.items || []).map(e => ({
+      id: 'gh_' + e.id,
+      title: e.summary || '祝日',
+      description: '',
+      start_datetime: e.start.date,
+      end_datetime: e.end.date,
+      all_day: true,
+      calendar_id: '__holiday__',
+      color: '#e53935',
+      is_google: true,
+      is_holiday: true,
+    }));
+
+    gEvents = [...personalEvents, ...holidayEvents];
     render();
   } catch(e) { console.warn('Google Calendar fetch error', e); }
 }
@@ -843,8 +868,9 @@ function renderMonth(y, m) {
     const ds = dateStr(date);
     const dow = date.getDay();
 
+    const isHoliday = allEvents().some(e => e.is_holiday && evOnDate(e, ds));
     const cell = document.createElement('div');
-    cell.className = 'day-cell' + (isThis ? '' : ' other-month') + (isToday ? ' today' : '') + (dow===0?' sun':dow===6?' sat':'');
+    cell.className = 'day-cell' + (isThis ? '' : ' other-month') + (isToday ? ' today' : '') + (dow===0||isHoliday?' sun':dow===6?' sat':'');
     cell.onclick = ev => { renderDayPanel(ds); if (ev.target === cell || ev.target.classList.contains('day-num') || ev.target.classList.contains('more-label')) openEvModal(null, ds); };
 
     const dn = document.createElement('div');

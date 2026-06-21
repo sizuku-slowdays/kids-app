@@ -210,6 +210,15 @@
   .day-panel-name { font-size: 14px; font-weight: 600; flex: 1; }
   .day-panel-empty { font-size: 13px; color: var(--text-sub); padding: 8px 0; }
 
+
+  .day-check {
+    display: flex; align-items: center; gap: 4px; font-size: 13px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 8px; cursor: pointer; user-select: none;
+  }
+  .day-check input { width: auto; }
+  .day-check:has(input:checked) { background: var(--accent); color: #fff; border-color: var(--accent); }
+
   /* ── FAB ── */
   #fab {
     position: fixed; bottom: 22px; right: 22px; width: 52px; height: 52px;
@@ -329,6 +338,71 @@
         <option value="60">1時間前</option>
         <option value="1440">1日前</option>
       </select>
+    </div>
+    <div class="frow" id="ev-recurrence-row">
+      <label>繰り返し</label>
+      <select id="ev-recur-type" onchange="toggleRecurrence()">
+        <option value="none">なし</option>
+        <option value="daily">毎日</option>
+        <option value="weekly">毎週</option>
+        <option value="monthly">毎月</option>
+        <option value="yearly">毎年</option>
+        <option value="custom">カスタム</option>
+      </select>
+    </div>
+    <!-- カスタム設定 -->
+    <div id="ev-recur-custom" style="display:none;background:var(--bg);border-radius:8px;padding:10px;margin-bottom:12px">
+      <div class="frow">
+        <label>繰り返し単位</label>
+        <select id="ev-custom-unit" onchange="updateCustomUnitLabel()">
+          <option value="daily">毎日</option>
+          <option value="weekly">毎週</option>
+          <option value="monthly">毎月</option>
+          <option value="yearly">毎年</option>
+        </select>
+      </div>
+      <div class="frow">
+        <label>繰り返し頻度</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:13px">毎</span>
+          <input type="number" id="ev-recur-interval" value="1" min="1" max="99" style="width:60px">
+          <span id="ev-recur-unit-label" style="font-size:13px">週</span>
+        </div>
+      </div>
+      <div class="frow" id="ev-recur-days-row" style="display:none">
+        <label>曜日</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px" id="ev-recur-days">
+          <label class="day-check"><input type="checkbox" value="0"> 日</label>
+          <label class="day-check"><input type="checkbox" value="1"> 月</label>
+          <label class="day-check"><input type="checkbox" value="2"> 火</label>
+          <label class="day-check"><input type="checkbox" value="3"> 水</label>
+          <label class="day-check"><input type="checkbox" value="4"> 木</label>
+          <label class="day-check"><input type="checkbox" value="5"> 金</label>
+          <label class="day-check"><input type="checkbox" value="6"> 土</label>
+        </div>
+      </div>
+    </div>
+    <!-- 繰り返し終了 -->
+    <div id="ev-recur-end" style="display:none;background:var(--bg);border-radius:8px;padding:10px;margin-bottom:12px">
+      <div class="frow">
+        <label>繰り返しの終了</label>
+        <select id="ev-recur-end-type" onchange="toggleRecurrenceEnd()">
+          <option value="none">終了しない</option>
+          <option value="count">回数</option>
+          <option value="date">期限</option>
+        </select>
+      </div>
+      <div id="ev-recur-end-count-row" style="display:none" class="frow">
+        <label>回数</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" id="ev-recur-end-count" value="10" min="1" max="99" style="width:60px">
+          <span style="font-size:13px">回</span>
+        </div>
+      </div>
+      <div id="ev-recur-end-date-row" style="display:none" class="frow">
+        <label>期限</label>
+        <input type="date" id="ev-recur-end-date">
+      </div>
     </div>
     <div class="frow"><label>メモ</label><textarea id="ev-desc" placeholder="詳細・メモ"></textarea></div>
     <div class="modal-btns">
@@ -847,6 +921,7 @@ function openEvModal(ev, defaultDate) {
     document.getElementById('ev-desc').value = ev.description || '';
     document.getElementById('ev-allday').checked = !!ev.all_day;
     document.getElementById('ev-notify').value = ev.notify_before ?? -1;
+    setRecurrenceForm(ev);
     sel.value = ev.calendar_id;
     if (ev.all_day) {
       document.getElementById('ev-start-d').value = ev.start_datetime.slice(0,10);
@@ -864,6 +939,7 @@ function openEvModal(ev, defaultDate) {
     document.getElementById('ev-desc').value = '';
     document.getElementById('ev-allday').checked = false;
     document.getElementById('ev-notify').value = -1;
+    setRecurrenceForm({ recurrence_type: 'none' });
     const base = defaultDate || dateStr(new Date());
     document.getElementById('ev-start-date').value = base;
     document.getElementById('ev-start-time').value = '09:00';
@@ -927,6 +1003,7 @@ async function saveEvent() {
 
   const cal = calendars.find(c => c.id === calId);
   const notify_before = parseInt(document.getElementById('ev-notify').value);
+  const recurData = getRecurrenceData();
 
   const body = {
     title,
@@ -937,6 +1014,7 @@ async function saveEvent() {
     calendar_id: calId,
     color: cal?.color || '#5b8dee',
     notify_before,
+    ...recurData,
   };
 
   const editId = document.getElementById('ev-id').value;
@@ -1052,6 +1130,87 @@ async function saveName() {
   document.getElementById('name-overlay').classList.remove('open');
 }
 
+
+
+// ══════════════════════════════════════════
+// 繰り返し設定
+// ══════════════════════════════════════════
+function toggleRecurrence() {
+  const type = document.getElementById('ev-recur-type').value;
+  const isCustom = type === 'custom';
+  const hasRecur = type !== 'none';
+  document.getElementById('ev-recur-custom').style.display = isCustom ? '' : 'none';
+  document.getElementById('ev-recur-end').style.display = hasRecur ? '' : 'none';
+  if (isCustom) updateCustomUnitLabel();
+}
+
+function toggleRecurrenceEnd() {
+  const type = document.getElementById('ev-recur-end-type').value;
+  document.getElementById('ev-recur-end-count-row').style.display = type === 'count' ? '' : 'none';
+  document.getElementById('ev-recur-end-date-row').style.display  = type === 'date'  ? '' : 'none';
+}
+
+function updateCustomUnitLabel() {
+  const unit = document.getElementById('ev-custom-unit').value;
+  const labels = { daily: '日', weekly: '週', monthly: 'ヶ月', yearly: '年' };
+  document.getElementById('ev-recur-unit-label').textContent = labels[unit] || '週';
+  document.getElementById('ev-recur-days-row').style.display = unit === 'weekly' ? '' : 'none';
+}
+
+function getRecurrenceData() {
+  const type = document.getElementById('ev-recur-type').value;
+  if (type === 'none') return { recurrence_type: 'none' };
+
+  let recurrence_type = type;
+  let recurrence_interval = 1;
+  let recurrence_days = null;
+
+  if (type === 'custom') {
+    recurrence_type = document.getElementById('ev-custom-unit').value;
+    recurrence_interval = parseInt(document.getElementById('ev-recur-interval').value) || 1;
+    if (recurrence_type === 'weekly') {
+      const checked = [...document.querySelectorAll('#ev-recur-days input:checked')].map(el => el.value);
+      recurrence_days = checked.length > 0 ? checked.join(',') : null;
+    }
+  }
+
+  const end_type = document.getElementById('ev-recur-end-type').value;
+  const recurrence_end_type = end_type;
+  const recurrence_end_count = end_type === 'count' ? parseInt(document.getElementById('ev-recur-end-count').value) || null : null;
+  const recurrence_end_date  = end_type === 'date'  ? document.getElementById('ev-recur-end-date').value || null : null;
+
+  return { recurrence_type, recurrence_interval, recurrence_days, recurrence_end_type, recurrence_end_count, recurrence_end_date };
+}
+
+function setRecurrenceForm(ev) {
+  const type = ev.recurrence_type || 'none';
+  const sel = document.getElementById('ev-recur-type');
+
+  if (['none','daily','weekly','monthly','yearly'].includes(type)) {
+    sel.value = type;
+  } else {
+    sel.value = 'custom';
+  }
+
+  if (sel.value === 'custom' || !['none','daily','weekly','monthly','yearly'].includes(type)) {
+    document.getElementById('ev-custom-unit').value = type;
+    document.getElementById('ev-recur-interval').value = ev.recurrence_interval || 1;
+    if (ev.recurrence_days) {
+      const days = ev.recurrence_days.split(',');
+      document.querySelectorAll('#ev-recur-days input').forEach(el => {
+        el.checked = days.includes(el.value);
+      });
+    }
+    updateCustomUnitLabel();
+  }
+
+  const endType = ev.recurrence_end_type || 'none';
+  document.getElementById('ev-recur-end-type').value = endType;
+  if (ev.recurrence_end_count) document.getElementById('ev-recur-end-count').value = ev.recurrence_end_count;
+  if (ev.recurrence_end_date)  document.getElementById('ev-recur-end-date').value  = ev.recurrence_end_date;
+  toggleRecurrenceEnd();
+  toggleRecurrence();
+}
 
 // ══════════════════════════════════════════
 // 選択日パネル

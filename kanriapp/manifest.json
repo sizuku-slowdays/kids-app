@@ -2,20 +2,20 @@
   "name": "家族カレンダー",
   "short_name": "カレンダー",
   "description": "家族で共有できるカレンダーアプリ",
-  "start_url": "/kids-app/calendar.html",
+  "start_url": "/kanriapp/calendar.html",
   "display": "standalone",
   "background_color": "#f8f7f4",
   "theme_color": "#5b8dee",
   "lang": "ja",
   "icons": [
     {
-      "src": "/kids-app/calendar-icon-192.png",
+      "src": "/kanriapp/calendar-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/kids-app/calendar-icon-512.png",
+      "src": "/kanriapp/calendar-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>おてつだいポイント</title>
+<link rel="apple-touch-icon" sizes="180x180" href="img/otetsudai-points.png">
+<link rel="icon" type="image/png" href="img/otetsudai-points.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="おてつだいポイント">
+<meta name="theme-color" content="#f0f8ff">
 <style>
   :root {
     --bg: #f0f8ff;
@@ -72,8 +79,11 @@
   .reward-name { font-weight: 700; font-size: 0.95rem; }
   .reward-pts { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
   .reward-pts strong { color: var(--star); }
-  .btn-request { background: linear-gradient(135deg, #f5a623, #f39c12); color: #fff; border: none; border-radius: 12px; padding: 8px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
-  .btn-request:disabled { background: #ccc; cursor: default; }
+  .reward-action { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+  .reward-need { font-size: 0.78rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .btn-request { border: none; border-radius: 12px; padding: 8px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .btn-request.can { background: linear-gradient(135deg, #5cb85c, #3a9a3a); color: #fff; box-shadow: 0 3px 10px rgba(60,160,60,0.3); }
+  .btn-request.cannot { background: #e0e0e0; color: #999; cursor: default; }
 
   .loading { text-align: center; padding: 30px; color: var(--muted); font-size: 1rem; }
   .empty { text-align: center; padding: 20px; color: var(--muted); }
@@ -237,6 +247,7 @@ function renderAll() {
       <div class="section-title">🎁 ごほうびいちらん</div>
       ${rewards.length ? rewards.map(r => {
         const canGet = balance >= r.points;
+        const need = r.points - balance;
         return `<div class="reward-item">
           ${r.image_url
             ? `<img src="${r.image_url}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;flex-shrink:0;">`
@@ -245,9 +256,12 @@ function renderAll() {
             <div class="reward-name">${r.name}</div>
             <div class="reward-pts"><strong>${r.points.toLocaleString()}pt</strong> ひつよう</div>
           </div>
-          <button class="btn-request" ${!canGet?'disabled':''} onclick="openRequest(${r.id},'${r.name}',${r.points})">
-            ${canGet ? 'こうかん！' : 'あとすこし'}
-          </button>
+          <div class="reward-action">
+            ${!canGet ? `<div class="reward-need">あと${need.toLocaleString()}pt</div>` : ''}
+            ${canGet
+              ? `<button class="btn-request can" onclick="openRequest(${r.id},'${r.name}',${r.points})">こうかん！</button>`
+              : `<button class="btn-request cannot">あとすこし</button>`}
+          </div>
         </div>`;
       }).join('') : '<div class="empty">ごほうびなし</div>'}
       <div style="margin-top:8px;font-size:0.78rem;color:var(--muted);text-align:center;">
@@ -297,3 +311,4 @@ init();
 </script>
 </body>
 </html>
+は

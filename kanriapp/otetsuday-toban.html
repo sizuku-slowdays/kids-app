@@ -204,6 +204,23 @@
       <div class="setting-title">🏡 作業リスト</div>
       <div id="choreSettings" class="loading">よみこみ中…</div>
     </div>
+    <div style="margin-top:12px;display:grid;gap:8px;">
+      <div style="display:flex;gap:8px;">
+        <input id="newChoreIcon" placeholder="🧹" style="width:60px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;text-align:center;font-size:1.2rem;">
+        <input id="newChoreName" placeholder="作業名（例：げんかんそうじ）" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:4px;">⭐ ポイント</div>
+          <input id="newChorePoints" type="number" placeholder="50" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:4px;">💴 金額（0円でもOK）</div>
+          <input id="newChoreMoney" type="number" placeholder="0" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
+        </div>
+      </div>
+      <button onclick="addChore()" style="padding:10px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">＋ 作業を追加</button>
+    </div>
   </div>
   <div class="card">
     <div class="setting-section">
@@ -632,6 +649,35 @@ async function toggleChore(id, currentEnabled, choreObj) {
     method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated)
   });
   loadSettings();
+}
+
+async function addChore() {
+  const icon = document.getElementById('newChoreIcon').value.trim() || '📋';
+  const name = document.getElementById('newChoreName').value.trim();
+  const points = parseInt(document.getElementById('newChorePoints').value) || 0;
+  const money = parseInt(document.getElementById('newChoreMoney').value) || 0;
+  if (!name) { alert('作業名をにゅうりょくしてください'); return; }
+  if (!points) { alert('ポイントをにゅうりょくしてください'); return; }
+
+  // IDは作業名をローマ字変換せず、タイムスタンプベースで生成
+  const id = 'chore_' + Date.now();
+
+  const r = await fetch(`${API}/api/settings/chores`, {
+    method: 'POST', headers: apiHeaders(),
+    body: JSON.stringify({ id, name, icon, points, money })
+  });
+  const data = await r.json();
+  if (data.ok) {
+    document.getElementById('newChoreIcon').value = '';
+    document.getElementById('newChoreName').value = '';
+    document.getElementById('newChorePoints').value = '';
+    document.getElementById('newChoreMoney').value = '';
+    loadSettings();
+    // 今日の画面も更新
+    loadToday();
+  } else {
+    alert('エラー: ' + (data.error || '?'));
+  }
 }
 
 async function saveRewardImage(id, rewardObj) {

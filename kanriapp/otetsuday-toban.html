@@ -207,7 +207,7 @@
     <div style="margin-top:12px;display:grid;gap:8px;">
       <div style="display:flex;gap:8px;">
         <input id="newChoreIcon" placeholder="🧹" style="width:60px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;text-align:center;font-size:1.2rem;">
-        <input id="newChoreName" placeholder="作業名（例：げんかんそうじ）" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
+        <input id="newChoreName" placeholder="作業名（例：おさらはこび）" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
       </div>
       <div style="display:flex;gap:8px;">
         <div style="flex:1;">
@@ -219,6 +219,10 @@
           <input id="newChoreMoney" type="number" placeholder="0" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
         </div>
       </div>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:10px;cursor:pointer;">
+        <input type="checkbox" id="newChoreNoRotation" style="width:18px;height:18px;accent-color:var(--accent);">
+        <span style="font-size:0.88rem;font-weight:700;">🔓 ローテーションなし（だれでもいつでもOK）</span>
+      </label>
       <button onclick="addChore()" style="padding:10px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">＋ 作業を追加</button>
     </div>
   </div>
@@ -382,13 +386,15 @@ async function loadToday() {
   const r = await fetch(`${API}/api/chores/today`);
   chores = await r.json();
   if (!chores.length) { el.innerHTML = '<div class="empty">おてつだいがありません</div>'; return; }
-  el.innerHTML = chores.map(c => `
+  el.innerHTML = chores.map(c => {
+    const isNoRotation = c.next_assignee === 'none' || !c.assignee;
+    return `
     <div class="card">
       <div class="chore-card">
         <div class="chore-icon">${c.icon}</div>
         <div class="chore-info">
           <div class="chore-name">${c.name}</div>
-          <div class="chore-assignee">担当：${c.assignee ? c.assignee.icon + ' ' + c.assignee.name : '—'}</div>
+          <div class="chore-assignee">${isNoRotation ? '👐 だれでもOK' : '担当：' + (c.assignee ? c.assignee.icon + ' ' + c.assignee.name : '—')}</div>
           <div class="chore-meta">
             <span class="chore-pts">⭐ ${c.points.toLocaleString()}pt</span>
             ${c.money > 0 ? `<span class="chore-yen">💴 ${c.money.toLocaleString()}円</span>` : ''}
@@ -397,7 +403,7 @@ async function loadToday() {
         <button class="btn-yatta" onclick="openYatta('${c.id}')">やった！</button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 // ──────── やった！モーダル ────────
@@ -656,15 +662,15 @@ async function addChore() {
   const name = document.getElementById('newChoreName').value.trim();
   const points = parseInt(document.getElementById('newChorePoints').value) || 0;
   const money = parseInt(document.getElementById('newChoreMoney').value) || 0;
+  const noRotation = document.getElementById('newChoreNoRotation').checked;
   if (!name) { alert('作業名をにゅうりょくしてください'); return; }
   if (!points) { alert('ポイントをにゅうりょくしてください'); return; }
 
-  // IDは作業名をローマ字変換せず、タイムスタンプベースで生成
   const id = 'chore_' + Date.now();
 
   const r = await fetch(`${API}/api/settings/chores`, {
     method: 'POST', headers: apiHeaders(),
-    body: JSON.stringify({ id, name, icon, points, money })
+    body: JSON.stringify({ id, name, icon, points, money, no_rotation: noRotation })
   });
   const data = await r.json();
   if (data.ok) {
@@ -672,8 +678,8 @@ async function addChore() {
     document.getElementById('newChoreName').value = '';
     document.getElementById('newChorePoints').value = '';
     document.getElementById('newChoreMoney').value = '';
+    document.getElementById('newChoreNoRotation').checked = false;
     loadSettings();
-    // 今日の画面も更新
     loadToday();
   } else {
     alert('エラー: ' + (data.error || '?'));

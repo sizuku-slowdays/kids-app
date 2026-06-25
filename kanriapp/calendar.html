@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="家族カレンダー">
+<meta name="theme-color" content="#5b8dee">
+<link rel="manifest" href="/kids-app/manifest.json">
+<link rel="apple-touch-icon" href="/kids-app/calendar-icon-192.png">
 <title>家族カレンダー</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -557,6 +563,13 @@ async function api(path, method = 'GET', body = null) {
 // Google Sign In
 // ══════════════════════════════════════════
 window.onload = () => {
+  // Service Worker登録
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/kids-app/service-worker.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  }
+
   google.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: onGoogleSignIn,
@@ -1531,13 +1544,15 @@ function updateNotifyBtn() {
   }
 }
 
-function scheduleNotifications() {
+async function scheduleNotifications() {
   notifyTimers.forEach(t => clearTimeout(t));
   notifyTimers = [];
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
 
   const now = Date.now();
+  const sw = navigator.serviceWorker?.controller;
+
   events.forEach(e => {
     if (e.all_day) return;
     const nb = e.notify_before ?? -1;
@@ -1548,14 +1563,20 @@ function scheduleNotifications() {
     if (diff < 0) return;
     if (diff > 7 * 24 * 60 * 60 * 1000) return;
 
-    const timer = setTimeout(() => {
-      const label = nb === 0 ? '開始時刻です' : `${nb >= 60 ? nb/60+'時間' : nb+'分'}前です`;
-      new Notification(`📅 ${e.title}`, {
-        body: `${label}\n${fmtDt(e.start_datetime, false)}`,
-        icon: '/kids-app/calendar-icon.png',
-      });
-    }, diff);
-    notifyTimers.push(timer);
+    const label = nb === 0 ? '開始時刻です' : `${nb >= 60 ? nb/60+'時間' : nb+'分'}前です`;
+    const title = `📅 ${e.title}`;
+    const body = `${label} ${fmtDt(e.start_datetime, false)}`;
+
+    if (sw) {
+      // ServiceWorker経由で通知（バックグラウンドでも動く）
+      sw.postMessage({ type: 'SCHEDULE_NOTIFICATION', title, body, delay: diff });
+    } else {
+      // フォールバック：通常のsetTimeout
+      const timer = setTimeout(() => {
+        new Notification(title, { body, icon: '/kids-app/calendar-icon-192.png' });
+      }, diff);
+      notifyTimers.push(timer);
+    }
   });
 }
 </script>

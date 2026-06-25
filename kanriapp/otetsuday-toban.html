@@ -3,974 +3,311 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>おてつだい当番</title>
+<title>おてつだいポイント</title>
+<link rel="apple-touch-icon" sizes="180x180" href="img/otetsudai-points.png">
+<link rel="icon" type="image/png" href="img/otetsudai-points.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="おてつだいポイント">
+<meta name="theme-color" content="#f0f8ff">
 <style>
   :root {
-    --bg: #fdf6ee;
+    --bg: #f0f8ff;
     --card: #ffffff;
-    --accent: #e8834a;
-    --accent2: #6db88f;
-    --text: #3a2f28;
-    --muted: #8c7b70;
-    --border: #e8ddd4;
-    --radius: 16px;
-    --shadow: 0 2px 12px rgba(58,47,40,0.08);
+    --star: #f5a623;
+    --green: #5cb85c;
+    --pink: #ff6b9d;
+    --purple: #9b59b6;
+    --text: #333;
+    --muted: #888;
+    --border: #e0ecf8;
+    --radius: 20px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Hiragino Maru Gothic ProN', 'BIZ UDPGothic', sans-serif; min-height: 100vh; }
 
   /* ヘッダー */
-  header { background: var(--accent); color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; }
-  header h1 { font-size: 1.1rem; font-weight: 700; flex: 1; }
-  header .today-date { font-size: 0.82rem; opacity: 0.9; }
+  header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 20px; text-align: center; border-radius: 0 0 28px 28px; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
 
-  /* タブ */
-  .tabs { display: flex; background: #fff; border-bottom: 2px solid var(--border); overflow-x: auto; }
-  .tab { flex: 1; min-width: 70px; padding: 12px 8px; text-align: center; font-size: 0.8rem; font-weight: 700; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  /* メンバー選択 */
+  .member-select { display: flex; gap: 12px; padding: 20px 16px 0; }
+  .member-tab { flex: 1; background: var(--card); border: 3px solid var(--border); border-radius: var(--radius); padding: 16px 8px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .member-tab .mt-icon { font-size: 2.2rem; }
+  .member-tab .mt-name { font-size: 0.9rem; font-weight: 700; margin-top: 6px; color: var(--muted); }
+  .member-tab.active-mama { border-color: #e8834a; background: #fff5ee; }
+  .member-tab.active-mama .mt-name { color: #e8834a; }
+  .point-banner.mama-color { background: linear-gradient(135deg, #e8834a, #f5a623); }
+  .member-tab.active-ane .mt-name { color: var(--pink); }
+  .member-tab.active-imouto { border-color: var(--purple); background: #f8f0ff; }
+  .member-tab.active-imouto .mt-name { color: var(--purple); }
 
-  /* ページ */
-  .page { display: none; padding: 16px; }
-  .page.active { display: block; }
+  /* コンテンツ */
+  .content { padding: 16px; }
+
+  /* ポイントバナー */
+  .point-banner { border-radius: var(--radius); padding: 24px 20px; text-align: center; margin-bottom: 16px; color: #fff; }
+  .point-banner.ane-color { background: linear-gradient(135deg, #ff6b9d, #ff8fab); }
+  .point-banner.imouto-color { background: linear-gradient(135deg, #9b59b6, #a78bfa); }
+  .pb-stars { font-size: 1.8rem; margin-bottom: 8px; }
+  .pb-pts { font-size: 3rem; font-weight: 700; line-height: 1; }
+  .pb-unit { font-size: 1rem; opacity: 0.9; }
+  .pb-sub { font-size: 0.85rem; opacity: 0.85; margin-top: 6px; }
+
+  /* セクション */
+  .section { margin-bottom: 16px; }
+  .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
 
   /* カード */
-  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
+  .card { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 
-  /* 今日のおてつだいカード */
-  .chore-card { display: flex; align-items: center; gap: 14px; }
-  .chore-icon { font-size: 2.4rem; flex-shrink: 0; }
-  .chore-info { flex: 1; }
-  .chore-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
-  .chore-meta { display: flex; gap: 12px; font-size: 0.82rem; color: var(--muted); }
-  .chore-pts { color: var(--accent); font-weight: 700; }
-  .chore-yen { color: var(--accent2); font-weight: 700; }
-  .chore-assignee { font-size: 0.85rem; margin-top: 6px; }
-  .btn-yatta { background: var(--accent); color: #fff; border: none; border-radius: 24px; padding: 10px 20px; font-size: 0.9rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
-  .btn-yatta:hover { opacity: 0.85; }
+  /* 履歴ログ */
+  .log-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .log-item:last-child { border-bottom: none; }
+  .log-icon { font-size: 1.8rem; flex-shrink: 0; width: 42px; height: 42px; background: var(--bg); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+  .log-main { flex: 1; }
+  .log-name { font-weight: 700; font-size: 0.95rem; }
+  .log-date { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .log-pts { font-weight: 700; font-size: 1.1rem; color: var(--star); }
+
+  /* ごほうびカード */
+  .reward-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--bg); border-radius: 14px; margin-bottom: 8px; }
+  .reward-icon { font-size: 1.8rem; }
+  .reward-main { flex: 1; }
+  .reward-name { font-weight: 700; font-size: 0.95rem; }
+  .reward-pts { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  .reward-pts strong { color: var(--star); }
+  .reward-action { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+  .reward-need { font-size: 0.78rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .btn-request { border: none; border-radius: 12px; padding: 8px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .btn-request.can { background: linear-gradient(135deg, #5cb85c, #3a9a3a); color: #fff; box-shadow: 0 3px 10px rgba(60,160,60,0.3); }
+  .btn-request.cannot { background: #e0e0e0; color: #999; cursor: default; }
+
+  .loading { text-align: center; padding: 30px; color: var(--muted); font-size: 1rem; }
+  .empty { text-align: center; padding: 20px; color: var(--muted); }
 
   /* モーダル */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: flex-end; justify-content: center; }
   .modal-overlay.open { display: flex; }
-  .modal { background: #fff; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px; padding: 24px 20px 32px; }
-  .modal h2 { text-align: center; font-size: 1.1rem; margin-bottom: 18px; }
-  .member-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; margin-bottom: 10px; background: var(--bg); border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; cursor: pointer; transition: all 0.15s; }
-  .member-btn:hover, .member-btn.selected { border-color: var(--accent); background: #fff5ee; }
-  .member-btn .micon { font-size: 1.5rem; }
-  .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
-  .btn-cancel { flex: 1; padding: 12px; border: 2px solid var(--border); border-radius: 12px; background: #fff; font-size: 0.95rem; cursor: pointer; }
-  .btn-save { flex: 2; padding: 12px; border: none; border-radius: 12px; background: var(--accent); color: #fff; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+  .modal { background: #fff; border-radius: 28px 28px 0 0; width: 100%; max-width: 480px; padding: 28px 20px 40px; text-align: center; }
+  .modal h2 { font-size: 1.2rem; margin-bottom: 16px; }
+  .modal .reward-confirm { font-size: 2.5rem; margin: 10px 0; }
+  .modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+  .modal-btns { display: flex; gap: 10px; }
+  .btn-cancel { flex: 1; padding: 14px; border: 2px solid var(--border); border-radius: 14px; background: #fff; font-size: 1rem; cursor: pointer; font-weight: 700; }
+  .btn-ok { flex: 2; padding: 14px; border: none; border-radius: 14px; background: linear-gradient(135deg, #f5a623, #f39c12); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
 
-  /* 認証 */
-  .auth-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
-  .auth-bar input { flex: 1; padding: 10px 12px; border: 2px solid var(--border); border-radius: 10px; font-size: 0.9rem; }
-  .auth-bar button { padding: 10px 16px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; }
-  .auth-ok { color: var(--accent2); font-size: 0.85rem; font-weight: 700; }
-  .auth-ng { color: #e05; font-size: 0.85rem; }
-
-  /* カレンダー */
-  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .cal-header button { background: none; border: 2px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 1rem; }
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-  .cal-dow { text-align: center; font-size: 0.72rem; font-weight: 700; color: var(--muted); padding: 4px 0; }
-  .cal-dow:first-child { color: #e05; }
-  .cal-dow:last-child { color: #57a; }
-  .cal-cell { background: #fff; border-radius: 8px; min-height: 64px; padding: 4px; cursor: pointer; transition: background 0.15s; }
-  .cal-cell:hover { background: #fff5ee; }
-  .cal-cell.empty { background: none; cursor: default; }
-  .cal-cell.today { outline: 2px solid var(--accent); }
-  .cal-day { font-size: 0.75rem; font-weight: 700; margin-bottom: 2px; }
-  .cal-logs { display: flex; flex-wrap: wrap; gap: 1px; }
-  .cal-log-icon { font-size: 0.85rem; }
-
-  /* 集計 */
-  .summary-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .summary-card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 14px; text-align: center; }
-  .summary-card .smicon { font-size: 1.8rem; }
-  .summary-card .smname { font-size: 0.8rem; color: var(--muted); margin: 4px 0; }
-  .summary-card .smval { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
-
-  /* 設定 */
-  .setting-section { margin-bottom: 20px; }
-  .setting-title { font-size: 0.85rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .setting-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .setting-row:last-child { border-bottom: none; }
-  .setting-row .sr-icon { font-size: 1.4rem; }
-  .setting-row .sr-main { flex: 1; }
-  .setting-row .sr-name { font-weight: 700; font-size: 0.95rem; }
-  .setting-row .sr-sub { font-size: 0.8rem; color: var(--muted); }
-  .toggle { width: 42px; height: 24px; background: var(--border); border-radius: 12px; cursor: pointer; position: relative; transition: background 0.2s; }
-  .toggle.on { background: var(--accent2); }
-  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left 0.2s; }
-  .toggle.on::after { left: 21px; }
-
-  /* ポイントビュー */
-  .pv-header { display: flex; gap: 10px; margin-bottom: 14px; }
-  .pv-btn { flex: 1; padding: 10px; border: 2px solid var(--border); border-radius: 10px; background: #fff; font-size: 0.9rem; cursor: pointer; font-weight: 700; text-align: center; transition: all 0.15s; }
-  .pv-btn.active { border-color: var(--accent2); background: var(--accent2); color: #fff; }
-  .balance-box { text-align: center; padding: 20px; }
-  .balance-box .bl-icon { font-size: 2.5rem; }
-  .balance-box .bl-name { font-size: 1rem; color: var(--muted); margin: 6px 0; }
-  .balance-box .bl-pts { font-size: 2.4rem; font-weight: 700; color: var(--accent); }
-  .balance-box .bl-sub { font-size: 0.82rem; color: var(--muted); }
-  .log-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .log-row:last-child { border-bottom: none; }
-  .log-row .lr-icon { font-size: 1.4rem; }
-  .log-row .lr-main { flex: 1; }
-  .log-row .lr-name { font-weight: 700; font-size: 0.9rem; }
-  .log-row .lr-sub { font-size: 0.78rem; color: var(--muted); }
-  .log-row .lr-pts { font-weight: 700; color: var(--accent); font-size: 0.95rem; }
-
-  /* rewards */
-  .reward-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .reward-row:last-child { border-bottom: none; }
-  .reward-row .rr-name { flex: 1; font-weight: 700; }
-  .reward-row .rr-pts { color: var(--accent); font-weight: 700; }
-  .rq-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .rq-row:last-child { border-bottom: none; }
-  .rq-status { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
-  .rq-status.pending { background: #fff3cd; color: #856404; }
-  .rq-status.approved { background: #d1e7dd; color: #155724; }
-  .rq-status.rejected { background: #f8d7da; color: #842029; }
-  .btn-sm { padding: 6px 14px; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
-  .btn-approve { background: var(--accent2); color: #fff; }
-  .btn-reject { background: #e05; color: #fff; margin-left: 6px; }
-
-  .loading { text-align: center; padding: 30px; color: var(--muted); }
-  .empty { text-align: center; padding: 20px; color: var(--muted); font-size: 0.9rem; }
-
-  .detail-modal { background: #fff; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px; padding: 24px 20px 40px; max-height: 70vh; overflow-y: auto; }
-  .close-btn { display: block; width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 10px; background: #fff; font-size: 0.95rem; cursor: pointer; margin-top: 16px; }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 
 <header>
-  <span style="font-size:1.5rem;">🏠</span>
-  <h1>おてつだい当番</h1>
-  <span class="today-date" id="headerDate"></span>
+  <h1>⭐ おてつだいポイント</h1>
+  <p>みんなのがんばりをチェック！</p>
 </header>
 
-<div class="tabs">
-  <div class="tab active" data-tab="today">📋 今日</div>
-  <div class="tab" data-tab="calendar">📅 カレンダー</div>
-  <div class="tab" data-tab="summary">📊 集計</div>
-  <div class="tab" data-tab="settings">⚙️ 設定</div>
-  <div class="tab" data-tab="points">⭐ ポイント</div>
-</div>
-
-<!-- ======================== 今日 ======================== -->
-<div class="page active" id="page-today">
-  <div class="auth-bar">
-    <input type="password" id="pwInput" placeholder="パスワード" />
-    <button onclick="setPassword()">✔</button>
-    <span id="pwStatus"></span>
+<div class="member-select">
+  <div class="member-tab" id="tab-mama" onclick="selectMember('mama')">
+    <div class="mt-icon">👩</div>
+    <div class="mt-name">ママ</div>
   </div>
-  <div id="todayList" class="loading">よみこみ中…</div>
-</div>
-
-<!-- ======================== カレンダー ======================== -->
-<div class="page" id="page-calendar">
-  <div class="card">
-    <div class="cal-header">
-      <button onclick="calPrev()">◀</button>
-      <strong id="calTitle"></strong>
-      <button onclick="calNext()">▶</button>
-    </div>
-    <div class="cal-grid">
-      <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
-      <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div>
-      <div class="cal-dow">土</div>
-    </div>
-    <div class="cal-grid" id="calGrid"></div>
+  <div class="member-tab" id="tab-ane" onclick="selectMember('ane')">
+    <div class="mt-icon">🌸</div>
+    <div class="mt-name">あね</div>
+  </div>
+  <div class="member-tab" id="tab-imouto" onclick="selectMember('imouto')">
+    <div class="mt-icon">🦄</div>
+    <div class="mt-name">いもうと</div>
   </div>
 </div>
 
-<!-- ======================== 集計 ======================== -->
-<div class="page" id="page-summary">
-  <div class="card">
-    <div class="cal-header">
-      <button onclick="sumPrev()">◀</button>
-      <strong id="sumTitle"></strong>
-      <button onclick="sumNext()">▶</button>
-    </div>
-  </div>
-  <div id="summaryContent" class="loading">よみこみ中…</div>
+<div class="content" id="mainContent">
+  <div class="loading">よみこみ中…</div>
 </div>
 
-<!-- ======================== 設定 ======================== -->
-<div class="page" id="page-settings">
-  <div class="card">
-    <div class="setting-section">
-      <div class="setting-title">🏡 作業リスト</div>
-      <div id="choreSettings" class="loading">よみこみ中…</div>
-    </div>
-    <div style="margin-top:12px;display:grid;gap:8px;">
-      <div style="display:flex;gap:8px;">
-        <input id="newChoreIcon" placeholder="🧹" style="width:60px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;text-align:center;font-size:1.2rem;">
-        <input id="newChoreName" placeholder="作業名（例：おさらはこび）" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
-      </div>
-      <div style="display:flex;gap:8px;">
-        <div style="flex:1;">
-          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:4px;">⭐ ポイント</div>
-          <input id="newChorePoints" type="number" placeholder="50" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
-        </div>
-        <div style="flex:1;">
-          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:4px;">💴 金額（0円でもOK）</div>
-          <input id="newChoreMoney" type="number" placeholder="0" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
-        </div>
-      </div>
-      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:10px;cursor:pointer;">
-        <input type="checkbox" id="newChoreNoRotation" style="width:18px;height:18px;accent-color:var(--accent);">
-        <span style="font-size:0.88rem;font-weight:700;">🔓 ローテーションなし（だれでもいつでもOK）</span>
-      </label>
-      <button onclick="addChore()" style="padding:10px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">＋ 作業を追加</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="setting-section">
-      <div class="setting-title">🔄 ローテーション</div>
-      <div id="rotationSettings" class="loading">よみこみ中…</div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="setting-section">
-      <div class="setting-title">🎁 ごほうびリスト</div>
-      <div id="rewardSettings" class="loading">よみこみ中…</div>
-    </div>
-    <div style="margin-top:12px;display:grid;gap:8px;">
-      <div style="display:flex;gap:8px;">
-        <input id="newRewardName" placeholder="ごほうび名" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
-        <input id="newRewardPts" type="number" placeholder="pt" style="width:80px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
-      </div>
-      <input id="newRewardImg" placeholder="画像URL（例: https://cetus.fun/kids-app/kanriapp/points/ice.jpg）" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.82rem;">
-      <button onclick="addReward()" style="padding:8px 14px;background:var(--accent2);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">追加</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="setting-section">
-      <div class="setting-title">💸 ママ銀行連携</div>
-      <div id="bankPending"></div>
-      <button onclick="loadBankPending()" style="margin-top:8px;padding:10px 18px;border:2px solid var(--border);border-radius:10px;background:#fff;font-weight:700;cursor:pointer;">🔍 未反映ログを確認する</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======================== ポイント ======================== -->
-<div class="page" id="page-points">
-  <div class="pv-header">
-    <div class="pv-btn" data-member="mama" onclick="selectPointMember('mama')">👩 ママ</div>
-    <div class="pv-btn active" data-member="ane" onclick="selectPointMember('ane')">🌸 あね</div>
-    <div class="pv-btn" data-member="imouto" onclick="selectPointMember('imouto')">🦄 いもうと</div>
-  </div>
-  <div id="pointsContent" class="loading">よみこみ中…</div>
-  <div class="card" style="margin-top:14px;">
-    <div class="setting-title">🎁 こうかんリクエスト</div>
-    <div id="rewardRequestList" class="loading">よみこみ中…</div>
-  </div>
-</div>
-
-<!-- ===== やった！モーダル ===== -->
-<div class="modal-overlay" id="yattaModal">
+<!-- こうかんモーダル -->
+<div class="modal-overlay" id="reqModal">
   <div class="modal">
-    <h2>だれがやった？ <span id="modalChoreIcon"></span></h2>
-    <div id="memberBtns"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
-      <button class="btn-save" onclick="saveComplete()">ほぞん</button>
+    <h2>こうかんしたい！</h2>
+    <div class="reward-confirm" id="reqIcon">🎁</div>
+    <div style="font-size:1.2rem;font-weight:700;margin-bottom:6px;" id="reqName"></div>
+    <p>ママにおねがいするよ。<br>ほんとうにこうかんする？</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">やめる</button>
+      <button class="btn-ok" onclick="confirmRequest()">おねがいする！</button>
     </div>
   </div>
 </div>
 
-<!-- ===== カレンダー詳細モーダル ===== -->
-<div class="modal-overlay" id="calDetailModal">
-  <div class="detail-modal">
-    <h2 id="calDetailTitle" style="text-align:center;margin-bottom:14px;"></h2>
-    <div id="calDetailContent"></div>
-    <button onclick="openPastAdd()" style="width:100%;margin-top:12px;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;">＋ おてつだいを追加</button>
-    <button class="close-btn" onclick="closeCalDetail()">とじる</button>
-  </div>
-</div>
-
-<!-- ===== 過去日付追加モーダル ===== -->
-<div class="modal-overlay" id="pastAddModal">
-  <div class="modal">
-    <h2>📅 <span id="pastAddDateLabel"></span> に追加</h2>
-    <div style="margin-bottom:14px;">
-      <div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:8px;">おてつだいを選んでね</div>
-      <div id="pastChoreSelect"></div>
-    </div>
-    <div>
-      <div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:8px;">だれがやった？</div>
-      <div id="pastMemberSelect"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closePastAdd()">キャンセル</button>
-      <button class="btn-save" onclick="savePastComplete()">ほぞん</button>
-    </div>
-  </div>
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
 const API = 'https://otetsudai-api.sslowdayss.workers.dev';
-let password = '';
-let members = [];
+let currentMember = null;
+let pendingReward = null;
+let rewards = [];
+let memberData = null;
 let chores = [];
-let currentChoreId = null;
-let selectedMember = null;
-let calYear, calMonth, sumYear, sumMonth;
 
 const today = new Date();
-const todayStr = today.toISOString().slice(0, 10);
+const monthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
 
-document.getElementById('headerDate').textContent =
-  `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
+async function init() {
+  // chore情報を先に取得（アイコン表示用）
+  try {
+    const r = await fetch(`${API}/api/chores/today`);
+    chores = await r.json();
+  } catch(e) {}
+  // 前回選択を復元
+  const saved = localStorage.getItem('otetsuday-member');
+  selectMember(saved || 'ane');
+}
 
-calYear = today.getFullYear();
-calMonth = today.getMonth() + 1;
-sumYear = today.getFullYear();
-sumMonth = today.getMonth() + 1;
+async function selectMember(id) {
+  currentMember = id;
+  localStorage.setItem('otetsuday-member', id);
 
-// ──────── パスワード ────────
-const PW_KEY = 'otetsuday_pw';
+  // タブのスタイル
+  document.getElementById('tab-mama').className = 'member-tab' + (id==='mama' ? ' active-mama' : '');
+  document.getElementById('tab-ane').className = 'member-tab' + (id==='ane' ? ' active-ane' : '');
+  document.getElementById('tab-imouto').className = 'member-tab' + (id==='imouto' ? ' active-imouto' : '');
 
-function setPassword() {
-  password = document.getElementById('pwInput').value;
-  if (password) {
-    localStorage.setItem(PW_KEY, password);
-    document.getElementById('pwInput').value = '';
-    document.getElementById('pwStatus').textContent = '🔓 セット済';
-    document.getElementById('pwStatus').className = 'auth-ok';
+  document.getElementById('mainContent').innerHTML = '<div class="loading">よみこみ中…⭐</div>';
+  await loadMemberData(id);
+  await loadRewards();
+  renderAll();
+}
+
+async function loadMemberData(id) {
+  try {
+    const r = await fetch(`${API}/api/points/member/${id}?month=${monthStr}`);
+    memberData = await r.json();
+  } catch(e) {
+    memberData = { balance: 0, total_points: 0, used_points: 0, month_points: 0, recent_logs: [] };
   }
-  loadToday();
 }
 
-// 初回ロード時にlocalStorageから復元
-(function restorePassword() {
-  const saved = localStorage.getItem(PW_KEY);
-  if (saved) {
-    password = saved;
-    document.getElementById('pwStatus').textContent = '🔓 セット済';
-    document.getElementById('pwStatus').className = 'auth-ok';
+async function loadRewards() {
+  try {
+    const r = await fetch(`${API}/api/rewards`);
+    rewards = await r.json();
+  } catch(e) {
+    rewards = [];
   }
-})();
-
-function apiHeaders() {
-  return { 'Content-Type': 'application/json', 'X-App-Password': password };
 }
 
-// ──────── タブ ────────
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('page-' + t.dataset.tab).classList.add('active');
-    if (t.dataset.tab === 'calendar') renderCalendar();
-    if (t.dataset.tab === 'summary') loadSummary();
-    if (t.dataset.tab === 'settings') loadSettings();
-    if (t.dataset.tab === 'points') loadPoints();
-  });
-});
+function renderAll() {
+  const isMama = currentMember === 'mama';
+  const isAne = currentMember === 'ane';
+  const colorClass = isMama ? 'mama-color' : isAne ? 'ane-color' : 'imouto-color';
+  const balance = memberData?.balance ?? 0;
+  const monthPts = memberData?.month_points ?? 0;
+  const usedPts = memberData?.used_points ?? 0;
 
-// ──────── メンバー読み込み ────────
-async function loadMembers() {
-  const r = await fetch(`${API}/api/members`);
-  members = await r.json();
-}
+  const html = `
+    <!-- ポイントバナー -->
+    <div class="point-banner ${colorClass}">
+      <div class="pb-stars">${isMama ? '👩💪✨' : '⭐⭐⭐'}</div>
+      <div class="pb-pts">${balance.toLocaleString()}<span class="pb-unit"> pt</span></div>
+      <div class="pb-sub">今月：${monthPts}pt${isMama ? '' : ` ／ つかった：${usedPts}pt`}</div>
+    </div>
 
-// ──────── 今日 ────────
-async function loadToday() {
-  const el = document.getElementById('todayList');
-  el.innerHTML = '<div class="loading">よみこみ中…</div>';
-  await loadMembers();
-  const r = await fetch(`${API}/api/chores/today`);
-  chores = await r.json();
-  if (!chores.length) { el.innerHTML = '<div class="empty">おてつだいがありません</div>'; return; }
-  el.innerHTML = chores.map(c => {
-    const isNoRotation = c.next_assignee === 'none' || !c.assignee;
-    return `
-    <div class="card">
-      <div class="chore-card">
-        <div class="chore-icon">${c.icon}</div>
-        <div class="chore-info">
-          <div class="chore-name">${c.name}</div>
-          <div class="chore-assignee">${isNoRotation ? '👐 だれでもOK' : '担当：' + (c.assignee ? c.assignee.icon + ' ' + c.assignee.name : '—')}</div>
-          <div class="chore-meta">
-            <span class="chore-pts">⭐ ${c.points.toLocaleString()}pt</span>
-            ${c.money > 0 ? `<span class="chore-yen">💴 ${c.money.toLocaleString()}円</span>` : ''}
-          </div>
-        </div>
-        <button class="btn-yatta" onclick="openYatta('${c.id}')">やった！</button>
+    <!-- 履歴 -->
+    <div class="section">
+      <div class="section-title">📋 さいきんのおてつだい</div>
+      <div class="card">
+        ${(memberData?.recent_logs||[]).length ? (memberData.recent_logs).map(l => {
+          const chore = chores.find(c => c.id === l.chore_id);
+          return `<div class="log-item">
+            <div class="log-icon">${chore?.icon||'📋'}</div>
+            <div class="log-main">
+              <div class="log-name">${l.chore_name}</div>
+              <div class="log-date">${l.completed_date}</div>
+            </div>
+            <div class="log-pts">+${l.points.toLocaleString()}pt</div>
+          </div>`;
+        }).join('') : `<div class="empty">${isMama ? 'まだなし' : 'まだおてつだいなし！<br>がんばろう💪'}</div>`}
       </div>
     </div>
-  `}).join('');
+
+    <!-- ごほうび（ママには表示しない） -->
+    ${isMama ? `
+    <div class="section">
+      <div class="card" style="text-align:center;padding:20px;color:var(--muted);">
+        👩 ママはいつもありがとう！<br>
+        <span style="font-size:0.85rem;">ポイントは記録されています</span>
+      </div>
+    </div>
+    ` : `
+    <div class="section">
+      <div class="section-title">🎁 ごほうびいちらん</div>
+      ${rewards.length ? rewards.map(r => {
+        const canGet = balance >= r.points;
+        const need = r.points - balance;
+        return `<div class="reward-item">
+          ${r.image_url
+            ? `<img src="${r.image_url}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;flex-shrink:0;">`
+            : `<div class="reward-icon">🎁</div>`}
+          <div class="reward-main">
+            <div class="reward-name">${r.name}</div>
+            <div class="reward-pts"><strong>${r.points.toLocaleString()}pt</strong> ひつよう</div>
+          </div>
+          <div class="reward-action">
+            ${!canGet ? `<div class="reward-need">あと${need.toLocaleString()}pt</div>` : ''}
+            ${canGet
+              ? `<button class="btn-request can" onclick="openRequest(${r.id},'${r.name}',${r.points})">こうかん！</button>`
+              : `<button class="btn-request cannot">あとすこし</button>`}
+          </div>
+        </div>`;
+      }).join('') : '<div class="empty">ごほうびなし</div>'}
+      <div style="margin-top:8px;font-size:0.78rem;color:var(--muted);text-align:center;">
+        ※こうかんはママがしょうにんしてから！
+      </div>
+    </div>
+    `}
+  `;
+  document.getElementById('mainContent').innerHTML = html;
 }
 
-// ──────── やった！モーダル ────────
-function openYatta(choreId) {
-  if (!password) { alert('先にパスワードをにゅうりょくしてください'); return; }
-  currentChoreId = choreId;
-  selectedMember = null;
-  const chore = chores.find(c => c.id === choreId);
-  document.getElementById('modalChoreIcon').textContent = chore.icon;
-  document.getElementById('memberBtns').innerHTML = members.map(m => `
-    <button class="member-btn" data-id="${m.id}" onclick="selectMember('${m.id}')">
-      <span class="micon">${m.icon}</span> ${m.name}
-    </button>
-  `).join('');
-  document.getElementById('yattaModal').classList.add('open');
-}
-
-function selectMember(id) {
-  selectedMember = id;
-  document.querySelectorAll('.member-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelector(`.member-btn[data-id="${id}"]`).classList.add('selected');
+function openRequest(id, name, pts) {
+  pendingReward = { id, name, pts };
+  document.getElementById('reqName').textContent = `${name}（${pts.toLocaleString()}pt）`;
+  document.getElementById('reqModal').classList.add('open');
 }
 
 function closeModal() {
-  document.getElementById('yattaModal').classList.remove('open');
+  document.getElementById('reqModal').classList.remove('open');
+  pendingReward = null;
 }
 
-async function saveComplete() {
-  if (!selectedMember) { alert('だれがやったか えらんでください'); return; }
-  const body = { chore_id: currentChoreId, completed_by: selectedMember, completed_date: todayStr };
-  const r = await fetch(`${API}/api/chores/complete`, {
-    method: 'POST', headers: apiHeaders(), body: JSON.stringify(body)
-  });
-  const data = await r.json();
-  if (data.ok) {
-    closeModal();
-    alert(`ほぞんしました！ ⭐${data.log.points}pt`);
-    loadToday();
-  } else {
-    alert('エラー: ' + (data.error || '?'));
-  }
-}
-
-// ──────── カレンダー ────────
-function calPrev() { calMonth--; if (calMonth < 1) { calMonth = 12; calYear--; } renderCalendar(); }
-function calNext() { calMonth++; if (calMonth > 12) { calMonth = 1; calYear++; } renderCalendar(); }
-
-async function renderCalendar() {
-  document.getElementById('calTitle').textContent = `${calYear}年${calMonth}月`;
-  const monthStr = `${calYear}-${String(calMonth).padStart(2,'0')}`;
-  const r = await fetch(`${API}/api/chores/logs?month=${monthStr}`);
-  const logs = await r.json();
-
-  // 日付ごとにグループ
-  const byDate = {};
-  for (const l of logs) {
-    if (!byDate[l.completed_date]) byDate[l.completed_date] = [];
-    byDate[l.completed_date].push(l);
-  }
-
-  const firstDay = new Date(calYear, calMonth - 1, 1).getDay();
-  const lastDate = new Date(calYear, calMonth, 0).getDate();
-  const grid = document.getElementById('calGrid');
-  let html = '';
-  for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell empty"></div>';
-  for (let d = 1; d <= lastDate; d++) {
-    const ds = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday = ds === todayStr;
-    const dayLogs = byDate[ds] || [];
-    html += `<div class="cal-cell${isToday?' today':''}" onclick="showCalDetail('${ds}', ${JSON.stringify(dayLogs).replace(/"/g,'&quot;')})">
-      <div class="cal-day">${d}</div>
-      <div class="cal-logs">${dayLogs.map(l => {
-        const chore = chores.find(c => c.id === l.chore_id);
-        const mem = members.find(m => m.id === l.completed_by);
-        return `<span class="cal-log-icon" title="${l.chore_name}">${chore?.icon||'📋'}${mem?.icon||''}</span>`;
-      }).join('')}</div>
-    </div>`;
-  }
-  grid.innerHTML = html;
-}
-
-function showCalDetail(ds, logs) {
-  const [y, mo, d] = ds.split('-');
-  document.getElementById('calDetailTitle').textContent = `${parseInt(mo)}月${parseInt(d)}日`;
-  document.getElementById('calDetailModal').dataset.date = ds;
-  if (!logs.length) {
-    document.getElementById('calDetailContent').innerHTML = '<div class="empty">おてつだいなし</div>';
-  } else {
-    document.getElementById('calDetailContent').innerHTML = logs.map(l => {
-      const chore = chores.find(c => c.id === l.chore_id);
-      const assigned = members.find(m => m.id === l.assigned_to);
-      const completed = members.find(m => m.id === l.completed_by);
-      return `<div class="log-row">
-        <div class="lr-icon">${chore?.icon||'📋'}</div>
-        <div class="lr-main">
-          <div class="lr-name">${l.chore_name}</div>
-          <div class="lr-sub">担当：${assigned?.icon||''}${assigned?.name||l.assigned_to}　実施：${completed?.icon||''}${completed?.name||l.completed_by}</div>
-        </div>
-        <div class="lr-pts">⭐${l.points.toLocaleString()}pt</div>
-      </div>`;
-    }).join('');
-  }
-  document.getElementById('calDetailModal').classList.add('open');
-}
-
-function closeCalDetail() { document.getElementById('calDetailModal').classList.remove('open'); }
-
-// ──────── 過去日付追加 ────────
-let pastSelectedChore = null;
-let pastSelectedMember = null;
-
-function openPastAdd() {
-  if (!password) { alert('先にパスワードをセットしてください'); return; }
-  const ds = document.getElementById('calDetailModal').dataset.date;
-  const [y, mo, d] = ds.split('-');
-  document.getElementById('pastAddDateLabel').textContent = `${parseInt(mo)}月${parseInt(d)}日`;
-  document.getElementById('pastAddModal').dataset.date = ds;
-  pastSelectedChore = null;
-  pastSelectedMember = null;
-
-  // 作業一覧
-  document.getElementById('pastChoreSelect').innerHTML = chores.map(c => `
-    <button class="member-btn" data-id="${c.id}" onclick="selectPastChore('${c.id}')">
-      <span class="micon">${c.icon}</span> ${c.name}
-      <span style="font-size:0.78rem;color:var(--muted);margin-left:auto;">⭐${c.points.toLocaleString()}pt</span>
-    </button>
-  `).join('');
-
-  // メンバー一覧
-  document.getElementById('pastMemberSelect').innerHTML = members.map(m => `
-    <button class="member-btn" data-id="${m.id}" onclick="selectPastMember('${m.id}')">
-      <span class="micon">${m.icon}</span> ${m.name}
-    </button>
-  `).join('');
-
-  document.getElementById('calDetailModal').classList.remove('open');
-  document.getElementById('pastAddModal').classList.add('open');
-}
-
-function selectPastChore(id) {
-  pastSelectedChore = id;
-  document.querySelectorAll('#pastChoreSelect .member-btn').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
-}
-
-function selectPastMember(id) {
-  pastSelectedMember = id;
-  document.querySelectorAll('#pastMemberSelect .member-btn').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
-}
-
-function closePastAdd() {
-  document.getElementById('pastAddModal').classList.remove('open');
-}
-
-async function savePastComplete() {
-  if (!pastSelectedChore) { alert('おてつだいをえらんでください'); return; }
-  if (!pastSelectedMember) { alert('だれがやったか えらんでください'); return; }
-  const ds = document.getElementById('pastAddModal').dataset.date;
-  const body = { chore_id: pastSelectedChore, completed_by: pastSelectedMember, completed_date: ds };
-  const r = await fetch(`${API}/api/chores/complete`, {
-    method: 'POST', headers: apiHeaders(), body: JSON.stringify(body)
-  });
-  const data = await r.json();
-  if (data.ok) {
-    closePastAdd();
-    alert(`ほぞんしました！ ⭐${data.log.points.toLocaleString()}pt`);
-    renderCalendar();
-  } else {
-    alert('エラー: ' + (data.error || '?'));
-  }
-}
-
-// ──────── 集計 ────────
-function sumPrev() { sumMonth--; if (sumMonth < 1) { sumMonth = 12; sumYear--; } loadSummary(); }
-function sumNext() { sumMonth++; if (sumMonth > 12) { sumMonth = 1; sumYear++; } loadSummary(); }
-
-async function loadSummary() {
-  const monthStr = `${sumYear}-${String(sumMonth).padStart(2,'0')}`;
-  document.getElementById('sumTitle').textContent = `${sumYear}年${sumMonth}月`;
-  const r = await fetch(`${API}/api/chores/summary?month=${monthStr}`);
-  const data = await r.json();
-  const el = document.getElementById('summaryContent');
-  if (!data.length) { el.innerHTML = '<div class="empty">まだおてつだいがありません</div>'; return; }
-  el.innerHTML = `<div class="summary-cards">${data.map(d => `
-    <div class="summary-card">
-      <div class="smicon">${d.member?.icon||'❓'}</div>
-      <div class="smname">${d.member?.name||d.completed_by}</div>
-      <div class="smval">⭐ ${d.total_points.toLocaleString()}pt</div>
-      <div class="smval" style="font-size:0.9rem;color:var(--accent2)">💴 ${d.total_money.toLocaleString()}円</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">${d.count}回</div>
-    </div>
-  `).join('')}</div>`;
-}
-
-// ──────── 設定 ────────
-async function loadSettings() {
-  // 作業設定
-  const r1 = await fetch(`${API}/api/settings/chores`, { headers: apiHeaders() });
-  const choreList = r1.ok ? await r1.json() : [];
-  const stateR = await fetch(`${API}/api/chores/state`);
-  const states = stateR.ok ? await stateR.json() : [];
-  const stateMap = {};
-  for (const s of states) stateMap[s.chore_id] = s;
-
-  document.getElementById('choreSettings').innerHTML = choreList.map(c => `
-    <div class="setting-row">
-      <span class="sr-icon">${c.icon}</span>
-      <div class="sr-main">
-        <div class="sr-name">${c.name}</div>
-        <div class="sr-sub">⭐${c.points.toLocaleString()}pt / 💴${c.money.toLocaleString()}円</div>
-      </div>
-      <div class="toggle ${c.enabled?'on':''}" onclick="toggleChore('${c.id}',${c.enabled}, ${JSON.stringify(c).replace(/"/g,'&quot;')})"></div>
-    </div>
-  `).join('') || '<div class="empty">なし</div>';
-
-  document.getElementById('rotationSettings').innerHTML = choreList.map(c => {
-    const s = stateMap[c.id];
-    if (!s) return '';
-    return `<div class="setting-row">
-      <span class="sr-icon">${c.icon}</span>
-      <div class="sr-main">
-        <div class="sr-name">${c.name}</div>
-        <div class="sr-sub">次：${members.find(m=>m.id===s.next_assignee)?.icon||''}${s.next_assignee}　順：${s.rotation_order}</div>
-      </div>
-    </div>`;
-  }).join('') || '<div class="empty">なし</div>';
-
-  // ごほうび
-  const r2 = await fetch(`${API}/api/settings/rewards`, { headers: apiHeaders() });
-  const rewardList = r2.ok ? await r2.json() : [];
-  document.getElementById('rewardSettings').innerHTML = rewardList.map(r => `
-    <div class="reward-row" style="flex-direction:column;align-items:stretch;gap:8px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        ${r.image_url ? `<img src="${r.image_url}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);">` : `<div style="width:48px;height:48px;border-radius:10px;background:var(--bg);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🎁</div>`}
-        <span class="rr-name">${r.name}</span>
-        <span class="rr-pts">⭐${r.points.toLocaleString()}pt</span>
-        <div class="toggle ${r.enabled?'on':''}" onclick="toggleReward(${r.id},${r.enabled},${JSON.stringify(r).replace(/"/g,'&quot;')})"></div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input id="imgurl-${r.id}" value="${r.image_url||''}" placeholder="画像URL" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;">
-        <button onclick="saveRewardImage(${r.id},${JSON.stringify(r).replace(/"/g,'&quot;')})" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">保存</button>
-      </div>
-    </div>
-  `).join('') || '<div class="empty">なし</div>';
-}
-
-async function toggleChore(id, currentEnabled, choreObj) {
-  const updated = { ...choreObj, enabled: currentEnabled ? 0 : 1 };
-  await fetch(`${API}/api/settings/chores/${id}`, {
-    method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated)
-  });
-  loadSettings();
-}
-
-async function addChore() {
-  const icon = document.getElementById('newChoreIcon').value.trim() || '📋';
-  const name = document.getElementById('newChoreName').value.trim();
-  const points = parseInt(document.getElementById('newChorePoints').value) || 0;
-  const money = parseInt(document.getElementById('newChoreMoney').value) || 0;
-  const noRotation = document.getElementById('newChoreNoRotation').checked;
-  if (!name) { alert('作業名をにゅうりょくしてください'); return; }
-  if (!points) { alert('ポイントをにゅうりょくしてください'); return; }
-
-  const id = 'chore_' + Date.now();
-
-  const r = await fetch(`${API}/api/settings/chores`, {
-    method: 'POST', headers: apiHeaders(),
-    body: JSON.stringify({ id, name, icon, points, money, no_rotation: noRotation })
-  });
-  const data = await r.json();
-  if (data.ok) {
-    document.getElementById('newChoreIcon').value = '';
-    document.getElementById('newChoreName').value = '';
-    document.getElementById('newChorePoints').value = '';
-    document.getElementById('newChoreMoney').value = '';
-    document.getElementById('newChoreNoRotation').checked = false;
-    loadSettings();
-    loadToday();
-  } else {
-    alert('エラー: ' + (data.error || '?'));
-  }
-}
-
-async function saveRewardImage(id, rewardObj) {
-  const image_url = document.getElementById(`imgurl-${id}`).value.trim();
-  const updated = { ...rewardObj, image_url: image_url || null };
-  await fetch(`${API}/api/settings/rewards/${id}`, {
-    method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated)
-  });
-  loadSettings();
-}
-
-async function toggleReward(id, currentEnabled, rewardObj) {
-  const updated = { ...rewardObj, enabled: currentEnabled ? 0 : 1 };
-  await fetch(`${API}/api/settings/rewards/${id}`, {
-    method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated)
-  });
-  loadSettings();
-}
-
-async function addReward() {
-  const name = document.getElementById('newRewardName').value.trim();
-  const pts = parseInt(document.getElementById('newRewardPts').value);
-  const image_url = document.getElementById('newRewardImg').value.trim();
-  if (!name || !pts) return;
-  await fetch(`${API}/api/settings/rewards`, {
-    method: 'POST', headers: apiHeaders(), body: JSON.stringify({ name, points: pts, image_url: image_url || null })
-  });
-  document.getElementById('newRewardName').value = '';
-  document.getElementById('newRewardPts').value = '';
-  document.getElementById('newRewardImg').value = '';
-  loadSettings();
-}
-
-// ──────── ママ銀行連携 ────────
-const MAMA_BANK_API = 'https://api.cetus.fun/api';
-const MAMA_BANK_KEYS = ['mama-bank', 'mama-bank-view'];
-
-// completed_by → ママ銀行の口座キー（mama は加算しない）
-const MEMBER_TO_ACCOUNT = { ane: 'usagi', imouto: 'kuma' };
-
-async function loadBankPending() {
-  const el = document.getElementById('bankPending');
-  el.innerHTML = '<div class="empty">よみこみ中…</div>';
-  if (!password) { el.innerHTML = '<div class="empty">先にパスワードをセットしてください</div>'; return; }
-
-  const r = await fetch(`${API}/api/bank/pending`, { headers: apiHeaders() });
-  if (!r.ok) { el.innerHTML = '<div class="empty">認証エラー：パスワードを確認してください</div>'; return; }
-  const logs = await r.json();
-
-  // mama は対象外
-  const targets = logs.filter(l => MEMBER_TO_ACCOUNT[l.completed_by]);
-
-  if (!targets.length) {
-    el.innerHTML = '<div class="empty">ママ銀行に反映するログがありません</div>';
-    return;
-  }
-
-  const total = targets.reduce((s, l) => s + l.money, 0);
-  const aneTotal = targets.filter(l => l.completed_by === 'ane').reduce((s, l) => s + l.money, 0);
-  const imoutoTotal = targets.filter(l => l.completed_by === 'imouto').reduce((s, l) => s + l.money, 0);
-
-  el.innerHTML = `
-    <div style="background:#fff8f0;border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;">
-      <div style="font-weight:700;margin-bottom:6px;">📋 反映予定 ${targets.length}件 / 合計 ${total}円</div>
-      ${aneTotal > 0 ? `<div style="font-size:0.85rem;">🌸 あね → 🐰 うさぎ口座 ＋${aneTotal}円</div>` : ''}
-      ${imoutoTotal > 0 ? `<div style="font-size:0.85rem;">🦄 いもうと → 🦄 ユニコーン口座 ＋${imoutoTotal}円</div>` : ''}
-    </div>
-    ${targets.map(l => `
-      <div class="log-row">
-        <div class="lr-main">
-          <div class="lr-name">${l.chore_name}</div>
-          <div class="lr-sub">${l.completed_date} / ${l.completed_by === 'ane' ? '🌸→🐰' : '🦄→🦄'}</div>
-        </div>
-        <div class="lr-pts">💴${l.money.toLocaleString()}円</div>
-      </div>`).join('')}
-    <button onclick="syncBankToMamaBank()" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#ffb347,#e8834a);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;">
-      🏦 ママ銀行に反映する
-    </button>
-  `;
-
-  // グローバルに保持して syncBankToMamaBank() で使う
-  window._bankPendingLogs = targets;
-}
-
-async function syncBankToMamaBank() {
-  const logs = window._bankPendingLogs;
-  if (!logs || !logs.length) return;
-
-  const total = logs.reduce((s, l) => s + l.money, 0);
-  const aneTotal = logs.filter(l => l.completed_by === 'ane').reduce((s, l) => s + l.money, 0);
-  const imoutoTotal = logs.filter(l => l.completed_by === 'imouto').reduce((s, l) => s + l.money, 0);
-
-  const msg = [
-    `以下の内容をママ銀行に反映します。`,
-    aneTotal > 0 ? `🌸 あね → 🐰 うさぎ口座 ＋${aneTotal}円` : '',
-    imoutoTotal > 0 ? `🦄 いもうと → 🦄 ユニコーン口座 ＋${imoutoTotal}円` : '',
-    `合計 ${total}円 / ${logs.length}件`,
-    `よろしいですか？`
-  ].filter(Boolean).join('\n');
-
-  if (!confirm(msg)) return;
-
-  const el = document.getElementById('bankPending');
-  el.innerHTML = '<div class="empty">ママ銀行データ取得中…</div>';
-
+async function confirmRequest() {
+  if (!pendingReward || !currentMember) return;
+  closeModal();
   try {
-    // ① ママ銀行の app-data を取得
-    const mamaData = await fetchMamaBankData();
-    if (!mamaData) {
-      el.innerHTML = '<div class="empty" style="color:#e05">ママ銀行データの取得に失敗しました。ママ銀行アプリを一度開いて保存してから試してください。</div>';
-      return;
-    }
-
-    // ② 残高・履歴を更新
-    const balances = mamaData.balances || { usagi: 0, kuma: 0 };
-    const history = Array.isArray(mamaData.history) ? mamaData.history : [];
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
-
-    for (const log of logs) {
-      const acc = MEMBER_TO_ACCOUNT[log.completed_by];
-      if (!acc) continue;
-      balances[acc] = Number(balances[acc] || 0) + Number(log.money);
-      history.push({
-        acc,
-        type: 'deposit',
-        amount: log.money,
-        memo: `おてつだい：${log.chore_name}`,
-        date: `${dateStr} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
-      });
-    }
-
-    // ③ app-data に書き戻し
-    const updatedData = { ...mamaData, balances, history, savedAt: new Date().toISOString() };
-    const saved = await saveMamaBankData(updatedData);
-    if (!saved) {
-      el.innerHTML = '<div class="empty" style="color:#e05">ママ銀行への保存に失敗しました。ログは変更していません。</div>';
-      return;
-    }
-
-    // ④ D1の bank_synced を更新
-    const ids = logs.map(l => l.id);
-    await fetch(`${API}/api/bank/sync`, {
-      method: 'POST', headers: apiHeaders(), body: JSON.stringify({ ids })
+    const r = await fetch(`${API}/api/rewards/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ member_id: currentMember, reward_id: pendingReward.id })
     });
-
-    el.innerHTML = `<div class="empty" style="color:var(--accent2);font-weight:700;">✅ ママ銀行に反映しました！<br>うさぎ口座 ＋${aneTotal}円 / ユニコーン口座 ＋${imoutoTotal}円</div>`;
-    window._bankPendingLogs = [];
-
-  } catch (e) {
-    console.error(e);
-    el.innerHTML = `<div class="empty" style="color:#e05">エラーが発生しました：${e.message}</div>`;
+    const data = await r.json();
+    showToast(data.message || 'リクエストしました！');
+  } catch(e) {
+    showToast('エラーがおきたよ…もういちどためしてね');
   }
 }
 
-// ママ銀行 app-data 取得（複数キー・複数URLを試す）
-async function fetchMamaBankData() {
-  const readPatterns = key => [
-    `${MAMA_BANK_API}/app-data?key=${encodeURIComponent(key)}`,
-    `${MAMA_BANK_API}/app-data?app=${encodeURIComponent(key)}`,
-    `${MAMA_BANK_API}/app-data/${encodeURIComponent(key)}`,
-  ];
-  for (const key of MAMA_BANK_KEYS) {
-    for (const url of readPatterns(key)) {
-      try {
-        const r = await fetch(url, { headers: apiHeaders(), cache: 'no-store' });
-        if (!r.ok) continue;
-        const raw = await r.json();
-        const unwrapped = unwrapMamaBankData(raw);
-        if (unwrapped && unwrapped.balances) return unwrapped;
-      } catch(e) { console.warn('mama-bank fetch failed', url, e.message); }
-    }
-  }
-  return null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ママ銀行 app-data 保存（複数パターンを試す）
-async function saveMamaBankData(payload) {
-  const writeTargets = key => [
-    { url: `${MAMA_BANK_API}/app-data`, method: 'POST', body: { key, data: payload } },
-    { url: `${MAMA_BANK_API}/app-data`, method: 'POST', body: { app: key, data: payload } },
-    { url: `${MAMA_BANK_API}/app-data`, method: 'POST', body: { key, value: payload } },
-    { url: `${MAMA_BANK_API}/app-data/${encodeURIComponent(key)}`, method: 'PUT', body: payload },
-    { url: `${MAMA_BANK_API}/app-data/${encodeURIComponent(key)}`, method: 'POST', body: payload },
-  ];
-  for (const key of MAMA_BANK_KEYS) {
-    for (const t of writeTargets(key)) {
-      try {
-        const r = await fetch(t.url, {
-          method: t.method,
-          headers: apiHeaders(),
-          body: JSON.stringify(t.body)
-        });
-        if (r.ok) return true;
-      } catch(e) { console.warn('mama-bank save failed', t.url, e.message); }
-    }
-  }
-  return false;
-}
-
-// ネストされたデータを掘り起こす（ママ銀行と同じロジック）
-function unwrapMamaBankData(data) {
-  if (!data) return null;
-  if (typeof data === 'string') { try { return unwrapMamaBankData(JSON.parse(data)); } catch { return null; } }
-  if (data.balances) return data;
-  for (const key of ['data', 'value', 'payload', 'record']) {
-    if (data[key]) { const u = unwrapMamaBankData(data[key]); if (u && u.balances) return u; }
-  }
-  return null;
-}
-
-// ──────── ポイントビュー ────────
-let currentPointMember = 'ane';
-function selectPointMember(id) {
-  currentPointMember = id;
-  document.querySelectorAll('.pv-btn').forEach(b => b.classList.toggle('active', b.dataset.member === id));
-  loadPoints();
-}
-
-async function loadPoints() {
-  const el = document.getElementById('pointsContent');
-  const monthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  const r = await fetch(`${API}/api/points/member/${currentPointMember}?month=${monthStr}`);
-  const data = await r.json();
-  const mem = members.find(m => m.id === currentPointMember);
-
-  el.innerHTML = `
-    <div class="card">
-      <div class="balance-box">
-        <div class="bl-icon">${mem?.icon||'⭐'}</div>
-        <div class="bl-name">${mem?.name||currentPointMember}</div>
-        <div class="bl-pts">${data.balance.toLocaleString()} pt</div>
-        <div class="bl-sub">今月：⭐${data.month_points||0}pt　つかった：${data.used_points}pt</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="setting-title">📋 さいきんのおてつだい</div>
-      ${data.recent_logs.length ? data.recent_logs.map(l => {
-        const chore = chores.find(c => c.id === l.chore_id);
-        return `<div class="log-row">
-          <div class="lr-icon">${chore?.icon||'📋'}</div>
-          <div class="lr-main">
-            <div class="lr-name">${l.chore_name}</div>
-            <div class="lr-sub">${l.completed_date}</div>
-          </div>
-          <div class="lr-pts">+${l.points.toLocaleString()}pt</div>
-        </div>`;
-      }).join('') : '<div class="empty">まだなし</div>'}
-    </div>
-  `;
-
-  // ごほうびリクエスト一覧（ママには表示しない）
-  const reqCard = document.querySelector('#page-points .card:last-of-type');
-  if (currentPointMember === 'mama') {
-    if (reqCard) reqCard.style.display = 'none';
-    return;
-  }
-  if (reqCard) reqCard.style.display = '';
-  const rl = await fetch(`${API}/api/rewards/requests`, { headers: apiHeaders() });
-  if (rl.ok) {
-    const rqs = await rl.json();
-    const myRqs = rqs.filter(r => r.member_id === currentPointMember);
-    document.getElementById('rewardRequestList').innerHTML = myRqs.length ? myRqs.map(r => `
-      <div class="rq-row">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <strong>${r.reward_name}</strong>
-          <span class="rq-status ${r.status}">${{pending:'待ち',approved:'承認',rejected:'NG'}[r.status]||r.status}</span>
-          <span style="font-size:0.8rem;color:var(--muted)">${r.requested_at?.slice(0,10)}</span>
-          <span style="color:var(--accent);font-weight:700">⭐${r.points_cost.toLocaleString()}pt</span>
-        </div>
-        ${r.status==='pending' ? `<div style="margin-top:6px"><button class="btn-sm btn-approve" onclick="resolveRequest(${r.id},'approved')">✔ 承認</button><button class="btn-sm btn-reject" onclick="resolveRequest(${r.id},'rejected')">✘ NG</button></div>` : ''}
-      </div>
-    `).join('') : '<div class="empty">リクエストなし</div>';
-  } else {
-    document.getElementById('rewardRequestList').innerHTML = '<div class="empty">（認証必要）</div>';
-  }
-}
-
-async function resolveRequest(id, status) {
-  await fetch(`${API}/api/rewards/resolve`, {
-    method: 'POST', headers: apiHeaders(), body: JSON.stringify({ id, status })
-  });
-  loadPoints();
-}
-
-// 初期ロード
-loadMembers().then(loadToday);
+init();
 </script>
 </body>
 </html>

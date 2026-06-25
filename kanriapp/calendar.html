@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="家族カレンダー">
 <meta name="theme-color" content="#5b8dee">
 <link rel="manifest" href="/kanriapp/manifest.json">
-<link rel="apple-touch-icon" href="/kanriapp/calendar-icon-192.png">
+<link rel="apple-touch-icon" href="/kanriapp/calendar.png">
 <title>家族カレンダー</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -1573,7 +1573,7 @@ async function scheduleNotifications() {
     } else {
       // フォールバック：通常のsetTimeout
       const timer = setTimeout(() => {
-        new Notification(title, { body, icon: '/kanriapp/calendar-icon-192.png' });
+        new Notification(title, { body, icon: '/kanriapp/calendar.png' });
       }, diff);
       notifyTimers.push(timer);
     }

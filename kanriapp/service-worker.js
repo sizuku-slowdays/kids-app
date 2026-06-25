@@ -1,6 +1,6 @@
 const CACHE_NAME = 'family-calendar-v1';
 const ASSETS = [
-  '/kids-app/calendar.html',
+  '/kanriapp/calendar.html',
 ];
 
 // インストール時にキャッシュ
@@ -41,9 +41,9 @@ self.addEventListener('push', event => {
   const title = data.title || '家族カレンダー';
   const options = {
     body: data.body || '',
-    icon: '/kids-app/calendar-icon-192.png',
-    badge: '/kids-app/calendar-icon-192.png',
-    data: { url: data.url || '/kids-app/calendar.html' },
+    icon: '/kanriapp/calendar-icon-192.png',
+    badge: '/kanriapp/calendar-icon-192.png',
+    data: { url: data.url || '/kanriapp/calendar.html' },
     vibrate: [200, 100, 200],
   };
   event.waitUntil(self.registration.showNotification(title, options));
@@ -71,8 +71,8 @@ self.addEventListener('message', event => {
     setTimeout(() => {
       self.registration.showNotification(title, {
         body,
-        icon: '/kids-app/calendar-icon-192.png',
-        badge: '/kids-app/calendar-icon-192.png',
+        icon: '/kanriapp/calendar-icon-192.png',
+        badge: '/kanriapp/calendar-icon-192.png',
         vibrate: [200, 100, 200],
       });
     }, delay);

@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家族カレンダー">
 <meta name="theme-color" content="#5b8dee">
-<link rel="manifest" href="/kids-app/manifest.json">
-<link rel="apple-touch-icon" href="/kids-app/calendar-icon-192.png">
+<link rel="manifest" href="/kanriapp/manifest.json">
+<link rel="apple-touch-icon" href="/kanriapp/calendar-icon-192.png">
 <title>家族カレンダー</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -565,7 +565,7 @@ async function api(path, method = 'GET', body = null) {
 window.onload = () => {
   // Service Worker登録
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/kids-app/service-worker.js')
+    navigator.serviceWorker.register('/kanriapp/service-worker.js')
       .then(reg => console.log('SW registered:', reg.scope))
       .catch(err => console.warn('SW registration failed:', err));
   }
@@ -1573,7 +1573,7 @@ async function scheduleNotifications() {
     } else {
       // フォールバック：通常のsetTimeout
       const timer = setTimeout(() => {
-        new Notification(title, { body, icon: '/kids-app/calendar-icon-192.png' });
+        new Notification(title, { body, icon: '/kanriapp/calendar-icon-192.png' });
       }, diff);
       notifyTimers.push(timer);
     }

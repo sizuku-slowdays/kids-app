@@ -265,7 +265,27 @@
   <div class="detail-modal">
     <h2 id="calDetailTitle" style="text-align:center;margin-bottom:14px;"></h2>
     <div id="calDetailContent"></div>
+    <button onclick="openPastAdd()" style="width:100%;margin-top:12px;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;">＋ おてつだいを追加</button>
     <button class="close-btn" onclick="closeCalDetail()">とじる</button>
+  </div>
+</div>
+
+<!-- ===== 過去日付追加モーダル ===== -->
+<div class="modal-overlay" id="pastAddModal">
+  <div class="modal">
+    <h2>📅 <span id="pastAddDateLabel"></span> に追加</h2>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:8px;">おてつだいを選んでね</div>
+      <div id="pastChoreSelect"></div>
+    </div>
+    <div>
+      <div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:8px;">だれがやった？</div>
+      <div id="pastMemberSelect"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePastAdd()">キャンセル</button>
+      <button class="btn-save" onclick="savePastComplete()">ほぞん</button>
+    </div>
   </div>
 </div>
 
@@ -290,13 +310,28 @@ sumYear = today.getFullYear();
 sumMonth = today.getMonth() + 1;
 
 // ──────── パスワード ────────
+const PW_KEY = 'otetsuday_pw';
+
 function setPassword() {
   password = document.getElementById('pwInput').value;
-  document.getElementById('pwInput').value = '';
-  document.getElementById('pwStatus').textContent = password ? '🔓 セット済' : '';
-  document.getElementById('pwStatus').className = 'auth-ok';
+  if (password) {
+    localStorage.setItem(PW_KEY, password);
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwStatus').textContent = '🔓 セット済';
+    document.getElementById('pwStatus').className = 'auth-ok';
+  }
   loadToday();
 }
+
+// 初回ロード時にlocalStorageから復元
+(function restorePassword() {
+  const saved = localStorage.getItem(PW_KEY);
+  if (saved) {
+    password = saved;
+    document.getElementById('pwStatus').textContent = '🔓 セット済';
+    document.getElementById('pwStatus').className = 'auth-ok';
+  }
+})();
 
 function apiHeaders() {
   return { 'Content-Type': 'application/json', 'X-App-Password': password };
@@ -430,6 +465,7 @@ async function renderCalendar() {
 function showCalDetail(ds, logs) {
   const [y, mo, d] = ds.split('-');
   document.getElementById('calDetailTitle').textContent = `${parseInt(mo)}月${parseInt(d)}日`;
+  document.getElementById('calDetailModal').dataset.date = ds;
   if (!logs.length) {
     document.getElementById('calDetailContent').innerHTML = '<div class="empty">おてつだいなし</div>';
   } else {
@@ -451,6 +487,70 @@ function showCalDetail(ds, logs) {
 }
 
 function closeCalDetail() { document.getElementById('calDetailModal').classList.remove('open'); }
+
+// ──────── 過去日付追加 ────────
+let pastSelectedChore = null;
+let pastSelectedMember = null;
+
+function openPastAdd() {
+  if (!password) { alert('先にパスワードをセットしてください'); return; }
+  const ds = document.getElementById('calDetailModal').dataset.date;
+  const [y, mo, d] = ds.split('-');
+  document.getElementById('pastAddDateLabel').textContent = `${parseInt(mo)}月${parseInt(d)}日`;
+  document.getElementById('pastAddModal').dataset.date = ds;
+  pastSelectedChore = null;
+  pastSelectedMember = null;
+
+  // 作業一覧
+  document.getElementById('pastChoreSelect').innerHTML = chores.map(c => `
+    <button class="member-btn" data-id="${c.id}" onclick="selectPastChore('${c.id}')">
+      <span class="micon">${c.icon}</span> ${c.name}
+      <span style="font-size:0.78rem;color:var(--muted);margin-left:auto;">⭐${c.points.toLocaleString()}pt</span>
+    </button>
+  `).join('');
+
+  // メンバー一覧
+  document.getElementById('pastMemberSelect').innerHTML = members.map(m => `
+    <button class="member-btn" data-id="${m.id}" onclick="selectPastMember('${m.id}')">
+      <span class="micon">${m.icon}</span> ${m.name}
+    </button>
+  `).join('');
+
+  document.getElementById('calDetailModal').classList.remove('open');
+  document.getElementById('pastAddModal').classList.add('open');
+}
+
+function selectPastChore(id) {
+  pastSelectedChore = id;
+  document.querySelectorAll('#pastChoreSelect .member-btn').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
+}
+
+function selectPastMember(id) {
+  pastSelectedMember = id;
+  document.querySelectorAll('#pastMemberSelect .member-btn').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
+}
+
+function closePastAdd() {
+  document.getElementById('pastAddModal').classList.remove('open');
+}
+
+async function savePastComplete() {
+  if (!pastSelectedChore) { alert('おてつだいをえらんでください'); return; }
+  if (!pastSelectedMember) { alert('だれがやったか えらんでください'); return; }
+  const ds = document.getElementById('pastAddModal').dataset.date;
+  const body = { chore_id: pastSelectedChore, completed_by: pastSelectedMember, completed_date: ds };
+  const r = await fetch(`${API}/api/chores/complete`, {
+    method: 'POST', headers: apiHeaders(), body: JSON.stringify(body)
+  });
+  const data = await r.json();
+  if (data.ok) {
+    closePastAdd();
+    alert(`ほぞんしました！ ⭐${data.log.points.toLocaleString()}pt`);
+    renderCalendar();
+  } else {
+    alert('エラー: ' + (data.error || '?'));
+  }
+}
 
 // ──────── 集計 ────────
 function sumPrev() { sumMonth--; if (sumMonth < 1) { sumMonth = 12; sumYear--; } loadSummary(); }

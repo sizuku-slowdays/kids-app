@@ -41,8 +41,8 @@ self.addEventListener('push', event => {
   const title = data.title || '家族カレンダー';
   const options = {
     body: data.body || '',
-    icon: '/kanriapp/calendar-icon-192.png',
-    badge: '/kanriapp/calendar-icon-192.png',
+    icon: '/kanriapp/calendar.png',
+    badge: '/kanriapp/calendar.png',
     data: { url: data.url || '/kanriapp/calendar.html' },
     vibrate: [200, 100, 200],
   };
@@ -71,8 +71,8 @@ self.addEventListener('message', event => {
     setTimeout(() => {
       self.registration.showNotification(title, {
         body,
-        icon: '/kanriapp/calendar-icon-192.png',
-        badge: '/kanriapp/calendar-icon-192.png',
+        icon: '/kanriapp/calendar.png',
+        badge: '/kanriapp/calendar.png',
         vibrate: [200, 100, 200],
       });
     }, delay);

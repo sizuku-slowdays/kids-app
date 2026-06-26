@@ -470,7 +470,7 @@ async function doLogin() {
   const btn = document.getElementById('login-btn');
   btn.disabled = true; btn.textContent = '確認中…';
   try {
-    const data = await api('POST', '/api/login', { username: selectedUser, password: pw });
+    const data = await api('POST', '/karada/login', { username: selectedUser, password: pw });
     saveAuth(data.token, data.user);
     state.token = data.token;
     state.user = data.user;

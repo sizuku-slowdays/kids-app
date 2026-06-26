@@ -157,8 +157,15 @@
   <span class="today-date" id="headerDate"></span>
 </header>
 
+<!-- 承認待ちバナー -->
+<div id="pendingBanner" style="display:none;background:linear-gradient(135deg,#f5a623,#e8834a);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;" onclick="showTab('points', {target: document.querySelector('[data-tab=points]')})">
+  <span id="pendingBannerText" style="font-weight:700;font-size:0.9rem;">🎁 こうかんしんせいがあります</span>
+  <span style="font-size:0.8rem;opacity:0.9;">タップして確認 →</span>
+</div>
+
 <div class="tabs">
   <div class="tab active" data-tab="today">📋 今日</div>
+  <div class="tab" data-tab="anytime">✨ いつでも</div>
   <div class="tab" data-tab="calendar">📅 カレンダー</div>
   <div class="tab" data-tab="summary">📊 集計</div>
   <div class="tab" data-tab="settings">⚙️ 設定</div>
@@ -173,8 +180,11 @@
     <span id="pwStatus"></span>
   </div>
   <div id="todayList" class="loading">よみこみ中…</div>
+</div>
 
-  <!-- 一回限りおてつだい -->
+<!-- ======================== いつでも ======================== -->
+<div class="page" id="page-anytime">
+  <div id="anytimeList" class="loading">よみこみ中…</div>
   <div class="card" style="margin-top:4px;">
     <div class="setting-title" style="margin-bottom:10px;">✨ 一回限りのおてつだい</div>
     <div style="display:grid;gap:8px;">
@@ -369,6 +379,7 @@ function setPassword() {
     document.getElementById('pwInput').value = '';
     document.getElementById('pwStatus').textContent = '🔓 セット済';
     document.getElementById('pwStatus').className = 'auth-ok';
+    checkPendingBanner();
   }
   loadToday();
 }
@@ -394,12 +405,45 @@ document.querySelectorAll('.tab').forEach(t => {
     document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById('page-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'anytime') loadAnytime();
     if (t.dataset.tab === 'calendar') renderCalendar();
     if (t.dataset.tab === 'summary') loadSummary();
     if (t.dataset.tab === 'settings') loadSettings();
     if (t.dataset.tab === 'points') loadPoints();
   });
 });
+
+// ──────── いつでもタブ ────────
+async function loadAnytime() {
+  const el = document.getElementById('anytimeList');
+  el.innerHTML = '<div class="loading">よみこみ中…</div>';
+  await loadMembers();
+  const r = await fetch(`${API}/api/chores/today`);
+  const allChores = await r.json();
+  const anytimeChores = allChores.filter(c => c.no_rotation);
+  if (!anytimeChores.length) {
+    el.innerHTML = '<div class="empty" style="padding:16px;">いつでもおてつだいはまだないよ<br>↓から追加してね</div>';
+    return;
+  }
+  el.innerHTML = anytimeChores.map(c => `
+    <div class="card">
+      <div class="chore-card">
+        <div class="chore-icon">${c.icon}</div>
+        <div class="chore-info">
+          <div class="chore-name">${c.name}</div>
+          <div class="chore-assignee">👐 だれでもOK・何回でもOK</div>
+          <div class="chore-meta">
+            <span class="chore-pts">⭐ ${c.points.toLocaleString()}pt</span>
+            ${c.money > 0 ? `<span class="chore-yen">💴 ${c.money.toLocaleString()}円</span>` : ''}
+          </div>
+        </div>
+        <button class="btn-yatta" onclick="openYatta('${c.id}')">やった！</button>
+      </div>
+    </div>
+  `).join('');
+  // いつでもタブ用にchoresを更新
+  chores = allChores;
+}
 
 // ──────── メンバー読み込み ────────
 async function loadMembers() {
@@ -415,15 +459,14 @@ async function loadToday() {
   const r = await fetch(`${API}/api/chores/today`);
   chores = await r.json();
   if (!chores.length) { el.innerHTML = '<div class="empty">おてつだいがありません</div>'; return; }
-  el.innerHTML = chores.map(c => {
-    const isNoRotation = c.next_assignee === 'none' || !c.assignee;
+  el.innerHTML = chores.filter(c => !c.no_rotation).map(c => {
     return `
     <div class="card">
       <div class="chore-card">
         <div class="chore-icon">${c.icon}</div>
         <div class="chore-info">
           <div class="chore-name">${c.name}</div>
-          <div class="chore-assignee">${isNoRotation ? '👐 だれでもOK' : '担当：' + (c.assignee ? c.assignee.icon + ' ' + c.assignee.name : '—')}</div>
+          <div class="chore-assignee">担当：${c.assignee ? c.assignee.icon + ' ' + c.assignee.name : '—'}</div>
           <div class="chore-meta">
             <span class="chore-pts">⭐ ${c.points.toLocaleString()}pt</span>
             ${c.money > 0 ? `<span class="chore-yen">💴 ${c.money.toLocaleString()}円</span>` : ''}
@@ -433,6 +476,9 @@ async function loadToday() {
       </div>
     </div>
   `}).join('');
+  if (!document.getElementById('todayList').innerHTML.trim()) {
+    el.innerHTML = '<div class="empty">ローテーション作業がありません</div>';
+  }
 }
 
 // ──────── 一回限りおてつだい ────────
@@ -702,9 +748,10 @@ async function loadSettings() {
       <span class="sr-icon">${c.icon}</span>
       <div class="sr-main">
         <div class="sr-name">${c.name}</div>
-        <div class="sr-sub">⭐${c.points.toLocaleString()}pt / 💴${c.money.toLocaleString()}円</div>
+        <div class="sr-sub">⭐${c.points.toLocaleString()}pt / 💴${c.money.toLocaleString()}円${stateMap[c.id]?.rotation_order==='none' ? ' / 🔓いつでも' : ''}</div>
       </div>
       <div class="toggle ${c.enabled?'on':''}" onclick="toggleChore('${c.id}',${c.enabled}, ${JSON.stringify(c).replace(/"/g,'&quot;')})"></div>
+      <button onclick="deleteChore('${c.id}','${c.name}')" style="padding:5px 10px;background:#fff0f2;border:1.5px solid #f5c0c8;border-radius:8px;color:#e05;font-size:0.78rem;font-weight:700;cursor:pointer;flex-shrink:0;">削除</button>
     </div>
   `).join('') || '<div class="empty">なし</div>';
 
@@ -727,16 +774,40 @@ async function loadSettings() {
     <div class="reward-row" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div style="display:flex;align-items:center;gap:10px;">
         ${r.image_url ? `<img src="${r.image_url}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);">` : `<div style="width:48px;height:48px;border-radius:10px;background:var(--bg);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🎁</div>`}
-        <span class="rr-name">${r.name}</span>
-        <span class="rr-pts">⭐${r.points.toLocaleString()}pt</span>
+        <div style="flex:1;">
+          <div style="font-weight:700;">${r.name}</div>
+          <div style="font-size:0.78rem;color:var(--muted);">⭐${r.points.toLocaleString()}pt　在庫：${r.stock === null || r.stock === undefined ? '無制限' : r.stock + '個'}</div>
+        </div>
         <div class="toggle ${r.enabled?'on':''}" onclick="toggleReward(${r.id},${r.enabled},${JSON.stringify(r).replace(/"/g,'&quot;')})"></div>
+        <button onclick="deleteReward(${r.id},'${r.name}')" style="padding:5px 10px;background:#fff0f2;border:1.5px solid #f5c0c8;border-radius:8px;color:#e05;font-size:0.78rem;font-weight:700;cursor:pointer;flex-shrink:0;">削除</button>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input id="imgurl-${r.id}" value="${r.image_url||''}" placeholder="画像URL" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;">
-        <button onclick="saveRewardImage(${r.id},${JSON.stringify(r).replace(/"/g,'&quot;')})" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">保存</button>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
+        <input id="imgurl-${r.id}" value="${r.image_url||''}" placeholder="画像URL" style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:0.78rem;white-space:nowrap;color:var(--muted);">在庫</span>
+          <input id="stock-${r.id}" type="number" value="${r.stock ?? ''}" placeholder="無制限" min="0" style="width:70px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;">
+          <button onclick="saveRewardSettings(${r.id},${JSON.stringify(r).replace(/"/g,'&quot;')})" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">保存</button>
+        </div>
       </div>
     </div>
   `).join('') || '<div class="empty">なし</div>';
+}
+
+async function deleteChore(id, name) {
+  if (!confirm(`「${name}」を削除しますか？\nログは残ります。`)) return;
+  await fetch(`${API}/api/settings/chores/${id}`, {
+    method: 'DELETE', headers: apiHeaders()
+  });
+  loadSettings();
+  loadToday();
+}
+
+async function deleteReward(id, name) {
+  if (!confirm(`「${name}」を削除しますか？`)) return;
+  await fetch(`${API}/api/settings/rewards/${id}`, {
+    method: 'DELETE', headers: apiHeaders()
+  });
+  loadSettings();
 }
 
 async function toggleChore(id, currentEnabled, choreObj) {
@@ -776,9 +847,11 @@ async function addChore() {
   }
 }
 
-async function saveRewardImage(id, rewardObj) {
+async function saveRewardSettings(id, rewardObj) {
   const image_url = document.getElementById(`imgurl-${id}`).value.trim();
-  const updated = { ...rewardObj, image_url: image_url || null };
+  const stockVal = document.getElementById(`stock-${id}`).value.trim();
+  const stock = stockVal === '' ? null : parseInt(stockVal);
+  const updated = { ...rewardObj, image_url: image_url || null, stock };
   await fetch(`${API}/api/settings/rewards/${id}`, {
     method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated)
   });
@@ -1057,10 +1130,28 @@ async function resolveRequest(id, status) {
     method: 'POST', headers: apiHeaders(), body: JSON.stringify({ id, status })
   });
   loadPoints();
+  checkPendingBanner();
+}
+
+// ──────── 承認待ちバナー ────────
+async function checkPendingBanner() {
+  if (!password) return;
+  try {
+    const r = await fetch(`${API}/api/rewards/pending-count`, { headers: apiHeaders() });
+    if (!r.ok) return;
+    const data = await r.json();
+    const banner = document.getElementById('pendingBanner');
+    if (data.count > 0) {
+      document.getElementById('pendingBannerText').textContent = `🎁 こうかんしんせいが ${data.count}件 あります`;
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch(e) {}
 }
 
 // 初期ロード
-loadMembers().then(loadToday);
+loadMembers().then(() => { loadToday(); checkPendingBanner(); });
 </script>
 </body>
 </html>

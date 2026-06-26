@@ -186,8 +186,15 @@ async function loadMemberData(id) {
   try {
     const r = await fetch(`${API}/api/points/member/${id}?month=${monthStr}`);
     memberData = await r.json();
+    // 申請中（pending）のごほうびを取得して仮引き計算用に追加
+    const rq = await fetch(`${API}/api/rewards/member-pending?member_id=${id}`);
+    if (rq.ok) {
+      const pdata = await rq.json();
+      memberData.pending_points = pdata.pending_points ?? 0;
+      memberData.pending_rewards = pdata.reward_ids ?? [];
+    }
   } catch(e) {
-    memberData = { balance: 0, total_points: 0, used_points: 0, month_points: 0, recent_logs: [] };
+    memberData = { balance: 0, total_points: 0, used_points: 0, month_points: 0, recent_logs: [], pending_points: 0, pending_rewards: [] };
   }
 }
 
@@ -246,20 +253,35 @@ function renderAll() {
     <div class="section">
       <div class="section-title">🎁 ごほうびいちらん</div>
       ${rewards.length ? rewards.map(r => {
-        const canGet = balance >= r.points;
-        const need = r.points - balance;
+        // 申請中のポイントも仮引き（pending分を残高から引く）
+        const pendingPts = (memberData?.pending_points ?? 0);
+        const effectiveBalance = balance - pendingPts;
+        const outOfStock = r.stock !== null && r.stock !== undefined && r.stock <= 0;
+        const isPending = (memberData?.pending_rewards ?? []).includes(r.id);
+        const canGet = !outOfStock && !isPending && effectiveBalance >= r.points;
+        const need = r.points - effectiveBalance;
+        const stockLabel = r.stock === null || r.stock === undefined
+          ? '' : r.stock <= 0
+          ? '<span style="color:#e05;font-size:0.75rem;font-weight:700;">在庫なし</span>'
+          : `<span style="color:var(--muted);font-size:0.75rem;">在庫${r.stock}個</span>`;
         return `<div class="reward-item">
           ${r.image_url
             ? `<img src="${r.image_url}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;flex-shrink:0;">`
             : `<div class="reward-icon">🎁</div>`}
           <div class="reward-main">
             <div class="reward-name">${r.name}</div>
-            <div class="reward-pts"><strong>${r.points.toLocaleString()}pt</strong> ひつよう</div>
+            <div class="reward-pts"><strong>${r.points.toLocaleString()}pt</strong> ひつよう ${stockLabel}</div>
           </div>
           <div class="reward-action">
-            ${!canGet ? `<div class="reward-need">あと${need.toLocaleString()}pt</div>` : ''}
-            ${canGet
-              ? `<button class="btn-request can" onclick="openRequest(${r.id},'${r.name}',${r.points})">こうかん！</button>`
+            ${isPending ? '<div class="reward-need" style="color:var(--star);">しんせいちゅう</div>' :
+              outOfStock ? '' :
+              !canGet ? `<div class="reward-need">あと${need.toLocaleString()}pt</div>` : ''}
+            ${isPending
+              ? `<button class="btn-request cannot">まってね</button>`
+              : outOfStock
+              ? `<button class="btn-request cannot">在庫なし</button>`
+              : canGet
+              ? `<button class="btn-request can" data-id="${r.id}" data-name="${r.name.replace(/"/g,'&quot;')}" data-pts="${r.points}" onclick="openRequestFromBtn(this)">こうかん！</button>`
               : `<button class="btn-request cannot">あとすこし</button>`}
           </div>
         </div>`;
@@ -271,6 +293,13 @@ function renderAll() {
     `}
   `;
   document.getElementById('mainContent').innerHTML = html;
+}
+
+function openRequestFromBtn(btn) {
+  const id = parseInt(btn.dataset.id);
+  const name = btn.dataset.name;
+  const pts = parseInt(btn.dataset.pts);
+  openRequest(id, name, pts);
 }
 
 function openRequest(id, name, pts) {
@@ -294,7 +323,14 @@ async function confirmRequest() {
       body: JSON.stringify({ member_id: currentMember, reward_id: pendingReward.id })
     });
     const data = await r.json();
-    showToast(data.message || 'リクエストしました！');
+    if (data.ok) {
+      showToast(`🎁 ママにおねがいしたよ！しょうにんまってね`);
+      await loadMemberData(currentMember);
+      await loadRewards();
+      renderAll();
+    } else {
+      showToast(data.error || 'エラーがおきたよ…もういちどためしてね');
+    }
   } catch(e) {
     showToast('エラーがおきたよ…もういちどためしてね');
   }

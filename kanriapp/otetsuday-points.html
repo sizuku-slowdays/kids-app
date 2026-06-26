@@ -315,12 +315,13 @@ function closeModal() {
 
 async function confirmRequest() {
   if (!pendingReward || !currentMember) return;
+  const reward = { ...pendingReward }; // closeModal前に保存
   closeModal();
   try {
     const r = await fetch(`${API}/api/rewards/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ member_id: currentMember, reward_id: pendingReward.id })
+      body: JSON.stringify({ member_id: currentMember, reward_id: reward.id })
     });
     const data = await r.json();
     if (data.ok) {
@@ -329,10 +330,10 @@ async function confirmRequest() {
       await loadRewards();
       renderAll();
     } else {
-      showToast(data.error || 'エラー：' + JSON.stringify(data));
+      showToast(data.error || 'エラーがおきたよ…もういちどためしてね');
     }
   } catch(e) {
-    showToast('エラー：' + e.message);
+    showToast('エラーがおきたよ…もういちどためしてね');
   }
 }
 

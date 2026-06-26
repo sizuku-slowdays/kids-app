@@ -329,10 +329,10 @@ async function confirmRequest() {
       await loadRewards();
       renderAll();
     } else {
-      showToast(data.error || 'エラーがおきたよ…もういちどためしてね');
+      showToast(data.error || 'エラー：' + JSON.stringify(data));
     }
   } catch(e) {
-    showToast('エラーがおきたよ…もういちどためしてね');
+    showToast('エラー：' + e.message);
   }
 }
 

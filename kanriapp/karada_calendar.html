@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>からだカレンダー</title>
+<meta name="theme-color" content="#F7A8C4">
+<style>
+/* ══════════════════════════════════
+   トークン
+══════════════════════════════════ */
+:root {
+  --pink:    #F7A8C4;
+  --pink-d:  #E87FA8;
+  --pink-l:  #FDE8F1;
+  --lav:     #C8B4E8;
+  --lav-d:   #A98ED4;
+  --lav-l:   #EDE5FA;
+  --mint:    #A8DDD1;
+  --mint-d:  #7AC8B8;
+  --mint-l:  #DFF5F1;
+  --peach:   #FDDAC4;
+  --yellow:  #FFF0B3;
+  --red-w:   #FDECEA;
+  --text:    #3D2B4A;
+  --text-m:  #7A6589;
+  --bg:      #FDF6FB;
+  --card:    #FFFFFF;
+  --border:  #F0E0F0;
+  --radius:  18px;
+  --shadow:  0 2px 12px rgba(180,100,180,.10);
+  --font:    'Hiragino Maru Gothic ProN','Hiragino Sans',Meiryo,sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
+button { font-family: var(--font); cursor: pointer; border: none; }
+input, textarea, select { font-family: var(--font); font-size: 1rem; }
+
+/* ══════════════════════════════════
+   レイアウト
+══════════════════════════════════ */
+#app { display: flex; flex-direction: column; height: 100%; max-width: 480px; margin: 0 auto; }
+#header {
+  background: linear-gradient(135deg, var(--pink) 0%, var(--lav) 100%);
+  padding: 14px 18px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(200,120,200,.18);
+  position: sticky; top: 0; z-index: 100;
+}
+#header h1 { font-size: 1.15rem; font-weight: 700; color: #fff; letter-spacing: .05em; }
+#header .user-badge {
+  background: rgba(255,255,255,.35); border-radius: 20px; padding: 4px 12px;
+  font-size: .8rem; color: #fff; font-weight: 600;
+}
+#content { flex: 1; overflow-y: auto; padding: 14px 14px 80px; }
+#nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: #fff; border-top: 1.5px solid var(--border);
+  display: flex; justify-content: space-around;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  z-index: 100; box-shadow: 0 -2px 12px rgba(180,100,180,.08);
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; color: var(--text-m); font-size: .68rem; padding: 4px 8px;
+  border-radius: 12px; transition: all .2s;
+}
+.nav-btn .icon { font-size: 1.5rem; line-height: 1; }
+.nav-btn.active { color: var(--pink-d); }
+.nav-btn.active .icon { filter: drop-shadow(0 0 4px var(--pink)); }
+
+/* ══════════════════════════════════
+   カード
+══════════════════════════════════ */
+.card {
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 16px; margin-bottom: 12px;
+}
+.card-title {
+  font-size: .75rem; font-weight: 700; letter-spacing: .1em;
+  color: var(--text-m); text-transform: uppercase; margin-bottom: 10px;
+}
+.section-label {
+  font-size: .7rem; color: var(--text-m); margin-bottom: 4px; font-weight: 600;
+}
+
+/* ══════════════════════════════════
+   ボタン
+══════════════════════════════════ */
+.btn {
+  border-radius: 50px; font-weight: 700; font-size: 1rem;
+  padding: 12px 24px; display: inline-flex; align-items: center;
+  justify-content: center; gap: 6px; transition: all .18s;
+  min-height: 48px;
+}
+.btn-primary { background: linear-gradient(135deg,var(--pink) 0%,var(--lav) 100%); color: #fff; }
+.btn-primary:active { opacity: .85; transform: scale(.97); }
+.btn-mint { background: var(--mint); color: var(--text); }
+.btn-ghost { background: var(--pink-l); color: var(--pink-d); }
+.btn-sm { font-size: .85rem; padding: 8px 16px; min-height: 36px; }
+.btn-block { width: 100%; }
+.btn-danger { background: #FDECEA; color: #D32F2F; }
+
+/* ══════════════════════════════════
+   フォーム
+══════════════════════════════════ */
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: .85rem; font-weight: 600; color: var(--text-m); margin-bottom: 6px; }
+.form-input {
+  width: 100%; border: 2px solid var(--border); border-radius: 12px;
+  padding: 10px 14px; font-size: 1rem; background: var(--bg);
+  transition: border .18s;
+}
+.form-input:focus { outline: none; border-color: var(--lav); }
+textarea.form-input { resize: vertical; min-height: 72px; }
+
+/* チップ選択 */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border-radius: 50px; padding: 8px 16px; font-size: .88rem; font-weight: 600;
+  background: var(--bg); border: 2px solid var(--border); color: var(--text-m);
+  cursor: pointer; transition: all .15s;
+}
+.chip.selected { background: var(--lav-l); border-color: var(--lav-d); color: var(--lav-d); }
+.chip.pink.selected { background: var(--pink-l); border-color: var(--pink-d); color: var(--pink-d); }
+.chip.mint.selected { background: var(--mint-l); border-color: var(--mint-d); color: var(--mint-d); }
+
+/* ══════════════════════════════════
+   ホーム — 大きい数字
+══════════════════════════════════ */
+.stat-big {
+  text-align: center; padding: 8px 0;
+}
+.stat-big .num { font-size: 3rem; font-weight: 800; color: var(--pink-d); line-height: 1; }
+.stat-big .unit { font-size: .9rem; color: var(--text-m); margin-top: 2px; }
+.stat-row { display: flex; gap: 10px; }
+.stat-card {
+  flex: 1; background: var(--pink-l); border-radius: 14px; padding: 12px;
+  text-align: center;
+}
+.stat-card.lav { background: var(--lav-l); }
+.stat-card.mint { background: var(--mint-l); }
+.stat-val { font-size: 1.6rem; font-weight: 800; color: var(--pink-d); }
+.stat-card.lav .stat-val { color: var(--lav-d); }
+.stat-card.mint .stat-val { color: var(--mint-d); }
+.stat-lbl { font-size: .72rem; color: var(--text-m); margin-top: 2px; }
+
+/* アラートバナー */
+.banner {
+  border-radius: 14px; padding: 12px 16px; font-size: .9rem; font-weight: 600;
+  margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start;
+}
+.banner.warn { background: var(--yellow); color: #6B5900; }
+.banner.info { background: var(--lav-l); color: var(--lav-d); }
+.banner.alert { background: var(--red-w); color: #C62828; }
+.banner.good { background: var(--mint-l); color: var(--mint-d); }
+
+/* 予定ライン */
+.predict-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px dashed var(--border);
+  font-size: .9rem;
+}
+.predict-row:last-child { border-bottom: none; }
+.predict-label { color: var(--text-m); font-size: .8rem; }
+.predict-date { font-weight: 700; color: var(--text); }
+
+/* ══════════════════════════════════
+   カレンダー
+══════════════════════════════════ */
+.cal-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.cal-nav { background: var(--pink-l); border: none; border-radius: 50%; width: 36px; height: 36px;
+  font-size: 1.2rem; color: var(--pink-d); display: flex; align-items: center; justify-content: center; }
+.cal-title { font-size: 1.1rem; font-weight: 700; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+.cal-dow {
+  text-align: center; font-size: .7rem; font-weight: 700;
+  color: var(--text-m); padding: 4px 0;
+}
+.cal-dow:first-child { color: #E87FA8; }
+.cal-dow:last-child  { color: #7A9BD4; }
+.cal-day {
+  aspect-ratio: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; border-radius: 10px;
+  font-size: .88rem; position: relative; cursor: pointer;
+  transition: background .15s;
+}
+.cal-day:hover { background: var(--pink-l); }
+.cal-day.other-month { color: #CCC; }
+.cal-day.today { font-weight: 800; border: 2px solid var(--pink-d); }
+.cal-day.period { background: var(--pink-l); color: var(--pink-d); font-weight: 700; }
+.cal-day.period-start { background: var(--pink-d); color: #fff; border-radius: 10px 10px 10px 10px; }
+.cal-day.period-end   { background: var(--pink);   color: #fff; }
+.cal-day.predict { background: var(--lav-l); color: var(--lav-d); }
+.cal-day.warning { background: var(--peach); }
+.cal-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--lav-d);
+  position: absolute; bottom: 3px; }
+
+/* ══════════════════════════════════
+   記録リスト
+══════════════════════════════════ */
+.record-item {
+  background: var(--card); border-radius: 14px; padding: 14px 16px;
+  margin-bottom: 10px; box-shadow: var(--shadow);
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.record-date-block { min-width: 52px; text-align: center; }
+.record-month { font-size: .7rem; color: var(--text-m); }
+.record-day { font-size: 1.6rem; font-weight: 800; color: var(--pink-d); line-height: 1; }
+.record-detail { flex: 1; }
+.record-range { font-size: .8rem; color: var(--text-m); margin-bottom: 4px; }
+.record-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.record-chip {
+  font-size: .72rem; padding: 3px 9px; border-radius: 50px;
+  background: var(--lav-l); color: var(--lav-d); font-weight: 600;
+}
+.record-chip.pink { background: var(--pink-l); color: var(--pink-d); }
+.record-chip.mint { background: var(--mint-l); color: var(--mint-d); }
+.record-memo { font-size: .82rem; color: var(--text-m); margin-top: 6px; font-style: italic; }
+.record-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ══════════════════════════════════
+   リクエスト・在庫
+══════════════════════════════════ */
+.request-urgency {
+  border-radius: 8px; padding: 4px 10px; font-size: .78rem; font-weight: 700; display: inline-block;
+}
+.urgency-sometime { background: var(--mint-l); color: var(--mint-d); }
+.urgency-soon     { background: var(--yellow); color: #6B5900; }
+.urgency-today    { background: var(--red-w); color: #C62828; }
+
+.inv-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.inv-row:last-child { border-bottom: none; }
+.inv-name { font-size: .95rem; font-weight: 600; }
+.inv-qty  { font-size: 1.1rem; font-weight: 800; color: var(--lav-d); }
+.inv-low  { color: #E53935 !important; }
+.inv-badge-low { background: var(--red-w); color: #C62828; border-radius: 8px; padding: 2px 8px; font-size: .7rem; font-weight: 700; }
+
+/* ══════════════════════════════════
+   ログイン
+══════════════════════════════════ */
+#login-screen {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 24px;
+  background: linear-gradient(160deg, var(--pink-l) 0%, var(--lav-l) 50%, var(--mint-l) 100%);
+}
+.login-logo { font-size: 3.5rem; margin-bottom: 8px; }
+.login-title { font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.login-sub { font-size: .85rem; color: var(--text-m); margin-bottom: 32px; }
+.user-select { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; }
+.user-btn {
+  flex: 1; min-width: 100px; background: #fff; border: 3px solid var(--border);
+  border-radius: 18px; padding: 16px 12px; text-align: center;
+  font-size: 1rem; font-weight: 700; color: var(--text-m); transition: all .2s;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.user-btn .user-icon { font-size: 2rem; }
+.user-btn.selected { border-color: var(--pink-d); color: var(--pink-d); background: var(--pink-l); }
+.login-box { width: 100%; max-width: 320px; }
+
+/* セットアップ */
+#setup-screen {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 24px;
+  background: linear-gradient(160deg, var(--pink-l) 0%, var(--lav-l) 100%);
+}
+
+/* ══════════════════════════════════
+   スピナー
+══════════════════════════════════ */
+.spinner {
+  width: 32px; height: 32px; border: 3px solid var(--lav-l);
+  border-top-color: var(--lav-d); border-radius: 50%;
+  animation: spin .7s linear infinite; margin: 32px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* モーダル */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(60,20,80,.35);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 200; padding-bottom: 0;
+}
+.modal {
+  background: #fff; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px;
+  padding: 20px 20px max(20px,env(safe-area-inset-bottom));
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.hidden { display: none !important; }
+.mt8 { margin-top: 8px; }
+.mt12 { margin-top: 12px; }
+.mb4 { margin-bottom: 4px; }
+.row { display: flex; gap: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <div class="login-logo">🌸</div>
+  <div class="login-title">からだカレンダー</div>
+  <div class="login-sub">家族だけの、からだメモ帳</div>
+
+  <div class="user-select" id="user-select">
+    <button class="user-btn" data-user="mama">
+      <span class="user-icon">👩</span>ママ
+    </button>
+    <button class="user-btn" data-user="child1">
+      <span class="user-icon">🌷</span>こ①
+    </button>
+    <button class="user-btn" data-user="child2">
+      <span class="user-icon">🌸</span>こ②
+    </button>
+  </div>
+
+  <div class="login-box" id="login-form-wrap">
+    <div class="form-group">
+      <label>パスワード</label>
+      <input type="password" id="pw-input" class="form-input" placeholder="パスワードを入力" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-block" id="login-btn">ログイン 🌸</button>
+    <div id="login-error" class="hidden" style="color:#E53935;text-align:center;margin-top:10px;font-size:.9rem;"></div>
+  </div>
+</div>
+
+<!-- 初回セットアップ画面 -->
+<div id="setup-screen" class="hidden">
+  <div class="login-logo">🔑</div>
+  <div class="login-title" style="margin-bottom:8px;">はじめての設定</div>
+  <div class="login-sub" style="margin-bottom:24px;">パスワードを決めてね</div>
+  <div style="width:100%;max-width:320px;">
+    <div class="form-group">
+      <label>ユーザー</label>
+      <select id="setup-user" class="form-input">
+        <option value="mama">ママ</option>
+        <option value="child1">こ①</option>
+        <option value="child2">こ②</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>パスワード（4文字以上）</label>
+      <input type="password" id="setup-pw" class="form-input" placeholder="パスワード" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label>確認</label>
+      <input type="password" id="setup-pw2" class="form-input" placeholder="もう一度" autocomplete="new-password">
+    </div>
+    <button class="btn btn-primary btn-block" id="setup-btn">設定する</button>
+    <div id="setup-error" style="color:#E53935;text-align:center;margin-top:10px;font-size:.9rem;"></div>
+    <button class="btn btn-ghost btn-block mt8" id="setup-back-btn">ログインに戻る</button>
+  </div>
+</div>
+
+<!-- メインアプリ -->
+<div id="app" class="hidden">
+  <div id="header">
+    <h1>🌸 からだカレンダー</h1>
+    <span class="user-badge" id="user-badge"></span>
+  </div>
+  <div id="content"></div>
+  <nav id="nav"></nav>
+</div>
+
+<!-- モーダル（記録入力・編集） -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script>
+// ══════════════════════════════════
+// 設定
+// ══════════════════════════════════
+const API = 'https://karada-calendar-api.YOUR_SUBDOMAIN.workers.dev'; // ← デプロイ後に変更
+const STORAGE_KEY = 'karada_auth';
+
+// ══════════════════════════════════
+// 状態
+// ══════════════════════════════════
+let state = {
+  token: null,
+  user: null,   // { id, username, displayName, role }
+  tab: 'home',
+  records: [],
+  predict: null,
+  requests: [],
+  inventory: [],
+  favorites: [],
+  allUsers: [],
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  editingRecord: null,
+};
+
+// ══════════════════════════════════
+// API ヘルパー
+// ══════════════════════════════════
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (state.token) opts.headers['Authorization'] = 'Bearer ' + state.token;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.status);
+  return data;
+}
+
+// ══════════════════════════════════
+// SHA-256（ブラウザ）
+// ══════════════════════════════════
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ══════════════════════════════════
+// 日付ユーティリティ
+// ══════════════════════════════════
+const fmtDate = d => {
+  if (!d) return '';
+  const dt = typeof d === 'string' ? new Date(d) : d;
+  return `${dt.getMonth()+1}月${dt.getDate()}日`;
+};
+const today = () => new Date().toISOString().slice(0,10);
+const daysBetween = (a, b) => Math.round((new Date(b)-new Date(a))/86400000);
+
+// ══════════════════════════════════
+// ローカルストレージ認証
+// ══════════════════════════════════
+function saveAuth(token, user) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ token, user }));
+}
+function loadAuth() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+}
+function clearAuth() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// ══════════════════════════════════
+// ログイン
+// ══════════════════════════════════
+let selectedUser = null;
+
+document.querySelectorAll('.user-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedUser = btn.dataset.user;
+    document.getElementById('pw-input').focus();
+  });
+});
+
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('pw-input').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+
+async function doLogin() {
+  if (!selectedUser) { showLoginError('ユーザーを選んでね！'); return; }
+  const pw = document.getElementById('pw-input').value;
+  if (!pw) { showLoginError('パスワードを入力してね！'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = '確認中…';
+  try {
+    const data = await api('POST', '/api/login', { username: selectedUser, password: pw });
+    saveAuth(data.token, data.user);
+    state.token = data.token;
+    state.user = data.user;
+    showApp();
+  } catch(e) {
+    if (e.message.includes('already set') || e.message.includes('パスワード')) {
+      showLoginError(e.message);
+    } else {
+      showLoginError('パスワードが違うかも。もう一度試してね！');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = 'ログイン 🌸';
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.classList.remove('hidden');
+}
+
+// セットアップ
+document.getElementById('setup-btn').addEventListener('click', async () => {
+  const username = document.getElementById('setup-user').value;
+  const pw  = document.getElementById('setup-pw').value;
+  const pw2 = document.getElementById('setup-pw2').value;
+  const errEl = document.getElementById('setup-error');
+  if (pw.length < 4) { errEl.textContent = '4文字以上にしてね'; return; }
+  if (pw !== pw2) { errEl.textContent = 'パスワードが一致しないよ'; return; }
+  try {
+    await api('POST', '/api/setup', { username, password: pw });
+    errEl.textContent = '';
+    alert(`${username} のパスワードを設定したよ！ログインしてね。`);
+    showLoginScreen();
+  } catch(e) {
+    errEl.textContent = e.message.includes('already set') ? 'すでに設定済みです' : e.message;
+  }
+});
+document.getElementById('setup-back-btn').addEventListener('click', showLoginScreen);
+
+function showLoginScreen() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const saved = loadAuth();
+  if (saved?.token && saved?.user) {
+    state.token = saved.token;
+    state.user = saved.user;
+    // サーバー確認
+    try {
+      const me = await api('GET', '/api/me');
+      state.user = { id: me.id, username: me.username, displayName: me.displayName, role: me.role };
+      saveAuth(state.token, state.user);
+      showApp();
+    } catch {
+      clearAuth();
+      showLoginScreen();
+    }
+  } else {
+    showLoginScreen();
+  }
+});
+
+// ══════════════════════════════════
+// アプリ表示
+// ══════════════════════════════════
+function showApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+
+  document.getElementById('user-badge').textContent = state.user.displayName;
+
+  // ナビ構築
+  buildNav();
+  loadData().then(() => renderTab(state.tab));
+}
+
+function buildNav() {
+  const tabs = [
+    { id:'home',    icon:'🏠', label:'ホーム' },
+    { id:'calendar',icon:'📅', label:'カレンダー' },
+    { id:'records', icon:'📝', label:'きろく' },
+    { id:'request', icon:'💌', label:'おねがい' },
+    { id:'favorites',icon:'⭐', label:'メモ' },
+  ];
+  if (state.user.role === 'mama') {
+    tabs.push({ id:'mama', icon:'👩', label:'管理' });
+  }
+  document.getElementById('nav').innerHTML = tabs.map(t =>
+    `<button class="nav-btn${state.tab===t.id?' active':''}" data-tab="${t.id}">
+      <span class="icon">${t.icon}</span>${t.label}
+    </button>`
+  ).join('');
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.tab = btn.dataset.tab;
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderTab(state.tab);
+    });
+  });
+}
+
+async function loadData() {
+  try {
+    const [records, predict, inventory, favorites] = await Promise.all([
+      api('GET', '/api/records'),
+      api('GET', '/api/predict'),
+      api('GET', '/api/inventory'),
+      api('GET', '/api/favorites'),
+    ]);
+    state.records = records;
+    state.predict = predict;
+    state.inventory = inventory;
+    state.favorites = favorites;
+
+    if (state.user.role === 'mama') {
+      const [requests, allUsers] = await Promise.all([
+        api('GET', '/api/requests'),
+        api('GET', '/api/users'),
+      ]);
+      state.requests = requests;
+      state.allUsers = allUsers;
+    }
+  } catch(e) {
+    console.error('loadData', e);
+  }
+}
+
+function renderTab(tab) {
+  const content = document.getElementById('content');
+  switch(tab) {
+    case 'home':     content.innerHTML = renderHome(); break;
+    case 'calendar': content.innerHTML = renderCalendar(); bindCalendarEvents(); break;
+    case 'records':  content.innerHTML = renderRecords(); bindRecordEvents(); break;
+    case 'request':  content.innerHTML = renderRequest(); bindRequestEvents(); break;
+    case 'favorites':content.innerHTML = renderFavorites(); bindFavEvents(); break;
+    case 'mama':     content.innerHTML = renderMama(); bindMamaEvents(); break;
+  }
+}
+
+// ══════════════════════════════════
+// ホーム
+// ══════════════════════════════════
+function renderHome() {
+  const p = state.predict;
+  const isMama = state.user.role === 'mama';
+  let html = '';
+
+  if (!p?.hasData) {
+    html += `
+      <div class="banner info">📝 まだきろくがないよ。はじめてのきろくをしてみよう！</div>
+      <button class="btn btn-primary btn-block" id="add-record-home">きろくを追加する ✏️</button>
+    `;
+    return html;
+  }
+
+  // 前回情報
+  const lastRec = state.records[0];
+  html += `
+    <div class="card">
+      <div class="card-title">📊 じょうたい</div>
+      <div class="stat-big">
+        <div class="num">${p.daysSince}</div>
+        <div class="unit">日前にはじまった</div>
+      </div>
+      <div class="stat-row mt12">
+        <div class="stat-card lav">
+          <div class="stat-val">${p.avgCycle}</div>
+          <div class="stat-lbl">平均周期（日）</div>
+        </div>
+        <div class="stat-card mint">
+          <div class="stat-val">${p.avgDuration}</div>
+          <div class="stat-lbl">平均日数</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // アラート
+  if (p.delayed) {
+    html += `<div class="banner alert">⚠️ 前回から${p.daysSince}日たってるよ。いつもより遅いかも。体調に変化があればメモしておこう！</div>`;
+  }
+  if (p.irregular) {
+    html += `<div class="banner warn">📈 周期がちょっとバラバラかも。気になるときはメモに残しておこう。</div>`;
+  }
+
+  // 次回予定
+  html += `
+    <div class="card">
+      <div class="card-title">🔮 つぎの予定</div>
+      <div class="predict-row">
+        <span class="predict-label">つぎの予定</span>
+        <span class="predict-date">${fmtDate(p.nextStart)}ごろ</span>
+      </div>
+      <div class="predict-row">
+        <span class="predict-label">体調が変わりやすい時期</span>
+        <span class="predict-date">${fmtDate(p.warningStart)}〜${fmtDate(p.warningEnd)}</span>
+      </div>
+  `;
+  if (isMama) {
+    html += `
+      <div class="predict-row">
+        <span class="predict-label">排卵日の目安</span>
+        <span class="predict-date">${fmtDate(p.ovulation)}ごろ</span>
+      </div>
+    `;
+  }
+  html += `</div>`;
+
+  // プール・旅行メモ
+  const poolStart = new Date(p.nextEnd);
+  poolStart.setDate(poolStart.getDate() + 3);
+  const poolEnd = new Date(p.nextStart);
+  poolEnd.setDate(poolEnd.getDate() - 5);
+  html += `
+    <div class="banner good">🏊 プール・旅行の予定に向いてる時期：${fmtDate(poolStart)}〜${fmtDate(poolEnd)}ごろ</div>
+  `;
+
+  html += `
+    <button class="btn btn-primary btn-block mt8" id="add-record-home">きろくを追加する ✏️</button>
+  `;
+
+  setTimeout(() => {
+    document.getElementById('add-record-home')?.addEventListener('click', openRecordModal);
+  }, 0);
+  return html;
+}
+
+// ══════════════════════════════════
+// カレンダー
+// ══════════════════════════════════
+function renderCalendar() {
+  const year = state.calYear;
+  const month = state.calMonth;
+  const dows = ['日','月','火','水','木','金','土'];
+
+  // 生理期間セット
+  const periodDays = new Set();
+  const predictDays = new Set();
+  const memodays = new Set();
+
+  state.records.forEach(r => {
+    if (!r.start_date) return;
+    const s = new Date(r.start_date);
+    const e = r.end_date ? new Date(r.end_date) : new Date(r.start_date);
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+      periodDays.add(d.toISOString().slice(0,10));
+    }
+    if (r.memo) memodays.add(r.start_date);
+  });
+
+  if (state.predict?.hasData) {
+    const s = new Date(state.predict.nextStart);
+    const e = new Date(state.predict.nextEnd);
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+      predictDays.add(d.toISOString().slice(0,10));
+    }
+  }
+
+  const first = new Date(year, month, 1);
+  const last  = new Date(year, month+1, 0);
+  const startDow = first.getDay();
+  const todayStr = today();
+
+  let html = `
+    <div class="card">
+      <div class="cal-header">
+        <button class="cal-nav" id="cal-prev">‹</button>
+        <span class="cal-title">${year}年${month+1}月</span>
+        <button class="cal-nav" id="cal-next">›</button>
+      </div>
+      <div class="cal-grid">
+        ${dows.map(d=>`<div class="cal-dow">${d}</div>`).join('')}
+  `;
+
+  // 空白
+  for (let i=0; i<startDow; i++) html += `<div class="cal-day other-month"></div>`;
+  // 日付
+  for (let d=1; d<=last.getDate(); d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let cls = 'cal-day';
+    if (ds === todayStr) cls += ' today';
+    if (periodDays.has(ds)) cls += ' period';
+    if (predictDays.has(ds)) cls += ' predict';
+    if (memodays.has(ds)) cls += ' has-memo';
+    html += `<div class="${cls}" data-date="${ds}">${d}${memodays.has(ds)?'<span class="cal-dot"></span>':''}</div>`;
+  }
+
+  html += `</div></div>`;
+
+  // 凡例
+  html += `
+    <div class="card">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:5px;font-size:.8rem;">
+          <div style="width:14px;height:14px;border-radius:4px;background:var(--pink-l);"></div>生理中
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:.8rem;">
+          <div style="width:14px;height:14px;border-radius:4px;background:var(--lav-l);"></div>つぎの予測
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:.8rem;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--lav-d);"></div>メモあり
+        </div>
+      </div>
+    </div>
+  `;
+  return html;
+}
+
+function bindCalendarEvents() {
+  document.getElementById('cal-prev')?.addEventListener('click', () => {
+    if (state.calMonth === 0) { state.calYear--; state.calMonth = 11; }
+    else state.calMonth--;
+    document.getElementById('content').innerHTML = renderCalendar();
+    bindCalendarEvents();
+  });
+  document.getElementById('cal-next')?.addEventListener('click', () => {
+    if (state.calMonth === 11) { state.calYear++; state.calMonth = 0; }
+    else state.calMonth++;
+    document.getElementById('content').innerHTML = renderCalendar();
+    bindCalendarEvents();
+  });
+}
+
+// ══════════════════════════════════
+// 記録一覧
+// ══════════════════════════════════
+const FLOW_LABELS = { light:'少ない', normal:'ふつう', heavy:'多い' };
+const PAIN_LABELS = { none:'痛みなし', mild:'すこし痛い', bad:'つらい' };
+const MOOD_LABELS = { normal:'ふつう', irritated:'イライラ', sleepy:'ねむい', tired:'だるい', sad:'かなしい' };
+
+function renderRecords() {
+  let html = `<button class="btn btn-primary btn-block mb4" id="add-record-btn">✏️ きろくを追加</button>`;
+  if (!state.records.length) {
+    html += `<div class="banner info" style="margin-top:12px;">まだきろくがないよ！</div>`;
+    return html;
+  }
+  state.records.forEach(r => {
+    const s = new Date(r.start_date);
+    const chips = [];
+    if (r.flow_level) chips.push(`<span class="record-chip pink">${FLOW_LABELS[r.flow_level]||r.flow_level}</span>`);
+    if (r.pain_level) chips.push(`<span class="record-chip">${PAIN_LABELS[r.pain_level]||r.pain_level}</span>`);
+    if (r.mood) chips.push(`<span class="record-chip mint">${MOOD_LABELS[r.mood]||r.mood}</span>`);
+    const dur = r.end_date ? `〜 ${fmtDate(r.end_date)}（${daysBetween(r.start_date,r.end_date)+1}日間）` : '記録中…';
+    html += `
+      <div class="record-item">
+        <div class="record-date-block">
+          <div class="record-month">${s.getMonth()+1}月</div>
+          <div class="record-day">${s.getDate()}</div>
+        </div>
+        <div class="record-detail">
+          <div class="record-range">${dur}</div>
+          <div class="record-chips">${chips.join('')}</div>
+          ${r.memo?`<div class="record-memo">${r.memo}</div>`:''}
+          <div class="record-actions">
+            <button class="btn btn-ghost btn-sm" data-edit="${r.id}">✏️ 編集</button>
+            <button class="btn btn-danger btn-sm" data-del="${r.id}">🗑</button>
+          </div>
+        </div>
+      </div>`;
+  });
+  return html;
+}
+
+function bindRecordEvents() {
+  document.getElementById('add-record-btn')?.addEventListener('click', openRecordModal);
+  document.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const rec = state.records.find(r => r.id === Number(btn.dataset.edit));
+      openRecordModal(rec);
+    });
+  });
+  document.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('このきろくを消す？')) return;
+      await api('DELETE', `/api/records/${btn.dataset.del}`);
+      await loadData(); renderTab('records');
+    });
+  });
+}
+
+// ══════════════════════════════════
+// 記録モーダル
+// ══════════════════════════════════
+function openRecordModal(rec) {
+  state.editingRecord = rec?.id ? rec : null;
+  const isEdit = !!state.editingRecord;
+  const r = state.editingRecord || {};
+
+  const modalBody = document.getElementById('modal-body');
+  modalBody.innerHTML = `
+    <div class="modal-title">${isEdit?'✏️ きろくを編集':'✏️ きろくを追加'}</div>
+    <div class="form-group">
+      <label>はじまった日</label>
+      <input type="date" id="m-start" class="form-input" value="${r.start_date||today()}">
+    </div>
+    <div class="form-group">
+      <label>おわった日（まだなら空白OK）</label>
+      <input type="date" id="m-end" class="form-input" value="${r.end_date||''}">
+    </div>
+    <div class="form-group">
+      <label>量</label>
+      <div class="chips" id="chips-flow">
+        ${[['light','少ない'],['normal','ふつう'],['heavy','多い']].map(([v,l])=>
+          `<div class="chip pink${r.flow_level===v?' selected':''}" data-group="flow" data-val="${v}">${l}</div>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>痛み</label>
+      <div class="chips" id="chips-pain">
+        ${[['none','痛みなし'],['mild','少し痛い'],['bad','つらい']].map(([v,l])=>
+          `<div class="chip${r.pain_level===v?' selected':''}" data-group="pain" data-val="${v}">${l}</div>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>気分</label>
+      <div class="chips" id="chips-mood">
+        ${[['normal','ふつう'],['irritated','イライラ'],['sleepy','ねむい'],['tired','だるい'],['sad','かなしい']].map(([v,l])=>
+          `<div class="chip mint${r.mood===v?' selected':''}" data-group="mood" data-val="${v}">${l}</div>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>メモ</label>
+      <textarea id="m-memo" class="form-input" placeholder="なんでも書いてOK">${r.memo||''}</textarea>
+    </div>
+    <div class="row">
+      <button class="btn btn-ghost btn-block" id="m-cancel">キャンセル</button>
+      <button class="btn btn-primary btn-block" id="m-save">💾 保存する</button>
+    </div>
+  `;
+
+  // チップ選択
+  document.querySelectorAll('.chip[data-group]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll(`.chip[data-group="${chip.dataset.group}"]`).forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+
+  const getChipVal = group => document.querySelector(`.chip[data-group="${group}"].selected`)?.dataset.val || null;
+
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+  document.getElementById('m-save').addEventListener('click', async () => {
+    const body = {
+      start_date: document.getElementById('m-start').value,
+      end_date:   document.getElementById('m-end').value || null,
+      flow_level: getChipVal('flow'),
+      pain_level: getChipVal('pain'),
+      mood:       getChipVal('mood'),
+      memo:       document.getElementById('m-memo').value.trim() || null,
+    };
+    if (!body.start_date) { alert('はじまった日を選んでね！'); return; }
+    if (isEdit) await api('PUT', `/api/records/${state.editingRecord.id}`, body);
+    else await api('POST', '/api/records', body);
+    closeModal();
+    await loadData();
+    renderTab('records');
+  });
+
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+// ══════════════════════════════════
+// リクエスト
+// ══════════════════════════════════
+function renderRequest() {
+  return `
+    <div class="card">
+      <div class="card-title">💌 ほしいものをおくろう</div>
+      <p style="font-size:.88rem;color:var(--text-m);margin-bottom:14px;">しゃべらなくてもOK！ボタンをおして送るだけ🌸</p>
+
+      <div class="form-group">
+        <label>何枚いる？（0でもOK）</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
+          ${[['昼用ナプキン','day_pad'],['夜用ナプキン','night_pad'],['多い日用','heavy_pad'],['おりものシート','liner']].map(([l,k])=>`
+            <div style="background:var(--pink-l);border-radius:12px;padding:10px;">
+              <div style="font-size:.78rem;color:var(--text-m);margin-bottom:4px;">${l}</div>
+              <input type="number" id="req-${k}" class="form-input" value="0" min="0" max="99" style="padding:6px 10px;">
+            </div>`).join('')}
+        </div>
+        <div style="background:var(--lav-l);border-radius:12px;padding:10px;margin-top:8px;">
+          <div style="font-size:.78rem;color:var(--text-m);margin-bottom:4px;">痛み止め（錠数）</div>
+          <input type="number" id="req-painkiller" class="form-input" value="0" min="0" max="30" style="padding:6px 10px;">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>⏰ どれくらい急いでる？</label>
+        <div class="chips" id="chips-urgency">
+          <div class="chip mint selected" data-group="urgency" data-val="sometime">そのうち</div>
+          <div class="chip" data-group="urgency" data-val="soon">そろそろ</div>
+          <div class="chip pink" data-group="urgency" data-val="today">今日ほしい！</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>メモ（任意）</label>
+        <textarea id="req-memo" class="form-input" placeholder="ほかにほしいものや、伝えたいことがあれば"></textarea>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="req-send">💌 おくる</button>
+    </div>
+  `;
+}
+
+function bindRequestEvents() {
+  document.querySelectorAll('.chip[data-group="urgency"]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip[data-group="urgency"]').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+
+  document.getElementById('req-send')?.addEventListener('click', async () => {
+    const body = {
+      day_pad:    Number(document.getElementById('req-day_pad').value),
+      night_pad:  Number(document.getElementById('req-night_pad').value),
+      heavy_pad:  Number(document.getElementById('req-heavy_pad').value),
+      liner:      Number(document.getElementById('req-liner').value),
+      painkiller: Number(document.getElementById('req-painkiller').value),
+      memo:       document.getElementById('req-memo').value.trim(),
+      urgency:    document.querySelector('.chip[data-group="urgency"].selected')?.dataset.val || 'sometime',
+    };
+    await api('POST', '/api/requests', body);
+    alert('おくったよ！ 🌸 ママが確認するね。');
+    document.getElementById('content').innerHTML = renderRequest();
+    bindRequestEvents();
+  });
+}
+
+// ══════════════════════════════════
+// お気に入り
+// ══════════════════════════════════
+function renderFavorites() {
+  let html = `
+    <div class="card">
+      <div class="card-title">⭐ 好きなもの・苦手なもの メモ</div>
+      <p style="font-size:.85rem;color:var(--text-m);margin-bottom:12px;">自分だけのメモ帳。好みを書いておこう！</p>
+      <div class="form-group">
+        <textarea id="fav-input" class="form-input" placeholder="例：羽つきが好き、これはかぶれる、など"></textarea>
+      </div>
+      <button class="btn btn-mint btn-block" id="fav-add">✚ 追加</button>
+    </div>
+  `;
+  if (state.favorites.length) {
+    html += `<div class="card"><div class="card-title">メモ一覧</div>`;
+    state.favorites.forEach(f => {
+      html += `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:.92rem;flex:1;">${f.memo}</span>
+          <button class="btn btn-danger btn-sm" data-fav-del="${f.id}">🗑</button>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+  return html;
+}
+
+function bindFavEvents() {
+  document.getElementById('fav-add')?.addEventListener('click', async () => {
+    const memo = document.getElementById('fav-input').value.trim();
+    if (!memo) return;
+    await api('POST', '/api/favorites', { memo });
+    await loadData(); renderTab('favorites');
+  });
+  document.querySelectorAll('[data-fav-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await api('DELETE', `/api/favorites/${btn.dataset.favDel}`);
+      await loadData(); renderTab('favorites');
+    });
+  });
+}
+
+// ══════════════════════════════════
+// ママ管理画面
+// ══════════════════════════════════
+function renderMama() {
+  // 未読リクエスト
+  const unread = state.requests.filter(r => !r.is_read);
+  const urgLabels = { sometime:'そのうち', soon:'そろそろ', today:'今日ほしい！' };
+  const urgClass  = { sometime:'urgency-sometime', soon:'urgency-soon', today:'urgency-today' };
+
+  let html = ``;
+
+  // ──── リクエスト ────
+  html += `
+    <div class="card">
+      <div class="card-title">💌 おねがいリスト（${unread.length}件 未確認）</div>
+  `;
+  if (!state.requests.length) {
+    html += `<div style="color:var(--text-m);font-size:.9rem;">リクエストなし</div>`;
+  }
+  state.requests.slice(0, 20).forEach(r => {
+    const items = [];
+    if (r.day_pad)    items.push(`昼用×${r.day_pad}`);
+    if (r.night_pad)  items.push(`夜用×${r.night_pad}`);
+    if (r.heavy_pad)  items.push(`多い日×${r.heavy_pad}`);
+    if (r.liner)      items.push(`おりものシート×${r.liner}`);
+    if (r.painkiller) items.push(`痛み止め×${r.painkiller}`);
+
+    html += `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border);${r.is_read?'opacity:.5':''}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="font-weight:700;">${r.display_name}</span>
+          <span class="request-urgency ${urgClass[r.urgency]||''}">
+            ${urgLabels[r.urgency]||r.urgency}
+          </span>
+          <span style="font-size:.75rem;color:var(--text-m);margin-left:auto;">${r.created_at?.slice(0,16)}</span>
+        </div>
+        <div style="font-size:.88rem;">${items.join('・') || 'アイテムなし'}</div>
+        ${r.memo?`<div style="font-size:.82rem;color:var(--text-m);margin-top:3px;">📝 ${r.memo}</div>`:''}
+        ${!r.is_read?`<button class="btn btn-mint btn-sm mt8" data-read="${r.id}">✅ 確認した</button>`:''}
+      </div>`;
+  });
+  html += `</div>`;
+
+  // ──── 在庫管理 ────
+  html += `
+    <div class="card">
+      <div class="card-title">📦 在庫</div>
+  `;
+  state.inventory.forEach(item => {
+    const isLow = item.quantity <= item.low_threshold;
+    html += `
+      <div class="inv-row">
+        <div>
+          <div class="inv-name">${item.item_name}</div>
+          ${isLow?`<span class="inv-badge-low">残り少ない！</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" class="form-input" id="inv-${item.item_key}" value="${item.quantity}"
+            min="0" max="999" style="width:70px;padding:6px 10px;text-align:center;">
+          <span class="inv-qty ${isLow?'inv-low':''}">${item.item_name.includes('錠')||item.item_key==='painkiller'?'錠':'枚'}</span>
+        </div>
+      </div>`;
+  });
+  html += `
+    <button class="btn btn-primary btn-block mt12" id="inv-save">💾 在庫を保存</button>
+    </div>
+  `;
+
+  // ──── 子どもの記録（mama用） ────
+  html += `
+    <div class="card">
+      <div class="card-title">👧 みんなのきろくを見る</div>
+      <div class="chips" id="chips-view-user" style="margin-bottom:12px;">
+        ${state.allUsers.filter(u=>u.username!=='mama').map(u=>
+          `<div class="chip" data-group="view-user" data-val="${u.id}">${u.display_name}</div>`
+        ).join('')}
+      </div>
+      <div id="child-records-area"></div>
+    </div>
+  `;
+
+  return html;
+}
+
+function bindMamaEvents() {
+  // 既読
+  document.querySelectorAll('[data-read]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await api('PUT', `/api/requests/${btn.dataset.read}/read`);
+      await loadData(); renderTab('mama');
+    });
+  });
+
+  // 在庫保存
+  document.getElementById('inv-save')?.addEventListener('click', async () => {
+    const updates = state.inventory.map(item => ({
+      item_key: item.item_key,
+      quantity: Number(document.getElementById(`inv-${item.item_key}`)?.value || 0),
+    }));
+    await api('PUT', '/api/inventory', updates);
+    await loadData(); renderTab('mama');
+    alert('在庫を更新したよ！');
+  });
+
+  // 子ども記録表示
+  document.querySelectorAll('.chip[data-group="view-user"]').forEach(chip => {
+    chip.addEventListener('click', async () => {
+      document.querySelectorAll('.chip[data-group="view-user"]').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      const userId = chip.dataset.val;
+      const area = document.getElementById('child-records-area');
+      area.innerHTML = '<div class="spinner"></div>';
+      const records = await api('GET', `/api/records?userId=${userId}`);
+      const predict = await api('GET', `/api/predict?userId=${userId}`);
+      if (!records.length) { area.innerHTML = '<div style="color:var(--text-m);">まだきろくなし</div>'; return; }
+      let html = '';
+      if (predict.hasData) {
+        html += `<div class="banner info">平均周期：${predict.avgCycle}日 / 平均日数：${predict.avgDuration}日<br>次回予定：${fmtDate(predict.nextStart)}ごろ</div>`;
+      }
+      records.slice(0,6).forEach(r => {
+        const dur = r.end_date ? `〜${fmtDate(r.end_date)}（${daysBetween(r.start_date,r.end_date)+1}日間）` : '記録中';
+        html += `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.9rem;"><b>${fmtDate(r.start_date)}</b> ${dur}${r.memo?` 📝${r.memo}`:''}</div>`;
+      });
+      area.innerHTML = html;
+    });
+  });
+}
+
+// ══════════════════════════════════
+// ログアウト（長押し）
+// ══════════════════════════════════
+let logoutTimer;
+document.getElementById('user-badge')?.addEventListener('touchstart', () => {
+  logoutTimer = setTimeout(() => {
+    if (confirm('このアカウントからログアウトしますか？\n（次回はパスワードが必要になります）')) {
+      clearAuth();
+      location.reload();
+    }
+  }, 2000);
+});
+document.getElementById('user-badge')?.addEventListener('touchend', () => clearTimeout(logoutTimer));
+</script>
+</body>
+</html>

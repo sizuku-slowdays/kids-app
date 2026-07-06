@@ -1,1 +1,748 @@
 
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>漢字書き順プリントメーカー</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&family=Kosugi+Maru&display=swap');
+
+  :root{
+    --sky:#eef6ff; --blue:#3b82f6; --blue-dark:#1d4ed8;
+    --coral:#f97316; --coral-light:#fed7aa;
+    --green:#22c55e; --green-dark:#15803d;
+    --gray-100:#f0f4f8; --gray-200:#e2e8f0; --gray-400:#94a3b8;
+    --gray-600:#475569; --gray-700:#334155; --ink:#1e293b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Kosugi Maru','Hiragino Sans','Yu Gothic',sans-serif;background:var(--sky);color:var(--ink);}
+  .app{max-width:980px;margin:0 auto;padding:14px 14px 60px;}
+
+  header{text-align:center;padding:16px 0 8px;}
+  header h1{font-family:'Zen Maru Gothic',sans-serif;font-weight:900;font-size:clamp(1.4rem,4.5vw,2rem);color:var(--blue-dark);letter-spacing:.04em;}
+  header h1 span{color:var(--coral);}
+  header p{color:var(--gray-400);font-size:.82rem;margin-top:4px;}
+
+  .panel{background:#fff;border:2px solid var(--gray-200);border-radius:16px;padding:14px;margin-bottom:14px;}
+  .panel h2{font-family:'Zen Maru Gothic',sans-serif;font-size:.95rem;color:var(--gray-700);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .panel h2 .sub{margin-left:auto;font-weight:400;font-size:.75rem;color:var(--gray-400);}
+
+  .grade-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .grade-btn{font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:.85rem;padding:8px 15px;border-radius:99px;border:2.5px solid var(--gray-200);background:#fff;color:var(--gray-700);cursor:pointer;transition:all .15s;}
+  .grade-btn:hover{border-color:var(--blue);color:var(--blue);}
+  .grade-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 3px 12px rgba(59,130,246,.35);}
+
+  .find-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .find-row .field{flex:1;min-width:180px;}
+  .find-row label{display:block;font-size:.72rem;color:var(--gray-600);font-weight:700;margin-bottom:4px;font-family:'Zen Maru Gothic',sans-serif;}
+  .find-row input{width:100%;font-family:'Kosugi Maru',sans-serif;font-size:1.02rem;padding:9px 14px;border-radius:12px;border:2.5px solid var(--gray-200);outline:none;}
+  .find-row input:focus{border-color:var(--blue);}
+  .add-btn{align-self:flex-end;font-family:'Zen Maru Gothic',sans-serif;font-weight:700;padding:10px 16px;border-radius:12px;border:none;background:var(--blue);color:#fff;cursor:pointer;font-size:.9rem;}
+  .add-btn:hover{background:var(--blue-dark);}
+
+  .kanji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;max-height:270px;overflow-y:auto;padding:3px;}
+  .kanji-grid::-webkit-scrollbar{width:6px;}
+  .kanji-grid::-webkit-scrollbar-thumb{background:var(--blue);border-radius:3px;}
+  .kanji-card{aspect-ratio:1;background:#fff;border-radius:12px;border:2.5px solid var(--gray-200);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;position:relative;}
+  .kanji-card::before{content:attr(data-label);position:absolute;top:3px;right:5px;font-size:.5rem;color:var(--gray-400);}
+  .kanji-card:hover{border-color:var(--blue);transform:translateY(-2px);}
+  .kanji-card.on{border-color:var(--coral);background:var(--coral-light);}
+  .kanji-card .c{font-family:'Zen Maru Gothic','Hiragino Sans','Yu Gothic',serif;font-weight:700;font-size:1.5rem;line-height:1;}
+  .kanji-card .r{font-size:.5rem;color:var(--gray-400);margin-top:3px;}
+  .grid-empty{grid-column:1/-1;text-align:center;color:var(--gray-400);padding:16px;font-size:.85rem;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;min-height:46px;}
+  .chip{display:flex;align-items:center;gap:4px;background:var(--gray-100);border:2px solid var(--gray-200);border-radius:12px;padding:5px 6px 5px 10px;font-family:'Zen Maru Gothic',sans-serif;font-weight:700;}
+  .chip.err{border-color:#ef4444;background:#fee2e2;}
+  .chip .c{font-size:1.25rem;margin-right:2px;}
+  .chip button{width:22px;height:22px;border-radius:7px;border:none;cursor:pointer;font-size:.85rem;line-height:1;background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);}
+  .chip button:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .chip button.x:hover{background:#ef4444;border-color:#ef4444;}
+  .chips-empty{color:var(--gray-400);font-size:.85rem;padding:12px 4px;}
+  .chips-note{font-size:.75rem;color:var(--gray-400);margin-top:8px;}
+
+  .fmt-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px;}
+  .fmt-card{border:2.5px solid var(--gray-200);border-radius:14px;padding:12px;cursor:pointer;transition:all .15s;background:#fff;}
+  .fmt-card:hover{border-color:var(--blue);}
+  .fmt-card.on{border-color:var(--coral);background:#fff7ed;box-shadow:0 3px 12px rgba(249,115,22,.18);}
+  .fmt-card .t{font-family:'Zen Maru Gothic',sans-serif;font-weight:900;font-size:.98rem;color:var(--ink);}
+  .fmt-card .n{display:inline-block;background:var(--blue);color:#fff;border-radius:99px;font-size:.68rem;padding:1px 8px;margin-left:6px;font-weight:700;}
+  .fmt-card.on .n{background:var(--coral);}
+  .fmt-card .d{font-size:.74rem;color:var(--gray-600);margin-top:6px;line-height:1.4;}
+
+  .opt-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:6px;}
+  .opt label{display:block;font-size:.76rem;color:var(--gray-700);font-weight:700;margin-bottom:5px;font-family:'Zen Maru Gothic',sans-serif;}
+  .opt select,.opt input[type=text]{width:100%;padding:9px 11px;border-radius:11px;border:2px solid var(--gray-200);font-family:'Kosugi Maru',sans-serif;font-size:.92rem;outline:none;background:#fff;}
+  .opt select:focus,.opt input:focus{border-color:var(--blue);}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  .btn{font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:.94rem;padding:12px 22px;border-radius:99px;border:none;cursor:pointer;transition:all .15s;}
+  .btn.make{background:var(--green);color:#fff;box-shadow:0 4px 14px rgba(34,197,94,.32);}
+  .btn.make:hover{background:var(--green-dark);}
+  .btn.print{background:var(--coral);color:#fff;box-shadow:0 4px 14px rgba(249,115,22,.32);}
+  .btn.print:hover{background:#ea6c0a;}
+  .btn.print:disabled{background:var(--gray-200);color:var(--gray-400);box-shadow:none;cursor:not-allowed;}
+  .btn.ghost{background:var(--gray-100);color:var(--gray-700);border:2px solid var(--gray-200);}
+  .btn.ghost:hover{border-color:#ef4444;color:#ef4444;}
+
+  .loading{display:none;align-items:center;gap:10px;margin-top:12px;font-size:.9rem;color:var(--gray-700);font-weight:700;font-family:'Zen Maru Gothic',sans-serif;}
+  .loading.on{display:flex;}
+  .spinner{width:20px;height:20px;border:3px solid var(--gray-200);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .banner{display:none;margin-top:12px;padding:12px 14px;border-radius:12px;background:#fef3c7;border:2px solid #fcd34d;color:#92400e;font-size:.86rem;}
+  .banner.on{display:block;}
+  .banner b{font-weight:700;}
+  .banner .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .banner .bbtn{font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:.82rem;padding:7px 14px;border-radius:99px;border:none;cursor:pointer;background:#f59e0b;color:#fff;}
+  .banner .bbtn.alt{background:#fff;color:#92400e;border:2px solid #f59e0b;}
+
+  .preview-note{text-align:center;font-size:.8rem;color:var(--gray-400);margin:6px 0 10px;}
+
+  /* ===================== プリント本体 ===================== */
+  #sheet{max-width:100%;overflow-x:auto;}
+  .sheet-empty{background:#fff;border:2px dashed var(--gray-200);border-radius:14px;padding:60px 20px;text-align:center;color:var(--gray-400);}
+  .sheet-empty .emoji{font-size:2.4rem;margin-bottom:8px;}
+
+  .page{background:#fff;color:#000;width:210mm;min-width:210mm;min-height:296mm;margin:0 auto 16px;padding:10mm;
+        box-shadow:0 6px 30px rgba(0,0,0,.12);
+        -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .page.fmt-a{--model:4.6cm;--cell:2.35cm;}
+  .page.fmt-b{--model:3.0cm;--cell:2.1cm;}
+  .page.fmt-c{--model:2.2cm;--cell:2.05cm;}
+
+  .sheet-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #111;padding-bottom:6px;margin-bottom:6mm;gap:10px;}
+  .sheet-title{font-family:'Zen Maru Gothic',sans-serif;font-weight:900;font-size:1.2rem;color:#111;}
+  .sheet-meta{display:flex;gap:16px;font-size:.82rem;color:#111;font-family:'Zen Maru Gothic',sans-serif;align-items:flex-end;}
+  .sheet-meta b{font-weight:700;margin-right:4px;}
+  .fill-line{display:inline-block;border-bottom:1.5px solid #111;min-width:3.4cm;height:1em;}
+
+  .kblock{border:1.5px solid #111;border-radius:4px;padding:3mm 3.5mm;margin-bottom:3mm;
+          break-inside:avoid;page-break-inside:avoid;}
+  .kblock:last-child{margin-bottom:0;}
+
+  .kb-top{display:flex;align-items:center;gap:4mm;}
+  .model-cell{width:var(--model);height:var(--model);flex:0 0 auto;}
+  .model-cell svg{display:block;width:100%;height:100%;}
+  .kinfo{flex:1;min-width:0;}
+  .kinfo .big{font-family:'Zen Maru Gothic','Hiragino Sans',serif;font-weight:900;font-size:1.5rem;color:#111;line-height:1;margin-bottom:3px;}
+  .kinfo .rd{font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:.86rem;color:#111;line-height:1.5;}
+  .kinfo .rd .k{color:#666;font-size:.72rem;margin-right:.2em;}
+  .kinfo .mn{font-size:.76rem;color:#333;margin-top:2px;}
+  .kaku{flex:0 0 auto;align-self:flex-start;font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:.8rem;color:#111;border:1.3px solid #111;border-radius:99px;padding:2px 10px;white-space:nowrap;}
+
+  .cell-row{display:flex;align-items:center;gap:2mm;flex-wrap:wrap;margin-top:3mm;}
+  .row-label{font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:.62rem;color:#111;writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.06em;border-right:1px dashed #999;padding-right:1mm;margin-right:1mm;align-self:stretch;display:flex;align-items:center;}
+  .pcell{width:var(--cell);height:var(--cell);flex:0 0 auto;}
+  .pcell svg{display:block;width:100%;height:100%;}
+
+  /* B / C は1行にまとめる */
+  .kb-inline{display:flex;align-items:center;gap:3mm;flex-wrap:nowrap;}
+  .kb-inline .cell-row{margin-top:0;}
+  .kb-inline .kinfo .rd{font-size:.78rem;}
+
+  footer.credit{margin-top:4mm;font-size:.56rem;color:#888;text-align:right;}
+
+  @media (max-width:560px){
+    .kanji-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+    .kanji-card .c{font-size:1.7rem;}
+    .btn{flex:1;min-width:130px;text-align:center;}
+  }
+
+  /* ===================== 印刷 ===================== */
+  @media print{
+    @page{size:A4 portrait;margin:10mm;}
+    html,body{background:#fff;}
+    .app{max-width:none;padding:0;}
+    .no-print{display:none !important;}
+    #sheet{overflow:visible;}
+    .page{width:auto;min-width:0;min-height:auto;margin:0;padding:0;box-shadow:none;border-radius:0;
+          break-after:page;page-break-after:always;}
+    .page:last-child{break-after:auto;page-break-after:auto;}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="no-print">
+    <h1>漢字書き順<span>プリント</span>メーカー 🖨️</h1>
+    <p>漢字をえらんで、A4の書き順れんしゅうプリントを作れます（書き順・なぞり書き・自分で書く）</p>
+  </header>
+
+  <!-- (1) えらぶ -->
+  <div class="panel no-print">
+    <h2>① 漢字をえらぶ<span class="sub" id="pick-count"></span></h2>
+    <div class="grade-tabs" id="grade-tabs">
+      <button class="grade-btn active" data-grade="all">すべて</button>
+      <button class="grade-btn" data-grade="1">1年生</button>
+      <button class="grade-btn" data-grade="2">2年生</button>
+      <button class="grade-btn" data-grade="3">3年生</button>
+      <button class="grade-btn" data-grade="4">4年生</button>
+      <button class="grade-btn" data-grade="5">5年生</button>
+      <button class="grade-btn" data-grade="6">6年生</button>
+      <button class="grade-btn" data-grade="name">名前漢字</button>
+    </div>
+    <div class="find-row">
+      <div class="field">
+        <label>さがす（漢字・読み）</label>
+        <input type="text" id="search-input" placeholder="例: 学 / まな" oninput="onsearch(this.value)">
+      </div>
+      <div class="field">
+        <label>漢字を直接入力（まとめて可）</label>
+        <input type="text" id="direct-input" placeholder="例: 書順漢字">
+      </div>
+      <button class="add-btn" onclick="adddirect()">追加</button>
+    </div>
+    <div class="kanji-grid" id="kanji-grid"></div>
+  </div>
+
+  <!-- (2) えらんだ漢字 -->
+  <div class="panel no-print">
+    <h2>② えらんだ漢字<span class="sub" id="select-count">0 / 8</span></h2>
+    <div class="chips" id="chips"><div class="chips-empty">まだありません。上からタップ、または直接入力で追加してください。</div></div>
+    <div class="chips-note">◀ ▶ で順番を入れかえ、× で1文字削除できます（最大8文字）。</div>
+  </div>
+
+  <!-- (3) 設定 -->
+  <div class="panel no-print">
+    <h2>③ プリントの形式と設定</h2>
+    <div class="fmt-cards" id="fmt-cards">
+      <div class="fmt-card on" data-fmt="a" onclick="setfmt('a')">
+        <div class="t">A しっかり練習<span class="n">1枚2字</span></div>
+        <div class="d">大きな書き順見本＋なぞり4・空白4。書き順を直したいときに。</div>
+      </div>
+      <div class="fmt-card" data-fmt="b" onclick="setfmt('b')">
+        <div class="t">B ふつう練習<span class="n">1枚4字</span></div>
+        <div class="d">書き順見本＋読み・画数、なぞり2・空白2。ふだんの練習に。</div>
+      </div>
+      <div class="fmt-card" data-fmt="c" onclick="setfmt('c')">
+        <div class="t">C 確認プリント<span class="n">1枚8字</span></div>
+        <div class="d">小さめの書き順見本＋空白2。まとめてチェックに。</div>
+      </div>
+    </div>
+    <div class="opt-row">
+      <div class="opt">
+        <label>マスの補助線</label>
+        <select id="guide-select" onchange="setguide(this.value)">
+          <option value="cross">十字線のみ</option>
+          <option value="crossdiag">十字線＋斜め線</option>
+          <option value="none">補助線なし</option>
+        </select>
+      </div>
+      <div class="opt">
+        <label>プリントのタイトル</label>
+        <input type="text" id="title-input" value="漢字 書き順れんしゅう" oninput="settitle(this.value)">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn make" onclick="makeprint()">🖨️ プリントを作る</button>
+      <button class="btn print" id="print-btn" onclick="window.print()" disabled>印刷する / PDFで保存</button>
+      <button class="btn ghost" onclick="clearselection()">選択をすべて解除</button>
+      <button class="btn ghost" onclick="resetsettings()">設定をリセット</button>
+    </div>
+    <div class="loading" id="loading"><div class="spinner"></div><span id="loading-text">書き順データを読み込んでいます…</span></div>
+    <div class="banner" id="banner"></div>
+  </div>
+
+  <div class="preview-note no-print">▼ プレビュー（このまま印刷されます）</div>
+  <div id="sheet">
+    <div class="sheet-empty"><div class="emoji">📄</div><p>漢字をえらんで「プリントを作る」を押すと、ここにプレビューが出ます</p></div>
+  </div>
+</div>
+
+<!-- 書き順番号の位置計算用（非表示） -->
+<svg id="calc-svg" width="0" height="0" style="position:absolute;visibility:hidden" viewBox="0 0 109 109"><path id="calc-path"/></svg>
+
+<script>
+const GRADE_KANJI = {
+  1:"一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
+  2:"引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
+  3:"悪安暗医委意育員院飲運泳駅央横屋温化荷界開階寒感漢館岸起期客究急級宮球去橋業曲局銀区苦具君係軽血決研県庫湖向幸港号根祭皿仕死使始指歯詩次事持式実写者主守取酒受州拾終習集住重宿所暑助昭消商章勝乗植申身神真深進世整昔全相送想息速族他打対待代第題炭短談着注柱丁帳調追定庭笛鉄転都度投豆島湯登等動童農波配倍箱畑発反坂板皮悲美鼻筆氷表秒病品負部服福物平返勉放味命面問役薬由油有遊予羊洋葉陽様落流旅両緑礼列練路和",
+  4:"愛案以衣位茨印英栄媛塩岡億加果貨課芽賀改械害街各覚潟完官管関観願岐希季旗器機議求泣給挙漁共協鏡競極熊訓軍郡群径景芸欠結建健験固功好香候康佐差菜最埼材崎昨札刷察参産散残氏司試児治滋辞鹿失借種周祝順初松笑唱焼照城縄臣信井成省清静席積折節説浅戦選然争倉巣束側続卒孫帯隊達単置仲沖兆低底的典伝徒努灯働特徳栃奈梨熱念敗梅博阪飯飛必票標不夫付府阜富副兵別辺変便包法望牧末満未民無約勇要養浴利陸良料量輪類令冷例連老労録",
+  5:"圧囲移因永営衛易益液演応往桜可仮価河過快解格確額刊幹慣眼紀基寄規喜技義逆久旧救居許境均禁句型経潔件険検限現減故個護効厚耕航鉱構興講告混査再災妻採際在財罪殺雑酸賛士支史志枝師資飼示似識質舎謝授修述術準序招証象賞条状常情織職制性政勢精製税責績接設絶祖素総造像増則測属率損貸態団断築貯張停提程適統堂銅導得毒独任燃能破犯判版比肥非費備評貧布婦武復複仏粉編弁保墓報豊防貿暴脈務夢迷綿輸余容略留領歴",
+  6:"胃異遺域宇映延沿恩我灰拡革閣割株干巻看簡危机揮貴疑吸供胸郷勤筋系敬警劇激穴券絹権憲源厳己呼誤后孝皇紅降鋼刻穀骨困砂座済裁策冊蚕至私姿視詞誌磁射捨尺若樹収宗就衆従縦縮熟純処署諸除承将傷障蒸針仁垂推寸盛聖誠舌宣専泉洗染銭善奏窓創装層操蔵臓存尊退宅担探誕段暖値宙忠著庁頂腸潮賃痛敵展討党糖届難乳認納脳派拝背肺俳班晩否批秘俵腹奮並陛閉片補暮宝訪亡忘棒枚幕密盟模訳郵優預幼欲翌乱卵覧裏律臨朗論"
+};
+const EXTRA_KANJI = { name:"遥" };
+
+const KANJI_META = {
+'一':{on:"イチ・イツ",kun:"ひと",m:"数の１"},'右':{on:"ウ・ユウ",kun:"みぎ",m:"右方向"},'雨':{on:"ウ",kun:"あめ・あま",m:"雨"},'円':{on:"エン",kun:"まる",m:"円・日本のお金"},'王':{on:"オウ",kun:"",m:"王様"},'音':{on:"オン・イン",kun:"おと・ね",m:"音・音楽"},'下':{on:"カ・ゲ",kun:"した・くだる",m:"下・下方"},'火':{on:"カ",kun:"ひ",m:"火・炎"},'花':{on:"カ",kun:"はな",m:"花"},'貝':{on:"",kun:"かい",m:"貝・貝殻"},'学':{on:"ガク",kun:"まなぶ",m:"学ぶ・学校"},'気':{on:"キ・ケ",kun:"",m:"気持ち・空気"},'九':{on:"キュウ・ク",kun:"ここの",m:"数の９"},'休':{on:"キュウ",kun:"やすむ",m:"休む・休憩"},'玉':{on:"ギョク",kun:"たま",m:"玉・宝玉"},'金':{on:"キン・コン",kun:"かね・かな",m:"金・お金"},'空':{on:"クウ",kun:"そら・あく",m:"空・空間"},'月':{on:"ゲツ・ガツ",kun:"つき",m:"月"},'犬':{on:"ケン",kun:"いぬ",m:"犬"},'見':{on:"ケン",kun:"みる",m:"見る・見物"},'五':{on:"ゴ",kun:"いつ",m:"数の５"},'口':{on:"コウ・ク",kun:"くち",m:"口・入り口"},'校':{on:"コウ",kun:"",m:"学校・校舎"},'左':{on:"サ",kun:"ひだり",m:"左方向"},'三':{on:"サン",kun:"み・みつ",m:"数の３"},'山':{on:"サン",kun:"やま",m:"山"},'子':{on:"シ・ス",kun:"こ",m:"子・子ども"},'四':{on:"シ",kun:"よ・よつ",m:"数の４"},'糸':{on:"シ",kun:"いと",m:"糸・絹"},'字':{on:"ジ",kun:"あざ",m:"文字・字"},'耳':{on:"ジ",kun:"みみ",m:"耳"},'七':{on:"シチ",kun:"なな",m:"数の７"},'車':{on:"シャ",kun:"くるま",m:"車・乗り物"},'手':{on:"シュ",kun:"て",m:"手"},'十':{on:"ジュウ",kun:"とお",m:"数の１０"},'出':{on:"シュツ",kun:"でる・だす",m:"出る・出口"},'女':{on:"ジョ・ニョ",kun:"おんな・め",m:"女性"},'小':{on:"ショウ",kun:"ちいさい",m:"小さい"},'上':{on:"ジョウ",kun:"うえ・あがる",m:"上・上方"},'森':{on:"シン",kun:"もり",m:"森・森林"},'人':{on:"ジン・ニン",kun:"ひと",m:"人・人間"},'水':{on:"スイ",kun:"みず",m:"水"},'正':{on:"セイ・ショウ",kun:"ただしい",m:"正しい・正直"},'生':{on:"セイ・ショウ",kun:"いきる",m:"生きる・生命"},'青':{on:"セイ・ショウ",kun:"あお",m:"青色"},'石':{on:"セキ",kun:"いし",m:"石・岩石"},'赤':{on:"セキ",kun:"あか",m:"赤色"},'千':{on:"セン",kun:"ち",m:"千・1000"},'川':{on:"セン",kun:"かわ",m:"川・河川"},'先':{on:"セン",kun:"さき・まず",m:"先・前"},'早':{on:"ソウ",kun:"はやい",m:"早い・早朝"},'草':{on:"ソウ",kun:"くさ",m:"草・植物"},'足':{on:"ソク",kun:"あし・たりる",m:"足・脚"},'村':{on:"ソン",kun:"むら",m:"村・村落"},'大':{on:"ダイ・タイ",kun:"おおきい",m:"大きい"},'男':{on:"ダン・ナン",kun:"おとこ",m:"男性"},'竹':{on:"チク",kun:"たけ",m:"竹"},'中':{on:"チュウ",kun:"なか",m:"中・中央"},'虫':{on:"チュウ",kun:"むし",m:"虫・昆虫"},'町':{on:"チョウ",kun:"まち",m:"町・まち"},'天':{on:"テン",kun:"あめ",m:"天・空"},'田':{on:"デン",kun:"た",m:"田んぼ"},'土':{on:"ド・ト",kun:"つち",m:"土・大地"},'二':{on:"ニ",kun:"ふた",m:"数の２"},'日':{on:"ニチ・ジツ",kun:"ひ・か",m:"太陽・一日"},'入':{on:"ニュウ",kun:"いる・はいる",m:"入る・入口"},'年':{on:"ネン",kun:"とし",m:"年・一年"},'白':{on:"ハク",kun:"しろ",m:"白色"},'八':{on:"ハチ",kun:"や・やつ",m:"数の８"},'百':{on:"ヒャク",kun:"もも",m:"百・100"},'文':{on:"ブン・モン",kun:"ふみ",m:"文字・文章"},'木':{on:"モク・ボク",kun:"き・こ",m:"木・樹木"},'本':{on:"ホン",kun:"もと",m:"本・書籍"},'名':{on:"メイ・ミョウ",kun:"な",m:"名前・名称"},'目':{on:"モク・ボク",kun:"め",m:"目・目標"},'立':{on:"リツ・リュウ",kun:"たつ",m:"立つ・立場"},'力':{on:"リョク・リキ",kun:"ちから",m:"力・体力"},'林':{on:"リン",kun:"はやし",m:"林・小さな森"},'六':{on:"ロク",kun:"む・むつ",m:"数の６"},'引':{on:"イン",kun:"ひく",m:"引く・引力"},'雲':{on:"ウン",kun:"くも",m:"雲・積雲"},'園':{on:"エン",kun:"その",m:"公園・園"},'遠':{on:"エン",kun:"とおい",m:"遠い・遠方"},'夏':{on:"カ",kun:"なつ",m:"夏・夏季"},'家':{on:"カ・ケ",kun:"いえ・や",m:"家・家族"},'歌':{on:"カ",kun:"うた",m:"歌・歌声"},'海':{on:"カイ",kun:"うみ",m:"海・海洋"},'絵':{on:"カイ・エ",kun:"",m:"絵・絵画"},'楽':{on:"ガク・ラク",kun:"たのしい",m:"楽しい・音楽"},'間':{on:"カン・ケン",kun:"あいだ・ま",m:"間・時間"},'顔':{on:"ガン",kun:"かお",m:"顔・表情"},'帰':{on:"キ",kun:"かえる",m:"帰る・帰宅"},'牛':{on:"ギュウ",kun:"うし",m:"牛・牛乳"},'魚':{on:"ギョ",kun:"さかな・うお",m:"魚・魚類"},'強':{on:"キョウ",kun:"つよい",m:"強い・強力"},'教':{on:"キョウ",kun:"おしえる",m:"教える・教育"},'近':{on:"キン",kun:"ちかい",m:"近い・近所"},'元':{on:"ゲン・ガン",kun:"もと",m:"元・元気"},'言':{on:"ゲン・ゴン",kun:"いう・こと",m:"言う・言葉"},'古':{on:"コ",kun:"ふるい",m:"古い・古代"},'後':{on:"ゴ・コウ",kun:"うしろ・あと",m:"後ろ・後日"},'語':{on:"ゴ",kun:"かたる",m:"語る・言語"},'工':{on:"コウ・ク",kun:"",m:"工作・工場"},'公':{on:"コウ",kun:"おおやけ",m:"公園・公共"},'広':{on:"コウ",kun:"ひろい",m:"広い・広場"},'光':{on:"コウ",kun:"ひかり",m:"光・光線"},'考':{on:"コウ",kun:"かんがえる",m:"考える・思考"},'行':{on:"コウ",kun:"いく・おこなう",m:"行く・行動"},'高':{on:"コウ",kun:"たかい",m:"高い・高度"},'黄':{on:"コウ・オウ",kun:"き",m:"黄色"},'合':{on:"ゴウ・ガッ",kun:"あう",m:"合う・合体"},'谷':{on:"コク",kun:"たに",m:"谷・渓谷"},'国':{on:"コク",kun:"くに",m:"国・国家"},'黒':{on:"コク",kun:"くろ",m:"黒色"},'今':{on:"コン・キン",kun:"いま",m:"今・現在"},'才':{on:"サイ",kun:"",m:"才能・年齢"},'細':{on:"サイ",kun:"ほそい",m:"細い・詳細"},'作':{on:"サク・サ",kun:"つくる",m:"作る・作品"},'算':{on:"サン",kun:"",m:"計算・算数"},'止':{on:"シ",kun:"とまる",m:"止まる・中止"},'市':{on:"シ",kun:"いち",m:"市・市場"},'矢':{on:"シ",kun:"や",m:"矢・弓矢"},'姉':{on:"シ",kun:"あね",m:"姉・お姉さん"},'思':{on:"シ",kun:"おもう",m:"思う・思考"},'紙':{on:"シ",kun:"かみ",m:"紙・紙類"},'寺':{on:"ジ",kun:"てら",m:"寺・お寺"},'自':{on:"ジ・シ",kun:"みずから",m:"自分・自由"},'時':{on:"ジ",kun:"とき",m:"時間・時刻"},'室':{on:"シツ",kun:"むろ",m:"教室・室内"},'社':{on:"シャ",kun:"やしろ",m:"会社・神社"},'弱':{on:"ジャク",kun:"よわい",m:"弱い・弱小"},'首':{on:"シュ",kun:"くび",m:"首・くび"},'秋':{on:"シュウ",kun:"あき",m:"秋・秋季"},'週':{on:"シュウ",kun:"",m:"週・一週間"},'春':{on:"シュン",kun:"はる",m:"春・春季"},'書':{on:"ショ",kun:"かく",m:"書く・書物"},'少':{on:"ショウ",kun:"すくない",m:"少ない・少量"},'場':{on:"ジョウ",kun:"ば",m:"場所・広場"},'色':{on:"ショク・シキ",kun:"いろ",m:"色・色彩"},'食':{on:"ショク・ジキ",kun:"たべる",m:"食べる・食事"},'心':{on:"シン",kun:"こころ",m:"心・気持ち"},'新':{on:"シン",kun:"あたらしい",m:"新しい・新年"},'親':{on:"シン",kun:"おや・したしい",m:"親・親しい"},'図':{on:"ズ・ト",kun:"はかる",m:"図・地図"},'数':{on:"スウ",kun:"かず・かぞえる",m:"数・数字"},'西':{on:"セイ・サイ",kun:"にし",m:"西・西方"},'声':{on:"セイ",kun:"こえ",m:"声・音声"},'星':{on:"セイ・ショウ",kun:"ほし",m:"星・星空"},'晴':{on:"セイ",kun:"はれる",m:"晴れ・晴天"},'切':{on:"セツ・サイ",kun:"きる",m:"切る・親切"},'雪':{on:"セツ",kun:"ゆき",m:"雪・降雪"},'船':{on:"セン",kun:"ふね",m:"船・船舶"},'線':{on:"セン",kun:"",m:"線・直線"},'前':{on:"ゼン",kun:"まえ",m:"前・前方"},'組':{on:"ソ",kun:"くむ",m:"組・組立"},'走':{on:"ソウ",kun:"はしる",m:"走る・走行"},'多':{on:"タ",kun:"おおい",m:"多い・多数"},'太':{on:"タイ・タ",kun:"ふとい",m:"太い・太陽"},'体':{on:"タイ・テイ",kun:"からだ",m:"体・身体"},'台':{on:"ダイ・タイ",kun:"",m:"台・台所"},'地':{on:"チ・ジ",kun:"",m:"地・大地"},'池':{on:"チ",kun:"いけ",m:"池・ため池"},'知':{on:"チ",kun:"しる",m:"知る・知識"},'茶':{on:"チャ・サ",kun:"",m:"お茶・茶色"},'昼':{on:"チュウ",kun:"ひる",m:"昼・昼食"},'長':{on:"チョウ",kun:"ながい",m:"長い・長さ"},'鳥':{on:"チョウ",kun:"とり",m:"鳥・小鳥"},'朝':{on:"チョウ",kun:"あさ",m:"朝・朝食"},'直':{on:"チョク・ジキ",kun:"なおす",m:"直す・正直"},'通':{on:"ツウ・ツ",kun:"とおる",m:"通る・交通"},'弟':{on:"テイ・ダイ",kun:"おとうと",m:"弟・兄弟"},'店':{on:"テン",kun:"みせ",m:"お店・商店"},'点':{on:"テン",kun:"",m:"点・点数"},'電':{on:"デン",kun:"",m:"電気・電車"},'刀':{on:"トウ",kun:"かたな",m:"刀・日本刀"},'冬':{on:"トウ",kun:"ふゆ",m:"冬・冬季"},'当':{on:"トウ",kun:"あたる",m:"当たる・当番"},'東':{on:"トウ",kun:"ひがし",m:"東・東方"},'答':{on:"トウ",kun:"こたえる",m:"答え・返答"},'頭':{on:"トウ・ズ",kun:"あたま",m:"頭・頭部"},'同':{on:"ドウ",kun:"おなじ",m:"同じ・同時"},'道':{on:"ドウ・トウ",kun:"みち",m:"道・道路"},'読':{on:"ドク",kun:"よむ",m:"読む・読書"},'内':{on:"ナイ・ダイ",kun:"うち",m:"内・内側"},'南':{on:"ナン",kun:"みなみ",m:"南・南方"},'肉':{on:"ニク",kun:"",m:"肉・筋肉"},'馬':{on:"バ",kun:"うま",m:"馬・競馬"},'売':{on:"バイ",kun:"うる",m:"売る・売買"},'買':{on:"バイ",kun:"かう",m:"買う・買い物"},'麦':{on:"バク",kun:"むぎ",m:"麦・小麦"},'半':{on:"ハン",kun:"なかば",m:"半分・半年"},'番':{on:"バン",kun:"",m:"番号・順番"},'父':{on:"フ",kun:"ちち",m:"父・お父さん"},'風':{on:"フウ・フ",kun:"かぜ",m:"風・そよ風"},'分':{on:"ブン・フン",kun:"わける",m:"分ける・時間の分"},'聞':{on:"ブン・モン",kun:"きく",m:"聞く・聞こえる"},'米':{on:"ベイ・マイ",kun:"こめ",m:"お米・米国"},'歩':{on:"ホ・ブ",kun:"あるく",m:"歩く・散歩"},'母':{on:"ボ",kun:"はは",m:"母・お母さん"},'方':{on:"ホウ",kun:"かた",m:"方向・方法"},'北':{on:"ホク",kun:"きた",m:"北・北方"},'毎':{on:"マイ",kun:"",m:"毎日・毎週"},'妹':{on:"マイ",kun:"いもうと",m:"妹・姉妹"},'万':{on:"マン・バン",kun:"よろず",m:"万・10000"},'明':{on:"メイ・ミョウ",kun:"あかるい",m:"明るい・明白"},'鳴':{on:"メイ",kun:"なく",m:"鳴く・鳴る"},'毛':{on:"モウ",kun:"け",m:"毛・毛糸"},'門':{on:"モン",kun:"かど",m:"門・校門"},'夜':{on:"ヤ",kun:"よる・よ",m:"夜・夜中"},'野':{on:"ヤ",kun:"の",m:"野原・野球"},'友':{on:"ユウ",kun:"とも",m:"友・友達"},'用':{on:"ヨウ",kun:"もちいる",m:"用いる・用事"},'曜':{on:"ヨウ",kun:"",m:"曜日"},'来':{on:"ライ",kun:"くる",m:"来る・来月"},'里':{on:"リ",kun:"さと",m:"里・ふるさと"},'理':{on:"リ",kun:"",m:"理由・理科"},'話':{on:"ワ",kun:"はなす",m:"話す・会話"},'悪':{on:"アク・オ",kun:"わるい",m:"悪い・悪事"},'安':{on:"アン",kun:"やすい",m:"安い・安全"},'暗':{on:"アン",kun:"くらい",m:"暗い・暗闇"},'医':{on:"イ",kun:"",m:"医者・医学"},'委':{on:"イ",kun:"ゆだねる",m:"委員・委任"},'意':{on:"イ",kun:"",m:"意味・意見"},'育':{on:"イク",kun:"そだてる",m:"育てる・教育"},'員':{on:"イン",kun:"",m:"社員・委員"},'院':{on:"イン",kun:"",m:"病院・入院"},'飲':{on:"イン",kun:"のむ",m:"飲む・飲料"},'運':{on:"ウン",kun:"はこぶ",m:"運ぶ・運動"},'泳':{on:"エイ",kun:"およぐ",m:"泳ぐ・水泳"},'駅':{on:"エキ",kun:"",m:"駅・鉄道駅"},'央':{on:"オウ",kun:"",m:"中央"},'横':{on:"オウ",kun:"よこ",m:"横・横断"},'屋':{on:"オク",kun:"や",m:"屋根・部屋"},'温':{on:"オン",kun:"あたたかい",m:"温かい・気温"},'化':{on:"カ・ケ",kun:"ばける",m:"変化・文化"},'荷':{on:"カ",kun:"に",m:"荷物・出荷"},'界':{on:"カイ",kun:"",m:"世界・限界"},'開':{on:"カイ",kun:"あける",m:"開ける・開始"},'階':{on:"カイ",kun:"",m:"階段・二階"},'寒':{on:"カン",kun:"さむい",m:"寒い・寒冷"},'感':{on:"カン",kun:"",m:"感じる・感動"},'漢':{on:"カン",kun:"",m:"漢字・漢語"},'館':{on:"カン",kun:"やかた",m:"図書館・旅館"},'岸':{on:"ガン",kun:"きし",m:"岸・海岸"},'起':{on:"キ",kun:"おきる",m:"起きる・起床"},'期':{on:"キ・ゴ",kun:"",m:"期間・学期"},'客':{on:"キャク・カク",kun:"",m:"客・お客様"},'究':{on:"キュウ",kun:"きわめる",m:"研究・究明"},'急':{on:"キュウ",kun:"いそぐ",m:"急ぐ・急行"},'級':{on:"キュウ",kun:"",m:"学級・等級"},'宮':{on:"キュウ・グウ",kun:"みや",m:"宮・神宮"},'球':{on:"キュウ",kun:"たま",m:"球・野球"},'去':{on:"キョ・コ",kun:"さる",m:"去る・過去"},'橋':{on:"キョウ",kun:"はし",m:"橋・橋梁"},'業':{on:"ギョウ・ゴウ",kun:"わざ",m:"業・職業"},'曲':{on:"キョク",kun:"まがる",m:"曲がる・曲線"},'局':{on:"キョク",kun:"",m:"局・放送局"},'銀':{on:"ギン",kun:"",m:"銀・銀行"},'区':{on:"ク",kun:"",m:"区・地区"},'苦':{on:"ク",kun:"くるしい",m:"苦しい・苦労"},'具':{on:"グ",kun:"",m:"道具・具体"},'君':{on:"クン",kun:"きみ",m:"君・君主"},'係':{on:"ケイ",kun:"かかる",m:"係・関係"},'軽':{on:"ケイ",kun:"かるい",m:"軽い・軽快"},'血':{on:"ケツ",kun:"ち",m:"血・血液"},'決':{on:"ケツ",kun:"きめる",m:"決める・決定"},'研':{on:"ケン",kun:"とぐ",m:"研究・研ぐ"},'県':{on:"ケン",kun:"",m:"県・都道府県"},'庫':{on:"コ・ク",kun:"",m:"倉庫・金庫"},'湖':{on:"コ",kun:"みずうみ",m:"湖・湖水"},'向':{on:"コウ",kun:"むかう",m:"向かう・方向"},'幸':{on:"コウ",kun:"しあわせ",m:"幸せ・幸運"},'港':{on:"コウ",kun:"みなと",m:"港・港湾"},'号':{on:"ゴウ",kun:"",m:"番号・記号"},'根':{on:"コン",kun:"ね",m:"根・根本"},'祭':{on:"サイ",kun:"まつり",m:"祭り・祭日"},'皿':{on:"",kun:"さら",m:"皿・お皿"},'仕':{on:"シ・ジ",kun:"つかえる",m:"仕事・仕える"},'死':{on:"シ",kun:"しぬ",m:"死ぬ・必死"},'使':{on:"シ",kun:"つかう",m:"使う・使用"},'始':{on:"シ",kun:"はじめる",m:"始める・開始"},'指':{on:"シ",kun:"ゆび・さす",m:"指・指差す"},'歯':{on:"シ",kun:"は",m:"歯・歯科"},'詩':{on:"シ",kun:"",m:"詩・詩人"},'次':{on:"ジ・シ",kun:"つぎ",m:"次・次回"},'事':{on:"ジ・ズ",kun:"こと",m:"事・出来事"},'持':{on:"ジ",kun:"もつ",m:"持つ・保持"},'式':{on:"シキ",kun:"",m:"式・方式"},'実':{on:"ジツ",kun:"み・みのる",m:"実・現実"},'写':{on:"シャ",kun:"うつす",m:"写す・写真"},'者':{on:"シャ",kun:"もの",m:"者・医者"},'主':{on:"シュ・ス",kun:"ぬし",m:"主・主人"},'守':{on:"シュ・ス",kun:"まもる",m:"守る・守備"},'取':{on:"シュ",kun:"とる",m:"取る・取得"},'酒':{on:"シュ",kun:"さけ",m:"酒・日本酒"},'受':{on:"ジュ",kun:"うける",m:"受ける・受理"},'州':{on:"シュウ",kun:"す",m:"州・本州"},'拾':{on:"シュウ・ジュウ",kun:"ひろう",m:"拾う・拾得"},'終':{on:"シュウ",kun:"おわる",m:"終わる・終了"},'習':{on:"シュウ",kun:"ならう",m:"習う・練習"},'集':{on:"シュウ",kun:"あつめる",m:"集める・集合"},'住':{on:"ジュウ",kun:"すむ",m:"住む・住宅"},'重':{on:"ジュウ・チョウ",kun:"おもい",m:"重い・重量"},'宿':{on:"シュク",kun:"やど",m:"宿・宿題"},'所':{on:"ショ",kun:"ところ",m:"場所・所有"},'暑':{on:"ショ",kun:"あつい",m:"暑い・残暑"},'助':{on:"ジョ",kun:"たすける",m:"助ける・助力"},'昭':{on:"ショウ",kun:"",m:"昭和"},'消':{on:"ショウ",kun:"きえる",m:"消える・消防"},'商':{on:"ショウ",kun:"あきなう",m:"商売・商品"},'章':{on:"ショウ",kun:"",m:"文章・記章"},'勝':{on:"ショウ",kun:"かつ",m:"勝つ・勝利"},'乗':{on:"ジョウ",kun:"のる",m:"乗る・乗車"},'植':{on:"ショク",kun:"うえる",m:"植える・植物"},'申':{on:"シン",kun:"もうす",m:"申す・申請"},'身':{on:"シン",kun:"み",m:"身体・身分"},'神':{on:"シン・ジン",kun:"かみ",m:"神・神社"},'真':{on:"シン",kun:"ま",m:"真・真実"},'深':{on:"シン",kun:"ふかい",m:"深い・深海"},'進':{on:"シン",kun:"すすむ",m:"進む・前進"},'世':{on:"セ・セイ",kun:"よ",m:"世界・世代"},'整':{on:"セイ",kun:"ととのえる",m:"整える・整理"},'昔':{on:"セキ・シャク",kun:"むかし",m:"昔・大昔"},'全':{on:"ゼン",kun:"すべて",m:"全部・全国"},'相':{on:"ソウ・ショウ",kun:"あい",m:"相手・相談"},'送':{on:"ソウ",kun:"おくる",m:"送る・郵送"},'想':{on:"ソウ・ソ",kun:"",m:"想像・感想"},'息':{on:"ソク",kun:"いき",m:"息・休息"},'速':{on:"ソク",kun:"はやい",m:"速い・速度"},'族':{on:"ゾク",kun:"",m:"家族・民族"},'他':{on:"タ",kun:"ほか",m:"他・他人"},'打':{on:"ダ",kun:"うつ",m:"打つ・打者"},'対':{on:"タイ・ツイ",kun:"",m:"対戦・反対"},'待':{on:"タイ",kun:"まつ",m:"待つ・待合"},'代':{on:"ダイ・タイ",kun:"かわる",m:"代わる・時代"},'第':{on:"ダイ",kun:"",m:"第一・次第"},'題':{on:"ダイ",kun:"",m:"問題・題名"},'炭':{on:"タン",kun:"すみ",m:"炭・石炭"},'短':{on:"タン",kun:"みじかい",m:"短い・短縮"},'談':{on:"ダン",kun:"",m:"相談・会談"},'着':{on:"チャク",kun:"きる",m:"着る・到着"},'注':{on:"チュウ",kun:"そそぐ",m:"注ぐ・注意"},'柱':{on:"チュウ",kun:"はしら",m:"柱・電柱"},'丁':{on:"チョウ・テイ",kun:"",m:"丁目・丁寧"},'帳':{on:"チョウ",kun:"",m:"手帳・帳面"},'調':{on:"チョウ",kun:"しらべる",m:"調べる・調査"},'追':{on:"ツイ",kun:"おう",m:"追う・追加"},'定':{on:"テイ・ジョウ",kun:"さだめる",m:"決定・安定"},'庭':{on:"テイ",kun:"にわ",m:"庭・庭園"},'笛':{on:"テキ",kun:"ふえ",m:"笛・口笛"},'鉄':{on:"テツ",kun:"",m:"鉄・金属"},'転':{on:"テン",kun:"ころがる",m:"転がる・回転"},'都':{on:"ト・ツ",kun:"みやこ",m:"都市・東京都"},'度':{on:"ド・ト",kun:"たび",m:"温度・一度"},'投':{on:"トウ",kun:"なげる",m:"投げる・投手"},'豆':{on:"トウ・ズ",kun:"まめ",m:"豆・大豆"},'島':{on:"トウ",kun:"しま",m:"島・列島"},'湯':{on:"トウ",kun:"ゆ",m:"湯・お湯"},'登':{on:"トウ・ト",kun:"のぼる",m:"登る・登山"},'等':{on:"トウ",kun:"ひとしい",m:"等しい・平等"},'動':{on:"ドウ",kun:"うごく",m:"動く・運動"},'童':{on:"ドウ",kun:"わらべ",m:"童話・児童"},'農':{on:"ノウ",kun:"",m:"農業・農村"},'波':{on:"ハ",kun:"なみ",m:"波・波紋"},'配':{on:"ハイ",kun:"くばる",m:"配る・配達"},'倍':{on:"バイ",kun:"",m:"倍・二倍"},'箱':{on:"",kun:"はこ",m:"箱・小箱"},'畑':{on:"",kun:"はた・はたけ",m:"畑・田畑"},'発':{on:"ハツ・ホツ",kun:"",m:"発見・出発"},'反':{on:"ハン・ホン",kun:"そる",m:"反対・反省"},'坂':{on:"ハン",kun:"さか",m:"坂・下り坂"},'板':{on:"ハン・バン",kun:"いた",m:"板・黒板"},'皮':{on:"ヒ",kun:"かわ",m:"皮・皮膚"},'悲':{on:"ヒ",kun:"かなしい",m:"悲しい・悲劇"},'美':{on:"ビ",kun:"うつくしい",m:"美しい・美術"},'鼻':{on:"ビ",kun:"はな",m:"鼻・鼻水"},'筆':{on:"ヒツ",kun:"ふで",m:"筆・鉛筆"},'氷':{on:"ヒョウ",kun:"こおり",m:"氷・氷山"},'表':{on:"ヒョウ",kun:"あらわす",m:"表・発表"},'秒':{on:"ビョウ",kun:"",m:"秒・秒針"},'病':{on:"ビョウ",kun:"やまい",m:"病気・病院"},'品':{on:"ヒン",kun:"しな",m:"品物・商品"},'負':{on:"フ",kun:"まける",m:"負ける・勝負"},'部':{on:"ブ",kun:"",m:"部分・部活"},'服':{on:"フク",kun:"",m:"服・衣服"},'福':{on:"フク",kun:"",m:"福・幸福"},'物':{on:"ブツ・モツ",kun:"もの",m:"物・生物"},'平':{on:"ヘイ・ビョウ",kun:"たいら",m:"平ら・平和"},'返':{on:"ヘン",kun:"かえす",m:"返す・返事"},'勉':{on:"ベン",kun:"",m:"勉強・努力"},'放':{on:"ホウ",kun:"はなす",m:"放す・放送"},'味':{on:"ミ",kun:"あじ",m:"味・風味"},'命':{on:"メイ・ミョウ",kun:"いのち",m:"命・寿命"},'面':{on:"メン",kun:"おも・つら",m:"面・表面"},'問':{on:"モン",kun:"とう",m:"問う・問題"},'役':{on:"ヤク・エキ",kun:"",m:"役・役目"},'薬':{on:"ヤク",kun:"くすり",m:"薬・薬品"},'由':{on:"ユ・ユウ・ユイ",kun:"よし",m:"由来・自由"},'油':{on:"ユ",kun:"あぶら",m:"油・石油"},'有':{on:"ユウ・ウ",kun:"ある",m:"有る・有名"},'遊':{on:"ユウ・ユ",kun:"あそぶ",m:"遊ぶ・遊園地"},'予':{on:"ヨ",kun:"",m:"予定・予習"},'羊':{on:"ヨウ",kun:"ひつじ",m:"羊・羊毛"},'洋':{on:"ヨウ",kun:"",m:"洋・海洋"},'葉':{on:"ヨウ",kun:"は",m:"葉・木の葉"},'陽':{on:"ヨウ",kun:"",m:"太陽・陽気"},'様':{on:"ヨウ",kun:"さま",m:"様子・様式"},'落':{on:"ラク",kun:"おちる",m:"落ちる・落下"},'流':{on:"リュウ・ル",kun:"ながれる",m:"流れる・流行"},'旅':{on:"リョ",kun:"たび",m:"旅・旅行"},'両':{on:"リョウ",kun:"",m:"両方・両親"},'緑':{on:"リョク・ロク",kun:"みどり",m:"緑色・緑化"},'礼':{on:"レイ・ライ",kun:"",m:"礼儀・お礼"},'列':{on:"レツ",kun:"",m:"列・行列"},'練':{on:"レン",kun:"ねる",m:"練習・訓練"},'路':{on:"ロ",kun:"じ",m:"道路・線路"},'和':{on:"ワ・オ",kun:"やわらぐ",m:"平和・和食"},'愛':{on:"アイ",kun:"",m:"愛・愛情"},'案':{on:"アン",kun:"",m:"案・提案"},'以':{on:"イ",kun:"",m:"以上・以下"},'衣':{on:"イ",kun:"ころも",m:"衣・衣服"},'位':{on:"イ",kun:"くらい",m:"位・順位"},'茨':{on:"",kun:"いばら",m:"茨城"},'印':{on:"イン",kun:"しるし",m:"印・印刷"},'英':{on:"エイ",kun:"",m:"英語・英国"},'栄':{on:"エイ",kun:"さかえる",m:"栄える・栄養"},'媛':{on:"エン",kun:"",m:"愛媛"},'塩':{on:"エン",kun:"しお",m:"塩・食塩"},'岡':{on:"",kun:"おか",m:"岡・静岡"},'億':{on:"オク",kun:"",m:"億・一億"},'加':{on:"カ",kun:"くわえる",m:"加える・参加"},'果':{on:"カ",kun:"はて・はたす",m:"果実・結果"},'貨':{on:"カ",kun:"",m:"貨物・通貨"},'課':{on:"カ",kun:"",m:"課題・課長"},'芽':{on:"ガ",kun:"め",m:"芽・発芽"},'賀':{on:"ガ",kun:"",m:"祝賀・年賀"},'改':{on:"カイ",kun:"あらためる",m:"改める・改正"},'械':{on:"カイ",kun:"",m:"機械・器械"},'害':{on:"ガイ",kun:"",m:"害・被害"},'街':{on:"ガイ・カイ",kun:"まち",m:"街・商店街"},'各':{on:"カク",kun:"おのおの",m:"各・各自"},'覚':{on:"カク",kun:"おぼえる",m:"覚える・感覚"},'潟':{on:"",kun:"かた",m:"新潟・干潟"},'完':{on:"カン",kun:"",m:"完成・完全"},'官':{on:"カン",kun:"",m:"官庁・警官"},'管':{on:"カン",kun:"くだ",m:"管・管理"},'関':{on:"カン",kun:"せき",m:"関係・玄関"},'観':{on:"カン",kun:"みる",m:"観察・観光"},'願':{on:"ガン",kun:"ねがう",m:"願う・願書"},'岐':{on:"キ",kun:"",m:"岐阜・分岐"},'希':{on:"キ",kun:"",m:"希望・希少"},'季':{on:"キ",kun:"",m:"季節・四季"},'旗':{on:"キ",kun:"はた",m:"旗・国旗"},'器':{on:"キ",kun:"うつわ",m:"器・道具"},'機':{on:"キ",kun:"はた",m:"機械・機会"},'議':{on:"ギ",kun:"",m:"議論・会議"},'求':{on:"キュウ",kun:"もとめる",m:"求める・要求"},'泣':{on:"キュウ",kun:"なく",m:"泣く・号泣"},'給':{on:"キュウ",kun:"",m:"給食・給料"},'挙':{on:"キョ",kun:"あげる",m:"挙げる・選挙"},'漁':{on:"ギョ・リョウ",kun:"",m:"漁業・漁師"},'共':{on:"キョウ",kun:"とも",m:"共・共通"},'協':{on:"キョウ",kun:"",m:"協力・協会"},'鏡':{on:"キョウ",kun:"かがみ",m:"鏡・望遠鏡"},'競':{on:"キョウ・ケイ",kun:"きそう",m:"競う・競争"},'極':{on:"キョク・ゴク",kun:"きわめる",m:"極・北極"},'熊':{on:"",kun:"くま",m:"熊・熊本"},'訓':{on:"クン",kun:"",m:"訓練・教訓"},'軍':{on:"グン",kun:"",m:"軍・軍隊"},'郡':{on:"グン",kun:"",m:"郡・郡部"},'群':{on:"グン",kun:"むれ",m:"群れ・群馬"},'径':{on:"ケイ",kun:"",m:"直径・半径"},'景':{on:"ケイ",kun:"",m:"景色・風景"},'芸':{on:"ゲイ",kun:"",m:"芸術・芸能"},'欠':{on:"ケツ",kun:"かける",m:"欠ける・欠席"},'結':{on:"ケツ",kun:"むすぶ",m:"結ぶ・結果"},'建':{on:"ケン・コン",kun:"たてる",m:"建てる・建物"},'健':{on:"ケン",kun:"すこやか",m:"健康・健全"},'験':{on:"ケン・ゲン",kun:"",m:"実験・経験"},'固':{on:"コ",kun:"かたい",m:"固い・固定"},'功':{on:"コウ・ク",kun:"",m:"成功・功績"},'好':{on:"コウ",kun:"すき",m:"好き・好意"},'香':{on:"コウ・キョウ",kun:"か・かおり",m:"香り・香川"},'候':{on:"コウ",kun:"そうろう",m:"天候・気候"},'康':{on:"コウ",kun:"",m:"健康"},'佐':{on:"サ",kun:"",m:"佐賀・補佐"},'差':{on:"サ",kun:"さす",m:"差・差別"},'菜':{on:"サイ",kun:"な",m:"菜・野菜"},'最':{on:"サイ",kun:"もっとも",m:"最大・最後"},'埼':{on:"",kun:"さき",m:"埼玉"},'材':{on:"ザイ",kun:"",m:"材料・木材"},'崎':{on:"",kun:"さき",m:"崎・長崎"},'昨':{on:"サク",kun:"",m:"昨日・昨年"},'札':{on:"サツ",kun:"ふだ",m:"札・お札"},'刷':{on:"サツ",kun:"する",m:"印刷・刷る"},'察':{on:"サツ",kun:"",m:"警察・観察"},'参':{on:"サン",kun:"まいる",m:"参加・参る"},'産':{on:"サン",kun:"うむ",m:"産む・生産"},'散':{on:"サン",kun:"ちる",m:"散る・散歩"},'残':{on:"ザン",kun:"のこる",m:"残る・残念"},'氏':{on:"シ",kun:"うじ",m:"氏・氏名"},'司':{on:"シ",kun:"",m:"司会・上司"},'試':{on:"シ",kun:"こころみる",m:"試みる・試験"},'児':{on:"ジ・ニ",kun:"",m:"児童・小児"},'治':{on:"ジ・チ",kun:"おさめる",m:"治す・政治"},'滋':{on:"ジ",kun:"",m:"滋賀・滋養"},'辞':{on:"ジ",kun:"やめる",m:"辞書・辞める"},'鹿':{on:"",kun:"しか",m:"鹿・鹿児島"},'失':{on:"シツ",kun:"うしなう",m:"失う・失敗"},'借':{on:"シャク",kun:"かりる",m:"借りる・借金"},'種':{on:"シュ",kun:"たね",m:"種類・品種"},'周':{on:"シュウ",kun:"まわり",m:"周り・周辺"},'祝':{on:"シュク・シュウ",kun:"いわう",m:"祝う・祝日"},'順':{on:"ジュン",kun:"",m:"順番・順序"},'初':{on:"ショ",kun:"はじめ",m:"初め・最初"},'松':{on:"ショウ",kun:"まつ",m:"松・松林"},'笑':{on:"ショウ",kun:"わらう",m:"笑う・笑顔"},'唱':{on:"ショウ",kun:"となえる",m:"唱える・合唱"},'焼':{on:"ショウ",kun:"やく",m:"焼く・全焼"},'照':{on:"ショウ",kun:"てる",m:"照る・照明"},'城':{on:"ジョウ",kun:"しろ",m:"城・大阪城"},'縄':{on:"ジョウ",kun:"なわ",m:"縄・沖縄"},'臣':{on:"シン・ジン",kun:"",m:"大臣・家臣"},'信':{on:"シン",kun:"",m:"信じる・自信"},'井':{on:"セイ・ショウ",kun:"い",m:"井戸・天井"},'成':{on:"セイ・ジョウ",kun:"なる",m:"成功・完成"},'省':{on:"セイ・ショウ",kun:"かえりみる",m:"反省・省略"},'清':{on:"セイ・ショウ",kun:"きよい",m:"清い・清潔"},'静':{on:"セイ・ジョウ",kun:"しずか",m:"静か・静止"},'席':{on:"セキ",kun:"",m:"席・出席"},'積':{on:"セキ",kun:"つむ",m:"積む・積雪"},'折':{on:"セツ",kun:"おる",m:"折る・骨折"},'節':{on:"セツ・セチ",kun:"ふし",m:"季節・節約"},'説':{on:"セツ・ゼイ",kun:"とく",m:"説明・小説"},'浅':{on:"セン",kun:"あさい",m:"浅い・浅瀬"},'戦':{on:"セン",kun:"いくさ",m:"戦争・戦略"},'選':{on:"セン",kun:"えらぶ",m:"選ぶ・選択"},'然':{on:"ゼン・ネン",kun:"",m:"自然・天然"},'争':{on:"ソウ",kun:"あらそう",m:"争う・競争"},'倉':{on:"ソウ",kun:"くら",m:"倉・倉庫"},'巣':{on:"ソウ",kun:"す",m:"巣・巣箱"},'束':{on:"ソク",kun:"たば",m:"束・約束"},'側':{on:"ソク",kun:"がわ",m:"側・両側"},'続':{on:"ゾク",kun:"つづく",m:"続く・継続"},'卒':{on:"ソツ",kun:"",m:"卒業・卒論"},'孫':{on:"ソン",kun:"まご",m:"孫・子孫"},'帯':{on:"タイ",kun:"おびる",m:"帯・地帯"},'隊':{on:"タイ",kun:"",m:"隊・軍隊"},'達':{on:"タツ",kun:"",m:"達成・友達"},'単':{on:"タン",kun:"",m:"単純・単語"},'置':{on:"チ",kun:"おく",m:"置く・位置"},'仲':{on:"チュウ",kun:"なか",m:"仲間・仲良し"},'沖':{on:"チュウ",kun:"おき",m:"沖・沖縄"},'兆':{on:"チョウ",kun:"きざす",m:"兆・前兆"},'低':{on:"テイ",kun:"ひくい",m:"低い・低温"},'底':{on:"テイ",kun:"そこ",m:"底・海底"},'的':{on:"テキ",kun:"まと",m:"的・目的"},'典':{on:"テン",kun:"",m:"典型・辞典"},'伝':{on:"デン",kun:"つたえる",m:"伝える・伝言"},'徒':{on:"ト",kun:"",m:"生徒・徒歩"},'努':{on:"ド",kun:"つとめる",m:"努力・努める"},'灯':{on:"トウ",kun:"ひ",m:"灯・電灯"},'働':{on:"ドウ",kun:"はたらく",m:"働く・労働"},'特':{on:"トク",kun:"",m:"特別・特徴"},'徳':{on:"トク",kun:"",m:"徳・道徳"},'栃':{on:"",kun:"とち",m:"栃木"},'奈':{on:"ナ",kun:"",m:"奈良・神奈川"},'梨':{on:"",kun:"なし",m:"梨・山梨"},'熱':{on:"ネツ",kun:"あつい",m:"熱い・体温"},'念':{on:"ネン",kun:"",m:"念・記念"},'敗':{on:"ハイ",kun:"やぶれる",m:"敗れる・失敗"},'梅':{on:"バイ",kun:"うめ",m:"梅・梅雨"},'博':{on:"ハク・バク",kun:"",m:"博士・博物館"},'阪':{on:"ハン",kun:"さか",m:"大阪"},'飯':{on:"ハン",kun:"めし",m:"飯・ご飯"},'飛':{on:"ヒ",kun:"とぶ",m:"飛ぶ・飛行"},'必':{on:"ヒツ",kun:"かならず",m:"必ず・必要"},'票':{on:"ヒョウ",kun:"",m:"投票・一票"},'標':{on:"ヒョウ",kun:"",m:"目標・標識"},'不':{on:"フ・ブ",kun:"",m:"不・不足"},'夫':{on:"フ・フウ",kun:"おっと",m:"夫・工夫"},'付':{on:"フ",kun:"つける",m:"付ける・受付"},'府':{on:"フ",kun:"",m:"都道府県"},'阜':{on:"フ",kun:"",m:"岐阜"},'富':{on:"フ・フウ",kun:"とむ",m:"富む・富士山"},'副':{on:"フク",kun:"",m:"副・副業"},'兵':{on:"ヘイ・ヒョウ",kun:"",m:"兵・兵庫"},'別':{on:"ベツ",kun:"わかれる",m:"別・区別"},'辺':{on:"ヘン",kun:"あたり",m:"辺・周辺"},'変':{on:"ヘン",kun:"かわる",m:"変わる・変化"},'便':{on:"ベン・ビン",kun:"たより",m:"便利・郵便"},'包':{on:"ホウ",kun:"つつむ",m:"包む・包丁"},'法':{on:"ホウ・ハッ",kun:"",m:"方法・法律"},'望':{on:"ボウ・モウ",kun:"のぞむ",m:"望む・希望"},'牧':{on:"ボク",kun:"まき",m:"牧場・放牧"},'末':{on:"マツ・バツ",kun:"すえ",m:"末・週末"},'満':{on:"マン",kun:"みちる",m:"満ちる・満足"},'未':{on:"ミ・ビ",kun:"",m:"未来・未満"},'民':{on:"ミン",kun:"たみ",m:"民・国民"},'無':{on:"ム・ブ",kun:"ない",m:"無い・無限"},'約':{on:"ヤク",kun:"",m:"約束・節約"},'勇':{on:"ユウ",kun:"いさむ",m:"勇気・勇敢"},'要':{on:"ヨウ",kun:"いる",m:"必要・重要"},'養':{on:"ヨウ",kun:"やしなう",m:"養う・栄養"},'浴':{on:"ヨク",kun:"あびる",m:"浴びる・入浴"},'利':{on:"リ",kun:"きく",m:"利用・便利"},'陸':{on:"リク",kun:"",m:"陸・大陸"},'良':{on:"リョウ",kun:"よい",m:"良い・改良"},'料':{on:"リョウ",kun:"",m:"料理・材料"},'量':{on:"リョウ",kun:"はかる",m:"量・分量"},'輪':{on:"リン",kun:"わ",m:"輪・車輪"},'類':{on:"ルイ",kun:"たぐい",m:"種類・分類"},'令':{on:"レイ",kun:"",m:"命令・法令"},'冷':{on:"レイ",kun:"つめたい",m:"冷たい・冷蔵"},'例':{on:"レイ",kun:"たとえる",m:"例・例文"},'連':{on:"レン",kun:"つらなる",m:"連なる・連続"},'老':{on:"ロウ",kun:"おいる",m:"老いる・老人"},'労':{on:"ロウ",kun:"",m:"労働・苦労"},'録':{on:"ロク",kun:"",m:"記録・登録"},'圧':{on:"アツ",kun:"",m:"圧力・血圧"},'囲':{on:"イ",kun:"かこむ",m:"囲む・周囲"},'移':{on:"イ",kun:"うつる",m:"移動・転移"},'因':{on:"イン",kun:"よる",m:"原因・要因"},'永':{on:"エイ",kun:"ながい",m:"永遠・永久"},'営':{on:"エイ",kun:"いとなむ",m:"営業・経営"},'衛':{on:"エイ・エ",kun:"",m:"衛生・防衛"},'易':{on:"エキ・イ",kun:"やさしい",m:"容易・貿易"},'益':{on:"エキ・ヤク",kun:"",m:"利益・有益"},'液':{on:"エキ",kun:"",m:"液体・血液"},'演':{on:"エン",kun:"",m:"演技・講演"},'応':{on:"オウ",kun:"こたえる",m:"応じる・応援"},'往':{on:"オウ",kun:"",m:"往復・往来"},'桜':{on:"オウ",kun:"さくら",m:"桜・桜前線"},'可':{on:"カ",kun:"",m:"可能・許可"},'仮':{on:"カ・ケ",kun:"かり",m:"仮・仮定"},'価':{on:"カ",kun:"あたい",m:"価格・価値"},'河':{on:"カ",kun:"かわ",m:"河・河川"},'過':{on:"カ",kun:"すぎる",m:"過ぎる・通過"},'快':{on:"カイ",kun:"こころよい",m:"快い・快適"},'解':{on:"カイ・ゲ",kun:"とく",m:"解く・理解"},'格':{on:"カク・コウ",kun:"",m:"格・性格"},'確':{on:"カク",kun:"たしか",m:"確かめる・確認"},'額':{on:"ガク",kun:"ひたい",m:"額・金額"},'刊':{on:"カン",kun:"",m:"刊行・週刊"},'幹':{on:"カン",kun:"みき",m:"幹・新幹線"},'慣':{on:"カン",kun:"なれる",m:"慣れる・習慣"},'眼':{on:"ガン・ゲン",kun:"まなこ",m:"眼・眼鏡"},'紀':{on:"キ",kun:"",m:"世紀・紀行"},'基':{on:"キ",kun:"もと",m:"基本・基礎"},'寄':{on:"キ",kun:"よる",m:"寄る・寄付"},'規':{on:"キ",kun:"",m:"規則・定規"},'喜':{on:"キ",kun:"よろこぶ",m:"喜ぶ・喜び"},'技':{on:"ギ",kun:"わざ",m:"技・技術"},'義':{on:"ギ",kun:"",m:"義務・正義"},'逆':{on:"ギャク",kun:"さか",m:"逆・逆転"},'久':{on:"キュウ・ク",kun:"ひさしい",m:"久しい・永久"},'旧':{on:"キュウ",kun:"",m:"旧・新旧"},'救':{on:"キュウ",kun:"すくう",m:"救う・救助"},'居':{on:"キョ",kun:"いる",m:"居る・住居"},'許':{on:"キョ",kun:"ゆるす",m:"許す・許可"},'境':{on:"キョウ・ケイ",kun:"さかい",m:"境・国境"},'均':{on:"キン",kun:"",m:"平均・均等"},'禁':{on:"キン",kun:"",m:"禁止・禁物"},'句':{on:"ク",kun:"",m:"句・俳句"},'型':{on:"ケイ",kun:"かた",m:"型・血液型"},'経':{on:"ケイ・キョウ",kun:"へる",m:"経験・経済"},'潔':{on:"ケツ",kun:"いさぎよい",m:"清潔・簡潔"},'件':{on:"ケン",kun:"",m:"件・事件"},'険':{on:"ケン",kun:"けわしい",m:"険しい・危険"},'検':{on:"ケン",kun:"",m:"検査・検討"},'限':{on:"ゲン",kun:"かぎる",m:"限る・限界"},'現':{on:"ゲン",kun:"あらわれる",m:"現れる・現在"},'減':{on:"ゲン",kun:"へる",m:"減る・減少"},'故':{on:"コ",kun:"ゆえ",m:"事故・故郷"},'個':{on:"コ",kun:"",m:"個・個人"},'護':{on:"ゴ",kun:"",m:"保護・護衛"},'効':{on:"コウ",kun:"きく",m:"効果・有効"},'厚':{on:"コウ",kun:"あつい",m:"厚い・厚紙"},'耕':{on:"コウ",kun:"たがやす",m:"耕す・農耕"},'航':{on:"コウ",kun:"",m:"航海・航空"},'鉱':{on:"コウ",kun:"",m:"鉱物・鉱山"},'構':{on:"コウ",kun:"かまえる",m:"構造・機構"},'興':{on:"コウ・キョウ",kun:"おこる",m:"興味・復興"},'講':{on:"コウ",kun:"",m:"講義・講演"},'告':{on:"コク",kun:"つげる",m:"告げる・報告"},'混':{on:"コン",kun:"まじる",m:"混む・混合"},'査':{on:"サ",kun:"",m:"調査・検査"},'再':{on:"サイ・サ",kun:"ふたたび",m:"再び・再会"},'災':{on:"サイ",kun:"わざわい",m:"災害・火災"},'妻':{on:"サイ",kun:"つま",m:"妻・夫妻"},'採':{on:"サイ",kun:"とる",m:"採る・採集"},'際':{on:"サイ",kun:"きわ",m:"際・国際"},'在':{on:"ザイ",kun:"ある",m:"存在・在宅"},'財':{on:"ザイ・サイ",kun:"",m:"財産・財政"},'罪':{on:"ザイ",kun:"つみ",m:"罪・犯罪"},'殺':{on:"サツ・サイ",kun:"ころす",m:"殺・殺人"},'雑':{on:"ザツ・ゾウ",kun:"",m:"雑・雑草"},'酸':{on:"サン",kun:"すい",m:"酸・酸素"},'賛':{on:"サン",kun:"",m:"賛成・賞賛"},'士':{on:"シ",kun:"",m:"士・武士"},'支':{on:"シ",kun:"ささえる",m:"支える・支持"},'史':{on:"シ",kun:"",m:"歴史・史実"},'志':{on:"シ",kun:"こころざす",m:"志・意志"},'枝':{on:"シ",kun:"えだ",m:"枝・枝葉"},'師':{on:"シ",kun:"",m:"師・教師"},'資':{on:"シ",kun:"",m:"資源・資金"},'飼':{on:"シ",kun:"かう",m:"飼う・飼育"},'示':{on:"ジ・シ",kun:"しめす",m:"示す・提示"},'似':{on:"ジ",kun:"にる",m:"似る・類似"},'識':{on:"シキ",kun:"",m:"知識・常識"},'質':{on:"シツ・シチ",kun:"",m:"品質・性質"},'舎':{on:"シャ",kun:"",m:"校舎・宿舎"},'謝':{on:"シャ",kun:"あやまる",m:"感謝・謝る"},'授':{on:"ジュ",kun:"さずける",m:"授業・教授"},'修':{on:"シュウ・シュ",kun:"おさめる",m:"修理・修学"},'述':{on:"ジュツ",kun:"のべる",m:"述べる・記述"},'術':{on:"ジュツ",kun:"",m:"技術・芸術"},'準':{on:"ジュン",kun:"",m:"準備・基準"},'序':{on:"ジョ",kun:"",m:"順序・序文"},'招':{on:"ショウ",kun:"まねく",m:"招く・招待"},'証':{on:"ショウ",kun:"",m:"証明・証拠"},'象':{on:"ショウ・ゾウ",kun:"",m:"対象・象"},'賞':{on:"ショウ",kun:"",m:"賞・賞金"},'条':{on:"ジョウ",kun:"",m:"条件・条約"},'状':{on:"ジョウ",kun:"",m:"状態・年賀状"},'常':{on:"ジョウ",kun:"つね",m:"常に・日常"},'情':{on:"ジョウ・セイ",kun:"なさけ",m:"情報・感情"},'織':{on:"ショク・シキ",kun:"おる",m:"織る・組織"},'職':{on:"ショク",kun:"",m:"職業・就職"},'制':{on:"セイ",kun:"",m:"制度・規制"},'性':{on:"セイ・ショウ",kun:"",m:"性質・男性"},'政':{on:"セイ・ショウ",kun:"まつりごと",m:"政治・行政"},'勢':{on:"セイ",kun:"いきおい",m:"勢い・勢力"},'精':{on:"セイ・ショウ",kun:"",m:"精神・精密"},'製':{on:"セイ",kun:"",m:"製品・製造"},'税':{on:"ゼイ",kun:"",m:"税金・消費税"},'責':{on:"セキ",kun:"せめる",m:"責任・責める"},'績':{on:"セキ",kun:"",m:"成績・業績"},'接':{on:"セツ",kun:"つぐ",m:"接する・面接"},'設':{on:"セツ",kun:"もうける",m:"設置・施設"},'絶':{on:"ゼツ",kun:"たえる",m:"絶える・絶対"},'祖':{on:"ソ",kun:"",m:"祖父・先祖"},'素':{on:"ソ・ス",kun:"",m:"素材・要素"},'総':{on:"ソウ",kun:"",m:"総合・総理"},'造':{on:"ゾウ",kun:"つくる",m:"造る・製造"},'像':{on:"ゾウ",kun:"",m:"像・想像"},'増':{on:"ゾウ",kun:"ふえる",m:"増える・増加"},'則':{on:"ソク",kun:"",m:"規則・法則"},'測':{on:"ソク",kun:"はかる",m:"測定・観測"},'属':{on:"ゾク",kun:"",m:"所属・金属"},'率':{on:"リツ・ソツ",kun:"ひきいる",m:"率・確率"},'損':{on:"ソン",kun:"そこなう",m:"損害・損失"},'貸':{on:"タイ",kun:"かす",m:"貸す・貸出"},'態':{on:"タイ",kun:"",m:"態度・状態"},'団':{on:"ダン・トン",kun:"",m:"団体・集団"},'断':{on:"ダン",kun:"たつ",m:"断つ・判断"},'築':{on:"チク",kun:"きずく",m:"建築・築く"},'貯':{on:"チョ",kun:"",m:"貯金・貯蔵"},'張':{on:"チョウ",kun:"はる",m:"張る・主張"},'停':{on:"テイ",kun:"",m:"停止・停車"},'提':{on:"テイ",kun:"さげる",m:"提出・提案"},'程':{on:"テイ",kun:"ほど",m:"程度・過程"},'適':{on:"テキ",kun:"",m:"適切・適当"},'統':{on:"トウ",kun:"すべる",m:"統一・伝統"},'堂':{on:"ドウ",kun:"",m:"食堂・講堂"},'銅':{on:"ドウ",kun:"",m:"銅・銅像"},'導':{on:"ドウ",kun:"みちびく",m:"導く・指導"},'得':{on:"トク",kun:"える",m:"得る・習得"},'毒':{on:"ドク",kun:"",m:"毒・消毒"},'独':{on:"ドク",kun:"ひとり",m:"独立・独自"},'任':{on:"ニン",kun:"まかせる",m:"任せる・責任"},'燃':{on:"ネン",kun:"もえる",m:"燃える・燃料"},'能':{on:"ノウ",kun:"",m:"能力・可能"},'破':{on:"ハ",kun:"やぶる",m:"破る・破壊"},'犯':{on:"ハン",kun:"おかす",m:"犯す・犯罪"},'判':{on:"ハン・バン",kun:"",m:"判断・裁判"},'版':{on:"ハン",kun:"",m:"版・出版"},'比':{on:"ヒ",kun:"くらべる",m:"比べる・比率"},'肥':{on:"ヒ",kun:"こえる",m:"肥える・肥料"},'非':{on:"ヒ",kun:"",m:"非常・非難"},'費':{on:"ヒ",kun:"ついやす",m:"費用・消費"},'備':{on:"ビ",kun:"そなえる",m:"準備・設備"},'評':{on:"ヒョウ",kun:"",m:"評価・評判"},'貧':{on:"ヒン・ビン",kun:"まずしい",m:"貧しい・貧困"},'布':{on:"フ",kun:"ぬの",m:"布・分布"},'婦':{on:"フ",kun:"",m:"婦人・主婦"},'武':{on:"ブ・ム",kun:"",m:"武・武士"},'復':{on:"フク",kun:"",m:"復習・往復"},'複':{on:"フク",kun:"",m:"複数・複雑"},'仏':{on:"ブツ",kun:"ほとけ",m:"仏・仏教"},'粉':{on:"フン",kun:"こな・こ",m:"粉・小麦粉"},'編':{on:"ヘン",kun:"あむ",m:"編む・編集"},'弁':{on:"ベン",kun:"",m:"弁当・弁論"},'保':{on:"ホ",kun:"たもつ",m:"保つ・保護"},'墓':{on:"ボ",kun:"はか",m:"墓・墓地"},'報':{on:"ホウ",kun:"むくいる",m:"報告・情報"},'豊':{on:"ホウ",kun:"ゆたか",m:"豊か・豊作"},'防':{on:"ボウ",kun:"ふせぐ",m:"防ぐ・予防"},'貿':{on:"ボウ",kun:"",m:"貿易・交易"},'暴':{on:"ボウ・バク",kun:"あばく",m:"暴力・暴れる"},'脈':{on:"ミャク",kun:"",m:"脈・山脈"},'務':{on:"ム",kun:"つとめる",m:"務める・義務"},'夢':{on:"ム",kun:"ゆめ",m:"夢・夢中"},'迷':{on:"メイ",kun:"まよう",m:"迷う・迷路"},'綿':{on:"メン",kun:"わた",m:"綿・木綿"},'輸':{on:"ユ",kun:"",m:"輸出・輸入"},'余':{on:"ヨ",kun:"あまる",m:"余る・余裕"},'容':{on:"ヨウ",kun:"",m:"内容・容量"},'略':{on:"リャク",kun:"",m:"省略・戦略"},'留':{on:"リュウ・ル",kun:"とめる",m:"留まる・留学"},'領':{on:"リョウ",kun:"",m:"領土・大統領"},'歴':{on:"レキ",kun:"",m:"歴史・経歴"},'胃':{on:"イ",kun:"",m:"胃・胃腸"},'異':{on:"イ",kun:"ことなる",m:"異なる・異常"},'遺':{on:"イ・ユイ",kun:"",m:"遺産・遺伝"},'域':{on:"イキ",kun:"",m:"地域・区域"},'宇':{on:"ウ",kun:"",m:"宇宙・宇宙人"},'映':{on:"エイ",kun:"うつる",m:"映る・映画"},'延':{on:"エン",kun:"のびる",m:"延びる・延期"},'沿':{on:"エン",kun:"そう",m:"沿う・沿岸"},'恩':{on:"オン",kun:"",m:"恩・恩人"},'我':{on:"ガ",kun:"われ",m:"我・自我"},'灰':{on:"カイ",kun:"はい",m:"灰・石灰"},'拡':{on:"カク",kun:"",m:"拡大・拡張"},'革':{on:"カク",kun:"かわ",m:"革命・革新"},'閣':{on:"カク",kun:"",m:"内閣・天守閣"},'割':{on:"カツ",kun:"わる",m:"割る・分割"},'株':{on:"",kun:"かぶ",m:"株・切り株"},'干':{on:"カン",kun:"ほす",m:"干す・干潮"},'巻':{on:"カン",kun:"まく",m:"巻く・巻物"},'看':{on:"カン",kun:"",m:"看護・看板"},'簡':{on:"カン",kun:"",m:"簡単・簡潔"},'危':{on:"キ",kun:"あぶない",m:"危険・危機"},'机':{on:"キ",kun:"つくえ",m:"机・書き物机"},'揮':{on:"キ",kun:"",m:"指揮・発揮"},'貴':{on:"キ",kun:"たっとい",m:"貴重・貴族"},'疑':{on:"ギ",kun:"うたがう",m:"疑う・疑問"},'吸':{on:"キュウ",kun:"すう",m:"吸う・呼吸"},'供':{on:"キョウ・ク",kun:"そなえる",m:"提供・子供"},'胸':{on:"キョウ",kun:"むね",m:"胸・胸部"},'郷':{on:"キョウ・ゴウ",kun:"",m:"郷土・故郷"},'勤':{on:"キン・ゴン",kun:"つとめる",m:"勤める・勤務"},'筋':{on:"キン",kun:"すじ",m:"筋・筋肉"},'系':{on:"ケイ",kun:"",m:"系統・体系"},'敬':{on:"ケイ",kun:"うやまう",m:"敬う・尊敬"},'警':{on:"ケイ",kun:"",m:"警察・警告"},'劇':{on:"ゲキ",kun:"",m:"劇・演劇"},'激':{on:"ゲキ",kun:"はげしい",m:"激しい・刺激"},'穴':{on:"ケツ",kun:"あな",m:"穴・洞穴"},'券':{on:"ケン",kun:"",m:"券・入場券"},'絹':{on:"ケン",kun:"きぬ",m:"絹・絹糸"},'権':{on:"ケン・ゴン",kun:"",m:"人権・権利"},'憲':{on:"ケン",kun:"",m:"憲法"},'源':{on:"ゲン",kun:"みなもと",m:"源・資源"},'厳':{on:"ゲン・ゴン",kun:"きびしい",m:"厳しい・厳格"},'己':{on:"コ・キ",kun:"おのれ",m:"自己・利己"},'呼':{on:"コ",kun:"よぶ",m:"呼ぶ・呼吸"},'誤':{on:"ゴ",kun:"あやまる",m:"誤る・誤解"},'后':{on:"コウ",kun:"",m:"皇后"},'孝':{on:"コウ",kun:"",m:"孝行・親孝行"},'皇':{on:"コウ・オウ",kun:"",m:"天皇・皇帝"},'紅':{on:"コウ・ク",kun:"べに・くれない",m:"紅・紅葉"},'降':{on:"コウ",kun:"おりる・ふる",m:"降る・降車"},'鋼':{on:"コウ",kun:"はがね",m:"鋼・鉄鋼"},'刻':{on:"コク",kun:"きざむ",m:"刻む・時刻"},'穀':{on:"コク",kun:"",m:"穀物・雑穀"},'骨':{on:"コツ",kun:"ほね",m:"骨・骨格"},'困':{on:"コン",kun:"こまる",m:"困る・困難"},'砂':{on:"サ・シャ",kun:"すな",m:"砂・砂漠"},'座':{on:"ザ",kun:"すわる",m:"座る・座席"},'済':{on:"サイ",kun:"すむ",m:"済む・経済"},'裁':{on:"サイ",kun:"たつ・さばく",m:"裁判・裁縫"},'策':{on:"サク",kun:"",m:"政策・対策"},'冊':{on:"サツ・サク",kun:"",m:"冊・別冊"},'蚕':{on:"サン",kun:"かいこ",m:"蚕・養蚕"},'至':{on:"シ",kun:"いたる",m:"至る・必至"},'私':{on:"シ",kun:"わたくし・わたし",m:"私・私立"},'姿':{on:"シ",kun:"すがた",m:"姿・姿勢"},'視':{on:"シ",kun:"",m:"視線・重視"},'詞':{on:"シ",kun:"",m:"詞・歌詞"},'誌':{on:"シ",kun:"",m:"雑誌・日誌"},'磁':{on:"ジ",kun:"",m:"磁石・磁気"},'射':{on:"シャ",kun:"いる",m:"射る・注射"},'捨':{on:"シャ",kun:"すてる",m:"捨てる・取捨"},'尺':{on:"シャク",kun:"",m:"尺・尺度"},'若':{on:"ジャク・ニャク",kun:"わかい",m:"若い・若者"},'樹':{on:"ジュ",kun:"",m:"樹・樹木"},'収':{on:"シュウ",kun:"おさめる",m:"収める・収入"},'宗':{on:"シュウ・ソウ",kun:"",m:"宗教・宗派"},'就':{on:"シュウ・ジュ",kun:"つく",m:"就職・就任"},'衆':{on:"シュウ・シュ",kun:"",m:"大衆・民衆"},'従':{on:"ジュウ・ショウ",kun:"したがう",m:"従う・従業"},'縦':{on:"ジュウ",kun:"たて",m:"縦・縦断"},'縮':{on:"シュク",kun:"ちぢむ",m:"縮む・短縮"},'熟':{on:"ジュク",kun:"うれる",m:"熟す・熟語"},'純':{on:"ジュン",kun:"",m:"純粋・単純"},'処':{on:"ショ",kun:"",m:"処理・対処"},'署':{on:"ショ",kun:"",m:"署名・警察署"},'諸':{on:"ショ",kun:"もろ",m:"諸国・諸問題"},'除':{on:"ジョ・ジ",kun:"のぞく",m:"除く・除去"},'承':{on:"ショウ",kun:"うけたまわる",m:"承知・承認"},'将':{on:"ショウ",kun:"",m:"将来・将軍"},'傷':{on:"ショウ",kun:"きず",m:"傷・傷つく"},'障':{on:"ショウ",kun:"さわる",m:"障害・故障"},'蒸':{on:"ジョウ",kun:"むす",m:"蒸す・蒸気"},'針':{on:"シン",kun:"はり",m:"針・時計の針"},'仁':{on:"ジン・ニ",kun:"",m:"仁・仁義"},'垂':{on:"スイ",kun:"たれる",m:"垂れる・垂直"},'推':{on:"スイ",kun:"おす",m:"推薦・推測"},'寸':{on:"スン",kun:"",m:"寸・寸法"},'盛':{on:"セイ・ジョウ",kun:"もる・さかる",m:"盛る・盛大"},'聖':{on:"セイ",kun:"",m:"聖人・神聖"},'誠':{on:"セイ",kun:"まこと",m:"誠実・誠意"},'舌':{on:"ゼツ",kun:"した",m:"舌・舌打ち"},'宣':{on:"セン",kun:"",m:"宣言・宣伝"},'専':{on:"セン",kun:"もっぱら",m:"専門・専任"},'泉':{on:"セン",kun:"いずみ",m:"泉・温泉"},'洗':{on:"セン",kun:"あらう",m:"洗う・洗濯"},'染':{on:"セン",kun:"そめる",m:"染める・伝染"},'銭':{on:"セン",kun:"ぜに",m:"銭・金銭"},'善':{on:"ゼン",kun:"よい",m:"善・改善"},'奏':{on:"ソウ",kun:"かなでる",m:"演奏・奏でる"},'窓':{on:"ソウ",kun:"まど",m:"窓・窓口"},'創':{on:"ソウ",kun:"つくる",m:"創作・創造"},'装':{on:"ソウ・ショウ",kun:"よそおう",m:"装う・衣装"},'層':{on:"ソウ",kun:"",m:"層・地層"},'操':{on:"ソウ",kun:"みさお・あやつる",m:"操作・体操"},'蔵':{on:"ゾウ",kun:"くら",m:"蔵・収蔵"},'臓':{on:"ゾウ",kun:"",m:"心臓・内臓"},'存':{on:"ソン・ゾン",kun:"",m:"存在・生存"},'尊':{on:"ソン",kun:"たっとい",m:"尊敬・尊重"},'退':{on:"タイ",kun:"しりぞく",m:"退く・退場"},'宅':{on:"タク",kun:"",m:"自宅・住宅"},'担':{on:"タン",kun:"になう",m:"担う・担当"},'探':{on:"タン",kun:"さぐる・さがす",m:"探す・探検"},'誕':{on:"タン",kun:"",m:"誕生・誕生日"},'段':{on:"ダン",kun:"",m:"段階・手段"},'暖':{on:"ダン",kun:"あたたかい",m:"暖かい・暖房"},'値':{on:"チ",kun:"ね・あたい",m:"値段・価値"},'宙':{on:"チュウ",kun:"",m:"宇宙・空中"},'忠':{on:"チュウ",kun:"",m:"忠実・忠告"},'著':{on:"チョ",kun:"あらわす・いちじるしい",m:"著者・著しい"},'庁':{on:"チョウ",kun:"",m:"庁・官庁"},'頂':{on:"チョウ",kun:"いただく",m:"山頂・頂上"},'腸':{on:"チョウ",kun:"",m:"腸・胃腸"},'潮':{on:"チョウ",kun:"しお",m:"潮・満潮"},'賃':{on:"チン",kun:"",m:"賃金・家賃"},'痛':{on:"ツウ",kun:"いたい",m:"痛い・頭痛"},'敵':{on:"テキ",kun:"かたき",m:"敵・強敵"},'展':{on:"テン",kun:"",m:"展開・展示"},'討':{on:"トウ",kun:"うつ",m:"討論・検討"},'党':{on:"トウ",kun:"",m:"政党・与党"},'糖':{on:"トウ",kun:"",m:"糖・砂糖"},'届':{on:"",kun:"とどける",m:"届ける・届出"},'難':{on:"ナン",kun:"むずかしい",m:"難しい・困難"},'乳':{on:"ニュウ",kun:"ちち・ち",m:"牛乳・乳児"},'認':{on:"ニン",kun:"みとめる",m:"認める・確認"},'納':{on:"ノウ・ナッ",kun:"おさめる",m:"納める・納税"},'脳':{on:"ノウ",kun:"",m:"脳・頭脳"},'派':{on:"ハ",kun:"",m:"派遣・流派"},'拝':{on:"ハイ",kun:"おがむ",m:"拝む・参拝"},'背':{on:"ハイ",kun:"せ・せい",m:"背中・背景"},'肺':{on:"ハイ",kun:"",m:"肺・肺活量"},'俳':{on:"ハイ",kun:"",m:"俳句・俳優"},'班':{on:"ハン",kun:"",m:"班・班長"},'晩':{on:"バン",kun:"",m:"晩・今晩"},'否':{on:"ヒ",kun:"いな",m:"否定・賛否"},'批':{on:"ヒ",kun:"",m:"批判・批評"},'秘':{on:"ヒ",kun:"ひめる",m:"秘密・神秘"},'俵':{on:"ヒョウ",kun:"たわら",m:"俵・土俵"},'腹':{on:"フク",kun:"はら",m:"腹・空腹"},'奮':{on:"フン",kun:"ふるう",m:"奮う・興奮"},'並':{on:"ヘイ",kun:"ならぶ",m:"並ぶ・並列"},'陛':{on:"ヘイ",kun:"",m:"陛下"},'閉':{on:"ヘイ",kun:"とじる",m:"閉じる・閉会"},'片':{on:"ヘン",kun:"かた",m:"片・片方"},'補':{on:"ホ",kun:"おぎなう",m:"補う・補助"},'暮':{on:"ボ",kun:"くれる・くらす",m:"暮らす・夕暮れ"},'宝':{on:"ホウ",kun:"たから",m:"宝物・国宝"},'訪':{on:"ホウ",kun:"おとずれる・たずねる",m:"訪ねる・訪問"},'亡':{on:"ボウ・モウ",kun:"ない",m:"亡くなる・死亡"},'忘':{on:"ボウ",kun:"わすれる",m:"忘れる・忘却"},'棒':{on:"ボウ",kun:"",m:"棒・棒グラフ"},'枚':{on:"マイ",kun:"",m:"枚・一枚"},'幕':{on:"マク・バク",kun:"",m:"幕・開幕"},'密':{on:"ミツ",kun:"",m:"秘密・密接"},'盟':{on:"メイ",kun:"",m:"同盟・連盟"},'模':{on:"モ・ボ",kun:"",m:"模型・規模"},'訳':{on:"ヤク",kun:"わけ",m:"翻訳・訳す"},'郵':{on:"ユウ",kun:"",m:"郵便・郵送"},'優':{on:"ユウ",kun:"やさしい・すぐれる",m:"優しい・優秀"},'預':{on:"ヨ",kun:"あずける",m:"預ける・預金"},'幼':{on:"ヨウ",kun:"おさない",m:"幼い・幼稚園"},'欲':{on:"ヨク",kun:"ほしい",m:"欲しい・欲望"},'翌':{on:"ヨク",kun:"",m:"翌日・翌週"},'乱':{on:"ラン",kun:"みだれる",m:"乱れる・混乱"},'卵':{on:"ラン",kun:"たまご",m:"卵・鶏卵"},'覧':{on:"ラン",kun:"",m:"覧・展覧会"},'裏':{on:"リ",kun:"うら",m:"裏・裏側"},'律':{on:"リツ・リチ",kun:"",m:"法律・規律"},'臨':{on:"リン",kun:"のぞむ",m:"臨む・臨時"},'朗':{on:"ロウ",kun:"ほがらか",m:"朗らか・朗読"},'論':{on:"ロン",kun:"",m:"論文・議論"},'遥':{on:"ヨウ",kun:"はるか",m:"はるか・遠い"}
+};
+
+// KANJI_LIST 構築
+const KANJI_LIST = {};
+Object.entries(GRADE_KANJI).forEach(([g,chars])=>{
+  [...chars].forEach(c=>{
+    const meta=KANJI_META[c]||{};
+    KANJI_LIST[c]={g:Number(g),label:`${g}年`,on:meta.on||'',kun:meta.kun||'',m:meta.m||`${g}年生で習う漢字`};
+  });
+});
+Object.entries(EXTRA_KANJI).forEach(([grp,chars])=>{
+  [...chars].forEach(c=>{
+    const meta=KANJI_META[c]||{};
+    KANJI_LIST[c]={g:grp,label:'名前',on:meta.on||'',kun:meta.kun||'',m:meta.m||'名前などで使う漢字'};
+  });
+});
+
+
+// ============================================================
+// 設定
+// ============================================================
+const MAX_SELECT = 8;
+const FORMATS = {
+  a:{ per:2, trace:4, blank:4, layout:'stack', grade:true,  reading:'full', mn:true },
+  b:{ per:4, trace:2, blank:2, layout:'inline', grade:false, reading:'compact', mn:false },
+  c:{ per:8, trace:0, blank:2, layout:'inline', grade:false, reading:'none', mn:false }
+};
+const DEFAULTS = { fmt:'a', guide:'cross', title:'漢字 書き順れんしゅう' };
+
+// ============================================================
+// STATE
+// ============================================================
+let state = { grade:'all', fmt:'a', guide:'cross', title:DEFAULTS.title, selected:[] };
+const svgCache = {};        // char -> {paths:[{d,w}], nums:[{x,y,n}], vb} または {error:true}
+let built = [];             // 現在プレビューに使われている漢字（成功したもの）
+const calcPath = document.getElementById('calc-path');
+const NS = 'http://www.w3.org/2000/svg';
+
+// ============================================================
+// 初期化
+// ============================================================
+function init(){
+  document.querySelectorAll('#grade-tabs .grade-btn').forEach(b=>{
+    b.onclick = ()=>filtergrade(b.dataset.grade);
+  });
+  document.getElementById('direct-input').addEventListener('keydown', e=>{ if(e.key==='Enter') adddirect(); });
+  rendergrid('all');
+  renderchips();
+}
+
+// ============================================================
+// 一覧・検索
+// ============================================================
+function filtergrade(g){
+  state.grade = g;
+  document.querySelectorAll('#grade-tabs .grade-btn').forEach(b=>b.classList.toggle('active', b.dataset.grade===g));
+  document.getElementById('search-input').value='';
+  rendergrid(g);
+}
+
+function rendergrid(g){
+  const grid = document.getElementById('kanji-grid');
+  grid.innerHTML='';
+  const entries = Object.entries(KANJI_LIST).filter(([,v])=> g==='all' || String(v.g)===g);
+  document.getElementById('pick-count').textContent =
+    g==='all' ? '全'+entries.length+'字' : (g==='name' ? '名前：'+entries.length+'字' : g+'年：'+entries.length+'字');
+  entries.forEach(([c,d])=> grid.appendChild(makecard(c,d)));
+}
+
+function makecard(c,d){
+  const card = document.createElement('div');
+  card.className = 'kanji-card' + (state.selected.includes(c)?' on':'');
+  card.dataset.label = d.label || (d.g+'年');
+  const reading = (d.kun || d.on || '').split('・')[0] || d.label;
+  card.innerHTML = '<span class="c">'+c+'</span><span class="r">'+reading+'</span>';
+  card.onclick = ()=> toggle(c);
+  return card;
+}
+
+function onsearch(v){
+  const grid = document.getElementById('kanji-grid');
+  if(!v){ rendergrid(state.grade); return; }
+  grid.innerHTML='';
+  const hits = Object.entries(KANJI_LIST).filter(([c,d])=>{
+    if(c===v) return true;
+    return (d.on+d.kun).includes(v);
+  }).slice(0,80);
+  if(!hits.length){ grid.innerHTML='<div class="grid-empty">「'+escapehtml(v)+'」は見つかりませんでした</div>'; return; }
+  hits.forEach(([c,d])=> grid.appendChild(makecard(c,d)));
+}
+
+// ============================================================
+// 選択の操作
+// ============================================================
+function toggle(c){
+  if(state.selected.includes(c)){
+    state.selected = state.selected.filter(x=>x!==c);
+  }else{
+    if(state.selected.length>=MAX_SELECT){ flashcount(); return; }
+    state.selected.push(c);
+  }
+  synccards(); renderchips();
+}
+
+async function adddirect(){
+  const inp = document.getElementById('direct-input');
+  const raw = inp.value || '';
+  // 漢字（CJK統合漢字）だけを対象に、重複除去
+  const chars = [...raw].filter(ch=>/[\u4e00-\u9fff\u3400-\u4dbf]/.test(ch));
+  const uniq = [];
+  chars.forEach(ch=>{ if(!uniq.includes(ch)) uniq.push(ch); });
+  if(!uniq.length){ inp.value=''; return; }
+
+  setloading(true, '漢字を確認しています…');
+  const added=[], failed=[], skipped=[];
+  for(const ch of uniq){
+    if(state.selected.includes(ch)){ continue; }
+    if(state.selected.length + added.length >= MAX_SELECT){ skipped.push(ch); continue; }
+    await loadone(ch);
+    if(svgCache[ch] && !svgCache[ch].error){ added.push(ch); }
+    else { failed.push(ch); }
+  }
+  added.forEach(ch=> state.selected.push(ch));
+  setloading(false);
+  inp.value='';
+  synccards(); renderchips();
+
+  let msg='';
+  if(added.length)  msg += added.length+'字を追加しました。 ';
+  if(failed.length) msg += '「'+failed.join('・')+'」は書き順データが見つかりませんでした。 ';
+  if(skipped.length)msg += '最大'+MAX_SELECT+'字までのため「'+skipped.join('・')+'」は追加できませんでした。';
+  if(failed.length || skipped.length) showbanner(msg, []);
+  else hidebanner();
+}
+
+function move(i, dir){
+  const j = i+dir;
+  if(j<0 || j>=state.selected.length) return;
+  const s = state.selected;
+  [s[i], s[j]] = [s[j], s[i]];
+  renderchips();
+}
+
+function removechar(c){
+  state.selected = state.selected.filter(x=>x!==c);
+  synccards(); renderchips();
+}
+
+function clearselection(){
+  state.selected = [];
+  synccards(); renderchips();
+}
+
+function flashcount(){
+  const el = document.getElementById('select-count');
+  el.style.color = '#ef4444';
+  setTimeout(()=>{ el.style.color=''; }, 900);
+}
+
+function synccards(){
+  document.querySelectorAll('.kanji-card').forEach(card=>{
+    const ch = card.querySelector('.c')?.textContent;
+    card.classList.toggle('on', state.selected.includes(ch));
+  });
+}
+
+function renderchips(){
+  const box = document.getElementById('chips');
+  document.getElementById('select-count').textContent = state.selected.length + ' / ' + MAX_SELECT;
+  if(!state.selected.length){
+    box.innerHTML = '<div class="chips-empty">まだありません。上からタップ、または直接入力で追加してください。</div>';
+    return;
+  }
+  box.innerHTML='';
+  state.selected.forEach((c,i)=>{
+    const err = svgCache[c] && svgCache[c].error;
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (err?' err':'');
+    chip.innerHTML =
+      '<button title="左へ">◀</button>' +
+      '<span class="c">'+c+'</span>' +
+      '<button title="右へ">▶</button>' +
+      '<button class="x" title="削除">×</button>';
+    const btns = chip.querySelectorAll('button');
+    btns[0].onclick = ()=> move(i,-1);
+    btns[1].onclick = ()=> move(i, 1);
+    btns[2].onclick = ()=> removechar(c);
+    box.appendChild(chip);
+  });
+}
+
+// ============================================================
+// 設定
+// ============================================================
+function setfmt(f){
+  state.fmt = f;
+  document.querySelectorAll('#fmt-cards .fmt-card').forEach(c=>c.classList.toggle('on', c.dataset.fmt===f));
+  if(built.length) renderpreview(built);
+}
+function setguide(g){ state.guide = g; if(built.length) renderpreview(built); }
+function settitle(t){ state.title = t; if(built.length) renderpreview(built); }
+
+function resetsettings(){
+  state.fmt = DEFAULTS.fmt; state.guide = DEFAULTS.guide; state.title = DEFAULTS.title;
+  document.querySelectorAll('#fmt-cards .fmt-card').forEach(c=>c.classList.toggle('on', c.dataset.fmt===DEFAULTS.fmt));
+  document.getElementById('guide-select').value = DEFAULTS.guide;
+  document.getElementById('title-input').value = DEFAULTS.title;
+  if(built.length) renderpreview(built);
+}
+
+// ============================================================
+// KanjiVG 取得（既存アプリと同じ kan-g を優先、失敗時に他ソース）
+// ============================================================
+function tohex(c){ return c.charCodeAt(0).toString(16).padStart(5,'0'); }
+
+async function loadone(c){
+  if(svgCache[c] && !svgCache[c].error) return;
+  const hex = tohex(c);
+  const sources = [
+    'https://kan-g.vnaka.dev/k/'+hex+'.svg',
+    'https://cdn.jsdelivr.net/gh/KanjiVG/kanjivg@master/kanji/'+hex+'.svg',
+    'https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/'+hex+'.svg'
+  ];
+  for(const url of sources){
+    try{
+      const res = await fetch(url);
+      if(!res.ok) continue;
+      const text = await res.text();
+      const parsed = parsesvg(text);
+      if(parsed && parsed.paths.length){ svgCache[c] = parsed; return; }
+    }catch(e){ /* 次のソースへ */ }
+  }
+  svgCache[c] = { error:true };
+}
+
+function parsesvg(text){
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  const svg = doc.querySelector('svg');
+  if(!svg) return null;
+  const vb = svg.getAttribute('viewBox') || '0 0 109 109';
+
+  // .kgPaths があれば優先、なければ全 path[d] を出現順に
+  let pathEls;
+  const kg = doc.querySelector('.kgPaths');
+  pathEls = kg ? [...kg.querySelectorAll('path')] : [...doc.querySelectorAll('path')];
+  const paths = pathEls.filter(p=>p.getAttribute('d')).map(p=>({ d:p.getAttribute('d'), w:p.getAttribute('stroke-width')||'3' }));
+  if(!paths.length) return { paths:[], nums:[], vb };
+
+  // .kgNumbers があれば優先
+  const kn = doc.querySelector('.kgNumbers');
+  const numEls = kn ? [...kn.querySelectorAll('text')] : [...doc.querySelectorAll('text')];
+  let nums = numEls.map((t,i)=>{
+    let x = parseFloat(t.getAttribute('x')), y = parseFloat(t.getAttribute('y'));
+    if(isNaN(x) || isNaN(y)){
+      const tr = t.getAttribute('transform') || '';
+      const m = tr.match(/matrix\([^)]*?([\-\d.]+)[ ,]+([\-\d.]+)\)/);
+      if(m){ x = parseFloat(m[1]); y = parseFloat(m[2]); }
+    }
+    return { x, y, n:(t.textContent||'').trim() || String(i+1) };
+  }).filter(o=>!isNaN(o.x) && !isNaN(o.y));
+
+  // 数が合わなければ各画の始点から番号位置を生成
+  if(nums.length !== paths.length){
+    nums = paths.map((p,i)=>{
+      const pt = startpoint(p.d);
+      return { x:pt.x, y:pt.y, n:String(i+1) };
+    });
+  }
+  return { paths, nums, vb };
+}
+
+function startpoint(d){
+  try{
+    calcPath.setAttribute('d', d);
+    const p = calcPath.getPointAtLength(0);
+    return { x:p.x, y:p.y };
+  }catch(e){
+    const m = d.match(/[Mm]\s*([\-\d.]+)[ ,]([\-\d.]+)/);
+    return m ? { x:parseFloat(m[1]), y:parseFloat(m[2]) } : { x:8, y:12 };
+  }
+}
+
+// ============================================================
+// SVG 組み立て
+// ============================================================
+function vbsize(vb){ const a = vb.split(/\s+/).map(Number); return { w:a[2]||109, h:a[3]||109 }; }
+
+function guidelines(vb, mode){
+  const { w, h } = vbsize(vb);
+  const cx = w/2, cy = h/2;
+  let s = '';
+  if(mode==='cross' || mode==='crossdiag'){
+    s += '<line x1="'+cx+'" y1="3" x2="'+cx+'" y2="'+(h-3)+'" stroke="#d0d0d0" stroke-width="0.7" stroke-dasharray="3,3"/>';
+    s += '<line x1="3" y1="'+cy+'" x2="'+(w-3)+'" y2="'+cy+'" stroke="#d0d0d0" stroke-width="0.7" stroke-dasharray="3,3"/>';
+  }
+  if(mode==='crossdiag'){
+    s += '<line x1="4" y1="4" x2="'+(w-4)+'" y2="'+(h-4)+'" stroke="#e2e2e2" stroke-width="0.6" stroke-dasharray="3,3"/>';
+    s += '<line x1="'+(w-4)+'" y1="4" x2="4" y2="'+(h-4)+'" stroke="#e2e2e2" stroke-width="0.6" stroke-dasharray="3,3"/>';
+  }
+  return s;
+}
+
+function frame(vb){
+  const { w, h } = vbsize(vb);
+  return '<rect x="0.6" y="0.6" width="'+(w-1.2)+'" height="'+(h-1.2)+'" fill="#fff" stroke="#111" stroke-width="1.1"/>';
+}
+
+// 書き順番号つき見本
+function modelsvg(data){
+  const vb = data.vb;
+  let inner = frame(vb) + guidelines(vb, 'cross');
+  data.paths.forEach(p=>{
+    const w = (parseFloat(p.w)||3);
+    inner += '<path d="'+p.d+'" fill="none" stroke="#111" stroke-width="'+(w).toFixed(1)+'" stroke-linecap="round" stroke-linejoin="round"/>';
+  });
+  data.nums.forEach(n=>{
+    inner += '<text x="'+n.x+'" y="'+n.y+'" font-size="8.5" fill="#d94f16" font-weight="bold" font-family="sans-serif">'+n.n+'</text>';
+  });
+  return '<svg xmlns="'+NS+'" viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+inner+'</svg>';
+}
+
+// なぞり / 空白マス
+function practicecell(data, trace){
+  const vb = data ? data.vb : '0 0 109 109';
+  let inner = frame(vb) + guidelines(vb, state.guide);
+  if(trace && data && data.paths.length){
+    data.paths.forEach(p=>{
+      const w = (parseFloat(p.w)||3);
+      inner += '<path d="'+p.d+'" fill="none" stroke="#c5c5c5" stroke-width="'+(w).toFixed(1)+'" stroke-linecap="round" stroke-linejoin="round"/>';
+    });
+  }
+  return '<svg xmlns="'+NS+'" viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+inner+'</svg>';
+}
+
+// ============================================================
+// プレビュー生成
+// ============================================================
+async function makeprint(){
+  hidebanner();
+  if(!state.selected.length){
+    showbanner('先に漢字をえらんでください。', []);
+    return;
+  }
+  setloading(true, '書き順データを読み込んでいます…');
+  for(const c of state.selected){ await loadone(c); }
+  setloading(false);
+
+  const ok = state.selected.filter(c=> svgCache[c] && !svgCache[c].error);
+  const ng = state.selected.filter(c=> !svgCache[c] || svgCache[c].error);
+  renderchips();
+
+  if(ng.length){
+    showbanner(
+      '「<b>'+ng.join('・')+'</b>」の書き順データを取得できませんでした。どうしますか？',
+      [
+        { label:'もう一度読み込む', alt:false, fn:()=>{ ng.forEach(c=>delete svgCache[c]); makeprint(); } },
+        { label:'取得できた漢字だけで作る', alt:true, fn:()=>{ hidebanner(); if(ok.length) renderpreview(ok); } }
+      ]
+    );
+    if(ok.length) renderpreview(ok);
+    return;
+  }
+  renderpreview(ok);
+}
+
+function renderpreview(list){
+  built = list.slice();
+  const sheet = document.getElementById('sheet');
+  const fmt = FORMATS[state.fmt];
+  if(!list.length){
+    sheet.innerHTML = '<div class="sheet-empty"><div class="emoji">📄</div><p>表示できる漢字がありません</p></div>';
+    document.getElementById('print-btn').disabled = true;
+    return;
+  }
+  // per ごとにページ分割
+  const pages = [];
+  for(let i=0;i<list.length;i+=fmt.per) pages.push(list.slice(i, i+fmt.per));
+
+  let html='';
+  pages.forEach(group=>{
+    html += '<div class="page fmt-'+state.fmt+'">';
+    html += sheethead();
+    group.forEach(c=> html += block(c));
+    html += '<footer class="credit">書き順データ: KanjiVG (CC BY-SA 3.0)</footer>';
+    html += '</div>';
+  });
+  sheet.innerHTML = html;
+  document.getElementById('print-btn').disabled = false;
+}
+
+function sheethead(){
+  return '<div class="sheet-head">' +
+    '<div class="sheet-title">'+escapehtml(state.title||'漢字 書き順れんしゅう')+'</div>' +
+    '<div class="sheet-meta">' +
+      '<span><b>なまえ</b><span class="fill-line"></span></span>' +
+      '<span><b>ひづけ</b><span class="fill-line" style="min-width:2.6cm"></span></span>' +
+    '</div></div>';
+}
+
+function block(c){
+  const fmt = FORMATS[state.fmt];
+  const d = KANJI_LIST[c] || {};
+  const data = svgCache[c];
+  if(!data || data.error) return '';
+
+  const model = '<div class="model-cell">'+modelsvg(data)+'</div>';
+  const kaku = '<div class="kaku">'+data.paths.length+'画</div>';
+
+  // 読み・意味
+  let info = '<div class="kinfo">';
+  if(fmt.grade) info += '<div class="big">'+c+'<span style="font-size:.7rem;font-weight:700;color:#555;margin-left:8px">'+(d.label||'')+'</span></div>';
+  if(fmt.reading==='full'){
+    const rd=[];
+    if(d.on)  rd.push('<span class="k">音</span>'+d.on);
+    if(d.kun) rd.push('<span class="k">訓</span>'+d.kun);
+    info += '<div class="rd">'+(rd.join('　')||'&nbsp;')+'</div>';
+    if(fmt.mn) info += '<div class="mn">'+escapehtml(d.m||'')+'</div>';
+  }else if(fmt.reading==='compact'){
+    const rd=[];
+    if(d.on)  rd.push(d.on);
+    if(d.kun) rd.push(d.kun);
+    info += '<div class="rd">'+(rd.join(' ・ ')||'&nbsp;')+'</div>';
+  }
+  info += '</div>';
+
+  // マス
+  let trace='';
+  for(let i=0;i<fmt.trace;i++) trace += '<div class="pcell">'+practicecell(data, true)+'</div>';
+  let blank='';
+  for(let i=0;i<fmt.blank;i++) blank += '<div class="pcell">'+practicecell(data, false)+'</div>';
+
+  if(fmt.layout==='stack'){
+    // A: 見本＋情報／なぞり行／空白行
+    return '<div class="kblock">' +
+      '<div class="kb-top">'+model+info+kaku+'</div>' +
+      (fmt.trace? '<div class="cell-row"><span class="row-label">なぞり</span>'+trace+'</div>':'') +
+      (fmt.blank? '<div class="cell-row"><span class="row-label">かく</span>'+blank+'</div>':'') +
+    '</div>';
+  }
+  // B / C: 1行にまとめる
+  const cells = (fmt.trace||fmt.blank) ? '<div class="cell-row">'+trace+blank+'</div>' : '';
+  return '<div class="kblock"><div class="kb-inline">'+model+info+(fmt.reading!=='none'?'':'')+kaku+cells+'</div></div>';
+}
+
+// ============================================================
+// UI ヘルパー
+// ============================================================
+function setloading(on, msg){
+  const el = document.getElementById('loading');
+  el.classList.toggle('on', on);
+  if(msg) document.getElementById('loading-text').textContent = msg;
+}
+function showbanner(html, buttons){
+  const el = document.getElementById('banner');
+  el.classList.add('on');
+  let h = '<div>'+html+'</div>';
+  if(buttons && buttons.length){
+    h += '<div class="btns"></div>';
+  }
+  el.innerHTML = h;
+  if(buttons && buttons.length){
+    const bar = el.querySelector('.btns');
+    buttons.forEach(b=>{
+      const btn = document.createElement('button');
+      btn.className = 'bbtn' + (b.alt?' alt':'');
+      btn.textContent = b.label;
+      btn.onclick = b.fn;
+      bar.appendChild(btn);
+    });
+  }
+}
+function hidebanner(){ document.getElementById('banner').classList.remove('on'); document.getElementById('banner').innerHTML=''; }
+function escapehtml(s){ return (s||'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+init();
+</script>
+</body>
+</html>

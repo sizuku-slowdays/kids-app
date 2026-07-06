@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#fdf7e5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="計算ドリルプリント">
-<title>計算ドリル プリントメーカー 明朝体版</title>
+<meta name="apple-mobile-web-app-title" content="計算プリント">
+<title>計算プリントメーカー 明朝体版</title>
 <style>
   :root{
     --paper:#ffffff;
@@ -33,29 +33,12 @@
     -webkit-text-size-adjust:100%;
   }
 
-  .app{
-    max-width:820px;
-    margin:0 auto;
-    padding:24px 16px 64px;
-  }
+  .app{ max-width:820px; margin:0 auto; padding:24px 16px 64px; }
 
   /* ---------- header ---------- */
-  .app-head{
-    text-align:center;
-    margin-bottom:20px;
-  }
-  .app-head h1{
-    font-size:clamp(22px,5.5vw,30px);
-    letter-spacing:.14em;
-    margin:0 0 6px;
-    font-weight:600;
-  }
-  .app-head p{
-    margin:0;
-    color:var(--sub);
-    font-size:13px;
-    letter-spacing:.06em;
-  }
+  .app-head{ text-align:center; margin-bottom:20px; }
+  .app-head h1{ font-size:clamp(22px,5.5vw,30px); letter-spacing:.14em; margin:0 0 6px; font-weight:600; }
+  .app-head p{ margin:0; color:var(--sub); font-size:13px; letter-spacing:.06em; }
 
   /* ---------- settings ---------- */
   .panel{
@@ -68,177 +51,99 @@
   }
   .field{ margin-bottom:18px; }
   .field:last-of-type{ margin-bottom:0; }
-  .field > label.head{
-    display:block;
-    font-size:13px;
-    color:var(--sub);
-    letter-spacing:.1em;
-    margin-bottom:8px;
+  .field > label.head, .field > span.head{
+    display:block; font-size:13px; color:var(--sub);
+    letter-spacing:.1em; margin-bottom:8px;
   }
   .field input[type=text]{
-    width:100%;
-    font-family:var(--serif);
-    font-size:16px;
-    color:var(--ink);
-    padding:10px 12px;
-    border:1px solid var(--line);
-    border-radius:10px;
-    background:#fff;
+    width:100%; font-family:var(--serif); font-size:16px; color:var(--ink);
+    padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#fff;
   }
   .field input[type=text]:focus{ outline:2px solid var(--accent-soft); border-color:var(--accent); }
 
   .seg{ display:flex; flex-wrap:wrap; gap:8px; }
   .seg button{
-    flex:1 1 auto;
-    min-width:90px;
-    font-family:var(--serif);
-    font-size:15px;
-    color:var(--ink);
-    padding:10px 8px;
-    border:1px solid var(--line);
-    border-radius:10px;
-    background:#fff;
-    cursor:pointer;
-    transition:.15s;
+    flex:1 1 auto; min-width:88px;
+    font-family:var(--serif); font-size:15px; color:var(--ink);
+    padding:10px 8px; border:1px solid var(--line); border-radius:10px;
+    background:#fff; cursor:pointer; transition:.15s;
   }
   .seg button:hover{ border-color:var(--accent); }
   .seg button.active{
-    background:var(--accent);
-    border-color:var(--accent);
-    color:#fff;
+    background:var(--accent); border-color:var(--accent); color:#fff;
     box-shadow:0 3px 10px rgba(217,164,65,.35);
   }
+  .seg .note{ display:block; font-size:11px; opacity:.75; margin-top:2px; }
 
   .checks{ display:flex; flex-direction:column; gap:10px; }
-  .check{
-    display:flex; align-items:center; gap:10px;
-    font-size:15px; cursor:pointer;
-    user-select:none;
-  }
+  .check{ display:flex; align-items:center; gap:10px; font-size:15px; cursor:pointer; user-select:none; }
   .check input{ width:20px; height:20px; accent-color:var(--accent); }
 
-  .actions{
-    display:flex; flex-wrap:wrap; gap:10px;
-    margin-top:6px;
-  }
+  .actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
   .btn{
-    font-family:var(--serif);
-    font-size:16px;
-    padding:13px 18px;
-    border-radius:11px;
-    border:1px solid var(--line);
-    background:#fff;
-    color:var(--ink);
-    cursor:pointer;
-    flex:1 1 auto;
+    font-family:var(--serif); font-size:16px; padding:13px 18px;
+    border-radius:11px; border:1px solid var(--line); background:#fff; color:var(--ink);
+    cursor:pointer; flex:1 1 auto;
   }
   .btn:hover{ border-color:var(--accent); }
-  .btn.primary{
-    background:var(--accent); border-color:var(--accent); color:#fff;
-    box-shadow:0 4px 14px rgba(217,164,65,.35);
-  }
+  .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 4px 14px rgba(217,164,65,.35); }
   .btn.ghost{ flex:0 0 auto; }
 
-  .hint{
-    font-size:12px; color:var(--sub);
-    margin:14px 2px 0; line-height:1.7;
-  }
+  .hint{ font-size:12px; color:var(--sub); margin:14px 2px 0; line-height:1.7; }
 
-  .preview-label{
-    text-align:center; color:var(--sub);
-    font-size:13px; letter-spacing:.14em;
-    margin:0 0 14px;
-  }
+  .preview-label{ text-align:center; color:var(--sub); font-size:13px; letter-spacing:.14em; margin:0 0 14px; }
 
   /* ---------- worksheet (paper) ---------- */
   #sheets{ display:flex; flex-direction:column; gap:28px; }
 
   .sheet{
     background:var(--paper);
-    width:210mm;
-    max-width:100%;
-    min-height:297mm;
-    margin:0 auto;
-    padding:16mm 15mm;
-    box-shadow:0 8px 30px rgba(80,64,26,.14);
-    border-radius:2px;
+    width:210mm; max-width:100%; min-height:297mm;
+    margin:0 auto; padding:16mm 15mm;
+    box-shadow:0 8px 30px rgba(80,64,26,.14); border-radius:2px;
   }
 
   .sheet-head{ margin-bottom:10mm; }
-  .sheet-title{
-    font-size:26px;
-    font-weight:600;
-    letter-spacing:.1em;
-    text-align:center;
-    margin:0 0 8px;
-  }
+  .sheet-title{ font-size:26px; font-weight:600; letter-spacing:.1em; text-align:center; margin:0 0 8px; }
   .sheet-rule{ border:none; border-top:1.5px solid var(--rule); margin:0 0 8px; }
-  .sheet-meta{
-    display:flex; align-items:flex-end; justify-content:space-between;
-    gap:16px;
-  }
+  .sheet-meta{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
   .sheet-name{ font-size:16px; letter-spacing:.06em; display:flex; align-items:flex-end; gap:6px; }
-  .sheet-name .line{
-    display:inline-block; min-width:150px;
-    border-bottom:1px solid var(--ink);
-    padding:0 6px 2px;
-  }
+  .sheet-name .line{ display:inline-block; min-width:150px; border-bottom:1px solid var(--ink); padding:0 6px 2px; }
   .sheet-stars{ color:var(--accent); font-size:18px; letter-spacing:.18em; }
 
   .grid{
     display:grid;
-    grid-template-columns:1fr 1fr;
-    column-gap:34px;
+    grid-template-columns:repeat(3,1fr);
+    column-gap:26px;
     row-gap:20px;
   }
   .q{
     display:flex; align-items:baseline; gap:10px;
-    font-size:23px; letter-spacing:.02em;
-    padding-bottom:6px;
-    border-bottom:1px dotted #efe7d2;
+    font-size:28px; letter-spacing:.02em;
+    padding-bottom:6px; border-bottom:1px dotted #efe7d2;
   }
   .num{
-    flex:0 0 auto;
-    width:1.7em; height:1.7em;
+    flex:0 0 auto; width:1.7em; height:1.7em;
     display:inline-flex; align-items:center; justify-content:center;
-    font-size:.62em;
-    color:var(--accent);
-    border:1px solid var(--accent);
-    border-radius:50%;
-    line-height:1;
+    font-size:.58em; color:var(--accent);
+    border:1px solid var(--accent); border-radius:50%; line-height:1;
   }
   .expr{ white-space:nowrap; }
-  .ans{
-    display:inline-block;
-    min-width:2.6em;
-    border-bottom:1px solid var(--ink);
-    text-align:center;
-  }
-  .ans.filled{
-    border-bottom:1px solid transparent;
-    color:var(--answer);
-    font-weight:600;
-  }
-  .mini{
-    font-size:.5em; color:#c9bfa6; margin-left:.3em;
-    vertical-align:super;
-  }
+  .ans{ display:inline-block; min-width:1.9em; border-bottom:1px solid var(--ink); text-align:center; }
+  .ans.filled{ border-bottom:1px solid transparent; color:var(--answer); font-weight:600; }
+  .mini{ font-size:.48em; color:#c9bfa6; margin-left:.3em; vertical-align:super; }
 
   /* density per problem count */
-  .sheet.count-15 .q{ font-size:26px; }
-  .sheet.count-15 .grid{ row-gap:26px; }
-  .sheet.count-30 .q{ font-size:20px; }
-  .sheet.count-30 .grid{ row-gap:12px; }
+  .sheet.count-20 .q{ font-size:30px; }
+  .sheet.count-20 .grid{ row-gap:28px; }
+  .sheet.count-45 .q{ font-size:23px; }
+  .sheet.count-45 .grid{ row-gap:13px; }
 
   /* screen scaling for narrow viewports */
   @media (max-width:840px){
-    .sheet{
-      width:100%;
-      min-height:auto;
-      padding:22px 18px;
-    }
-    .grid{ column-gap:20px; }
-    .q,.sheet.count-15 .q,.sheet.count-30 .q{ font-size:18px; }
+    .sheet{ width:100%; min-height:auto; padding:22px 16px; }
+    .grid{ column-gap:14px; row-gap:16px; }
+    .q,.sheet.count-20 .q,.sheet.count-45 .q{ font-size:19px; }
   }
 
   /* ---------- print ---------- */
@@ -248,12 +153,7 @@
     .no-print{ display:none !important; }
     .app{ max-width:none; padding:0; margin:0; }
     #sheets{ gap:0; }
-    .sheet{
-      width:auto; min-height:auto;
-      margin:0; padding:0;
-      box-shadow:none; border-radius:0;
-      page-break-after:always;
-    }
+    .sheet{ width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; border-radius:0; page-break-after:always; }
     .sheet:last-child{ page-break-after:auto; }
     .q{ break-inside:avoid; }
   }
@@ -263,15 +163,15 @@
 <div class="app">
 
   <header class="app-head no-print">
-    <h1>計算ドリル プリントメーカー</h1>
-    <p>A4に印刷して、よこ式の計算をれんしゅう</p>
+    <h1>計算プリントメーカー</h1>
+    <p>一桁のたし算・ひき算を、おぼえるためのドリル</p>
   </header>
 
   <section class="panel no-print">
 
     <div class="field">
       <label class="head" for="title">プリント名</label>
-      <input type="text" id="title" value="けいさんドリル" maxlength="24">
+      <input type="text" id="title" value="けいさんプリント" maxlength="24">
     </div>
 
     <div class="field">
@@ -291,8 +191,8 @@
     <div class="field">
       <span class="head">くり上がり・くり下がり</span>
       <div class="seg" id="carrySeg">
-        <button data-v="none">なし</button>
-        <button data-v="yes">あり</button>
+        <button data-v="none">なし<span class="note">答えが9まで</span></button>
+        <button data-v="yes">あり<span class="note">答えが10以上</span></button>
         <button data-v="mix" class="active">ミックス</button>
       </div>
     </div>
@@ -300,9 +200,9 @@
     <div class="field">
       <span class="head">もんだいの数</span>
       <div class="seg" id="countSeg">
-        <button data-v="15">15もん</button>
-        <button data-v="20" class="active">20もん</button>
-        <button data-v="30">30もん</button>
+        <button data-v="20">20もん</button>
+        <button data-v="30" class="active">30もん</button>
+        <button data-v="45">45もん</button>
       </div>
     </div>
 
@@ -320,8 +220,9 @@
     </div>
 
     <p class="hint">
-      日付らんはありません（先に日付だけ印刷した紙に、そのまま重ねて印刷できます）。<br>
-      印刷すると設定画面は消えて、プリントだけが出ます。iPhone・iPadは共有メニューから、パソコンは Ctrl + P（Macは ⌘ + P）でも印刷できます。
+      すべて一桁＋一桁（ひき算のくり下がりありは 13−5 のように借りてくる形）です。<br>
+      日付らんはありません。先に日付だけ印刷した紙に、そのまま重ねて印刷できます。<br>
+      印刷すると設定画面は消えて、プリントだけが出ます。パソコンは Ctrl + P（Macは ⌘ + P）、iPhone・iPadは共有メニューから印刷できます。
     </p>
   </section>
 
@@ -334,39 +235,27 @@
   const $ = s => document.querySelector(s);
 
   const state = {
-    title:'けいさんドリル',
+    title:'けいさんプリント',
     name:'',
     op:'add',      // add | sub | mix
     carry:'mix',   // none | yes | mix
-    count:20,      // 15 | 20 | 30
+    count:30,      // 20 | 30 | 45
     answerSheet:true,
     miniAnswer:false,
   };
 
-  /* ---------- problem generation ---------- */
+  /* ---------- problem generation (all single-digit facts) ---------- */
   const ri = (min,max)=>Math.floor(Math.random()*(max-min+1))+min;
   const mk = (a,b,op)=>({a,b,op,ans: op==='+' ? a+b : a-b});
 
-  function addNoCarry(){           // 各位くり上がりなし（2桁＋2桁）
-    const t1=ri(1,8), t2=ri(1,9-t1);
-    const o1=ri(0,9), o2=ri(0,9-o1);
-    return mk(t1*10+o1, t2*10+o2, '+');
-  }
-  function addCarry(){             // 一の位でくり上がりあり
-    const o1=ri(1,9), o2=ri(10-o1,9);
-    const t1=ri(1,8), t2=ri(1,8);
-    return mk(t1*10+o1, t2*10+o2, '+');
-  }
-  function subNoBorrow(){          // くり下がりなし（各位 a>=b）
-    const t2=ri(1,8), t1=ri(t2,9);
-    const o2=ri(0,9), o1=ri(o2,9);
-    return mk(t1*10+o1, t2*10+o2, '-');
-  }
-  function subBorrow(){            // 一の位でくり下がりあり（答えは必ず正）
-    const o2=ri(1,9), o1=ri(0,o2-1);
-    const t2=ri(1,7), t1=ri(t2+1,9);
-    return mk(t1*10+o1, t2*10+o2, '-');
-  }
+  // たし算 くり上がりなし : 一桁＋一桁、答え2〜9
+  function addNoCarry(){ const a=ri(1,8), b=ri(1,9-a); return mk(a,b,'+'); }
+  // たし算 くり上がりあり : 一桁＋一桁、答え10〜18
+  function addCarry(){ const a=ri(2,9), b=ri(10-a,9); return mk(a,b,'+'); }
+  // ひき算 くり下がりなし : 一桁−一桁、答え1〜8
+  function subNoBorrow(){ const a=ri(2,9), b=ri(1,a-1); return mk(a,b,'-'); }
+  // ひき算 くり下がりあり : (11〜18)−一桁、答え2〜9（借りてくる）
+  function subBorrow(){ const d=ri(1,8), m=10+d, s=ri(d+1,9); return mk(m,s,'-'); }
 
   const pickOp    = ()=> state.op==='add' ? '+' : state.op==='sub' ? '-' : (Math.random()<0.5?'+':'-');
   const pickCarry = ()=> state.carry==='none' ? false : state.carry==='yes' ? true : Math.random()<0.5;
@@ -382,14 +271,10 @@
     while(arr.length<n && guard<n*40){
       guard++;
       const p=genOne();
-      if(p.op==='-' && p.a===p.b) continue;                 // 答え0は避ける
       if(arr.some(q=>q.a===p.a && q.b===p.b && q.op===p.op)) continue; // 軽い重複回避
       arr.push(p);
     }
-    while(arr.length<n){                                     // 埋まらなければ重複許可
-      const p=genOne();
-      if(!(p.op==='-' && p.a===p.b)) arr.push(p);
-    }
+    while(arr.length<n) arr.push(genOne());                            // 埋まらなければ重複許可
     return arr;
   }
 
@@ -398,9 +283,7 @@
   const sym = op => op==='+' ? '＋' : '−';
 
   function cell(p, idx, isAnswer){
-    const ans = isAnswer
-      ? `<span class="ans filled">${p.ans}</span>`
-      : `<span class="ans"></span>`;
+    const ans = isAnswer ? `<span class="ans filled">${p.ans}</span>` : `<span class="ans"></span>`;
     const mini = (state.miniAnswer && !isAnswer) ? `<span class="mini">${p.ans}</span>` : '';
     return `<div class="q">
       <span class="num">${idx}</span>
@@ -410,7 +293,7 @@
 
   function sheet(problems, isAnswer){
     const cells = problems.map((p,i)=>cell(p,i+1,isAnswer)).join('');
-    const title = esc(state.title || 'けいさんドリル') + (isAnswer ? '（こたえ）' : '');
+    const title = esc(state.title || 'けいさんプリント') + (isAnswer ? '（こたえ）' : '');
     const nameInner = state.name ? esc(state.name) : '';
     return `<article class="sheet count-${state.count} ${isAnswer?'is-answer':''}">
       <header class="sheet-head">
@@ -455,13 +338,13 @@
   $('#makeBtn').addEventListener('click', render);
   $('#printBtn').addEventListener('click', ()=>window.print());
   $('#resetBtn').addEventListener('click', ()=>{
-    Object.assign(state,{title:'けいさんドリル',name:'',op:'add',carry:'mix',count:20,answerSheet:true,miniAnswer:false});
-    $('#title').value='けいさんドリル';
+    Object.assign(state,{title:'けいさんプリント',name:'',op:'add',carry:'mix',count:30,answerSheet:true,miniAnswer:false});
+    $('#title').value='けいさんプリント';
     $('#name').value='';
     $('#answerSheet').checked=true;
     $('#miniAnswer').checked=false;
     const setSeg=(id,v)=>document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
-    setSeg('opSeg','add'); setSeg('carrySeg','mix'); setSeg('countSeg','20');
+    setSeg('opSeg','add'); setSeg('carrySeg','mix'); setSeg('countSeg','30');
     render();
   });
 

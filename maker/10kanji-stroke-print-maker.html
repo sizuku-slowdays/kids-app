@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -109,7 +108,7 @@
         box-shadow:0 6px 30px rgba(0,0,0,.12);
         -webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .page.fmt-a{--model:4.6cm;--cell:2.35cm;}
-  .page.fmt-b{--model:3.0cm;--cell:2.1cm;}
+  .page.fmt-b{--model:4.4cm;--cell:2.9cm;}
   .page.fmt-c{--model:2.2cm;--cell:2.05cm;}
 
   .sheet-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #111;padding-bottom:6px;margin-bottom:6mm;gap:10px;}
@@ -292,7 +291,7 @@ Object.entries(EXTRA_KANJI).forEach(([grp,chars])=>{
 const MAX_SELECT = 8;
 const FORMATS = {
   a:{ per:2, trace:4, blank:4, layout:'stack', grade:true,  reading:'full', mn:true },
-  b:{ per:4, trace:2, blank:2, layout:'inline', grade:false, reading:'compact', mn:false },
+  b:{ per:4, trace:2, blank:2, layout:'wrap', grade:false, reading:'compact', mn:false },
   c:{ per:8, trace:0, blank:2, layout:'inline', grade:false, reading:'none', mn:false }
 };
 const DEFAULTS = { fmt:'a', guide:'cross', title:'漢字 書き順れんしゅう' };
@@ -584,6 +583,8 @@ function modelsvg(data){
     inner += '<path d="'+p.d+'" fill="none" stroke="#111" stroke-width="'+(w).toFixed(1)+'" stroke-linecap="round" stroke-linejoin="round"/>';
   });
   data.nums.forEach(n=>{
+    // 番号の下に白いハロー（縁取り）を敷いて、線や他の番号と重なっても読めるようにする
+    inner += '<circle cx="'+n.x+'" cy="'+(n.y-2.6)+'" r="4.6" fill="#fff" fill-opacity="0.88"/>';
     inner += '<text x="'+n.x+'" y="'+n.y+'" font-size="8.5" fill="#d94f16" font-weight="bold" font-family="sans-serif">'+n.n+'</text>';
   });
   return '<svg xmlns="'+NS+'" viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+inner+'</svg>';
@@ -707,7 +708,12 @@ function block(c){
       (fmt.blank? '<div class="cell-row"><span class="row-label">かく</span>'+blank+'</div>':'') +
     '</div>';
   }
-  // B / C: 1行にまとめる
+  if(fmt.layout==='wrap'){
+    // B: 見本＋情報を上段、なぞり・空白マスは下段にまとめて大きく使う
+    const cells = (fmt.trace||fmt.blank) ? '<div class="cell-row cell-row-wrap">'+trace+blank+'</div>' : '';
+    return '<div class="kblock"><div class="kb-top">'+model+info+kaku+'</div>'+cells+'</div>';
+  }
+  // C: 1行にまとめる
   const cells = (fmt.trace||fmt.blank) ? '<div class="cell-row">'+trace+blank+'</div>' : '';
   return '<div class="kblock"><div class="kb-inline">'+model+info+(fmt.reading!=='none'?'':'')+kaku+cells+'</div></div>';
 }

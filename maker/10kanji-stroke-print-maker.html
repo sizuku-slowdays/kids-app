@@ -153,17 +153,19 @@
 
   /* ===================== 印刷 ===================== */
   @media print{
-    @page{size:A4 portrait;margin:10mm;}
+    @page{size:A4 portrait;margin:0;}
     html,body{background:#fff;}
     .app{max-width:none;padding:0;}
     .no-print{display:none !important;}
     #sheet{overflow:visible;}
-    .page{width:auto;min-width:0;min-height:auto;margin:0;padding:0;box-shadow:none;border-radius:0;
+    .page{width:210mm;min-width:0;min-height:277mm;margin:0;padding:10mm;box-sizing:border-box;
+          box-shadow:none;border-radius:0;
           break-after:page;page-break-after:always;}
     .page:last-child{break-after:auto;page-break-after:auto;}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   }
 </style>
+<!-- 印刷時は、印刷ダイアログの「余白」を必ず「なし」にしてください。余白はこのCSS側（.pageのpadding）で作っています。 -->
 </head>
 <body>
 <div class="app">
@@ -244,6 +246,7 @@
       <button class="btn ghost" onclick="clearselection()">選択をすべて解除</button>
       <button class="btn ghost" onclick="resetsettings()">設定をリセット</button>
     </div>
+    <p class="hint" style="margin-top:8px">※ 印刷ダイアログの「余白」は必ず<b>「なし」</b>にしてください（余白はこのアプリ側で作っています）</p>
     <div class="loading" id="loading"><div class="spinner"></div><span id="loading-text">書き順データを読み込んでいます…</span></div>
     <div class="banner" id="banner"></div>
   </div>
@@ -420,7 +423,11 @@ function removechar(c){
 
 function clearselection(){
   state.selected = [];
-  synccards(); renderchips();
+  built = [];
+  synccards(); renderchips(); hidebanner(); setloading(false);
+  document.getElementById('sheet').innerHTML =
+    '<div class="sheet-empty"><div class="emoji">📄</div><p>漢字をえらんで「プリントを作る」を押すと、ここにプレビューが出ます</p></div>';
+  document.getElementById('print-btn').disabled = true;
 }
 
 function flashcount(){

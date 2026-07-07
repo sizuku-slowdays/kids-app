@@ -110,7 +110,10 @@
         -webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .page.fmt-a{--model:4.6cm;--cell:2.35cm;}
   .page.fmt-b{--model:3.9cm;--cell:2.5cm;}
-  .page.fmt-b .kblock{padding:2.5mm 3.5mm;margin-bottom:2.5mm;}
+  .page.fmt-b .kblock{padding:2.5mm 3.5mm;margin-bottom:2.5mm;
+    height:calc(var(--model) + var(--cell) + 3mm + 5mm);box-sizing:border-box;overflow:hidden;}
+  .page.fmt-b .kb-top{height:var(--model);overflow:hidden;}
+  .page.fmt-b .cell-row-wrap{height:var(--cell);overflow:hidden;}
   .page.fmt-c{--model:2.2cm;--cell:2.05cm;}
 
   .sheet-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #111;padding-bottom:6px;margin-bottom:6mm;gap:10px;}

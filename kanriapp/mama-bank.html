@@ -309,7 +309,6 @@
       <button class="drive-btn" id="driveSaveNow">💾 今すぐ保存</button>
       <button class="drive-btn" id="driveLoadNow">🔄 最新にする</button>
       <button class="drive-btn" id="passwordChangeBtn">🔑 パスワード変更</button>
-      <button class="drive-btn danger" id="resetAllBtn">🧹 0円に初期化</button>
     </div>
   </div>
 </div>
@@ -976,14 +975,10 @@ function undoLast(idx){
   else b[item.acc] = Number(b[item.acc]||0) + Number(item.amount||0);
   saveBalances(b); h.splice(idx,1); saveHistory(h); updateBalanceUI(); updateHistoryUI(); showToast('↩ 取り消したよ！','success'); scheduleAutoSave();
 }
-async function resetAllData(){
-  if(!confirm('ママ銀行を 0円 に初期化します。\n残高・履歴・目標が すべて消えます。\nクラウドのデータも上書きされます。\n\n本当によろしいですか？')) return;
-  // 誤タップ防止：合言葉を入力しないと実行しない
-  const word = prompt('本当に初期化する場合は、下の欄に「しょきか」と入力してください。');
-  if((word || '').trim() !== 'しょきか'){ showToast('初期化をキャンセルしました','error'); return; }
-  saveBalances({usagi:0,kuma:0}); saveHistory([]); saveGoalData({usagi:0,kuma:0}); updateAllUI();
-  await saveToCloudNow({force:true}); showToast('🧹 0円に初期化して保存しました','success');
-}
+// 「0円に初期化」機能は削除しました。
+// 誤タップで本番データ（残高・履歴・目標）が消える危険があるためです。
+// 万一やり直しが必要になった場合は、Cloudflare の D1 コンソールから
+// app_data テーブルを直接操作してください。
 function escapeHtml(value){ return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 function showToast(msg, type=''){
   const t = document.getElementById('toast'); t.textContent=msg; t.className='toast show '+type;
@@ -1009,7 +1004,6 @@ document.getElementById('driveLoadNow').addEventListener('click', loadFromCloud)
 document.getElementById('passwordChangeBtn').addEventListener('click', () => {
   clearSavedPassword(); const pw = ensurePassword(); if(pw){ showToast('🔑 パスワードを保存しました','success'); loadFromCloud(); }
 });
-document.getElementById('resetAllBtn').addEventListener('click', resetAllData);
 selectDepAcc('usagi'); selectWitAcc('usagi'); selectQuick('usagi'); updateStickerTotal(); updateAllUI(); loadFromCloud();
 </script>
 

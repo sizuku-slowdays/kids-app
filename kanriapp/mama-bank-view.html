@@ -39,7 +39,13 @@
   .section{background:var(--card);border-radius:var(--radius);padding:18px 16px;margin-top:14px;box-shadow:var(--shadow);border:1.5px solid rgba(200,150,220,0.18)}
   .section-title{font-size:1rem;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:6px}
   .balance-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .balance-card{border-radius:20px;padding:18px 10px 14px;text-align:center;position:relative;overflow:hidden}
+  .balance-card{border-radius:20px;padding:18px 10px 14px;text-align:center;position:relative;overflow:hidden;cursor:pointer;transition:opacity .2s,filter .2s,transform .12s}
+  .balance-card:active{transform:scale(0.96)}
+  .balance-card.dimmed{opacity:.4;filter:saturate(.45)}
+  .tap-hint{text-align:center;font-size:0.74rem;color:var(--text-soft);margin-top:10px}
+  .filter-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;background:#faf4ff;border:1.5px solid #dbc8f0;font-size:0.78rem;font-weight:700;color:var(--uni-dark);margin-left:auto}
+  .show-all-btn{padding:4px 12px;border-radius:999px;border:1.5px solid #dbc8f0;background:#faf4ff;font-family:'Noto Sans JP',sans-serif;font-size:0.76rem;font-weight:700;cursor:pointer;color:var(--uni-dark);margin-left:auto}
+  .show-all-btn:active{transform:scale(0.96)}
   .balance-card.saru{background:linear-gradient(145deg,#ffd6e7,#ffb3cc);border:2.5px solid var(--saru);box-shadow:0 4px 14px rgba(255,100,150,0.22)}
   .balance-card.uni{background:linear-gradient(145deg,#f2e0fc,#e4c5f8);border:2.5px solid var(--uni);box-shadow:0 4px 14px rgba(199,125,232,0.22)}
   .card-icon{font-size:2.4rem;line-height:1;margin-bottom:6px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.12))}
@@ -243,11 +249,33 @@ async function loadData(){
   }
 }
 
+// 口座をタップすると、その口座のきろくだけ表示する
+// 'all' / 'usagi' / 'kuma'
+let viewFilter = 'all';
+let lastData = null;
+let lastOptions = {};
+
+function tapAccount(acc){
+  // 同じ口座をもう一度タップしたら「ぜんぶ」に戻す
+  viewFilter = (viewFilter === acc) ? 'all' : acc;
+  if(lastData) renderData(lastData, lastOptions);
+}
+function showAllHistory(){
+  viewFilter = 'all';
+  if(lastData) renderData(lastData, lastOptions);
+}
+
 function renderData(data, options={}){
+  lastData = data;
+  lastOptions = options;
+
   const contentEl = document.getElementById('mainContent');
   const b = normalizeBalances(data.balances);
   const g = normalizeGoals(data.goals || {usagi:0,kuma:0});
-  const h = Array.isArray(data.history) ? data.history : [];
+  const all = Array.isArray(data.history) ? data.history : [];
+
+  // 選ばれた口座のきろくだけにする
+  const h = viewFilter === 'all' ? all : all.filter(item => item.acc === viewFilter);
 
   function goalBlock(acc){
     const bal  = Number(b[acc]||0);
@@ -259,14 +287,24 @@ function renderData(data, options={}){
     return `<div class="goal-block"><div class="goal-label">🎯 もくひょう ${goal.toLocaleString()}えん（${pct}%）</div><div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%"></div></div><div class="goal-remaining">あと <strong>${rem.toLocaleString()}えん</strong></div></div>`;
   }
 
+  // 選ばれていない方のカードは うすく する
+  const dim = (acc) => (viewFilter !== 'all' && viewFilter !== acc) ? ' dimmed' : '';
+
   const histHtml = !h.length
-    ? '<div class="no-history">まだきろくがないよ 🌸</div>'
+    ? (viewFilter === 'all'
+        ? '<div class="no-history">まだきろくがないよ 🌸</div>'
+        : '<div class="no-history">この こうざの きろくは まだないよ 🌸</div>')
     : h.slice().reverse().map(item=>{
         const isPlus  = item.type==='deposit';
         const icon    = item.acc==='usagi'?'🐰':'🦄';
         const accName = item.acc==='usagi'?'うさぎ口座':'ユニコーン口座';
         return `<div class="history-item"><div class="history-icon">${icon}</div><div class="history-info"><div class="history-name">${accName}</div><div class="history-memo">${esc(item.memo||'メモなし')}</div><div class="history-date">${esc(item.date||'')}</div></div><div class="history-amount ${isPlus?'plus':'minus'}">${isPlus?'+':'-'}${Number(item.amount||0).toLocaleString()}円</div></div>`;
       }).join('');
+
+  // きろくの見出し（絞り込み中は「ぜんぶみる」ボタンを出す）
+  const histTitle = viewFilter === 'all'
+    ? '<div class="section-title">📋 きろく</div>'
+    : `<div class="section-title">📋 ${viewFilter==='usagi'?'🐰 うさぎ口座':'🦄 ユニコーン口座'} の きろく<button class="show-all-btn" onclick="showAllHistory()">ぜんぶみる</button></div>`;
 
   const notice = options.balanceOnly ? `
     <div class="setup-box">
@@ -285,14 +323,14 @@ function renderData(data, options={}){
     <div class="section">
       <div class="section-title">💳 ざんだか</div>
       <div class="balance-cards">
-        <div class="balance-card saru">
+        <div class="balance-card saru${dim('usagi')}" onclick="tapAccount('usagi')">
           <div class="card-icon">🐰</div>
           <div class="card-name">うさぎ口座</div>
           <div class="card-balance">${Number(b.usagi||0).toLocaleString()}</div>
           <div class="card-unit">円</div>
           ${goalBlock('usagi')}
         </div>
-        <div class="balance-card uni">
+        <div class="balance-card uni${dim('kuma')}" onclick="tapAccount('kuma')">
           <div class="card-icon">🦄</div>
           <div class="card-name">ユニコーン口座</div>
           <div class="card-balance">${Number(b.kuma||0).toLocaleString()}</div>
@@ -300,9 +338,10 @@ function renderData(data, options={}){
           ${goalBlock('kuma')}
         </div>
       </div>
+      <div class="tap-hint">👆 こうざを タップすると、その きろくだけ みられるよ</div>
     </div>
     <div class="section">
-      <div class="section-title">📋 きろく</div>
+      ${histTitle}
       ${histHtml}
     </div>`;
 }

@@ -196,6 +196,11 @@
   .history-undo { background: #f5eeff; border: 1.5px solid #d8c0ec; border-radius: 9px; padding: 5px 9px; font-size: 0.74rem; cursor: pointer; color: var(--uni-dark); font-family: 'Noto Sans JP', sans-serif; font-weight: 700; flex-shrink: 0; transition: background 0.15s; }
   .history-undo:hover { background: #ede0fa; }
   .no-history { text-align: center; padding: 28px; color: var(--text-soft); font-size: 0.9rem; }
+  .hist-filter { display: flex; gap: 6px; margin-bottom: 10px; }
+  .hist-btn { flex: 1; padding: 8px 4px; border-radius: 999px; border: 1.5px solid #e2d0ee; background: #fbf7ff; font-family: 'Noto Sans JP', sans-serif; font-size: 0.76rem; font-weight: 700; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+  .hist-btn:active { transform: scale(0.96); }
+  .hist-btn.active { background: var(--uni-dark); border-color: var(--uni-dark); color: #fff; }
+  .hist-btn.active.usagi { background: var(--saru-dark); border-color: var(--saru-dark); }
 .hint-box { background: linear-gradient(135deg, #fffbf0, #fff5f8); border: 1.5px solid #f0d8a0; border-radius: 14px; padding: 14px 16px; margin-top: 14px; }
   .hint-box .hint-title { font-size: 0.85rem; font-weight: 900; color: #c08020; margin-bottom: 8px; }
   .hint-box ul { list-style: none; }
@@ -491,6 +496,11 @@
   <div class="container">
     <div class="section">
       <div class="section-title">📋 きろく</div>
+      <div class="hist-filter">
+        <button class="hist-btn active" id="hf-all"   onclick="setHistFilter('all')">ぜんぶ</button>
+        <button class="hist-btn"        id="hf-usagi" onclick="setHistFilter('usagi')">🐰 うさぎ</button>
+        <button class="hist-btn"        id="hf-kuma"  onclick="setHistFilter('kuma')">🦄 ユニコーン</button>
+      </div>
       <div id="history-list"><div class="no-history">まだきろくがないよ 🌸</div></div>
     </div>
   </div>
@@ -910,15 +920,43 @@ function updateBalanceUI(){
     el.innerHTML = rem <= 0 ? `<span class="goal-reached">🎉 目標 ${goal.toLocaleString()}円 たっせい！</span>` : `目標：${goal.toLocaleString()}円 ｜ あと <strong>${rem.toLocaleString()}円</strong>`;
   });
 }
+// 履歴の絞り込み：'all' / 'usagi' / 'kuma'
+let histFilter = 'all';
+function setHistFilter(acc){
+  histFilter = acc;
+  ['all','usagi','kuma'].forEach(k => {
+    const btn = document.getElementById('hf-' + k);
+    if(!btn) return;
+    btn.classList.toggle('active', k === acc);
+    btn.classList.toggle('usagi', k === 'usagi');
+  });
+  updateHistoryUI();
+}
 function updateHistoryUI(){
   const h = loadHistory(); const el = document.getElementById('history-list'); if(!el) return;
-  if(!h.length){ el.innerHTML='<div class="no-history">まだきろくがないよ 🌸</div>'; return; }
-  el.innerHTML = h.slice().reverse().map((item,i) => {
+
+  // ★元の配列での位置(idx)を保ったまま絞り込む。
+  //   取消(undoLast)が「見た目の順番」ではなく本物のデータを指すようにするため。
+  const rows = h
+    .map((item, idx) => ({item, idx}))
+    .filter(r => histFilter === 'all' || r.item.acc === histFilter)
+    .reverse();   // 新しい順
+
+  if(!rows.length){
+    el.innerHTML = histFilter === 'all'
+      ? '<div class="no-history">まだきろくがないよ 🌸</div>'
+      : '<div class="no-history">この口座のきろくは まだないよ 🌸</div>';
+    return;
+  }
+
+  el.innerHTML = rows.map((r, i) => {
+    const item = r.item;
     const isPlus = item.type === 'deposit';
     const icon = item.acc === 'usagi' ? '🐰' : '🦄';
     const accName = item.acc === 'usagi' ? 'うさぎ口座' : 'ユニコーン口座';
-    const realIdx = h.length - 1 - i;
-    return `<div class="history-item"><div class="history-icon">${icon}</div><div class="history-info"><div class="history-name">${accName}</div><div class="history-memo">${escapeHtml(item.memo||'メモなし')}</div><div class="history-date">${escapeHtml(item.date||'')}</div></div><div class="history-amount ${isPlus?'plus':'minus'}">${isPlus?'+':'-'}${Number(item.amount||0).toLocaleString()}円</div>${i===0?`<button class="history-undo" onclick="undoLast(${realIdx})">↩ 取消</button>`:''}</div>`;
+    // 取消ボタンは、表示中のいちばん新しい1件だけに出す
+    const undoBtn = i === 0 ? `<button class="history-undo" onclick="undoLast(${r.idx})">↩ 取消</button>` : '';
+    return `<div class="history-item"><div class="history-icon">${icon}</div><div class="history-info"><div class="history-name">${accName}</div><div class="history-memo">${escapeHtml(item.memo||'メモなし')}</div><div class="history-date">${escapeHtml(item.date||'')}</div></div><div class="history-amount ${isPlus?'plus':'minus'}">${isPlus?'+':'-'}${Number(item.amount||0).toLocaleString()}円</div>${undoBtn}</div>`;
   }).join('');
 }
 function updateAllUI(){ updateBalanceUI(); updateHistoryUI(); updateGoalInputs(); updateChoreList(); }

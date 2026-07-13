@@ -640,6 +640,22 @@ let furiganaOn = true;
 // Cloudflare Worker のURL。独自ドメインを使う場合はこのままでOK。
 const API_BASE = 'https://api.cetus.fun';
 
+// ===== 通知センター連携 =====
+// 宿題（id が 'hw_' で始まる項目）がぜんぶ終わったら「できた」を送る。
+// 項目名ではなく固定キー 'homework' × recipient で通知ルールに対応づける。
+const NC_KEY_HOMEWORK = 'homework';
+const NC_RECIPIENT = { elder: 'child1', younger: 'child2' };
+
+function ncNotifyHomeworkIfDone() {
+  try {
+    if (typeof NotifyDone !== 'function') return;
+    const hw = getAllCheckableIds().filter(id => id.indexOf('hw_') === 0);
+    if (!hw.length) return;                                  // 宿題のない画面では何もしない
+    if (!hw.every(id => checkedIds.has(id))) return;         // ぜんぶ終わったときだけ
+    NotifyDone(NC_KEY_HOMEWORK, NC_RECIPIENT[currentKid]);   // awaitしない・例外も出ない
+  } catch (e) { /* 連携の失敗で元アプリを止めない */ }
+}
+
 // GitHubにパスワードを直書きしないため、初回入力した合言葉を端末内に保存します。
 const PASSWORD_STORAGE_KEY = 'cloudflare_app_password';
 const PASSWORD_PROMPTED_KEY = 'school_check_password_prompted';
@@ -1182,6 +1198,7 @@ function toggleCheck(id) {
   updateCardState(id);
   updateProgress();
   scheduleSchoolSave();
+  ncNotifyHomeworkIfDone();   // ← 宿題が全部終わっていれば通知センターへ（待たない）
 }
 
 function updateCardState(id) {
@@ -1512,5 +1529,7 @@ window.addEventListener('load', async () => {
   render();
 });
 </script>
+<!-- 通知センター連携（元アプリを止めない。失敗しても保存はそのまま） -->
+<script src="/kanriapp/notification-link.js" data-api="https://notification-center-api.sslowdayss.workers.dev" defer></script>
 </body>
 </html>

@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>通知センター</title>
+
+<!-- iPhoneホーム画面Webアプリとして動かすための宣言（Web PushはPWAとして起動した時だけ使える） -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="通知センター">
+<meta name="theme-color" content="#eef1f6">
+<link rel="manifest" href="/kanriapp/notification-manifest.webmanifest">
+<link rel="apple-touch-icon" href="/kanriapp/notification-icon-192.png">
+
+<style>
+  :root{
+    --bg:#eef1f6;
+    --panel:#ffffff;
+    --panel-2:#f7f9fc;
+    --ink:#26313d;
+    --muted:#78889a;
+    --line:#dfe5ee;
+    --accent:#5b6ee1;
+    --accent-soft:#e7eaff;
+    --danger:#e0607a;
+    --ok:#3fa98a;
+
+    --mama:#ff9db4;
+    --child1:#ffbe63;
+    --child2:#b39ddb;
+    --all:#6fd3b8;
+
+    --radius:18px;
+    --shadow:0 2px 10px rgba(38,49,61,.06);
+    --font:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--font);
+    background:var(--bg);
+    color:var(--ink);
+    line-height:1.6;
+    padding:0 14px calc(96px + env(safe-area-inset-bottom));
+    max-width:640px;margin:0 auto;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{margin:0;font-weight:800;letter-spacing:.02em}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:16px}
+
+  /* ヘッダー */
+  header{padding:calc(20px + env(safe-area-inset-top)) 2px 12px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+  header h1{font-size:22px}
+  header h1 small{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.18em;margin-bottom:2px}
+  .clock{font-variant-numeric:tabular-nums;font-weight:800;font-size:20px;color:var(--accent);text-align:right;line-height:1.2}
+  .clock span{display:block;font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.1em}
+  .navlink{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;background:var(--accent-soft);padding:7px 11px;border-radius:11px;margin-bottom:6px;white-space:nowrap}
+
+  .card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+  .card h2{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .hint{font-size:12px;color:var(--muted);margin:4px 0 0}
+
+  /* タイムライン（今日の一日） */
+  .timeline{padding-bottom:10px}
+  .tl-wrap{position:relative;margin:14px 0 6px;height:74px}
+  .tl-axis{position:absolute;left:0;right:0;top:44px;height:6px;border-radius:3px;background:linear-gradient(90deg,#dfe5ee,#eef1f6,#dfe5ee)}
+  .tl-hour{position:absolute;top:54px;transform:translateX(-50%);font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .tl-tick{position:absolute;top:44px;width:1px;height:6px;background:#cfd7e3}
+  .tl-dot{position:absolute;top:34px;width:11px;height:11px;border-radius:50%;transform:translateX(-50%);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+  .tl-dot.stack2{top:22px}
+  .tl-dot.stack3{top:10px}
+  .tl-now{position:absolute;top:6px;bottom:20px;width:2px;background:var(--accent);border-radius:2px}
+  .tl-now::before{content:"";position:absolute;top:-4px;left:-3px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  .tl-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted)}
+  .tl-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted)}
+  .tl-legend b{display:inline-flex;align-items:center;gap:4px;font-weight:600;color:var(--ink)}
+  .swatch{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+  /* セットアップ */
+  .field{margin-bottom:10px}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}
+  .field input[type=text],.field input[type=password],.field input[type=time],.field input[type=date],.field input[type=number],.field select,.field textarea{
+    width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel-2);color:var(--ink);
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1;min-width:0}
+
+  .btn{border:none;border-radius:12px;padding:12px 16px;font-weight:700;font-size:14px;background:var(--accent);color:#fff}
+  .btn:active{transform:translateY(1px)}
+  .btn.sub{background:var(--accent-soft);color:var(--accent)}
+  .btn.ghost{background:transparent;color:var(--muted);border:1.5px solid var(--line)}
+  .btn.danger{background:#fdeaee;color:var(--danger)}
+  .btn.wide{width:100%}
+  .btn:disabled{opacity:.45}
+
+  .status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;padding:10px 12px;border-radius:12px;background:var(--panel-2);margin-bottom:10px}
+  .status.ok{background:#e7f6f1;color:var(--ok)}
+  .status.warn{background:#fff4e2;color:#b8792a}
+  .status.err{background:#fdeaee;color:var(--danger)}
+
+  /* 通知先チップ */
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1.5px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+  .chip[aria-pressed="true"]{color:#fff;border-color:transparent}
+  .chip[data-r="mama"][aria-pressed="true"]{background:var(--mama)}
+  .chip[data-r="child1"][aria-pressed="true"]{background:var(--child1)}
+  .chip[data-r="child2"][aria-pressed="true"]{background:var(--child2)}
+  .chip[data-r="all"][aria-pressed="true"]{background:var(--all)}
+
+  /* ルール一覧 */
+  .rule{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--line)}
+  .rule:last-child{border-bottom:none}
+  .rule.off{opacity:.45}
+  .rule-bar{width:4px;align-self:stretch;border-radius:2px;flex:none}
+  .rule-main{flex:1;min-width:0}
+  .rule-title{font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rule-body{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rule-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;font-size:11px;color:var(--muted);align-items:center}
+  .tag{background:var(--panel-2);border-radius:999px;padding:2px 8px;font-weight:700;font-variant-numeric:tabular-nums}
+  .tag.who{color:#fff}
+  .tag.link{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rule-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+  .icon-btn{border:none;background:none;font-size:15px;color:var(--muted);padding:2px 4px}
+
+  /* トグル */
+  .toggle{position:relative;width:44px;height:26px;border-radius:999px;background:var(--line);border:none;padding:0;flex:none;transition:background .15s}
+  .toggle[aria-pressed="true"]{background:var(--ok)}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .toggle[aria-pressed="true"]::after{transform:translateX(18px)}
+
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:22px 8px}
+
+  /* 折りたたみ */
+  details{margin-bottom:14px}
+  details>summary{list-style:none;cursor:pointer;background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;font-weight:800;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+  details>summary::-webkit-details-marker{display:none}
+  details>summary::after{content:"▾";color:var(--muted);font-size:12px}
+  details[open]>summary{border-radius:var(--radius) var(--radius) 0 0}
+  details[open]>summary::after{content:"▴"}
+  .details-body{background:var(--panel);border-radius:0 0 var(--radius) var(--radius);box-shadow:var(--shadow);padding:0 16px 16px;margin-top:-2px}
+
+  .device{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .device:last-child{border-bottom:none}
+  .device-name{font-weight:700;font-size:14px}
+  .device-sub{font-size:11px;color:var(--muted)}
+  .log{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:7px 0;border-bottom:1px dashed var(--line);color:var(--muted)}
+  .log b{color:var(--ink);font-weight:700}
+
+  /* 追加ボタン（下部固定） */
+  .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));width:min(612px,calc(100% - 28px));
+    background:var(--accent);color:#fff;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:800;box-shadow:0 6px 20px rgba(91,110,225,.35)}
+
+  /* モーダル */
+  dialog{border:none;padding:0;background:transparent;max-width:100%;width:100%}
+  dialog::backdrop{background:rgba(38,49,61,.45)}
+  .sheet{background:var(--panel);border-radius:22px 22px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:640px;margin:0 auto;position:fixed;bottom:0;left:0;right:0;max-height:92vh;overflow-y:auto}
+  .sheet h3{font-size:16px;margin-bottom:12px}
+  .emoji-picks{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+  .emoji-picks button{border:1.5px solid var(--line);background:var(--panel-2);border-radius:10px;padding:5px 8px;font-size:16px}
+  .days{display:flex;gap:5px}
+  .days button{flex:1;border:1.5px solid var(--line);background:var(--panel-2);border-radius:10px;padding:8px 0;font-size:13px;font-weight:700;color:var(--muted)}
+  .days button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+  .days button[data-d="0"]{color:var(--danger)}
+  .days button[data-d="6"]{color:#4a90d9}
+  .days button[aria-pressed="true"][data-d="0"],.days button[aria-pressed="true"][data-d="6"]{color:#fff}
+  .sheet-actions{display:flex;gap:8px;margin-top:14px}
+  .sheet-actions .btn{flex:1}
+
+  .preset{width:100%;text-align:left;border:1.5px solid var(--line);background:var(--panel-2);border-radius:12px;padding:10px 12px;margin-bottom:6px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:8px}
+  .preset small{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  /* トースト */
+  #toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;z-index:99;max-width:90%;text-align:center}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><small>NOTIFICATION CENTER</small>通知センター</h1>
+  <div style="text-align:right">
+    <a class="navlink" href="/kanriapp/notification-today.html">📊 きょうの記録</a>
+    <div class="clock"><span>いま（日本時間）</span><b id="clock">--:--</b></div>
+  </div>
+</header>
+
+<!-- 接続とこの端末の設定 -->
+<details id="setupBox" class="setup">
+  <summary>⚙️ 接続とこの端末</summary>
+  <div class="details-body">
+    <div id="deviceStatus" class="status">状態を確認しています…</div>
+
+    <div class="field">
+      <label for="apiBase">Worker の URL</label>
+      <input type="text" id="apiBase" value="https://notification-center-api.sslowdayss.workers.dev" placeholder="https://notification-center-api.sslowdayss.workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="appPassword">あいことば（X-App-Password）</label>
+      <input type="password" id="appPassword" placeholder="APP_PASSWORD" autocomplete="current-password">
+    </div>
+    <div class="field">
+      <label>この端末は誰のもの？</label>
+      <div class="chips" id="deviceRecipient">
+        <button type="button" class="chip" data-r="mama"   aria-pressed="false">🌸 ママ</button>
+        <button type="button" class="chip" data-r="child1" aria-pressed="false">🐒 長女</button>
+        <button type="button" class="chip" data-r="child2" aria-pressed="false">🦄 次女</button>
+        <button type="button" class="chip" data-r="all"    aria-pressed="false">👨‍👩‍👧‍👦 家族共用</button>
+      </div>
+      <p class="hint">「家族共用」にすると、すべての通知がこの端末に届きます。</p>
+    </div>
+    <div class="field">
+      <label for="deviceName">端末の名前</label>
+      <input type="text" id="deviceName" placeholder="ママのiPhone">
+    </div>
+
+    <div class="row">
+      <button class="btn" id="btnSubscribe">通知をゆるす</button>
+      <button class="btn sub" id="btnTest">テスト通知</button>
+    </div>
+    <button class="btn ghost wide" id="btnUnsubscribe" style="margin-top:8px">この端末の通知をやめる</button>
+    <p class="hint" id="iosHint"></p>
+  </div>
+</details>
+
+<!-- 今日のタイムライン（この画面の主役） -->
+<section class="card timeline">
+  <h2>🕐 今日 鳴るタイミング</h2>
+  <div class="tl-wrap" id="timeline"></div>
+  <div class="tl-legend">
+    <b><i class="swatch" style="background:var(--mama)"></i>ママ</b>
+    <b><i class="swatch" style="background:var(--child1)"></i>長女</b>
+    <b><i class="swatch" style="background:var(--child2)"></i>次女</b>
+    <b><i class="swatch" style="background:var(--all)"></i>ぜんいん</b>
+  </div>
+</section>
+
+<!-- ルール一覧 -->
+<section class="card">
+  <h2>🔔 通知の設定</h2>
+  <div class="chips" id="filterChips" style="margin-bottom:6px">
+    <button type="button" class="chip" data-f="" aria-pressed="true">すべて</button>
+    <button type="button" class="chip" data-r="mama"   data-f="mama"   aria-pressed="false">🌸 ママ</button>
+    <button type="button" class="chip" data-r="child1" data-f="child1" aria-pressed="false">🐒 長女</button>
+    <button type="button" class="chip" data-r="child2" data-f="child2" aria-pressed="false">🦄 次女</button>
+    <button type="button" class="chip" data-r="all"    data-f="all"    aria-pressed="false">👨‍👩‍👧‍👦 ぜんいん</button>
+  </div>
+  <div id="ruleList"><div class="empty">読み込み中…</div></div>
+</section>
+
+<!-- サンプル -->
+<details>
+  <summary>✨ よく使う通知を追加</summary>
+  <div class="details-body" id="presetList"></div>
+</details>
+
+<!-- 端末一覧 -->
+<details id="devicesBox">
+  <summary>📱 登録された端末</summary>
+  <div class="details-body" id="deviceList"><div class="empty">読み込み中…</div></div>
+</details>
+
+<!-- ログ -->
+<details id="logsBox">
+  <summary>📜 送信のきろく</summary>
+  <div class="details-body">
+    <div id="logList"><div class="empty">まだありません</div></div>
+    <button class="btn ghost wide" id="btnTick" style="margin-top:10px">いますぐ判定を1回まわす（動作確認）</button>
+  </div>
+</details>
+
+<button class="fab" id="btnNew">＋ 新しい通知</button>
+
+<!-- 編集シート -->
+<dialog id="ruleDialog">
+  <form method="dialog" class="sheet" id="ruleForm">
+    <h3 id="dialogTitle">新しい通知</h3>
+
+    <div class="field">
+      <label for="fTitle">タイトル（絵文字＋短く）</label>
+      <div class="emoji-picks" id="emojiPicks">
+        <button type="button">📝</button><button type="button">🦷</button><button type="button">💊</button>
+        <button type="button">📱</button><button type="button">🎒</button><button type="button">💧</button>
+        <button type="button">👀</button><button type="button">💪</button><button type="button">📅</button>
+        <button type="button">⚖️</button><button type="button">🛁</button><button type="button">🌙</button>
+      </div>
+      <input type="text" id="fTitle" maxlength="30" placeholder="📝 しゅくだい！" required>
+    </div>
+
+    <div class="field">
+      <label for="fBody">本文</label>
+      <input type="text" id="fBody" maxlength="60" placeholder="しゅくだい はじめよう">
+      <p class="hint">子ども向けは ひらがな中心 にすると読みやすいです。</p>
+    </div>
+
+    <div class="field">
+      <label>だれに送る？</label>
+      <div class="chips" id="fRecipient">
+        <button type="button" class="chip" data-r="mama"   aria-pressed="false">🌸 ママ</button>
+        <button type="button" class="chip" data-r="child1" aria-pressed="false">🐒 長女</button>
+        <button type="button" class="chip" data-r="child2" aria-pressed="false">🦄 次女</button>
+        <button type="button" class="chip" data-r="all"    aria-pressed="true">👨‍👩‍👧‍👦 ぜんいん</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="fUrl">タップで開くページ（空でもOK）</label>
+      <input type="text" id="fUrl" list="urlList" placeholder="/kanriapp/calendar.html" autocapitalize="off" spellcheck="false">
+      <datalist id="urlList">
+        <option value="/kanriapp/calendar.html">
+        <option value="/kanriapp/kyosei-check.html">
+        <option value="/kanriapp/school-check.html">
+        <option value="/kanriapp/notification-center.html">
+      </datalist>
+    </div>
+
+    <div class="field">
+      <label for="fRepeat">繰り返し</label>
+      <select id="fRepeat">
+        <option value="daily">毎日</option>
+        <option value="weekly">曜日を指定（毎週）</option>
+        <option value="interval">数時間ごと（時間帯を決めて）</option>
+        <option value="once">一度だけ</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>連携キー（external_key・任意）</label>
+      <input type="text" id="fExtKey" maxlength="40" placeholder="mouthpiece / homework など"
+             autocapitalize="off" spellcheck="false" list="extKeyList">
+      <datalist id="extKeyList">
+        <option value="mouthpiece">
+        <option value="homework">
+        <option value="smile-zemi">
+      </datalist>
+      <p class="hint">他のアプリ（きょうせいチェック等）から <code>NotifyDone('キー', 'child1')</code> で
+        「できた」を送るための固定キー。半角英数と <code>-_</code> のみ。<br>
+        同じキーを人ごとに持てます（homework × 長女／次女）。項目名を変えても壊れません。</p>
+    </div>
+
+    <div class="field">
+      <label>この通知を「習慣」として記録する</label>
+      <button type="button" class="toggle" id="fTrack" aria-pressed="true" style="margin-top:2px"></button>
+      <p class="hint">ONにすると、通知タップで <b>✅できた / ⏰あとで / ❌今日はしない</b> を選べて、「きょうの記録」に残ります。<br>OFFなら通知タップで上のURLをそのまま開きます。</p>
+    </div>
+
+    <details style="margin-bottom:10px">
+      <summary style="box-shadow:none;background:var(--panel-2);padding:11px 12px;border-radius:12px;font-size:13px">💬 通知文を人ごとに変える（任意）</summary>
+      <div style="padding:10px 2px 0">
+        <p class="hint" style="margin-bottom:8px">空欄なら上の既定文が使われます。次女には漢字を使わず、ひらがな・カタカナ・絵文字で。</p>
+        <div id="textsEditor"></div>
+      </div>
+    </details>
+
+    <div class="field" id="wrapTime">
+      <label for="fTime">時刻</label>
+      <input type="time" id="fTime" value="08:00">
+    </div>
+
+    <div class="field" id="wrapDate" hidden>
+      <label for="fDate">日付</label>
+      <input type="date" id="fDate">
+    </div>
+
+    <div class="field" id="wrapDays" hidden>
+      <label>曜日</label>
+      <div class="days" id="fDays">
+        <button type="button" data-d="0" aria-pressed="false">日</button>
+        <button type="button" data-d="1" aria-pressed="false">月</button>
+        <button type="button" data-d="2" aria-pressed="false">火</button>
+        <button type="button" data-d="3" aria-pressed="false">水</button>
+        <button type="button" data-d="4" aria-pressed="false">木</button>
+        <button type="button" data-d="5" aria-pressed="false">金</button>
+        <button type="button" data-d="6" aria-pressed="false">土</button>
+      </div>
+      <button type="button" class="btn ghost" id="btnWeekdays" style="margin-top:6px;padding:7px 12px;font-size:12px">平日だけ（月〜金）</button>
+    </div>
+
+    <div id="wrapInterval" hidden>
+      <div class="row">
+        <div class="field"><label for="fStart">開始</label><input type="time" id="fStart" value="09:00"></div>
+        <div class="field"><label for="fEnd">終了</label><input type="time" id="fEnd" value="17:00"></div>
+      </div>
+      <div class="field">
+        <label for="fInterval">何時間ごと</label>
+        <select id="fInterval">
+          <option value="1">1時間ごと</option>
+          <option value="2">2時間ごと</option>
+          <option value="3">3時間ごと</option>
+          <option value="4">4時間ごと</option>
+          <option value="6">6時間ごと</option>
+        </select>
+      </div>
+      <p class="hint">開始時刻から数えて鳴ります。例）9:00開始・1時間ごと・17:00終了 → 9,10,…,17時。</p>
+    </div>
+
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="btnCancel">やめる</button>
+      <button type="button" class="btn" id="btnSave">保存する</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+/* ================================================================
+   通知センター フロントエンド
+   - 設定は localStorage に保存（API URL / あいことば / この端末の情報）
+   - Push購読は Service Worker (/kanriapp/notification-sw.js) 経由
+   ================================================================ */
+
+const LS = {
+  api: 'nc_api_base',
+  pw: 'nc_app_password',
+  recipient: 'nc_device_recipient',
+  device: 'nc_device_name',
+};
+
+const RECIPIENT_LABEL = { mama:'🌸 ママ', child1:'🐒 長女', child2:'🦄 次女', all:'👨‍👩‍👧‍👦 ぜんいん' };
+const RECIPIENT_COLOR = { mama:'var(--mama)', child1:'var(--child1)', child2:'var(--child2)', all:'var(--all)' };
+const DOW = ['日','月','火','水','木','金','土'];
+const TEXT_RECIPIENTS = ['mama','child1','child2'];
+const TEXT_PLACEHOLDER = {
+  mama:   { title:'15時です。肩回しを50回しましょう', body:'（本文・任意）' },
+  child1: { title:'マウスピースした？',               body:'（本文・任意）' },
+  child2: { title:'🦷 まうすぴーす！',                body:'はめてね' },
+};
+
+const state = {
+  rules: [],
+  devices: [],
+  filter: '',
+  editingId: null,
+  subscription: null,
+  swReg: null,
+};
+
+/* ---------- 小道具 ---------- */
+const $ = (id) => document.getElementById(id);
+
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function jstNow(){
+  const d = new Date(Date.now() + 9*3600*1000);
+  return { hour:d.getUTCHours(), minute:d.getUTCMinutes(), dow:d.getUTCDay() };
+}
+
+function setChips(container, value){
+  container.querySelectorAll('.chip').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.r === value));
+  });
+}
+function getChips(container){
+  const on = container.querySelector('.chip[aria-pressed="true"]');
+  return on ? on.dataset.r : null;
+}
+
+/* ---------- API ---------- */
+function apiBase(){ return (localStorage.getItem(LS.api) || '').replace(/\/+$/, ''); }
+function appPassword(){ return localStorage.getItem(LS.pw) || ''; }
+
+async function api(path, options = {}){
+  if(!apiBase()) throw new Error('Worker の URL を設定してください');
+  const res = await fetch(apiBase() + path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-App-Password': appPassword(),
+      ...(options.headers || {}),
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error(data.error || `エラー (${res.status})`);
+  return data;
+}
+
+/* ---------- 発火時刻の計算（タイムライン用・画面表示用） ---------- */
+function toMin(hhmm){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+  return m ? (+m[1])*60 + (+m[2]) : null;
+}
+function fmtMin(min){
+  return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
+}
+function ruleDays(rule){
+  if(!rule.days_of_week) return null;
+  return String(rule.days_of_week).split(',').map(Number).filter((n) => n>=0 && n<=6);
+}
+
+/** 今日（JST）に鳴る時刻の配列を返す */
+function todayFireMinutes(rule){
+  const now = jstNow();
+  const days = ruleDays(rule);
+  if(rule.repeat_type === 'daily'){
+    const t = toMin(rule.time);
+    return t === null ? [] : [t];
+  }
+  if(rule.repeat_type === 'weekly'){
+    if(!days || !days.includes(now.dow)) return [];
+    const t = toMin(rule.time);
+    return t === null ? [] : [t];
+  }
+  if(rule.repeat_type === 'once'){
+    const d = new Date(Date.now() + 9*3600*1000);
+    const today = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+    if(rule.once_date !== today) return [];
+    const t = toMin(rule.time);
+    return t === null ? [] : [t];
+  }
+  if(rule.repeat_type === 'interval'){
+    if(days && !days.includes(now.dow)) return [];
+    const start = toMin(rule.start_time) ?? 540;
+    const end = toMin(rule.end_time) ?? 1020;
+    const step = Math.max(1, Number(rule.interval_hours) || 1) * 60;
+    const out = [];
+    for(let m = start; m <= end; m += step) out.push(m);
+    return out;
+  }
+  return [];
+}
+
+/** 一覧に出す「いつ鳴るか」の説明文 */
+function scheduleLabel(rule){
+  const days = ruleDays(rule);
+  const daysText = () => {
+    if(!days) return '毎日';
+    if(days.join(',') === '1,2,3,4,5') return '平日';
+    if(days.join(',') === '0,6') return '土日';
+    return days.map((d) => DOW[d]).join('・');
+  };
+  switch(rule.repeat_type){
+    case 'daily':    return `毎日 ${rule.time}`;
+    case 'weekly':   return `${daysText()} ${rule.time}`;
+    case 'once':     return `${rule.once_date} ${rule.time}（1回）`;
+    case 'interval': return `${daysText()} ${rule.start_time}〜${rule.end_time} ${rule.interval_hours}時間ごと`;
+    default:         return '';
+  }
+}
+
+/* ---------- 描画：タイムライン ---------- */
+function renderTimeline(){
+  const el = $('timeline');
+  el.innerHTML = '';
+
+  const axis = document.createElement('div');
+  axis.className = 'tl-axis';
+  el.appendChild(axis);
+
+  for(let h = 0; h <= 24; h += 3){
+    const pct = (h/24)*100;
+    const tick = document.createElement('div');
+    tick.className = 'tl-tick';
+    tick.style.left = `${pct}%`;
+    el.appendChild(tick);
+    const lab = document.createElement('div');
+    lab.className = 'tl-hour';
+    lab.style.left = `${pct}%`;
+    lab.textContent = h === 24 ? '24' : String(h);
+    el.appendChild(lab);
+  }
+
+  const active = state.rules.filter((r) => r.enabled);
+  const points = [];
+  active.forEach((r) => {
+    todayFireMinutes(r).forEach((m) => points.push({ m, r }));
+  });
+
+  if(points.length === 0){
+    const e = document.createElement('div');
+    e.className = 'tl-empty';
+    e.textContent = '今日 鳴る通知はありません';
+    el.appendChild(e);
+  }
+
+  // 近い時刻は上に積む
+  const buckets = {};
+  points.sort((a,b) => a.m - b.m).forEach((p) => {
+    const key = Math.round(p.m / 30);
+    buckets[key] = (buckets[key] || 0) + 1;
+    const level = Math.min(3, buckets[key]);
+    const dot = document.createElement('div');
+    dot.className = 'tl-dot' + (level === 2 ? ' stack2' : level === 3 ? ' stack3' : '');
+    dot.style.left = `${(p.m/1440)*100}%`;
+    dot.style.background = RECIPIENT_COLOR[p.r.recipient] || 'var(--all)';
+    dot.title = `${fmtMin(p.m)} ${p.r.title}`;
+    el.appendChild(dot);
+  });
+
+  const now = jstNow();
+  const nowLine = document.createElement('div');
+  nowLine.className = 'tl-now';
+  nowLine.style.left = `${((now.hour*60 + now.minute)/1440)*100}%`;
+  el.appendChild(nowLine);
+}
+
+/* ---------- 描画：ルール一覧 ---------- */
+function renderRules(){
+  const list = $('ruleList');
+  const rules = state.filter ? state.rules.filter((r) => r.recipient === state.filter) : state.rules;
+  list.innerHTML = '';
+
+  if(!rules.length){
+    list.innerHTML = '<div class="empty">通知はまだありません。<br>下の「＋ 新しい通知」から作れます。</div>';
+    return;
+  }
+
+  rules.forEach((r) => {
+    const row = document.createElement('div');
+    row.className = 'rule' + (r.enabled ? '' : ' off');
+    row.innerHTML = `
+      <div class="rule-bar" style="background:${RECIPIENT_COLOR[r.recipient]}"></div>
+      <div class="rule-main">
+        <div class="rule-title"></div>
+        <div class="rule-body"></div>
+        <div class="rule-meta">
+          <span class="tag who" style="background:${RECIPIENT_COLOR[r.recipient]}">${RECIPIENT_LABEL[r.recipient]}</span>
+          <span class="tag sched"></span>
+          ${r.track_completion ? '<span class="tag">📊 記録する</span>' : ''}
+          ${r.external_key ? `<span class="tag">🔗 ${r.external_key}</span>` : ''}
+          ${r.url ? '<span class="tag link">🔗 <span class="urltext"></span></span>' : ''}
+        </div>
+      </div>
+      <div class="rule-side">
+        <button class="toggle" aria-pressed="${r.enabled ? 'true' : 'false'}" aria-label="ON/OFF"></button>
+        <div>
+          <button class="icon-btn edit" aria-label="編集">✏️</button>
+          <button class="icon-btn del" aria-label="削除">🗑️</button>
+        </div>
+      </div>`;
+    row.querySelector('.rule-title').textContent = r.title;
+    row.querySelector('.rule-body').textContent = r.body || '';
+    row.querySelector('.sched').textContent = scheduleLabel(r);
+    if(r.url) row.querySelector('.urltext').textContent = r.url;
+
+    row.querySelector('.toggle').addEventListener('click', () => toggleRule(r));
+    row.querySelector('.edit').addEventListener('click', () => openDialog(r));
+    row.querySelector('.del').addEventListener('click', () => deleteRule(r));
+    list.appendChild(row);
+  });
+}
+
+/* ---------- 描画：端末一覧 ---------- */
+function renderDevices(){
+  const list = $('deviceList');
+  if(!state.devices.length){
+    list.innerHTML = '<div class="empty">まだ端末が登録されていません</div>';
+    return;
+  }
+  list.innerHTML = '';
+  state.devices.forEach((d) => {
+    const isThis = state.subscription && state.subscription.endpoint === d.endpoint;
+    const row = document.createElement('div');
+    row.className = 'device';
+    row.innerHTML = `
+      <div style="flex:1;min-width:0">
+        <div class="device-name"></div>
+        <div class="device-sub"></div>
+      </div>
+      <select class="dev-recipient" style="border:1.5px solid var(--line);border-radius:10px;padding:6px;background:var(--panel-2);font-size:12px">
+        ${Object.keys(RECIPIENT_LABEL).map((k) => `<option value="${k}" ${k===d.recipient?'selected':''}>${RECIPIENT_LABEL[k]}</option>`).join('')}
+      </select>
+      <button class="toggle" aria-pressed="${d.enabled ? 'true':'false'}" aria-label="ON/OFF"></button>
+      <button class="icon-btn del" aria-label="削除">🗑️</button>`;
+    row.querySelector('.device-name').textContent = d.device_name + (isThis ? '（この端末）' : '');
+    row.querySelector('.device-sub').textContent =
+      (d.last_success_at ? `最後の送信 ${d.last_success_at}` : '未送信') + (d.last_error ? ` / エラー ${d.last_error}` : '');
+
+    row.querySelector('.dev-recipient').addEventListener('change', async (e) => {
+      await api(`/api/devices/${d.id}`, { method:'PATCH', body: JSON.stringify({ recipient: e.target.value }) });
+      toast('通知先を変えました');
+      loadDevices();
+    });
+    row.querySelector('.toggle').addEventListener('click', async (e) => {
+      const next = e.target.getAttribute('aria-pressed') !== 'true';
+      await api(`/api/devices/${d.id}`, { method:'PATCH', body: JSON.stringify({ enabled: next }) });
+      loadDevices();
+    });
+    row.querySelector('.del').addEventListener('click', async () => {
+      if(!confirm(`「${d.device_name}」を削除しますか？`)) return;
+      await api(`/api/devices/${d.id}`, { method:'DELETE' });
+      toast('削除しました');
+      loadDevices();
+    });
+    list.appendChild(row);
+  });
+}
+
+/* ---------- 読み込み ---------- */
+async function loadRules(){
+  try{
+    const { rules } = await api('/api/rules');
+    state.rules = rules;
+    renderRules();
+    renderTimeline();
+  }catch(e){
+    $('ruleList').innerHTML = `<div class="empty">${e.message}<br>「⚙️ 接続とこの端末」を確認してください。</div>`;
+  }
+}
+async function loadDevices(){
+  try{
+    const { devices } = await api('/api/devices');
+    state.devices = devices;
+    renderDevices();
+  }catch(e){
+    $('deviceList').innerHTML = `<div class="empty">${e.message}</div>`;
+  }
+}
+async function loadLogs(){
+  try{
+    const { logs } = await api('/api/logs');
+    const el = $('logList');
+    if(!logs.length){ el.innerHTML = '<div class="empty">まだありません</div>'; return; }
+    el.innerHTML = '';
+    logs.forEach((l) => {
+      const row = document.createElement('div');
+      row.className = 'log';
+      const left = document.createElement('div');
+      left.innerHTML = '<b></b>';
+      left.querySelector('b').textContent = l.title || `#${l.rule_id}`;
+      const right = document.createElement('div');
+      right.textContent = `${l.fire_key} / 送信${l.sent_count} 失敗${l.fail_count}`;
+      row.append(left, right);
+      el.appendChild(row);
+    });
+  }catch(e){
+    $('logList').innerHTML = `<div class="empty">${e.message}</div>`;
+  }
+}
+
+/* ---------- ルール操作 ---------- */
+async function toggleRule(rule){
+  try{
+    await api(`/api/rules/${rule.id}`, { method:'PATCH', body: JSON.stringify({ enabled: !rule.enabled }) });
+    rule.enabled = rule.enabled ? 0 : 1;
+    renderRules(); renderTimeline();
+  }catch(e){ toast(e.message); }
+}
+
+async function deleteRule(rule){
+  if(!confirm(`「${rule.title}」を削除しますか？`)) return;
+  try{
+    await api(`/api/rules/${rule.id}`, { method:'DELETE' });
+    state.rules = state.rules.filter((r) => r.id !== rule.id);
+    renderRules(); renderTimeline();
+    toast('削除しました');
+  }catch(e){ toast(e.message); }
+}
+
+/* ---------- 編集シート ---------- */
+function updateRepeatFields(){
+  const t = $('fRepeat').value;
+  $('wrapTime').hidden = (t === 'interval');
+  $('wrapDays').hidden = !(t === 'weekly' || t === 'interval');
+  $('wrapDate').hidden = (t !== 'once');
+  $('wrapInterval').hidden = (t !== 'interval');
+}
+
+function openDialog(rule){
+  state.editingId = rule ? rule.id : null;
+  $('dialogTitle').textContent = rule ? '通知を編集' : '新しい通知';
+
+  $('fTitle').value = rule ? rule.title : '';
+  $('fBody').value = rule ? (rule.body || '') : '';
+  $('fUrl').value = rule ? (rule.url || '') : '';
+  $('fRepeat').value = rule ? rule.repeat_type : 'daily';
+  $('fTime').value = (rule && rule.time) || '08:00';
+  $('fStart').value = (rule && rule.start_time) || '09:00';
+  $('fEnd').value = (rule && rule.end_time) || '17:00';
+  $('fInterval').value = String((rule && rule.interval_hours) || 1);
+  $('fDate').value = (rule && rule.once_date) || new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
+  setChips($('fRecipient'), rule ? rule.recipient : 'all');
+  $('fTrack').setAttribute('aria-pressed', String(!rule || rule.track_completion !== 0));
+  $('fExtKey').value = (rule && rule.external_key) || '';
+  const texts = (rule && rule.texts) || {};
+  TEXT_RECIPIENTS.forEach((r) => {
+    $(`tx_${r}_title`).value = (texts[r] && texts[r].title) || '';
+    $(`tx_${r}_body`).value  = (texts[r] && texts[r].body)  || '';
+    $(`tx_${r}_url`).value   = (texts[r] && texts[r].url)   || '';
+  });
+
+  const days = rule ? (ruleDays(rule) || []) : [];
+  $('fDays').querySelectorAll('button').forEach((b) => {
+    b.setAttribute('aria-pressed', String(days.includes(Number(b.dataset.d))));
+  });
+
+  updateRepeatFields();
+  $('ruleDialog').showModal();
+}
+
+function collectTexts(){
+  const out = {};
+  TEXT_RECIPIENTS.forEach((r) => {
+    const title = $(`tx_${r}_title`).value.trim();
+    const body  = $(`tx_${r}_body`).value.trim();
+    const url   = $(`tx_${r}_url`).value.trim();
+    if(title || body || url){
+      out[r] = {};
+      if(title) out[r].title = title;
+      if(body)  out[r].body  = body;
+      if(url)   out[r].url   = url;
+    }
+  });
+  return out;
+}
+
+function collectForm(){
+  const days = [...$('fDays').querySelectorAll('button[aria-pressed="true"]')].map((b) => Number(b.dataset.d));
+  const type = $('fRepeat').value;
+  return {
+    texts: collectTexts(),
+    external_key: $('fExtKey').value.trim(),
+    track_completion: $('fTrack').getAttribute('aria-pressed') === 'true' ? 1 : 0,
+    title: $('fTitle').value.trim(),
+    body: $('fBody').value.trim(),
+    recipient: getChips($('fRecipient')) || 'all',
+    url: $('fUrl').value.trim(),
+    repeat_type: type,
+    time: (type === 'interval') ? null : $('fTime').value,
+    days_of_week: (type === 'weekly' || type === 'interval') ? days.join(',') : null,
+    start_time: (type === 'interval') ? $('fStart').value : null,
+    end_time: (type === 'interval') ? $('fEnd').value : null,
+    interval_hours: (type === 'interval') ? Number($('fInterval').value) : null,
+    once_date: (type === 'once') ? $('fDate').value : null,
+    enabled: 1,
+  };
+}
+
+async function saveRule(){
+  const payload = collectForm();
+  if(!payload.title){ toast('タイトルを入れてください'); return; }
+  if(payload.repeat_type === 'weekly' && !payload.days_of_week){ toast('曜日を選んでください'); return; }
+  try{
+    if(state.editingId){
+      await api(`/api/rules/${state.editingId}`, { method:'PUT', body: JSON.stringify(payload) });
+    }else{
+      await api('/api/rules', { method:'POST', body: JSON.stringify(payload) });
+    }
+    $('ruleDialog').close();
+    toast('保存しました');
+    loadRules();
+  }catch(e){ toast(e.message); }
+}
+
+/* ---------- サンプル ---------- */
+const PRESETS = [
+  { title:'📅 今日のカレンダー', body:'今日の予定を確認しよう', recipient:'mama', url:'/kanriapp/calendar.html',
+    repeat_type:'daily', time:'08:00', track_completion:0 },
+
+  { title:'👀 とおくをみる', body:'20秒だけ遠くをぼんやり', recipient:'mama',
+    repeat_type:'interval', start_time:'09:00', end_time:'17:00', interval_hours:1, track_completion:1 },
+
+  { title:'💧 みずをのむ', body:'コップ1杯どうぞ', recipient:'mama',
+    repeat_type:'interval', start_time:'09:00', end_time:'19:00', interval_hours:2, track_completion:1 },
+
+  { title:'💪 かたまわし 50かい', body:'肩をぐるぐる50回', recipient:'mama',
+    repeat_type:'daily', time:'15:00', track_completion:1,
+    texts:{ mama:{ title:'15時です。肩回しを50回しましょう' } } },
+
+  { title:'⚖️ 体重を記録', body:'からだカレンダーに入力', recipient:'mama',
+    repeat_type:'daily', time:'21:00', track_completion:1 },
+
+  { title:'🦷 まうすぴーす', body:'まうすぴーす したかな？', recipient:'child1', url:'/kanriapp/kyosei-check.html',
+    repeat_type:'daily', time:'15:10', track_completion:1, external_key:'mouthpiece',
+    texts:{ child1:{ title:'マウスピースした？' }, child2:{ title:'🦷 まうすぴーす！', body:'はめてね' } } },
+
+  { title:'📝 しゅくだい', body:'しゅくだい はじめよう', recipient:'child1', url:'/kanriapp/school-check.html',
+    repeat_type:'weekly', time:'15:20', days_of_week:'1,2,3,4,5', track_completion:1, external_key:'homework',
+    texts:{ child1:{ title:'📝 しゅくだい！', body:'宿題をはじめよう' } } },
+
+  { title:'📝 しゅくだい', body:'しゅくだい してね', recipient:'child2', url:'/kanriapp/school-check.html',
+    repeat_type:'weekly', time:'15:20', days_of_week:'1,2,3,4,5', track_completion:1, external_key:'homework',
+    texts:{ child2:{ title:'📝 しゅくだい！', body:'しゅくだい してね' } } },
+
+  { title:'📱 すまいるぜみ', body:'すまいるぜみ やろう', recipient:'child2',
+    repeat_type:'daily', time:'17:00', track_completion:1, external_key:'smile-zemi',
+    texts:{ child2:{ title:'📱 すまいるぜみ！', body:'きょうのぶん やろう' } } },
+
+  { title:'🎒 あしたのしたく', body:'あしたの じゅんびを しよう', recipient:'all',
+    repeat_type:'daily', time:'19:30', track_completion:1,
+    texts:{
+      mama:  { title:'🎒 明日の準備', body:'持ち物の確認をしましょう' },
+      child1:{ title:'🎒 あしたのしたく！', body:'ランドセルの じゅんび しよう' },
+      child2:{ title:'🎒 あしたのしたく！', body:'ランドセル じゅんび してね' },
+    } },
+];
+
+function renderTextsEditor(){
+  const el = $('textsEditor');
+  el.innerHTML = '';
+  TEXT_RECIPIENTS.forEach((r) => {
+    const box = document.createElement('div');
+    box.style.cssText = 'border-left:4px solid ' + RECIPIENT_COLOR[r] + ';padding-left:10px;margin-bottom:12px';
+    box.innerHTML = `
+      <div style="font-size:12px;font-weight:800;margin-bottom:5px">${RECIPIENT_LABEL[r]} 向け</div>
+      <div class="field"><input type="text" id="tx_${r}_title" maxlength="60" placeholder="${TEXT_PLACEHOLDER[r].title}"></div>
+      <div class="field"><input type="text" id="tx_${r}_body" maxlength="60" placeholder="${TEXT_PLACEHOLDER[r].body}"></div>
+      <div class="field"><input type="text" id="tx_${r}_url" list="urlList" placeholder="この人だけ別のURL（任意）" autocapitalize="off" spellcheck="false"></div>`;
+    el.appendChild(box);
+  });
+}
+
+function renderPresets(){
+  const el = $('presetList');
+  el.innerHTML = '';
+  PRESETS.forEach((p) => {
+    const b = document.createElement('button');
+    b.className = 'preset';
+    b.type = 'button';
+    const left = document.createElement('span');
+    left.textContent = p.title;
+    const right = document.createElement('small');
+    right.textContent = `${RECIPIENT_LABEL[p.recipient]} / ${scheduleLabel({ ...p, days_of_week: p.days_of_week || null })}`;
+    b.append(left, right);
+    b.addEventListener('click', async () => {
+      try{
+        await api('/api/rules', { method:'POST', body: JSON.stringify({ enabled:1, ...p }) });
+        toast('追加しました');
+        loadRules();
+      }catch(e){ toast(e.message); }
+    });
+    el.appendChild(b);
+  });
+}
+
+/* ---------- Push購読 ---------- */
+function isStandalone(){
+  return window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+}
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for(let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function registerSW(){
+  if(!('serviceWorker' in navigator)) return null;
+  state.swReg = await navigator.serviceWorker.register('/kanriapp/notification-sw.js', { scope: '/kanriapp/' });
+  await navigator.serviceWorker.ready;
+  state.subscription = await state.swReg.pushManager.getSubscription();
+  return state.swReg;
+}
+
+function setStatus(kind, text){
+  const el = $('deviceStatus');
+  el.className = `status ${kind}`;
+  el.textContent = text;
+}
+
+function refreshStatus(){
+  const supported = ('serviceWorker' in navigator) && ('PushManager' in window);
+  const hint = $('iosHint');
+
+  if(isIOS() && !isStandalone()){
+    setStatus('warn', 'まずホーム画面に追加してください');
+    hint.innerHTML = 'iPhoneでは <b>共有 → ホーム画面に追加</b> して、そのアイコンから開いた時だけ通知を登録できます（iOS 16.4以上）。';
+    $('btnSubscribe').disabled = true;
+    return;
+  }
+  hint.textContent = '';
+
+  if(!supported){
+    setStatus('err', 'このブラウザは通知に対応していません');
+    $('btnSubscribe').disabled = true;
+    return;
+  }
+  $('btnSubscribe').disabled = false;
+
+  if(Notification.permission === 'denied'){
+    setStatus('err', '通知がブロックされています（設定から許可してください）');
+    return;
+  }
+  if(state.subscription){
+    setStatus('ok', `この端末は登録ずみ（${RECIPIENT_LABEL[localStorage.getItem(LS.recipient)] || '未設定'}）`);
+    return;
+  }
+  setStatus('warn', 'この端末はまだ登録されていません');
+}
+
+async function subscribeThisDevice(){
+  const recipient = getChips($('deviceRecipient'));
+  const deviceName = $('deviceName').value.trim();
+  if(!apiBase()){ toast('Worker の URL を入れてください'); return; }
+  if(!appPassword()){ toast('あいことばを入れてください'); return; }
+  if(!recipient){ toast('この端末が誰のものか選んでください'); return; }
+  if(!deviceName){ toast('端末の名前を入れてください'); return; }
+
+  try{
+    // ユーザー操作のなかで許可を求める（iOSの必須条件）
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ setStatus('err','通知が許可されませんでした'); return; }
+
+    const reg = state.swReg || await registerSW();
+    const { publicKey } = await (await fetch(apiBase() + '/api/vapid-public-key')).json();
+    if(!publicKey) throw new Error('WorkerにVAPID公開鍵が設定されていません');
+
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+    state.subscription = sub;
+    const j = sub.toJSON();
+
+    await api('/api/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({
+        endpoint: j.endpoint,
+        p256dh: j.keys.p256dh,
+        auth: j.keys.auth,
+        recipient,
+        device_name: deviceName,
+        user_agent: navigator.userAgent,
+      }),
+    });
+
+    localStorage.setItem(LS.recipient, recipient);
+    localStorage.setItem(LS.device, deviceName);
+    toast('この端末を登録しました');
+    refreshStatus();
+    loadDevices();
+  }catch(e){
+    setStatus('err', e.message);
+  }
+}
+
+async function unsubscribeThisDevice(){
+  if(!state.subscription){ toast('この端末はまだ登録されていません'); return; }
+  if(!confirm('この端末への通知を止めますか？')) return;
+  const endpoint = state.subscription.endpoint;
+  try{
+    await state.subscription.unsubscribe();
+    await api('/api/unsubscribe', { method:'POST', body: JSON.stringify({ endpoint }) });
+    state.subscription = null;
+    toast('この端末の通知を止めました');
+    refreshStatus();
+    loadDevices();
+  }catch(e){ toast(e.message); }
+}
+
+async function sendTest(){
+  if(!state.subscription){ toast('先に「通知をゆるす」を押してください'); return; }
+  try{
+    await api('/api/test', {
+      method:'POST',
+      body: JSON.stringify({
+        endpoint: state.subscription.endpoint,
+        title: '🔔 テスト通知',
+        body: 'とどいたら成功だよ',
+        url: '/kanriapp/notification-center.html',
+      }),
+    });
+    toast('送りました。数秒待ってください');
+  }catch(e){ toast(e.message); }
+}
+
+/* SWから再購読の依頼が来たとき（購読が失効したケース） */
+navigator.serviceWorker?.addEventListener('message', async (event) => {
+  if(event.data?.type !== 'resubscribe') return;
+  const j = event.data.subscription;
+  if(!j) return;
+  try{
+    await api('/api/subscribe', {
+      method:'POST',
+      body: JSON.stringify({
+        endpoint: j.endpoint,
+        p256dh: j.keys.p256dh,
+        auth: j.keys.auth,
+        recipient: localStorage.getItem(LS.recipient) || 'all',
+        device_name: localStorage.getItem(LS.device) || 'この端末',
+        user_agent: navigator.userAgent,
+      }),
+    });
+  }catch(e){ /* 次回起動時に再試行される */ }
+});
+
+/* ---------- 起動 ---------- */
+function tickClock(){
+  const n = jstNow();
+  $('clock').textContent = `${String(n.hour).padStart(2,'0')}:${String(n.minute).padStart(2,'0')}`;
+}
+
+function bindEvents(){
+  // 設定の保存
+  $('apiBase').addEventListener('change', (e) => {
+    localStorage.setItem(LS.api, e.target.value.trim());
+    loadRules(); loadDevices();
+  });
+  $('appPassword').addEventListener('change', (e) => {
+    localStorage.setItem(LS.pw, e.target.value);
+    loadRules(); loadDevices();
+  });
+  $('deviceName').addEventListener('change', (e) => localStorage.setItem(LS.device, e.target.value.trim()));
+  $('deviceRecipient').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if(!b) return;
+    setChips($('deviceRecipient'), b.dataset.r);
+    localStorage.setItem(LS.recipient, b.dataset.r);
+  });
+
+  $('btnSubscribe').addEventListener('click', subscribeThisDevice);
+  $('btnUnsubscribe').addEventListener('click', unsubscribeThisDevice);
+  $('btnTest').addEventListener('click', sendTest);
+
+  // フィルタ
+  $('filterChips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if(!b) return;
+    state.filter = b.dataset.f || '';
+    $('filterChips').querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+    renderRules();
+  });
+
+  // 編集シート
+  $('btnNew').addEventListener('click', () => openDialog(null));
+  $('btnCancel').addEventListener('click', () => $('ruleDialog').close());
+  $('btnSave').addEventListener('click', saveRule);
+  $('fRepeat').addEventListener('change', updateRepeatFields);
+  $('fRecipient').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if(!b) return;
+    setChips($('fRecipient'), b.dataset.r);
+  });
+  $('fTrack').addEventListener('click', (e) => {
+    const on = e.currentTarget.getAttribute('aria-pressed') === 'true';
+    e.currentTarget.setAttribute('aria-pressed', String(!on));
+  });
+  $('fDays').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if(!b) return;
+    b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+  });
+  $('btnWeekdays').addEventListener('click', () => {
+    $('fDays').querySelectorAll('button').forEach((b) => {
+      const d = Number(b.dataset.d);
+      b.setAttribute('aria-pressed', String(d >= 1 && d <= 5));
+    });
+  });
+  $('emojiPicks').addEventListener('click', (e) => {
+    if(e.target.tagName !== 'BUTTON') return;
+    const input = $('fTitle');
+    input.value = e.target.textContent + ' ' + input.value.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '');
+    input.focus();
+  });
+
+  $('logsBox').addEventListener('toggle', (e) => { if(e.target.open) loadLogs(); });
+  $('devicesBox').addEventListener('toggle', (e) => { if(e.target.open) loadDevices(); });
+
+  $('btnTick').addEventListener('click', async () => {
+    try{
+      const r = await api('/api/tick', { method:'POST' });
+      toast(`判定しました：発火 ${r.fired.length} 件`);
+      loadLogs();
+    }catch(e){ toast(e.message); }
+  });
+}
+
+async function init(){
+  $('apiBase').value = localStorage.getItem(LS.api) || '';
+  $('appPassword').value = localStorage.getItem(LS.pw) || '';
+  $('deviceName').value = localStorage.getItem(LS.device) || '';
+  setChips($('deviceRecipient'), localStorage.getItem(LS.recipient) || '');
+
+  tickClock();
+  setInterval(() => { tickClock(); renderTimeline(); }, 30000);
+
+  renderTextsEditor();
+  bindEvents();
+  renderPresets();
+
+  try{ await registerSW(); }catch(e){ /* 非対応環境 */ }
+  refreshStatus();
+
+  if(!apiBase() || !appPassword()){
+    $('setupBox').open = true;
+  }
+  loadRules();
+  loadDevices();
+}
+
+init();
+</script>
+</body>
+</html>

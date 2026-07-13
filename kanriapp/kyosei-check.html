@@ -647,10 +647,36 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- 通知センター連携（元アプリを止めない。失敗しても保存はそのまま） -->
+<script src="/kanriapp/notification-link.js" data-api="https://notification-center-api.sslowdayss.workers.dev" defer></script>
+
 <script>
 // ===== 設定 =====
 // Cloudflare Worker のURL。独自ドメインを使う場合はこのままでOK。
 const API_BASE = 'https://api.cetus.fun';
+
+// ===== 通知センター連携 =====
+// 項目名ではなく「item.id」という固定キーで通知ルールに対応づける。
+// 項目名を変えても壊れない。ここに無い項目は何もしない。
+const NC_LINK = {
+  elder:   { recipient: 'child1', items: { item1: 'mouthpiece' } },
+  younger: { recipient: 'child2', items: { item1: 'mouthpiece' } },
+};
+
+// ○（maru）を「今日」の日付に付けたときだけ、通知センターへ「できた」を送る。
+// awaitしない・例外を投げない → 保存や画面更新には一切影響しない。
+function ncNotifyIfDone(child, item, dateStr, choice) {
+  try {
+    if (choice !== 'maru') return;
+    const t = new Date();
+    const today = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    if (dateStr !== today) return;                    // 過去日の記入では通知連携しない
+    const link = NC_LINK[child];
+    const key = link && link.items[item.id];
+    if (!key || typeof NotifyDone !== 'function') return;
+    NotifyDone(key, link.recipient);
+  } catch (e) { /* 連携の失敗で元アプリを止めない */ }
+}
 
 // GitHubにパスワードを直書きしないため、初回入力した合言葉を端末内に保存します。
 const PASSWORD_STORAGE_KEY = 'cloudflare_app_password';
@@ -1068,6 +1094,8 @@ async function saveCheck() {
   } else {
     childData.records[dateStr][item.id] = { check: choice, comment };
   }
+
+  ncNotifyIfDone(child, item, dateStr, choice);   // ← 通知センターへ「できた」（待たない）
 
   closeModal();
   renderPage(child);

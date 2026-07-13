@@ -330,17 +330,13 @@
     </div>
 
     <div class="field">
-      <label>連携キー（external_key・任意）</label>
-      <input type="text" id="fExtKey" maxlength="40" placeholder="mouthpiece / homework など"
-             autocapitalize="off" spellcheck="false" list="extKeyList">
-      <datalist id="extKeyList">
-        <option value="mouthpiece">
-        <option value="homework">
-        <option value="smile-zemi">
-      </datalist>
-      <p class="hint">他のアプリ（きょうせいチェック等）から <code>NotifyDone('キー', 'child1')</code> で
-        「できた」を送るための固定キー。半角英数と <code>-_</code> のみ。<br>
-        同じキーを人ごとに持てます（homework × 長女／次女）。項目名を変えても壊れません。</p>
+      <label>ほかのアプリと連携する</label>
+      <select id="fExtKey">
+        <option value="">連携しない</option>
+      </select>
+      <input type="text" id="fExtKeyCustom" maxlength="40" placeholder="連携キー（半角英数）"
+             autocapitalize="off" spellcheck="false" hidden style="margin-top:6px">
+      <p class="hint" id="extKeyHint">選ぶと、そのアプリでチェックしたときに自動で「できた」になります。</p>
     </div>
 
     <div class="field">
@@ -426,6 +422,14 @@ const RECIPIENT_LABEL = { mama:'🌸 ママ', child1:'🐒 長女', child2:'🦄
 const RECIPIENT_COLOR = { mama:'var(--mama)', child1:'var(--child1)', child2:'var(--child2)', all:'var(--all)' };
 const DOW = ['日','月','火','水','木','金','土'];
 const TEXT_RECIPIENTS = ['mama','child1','child2'];
+
+/* 他アプリとの連携先。キー文字列はアプリ側のコードで決まっているので、ここから選ぶだけにする。 */
+const EXT_KEYS = [
+  { key:'mouthpiece', label:'🦷 きょうせいチェック（マウスピースに○）',
+    hint:'kyosei-check.html で「今日」に○をつけたとき。長女=child1 / 次女=child2 に対応。' },
+  { key:'homework',   label:'📝 学校チェック（しゅくだいが全部おわった）',
+    hint:'school-check.html で宿題の項目がぜんぶチェックされたとき。長女・次女それぞれに対応。' },
+];
 const TEXT_PLACEHOLDER = {
   mama:   { title:'15時です。肩回しを50回しましょう', body:'（本文・任意）' },
   child1: { title:'マウスピースした？',               body:'（本文・任意）' },
@@ -628,7 +632,7 @@ function renderRules(){
           <span class="tag who" style="background:${RECIPIENT_COLOR[r.recipient]}">${RECIPIENT_LABEL[r.recipient]}</span>
           <span class="tag sched"></span>
           ${r.track_completion ? '<span class="tag">📊 記録する</span>' : ''}
-          ${r.external_key ? `<span class="tag">🔗 ${r.external_key}</span>` : ''}
+          ${r.external_key ? `<span class="tag">🔗 ${(EXT_KEYS.find((e) => e.key === r.external_key) || {}).label || r.external_key}</span>` : ''}
           ${r.url ? '<span class="tag link">🔗 <span class="urltext"></span></span>' : ''}
         </div>
       </div>
@@ -782,7 +786,11 @@ function openDialog(rule){
   $('fDate').value = (rule && rule.once_date) || new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
   setChips($('fRecipient'), rule ? rule.recipient : 'all');
   $('fTrack').setAttribute('aria-pressed', String(!rule || rule.track_completion !== 0));
-  $('fExtKey').value = (rule && rule.external_key) || '';
+  const ek = (rule && rule.external_key) || '';
+  const known = EXT_KEYS.some((e) => e.key === ek);
+  $('fExtKey').value = ek ? (known ? ek : '__custom__') : '';
+  $('fExtKeyCustom').value = ek && !known ? ek : '';
+  updateExtKeyHint();
   const texts = (rule && rule.texts) || {};
   TEXT_RECIPIENTS.forEach((r) => {
     $(`tx_${r}_title`).value = (texts[r] && texts[r].title) || '';
@@ -820,7 +828,7 @@ function collectForm(){
   const type = $('fRepeat').value;
   return {
     texts: collectTexts(),
-    external_key: $('fExtKey').value.trim(),
+    external_key: $('fExtKey').value === '__custom__' ? $('fExtKeyCustom').value.trim() : $('fExtKey').value,
     track_completion: $('fTrack').getAttribute('aria-pressed') === 'true' ? 1 : 0,
     title: $('fTitle').value.trim(),
     body: $('fBody').value.trim(),
@@ -895,6 +903,32 @@ const PRESETS = [
       child2:{ title:'🎒 あしたのしたく！', body:'ランドセル じゅんび してね' },
     } },
 ];
+
+function renderExtKeySelect(){
+  const sel = $('fExtKey');
+  sel.innerHTML = '<option value="">連携しない</option>';
+  EXT_KEYS.forEach((e) => {
+    const o = document.createElement('option');
+    o.value = e.key;
+    o.textContent = e.label;
+    sel.appendChild(o);
+  });
+  const o = document.createElement('option');
+  o.value = '__custom__';
+  o.textContent = '✏️ そのほか（キーを自分で入力）';
+  sel.appendChild(o);
+}
+
+function updateExtKeyHint(){
+  const v = $('fExtKey').value;
+  const custom = v === '__custom__';
+  $('fExtKeyCustom').hidden = !custom;
+  const found = EXT_KEYS.find((e) => e.key === v);
+  $('extKeyHint').textContent =
+    custom ? '別のアプリから NotifyDone(\'キー\', \'child1\') で送るときのキー。半角英数と -_ のみ。'
+    : found ? found.hint
+    : '選ぶと、そのアプリでチェックしたときに自動で「できた」になります。';
+}
 
 function renderTextsEditor(){
   const el = $('textsEditor');
@@ -1140,6 +1174,7 @@ function bindEvents(){
     const b = e.target.closest('.chip'); if(!b) return;
     setChips($('fRecipient'), b.dataset.r);
   });
+  $('fExtKey').addEventListener('change', updateExtKeyHint);
   $('fTrack').addEventListener('click', (e) => {
     const on = e.currentTarget.getAttribute('aria-pressed') === 'true';
     e.currentTarget.setAttribute('aria-pressed', String(!on));
@@ -1182,6 +1217,7 @@ async function init(){
   tickClock();
   setInterval(() => { tickClock(); renderTimeline(); }, 30000);
 
+  renderExtKeySelect();
   renderTextsEditor();
   bindEvents();
   renderPresets();

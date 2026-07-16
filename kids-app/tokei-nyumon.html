@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>とけい はじめてまなぶ</title>
+<style>
+  :root{
+    --cream:#FFF7EC;
+    --cream2:#FFEBD6;
+    --ink:#3A3357;
+    --ink-soft:#6E668C;
+    --blue:#3B82C4;      /* ながい はり (minute) */
+    --blue-soft:#E4F1FB;
+    --red:#E85D5D;       /* みじかい はり (hour) */
+    --red-soft:#FDE7E7;
+    --l1:#4EA8DE;
+    --l2:#FF7A7A;
+    --l3:#A87BDB;
+    --l4:#57C784;
+    --l5:#FFA94D;
+    --l6:#5C7CFA;
+    --sun:#FFCE3A;
+    --shadow:0 6px 0 rgba(58,51,87,.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN W4","Rounded Mplus 1c","M PLUS Rounded 1c",system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 500px at 50% -8%, #FFF6D9 0%, transparent 60%),
+      linear-gradient(180deg,#FFF7EC 0%, #FFE9F1 100%);
+    min-height:100vh;
+    -webkit-text-size-adjust:100%;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:14px 14px 40px;}
+
+  /* buttons base */
+  button{
+    font-family:inherit;font-weight:800;color:var(--ink);
+    border:none;border-radius:22px;background:#fff;
+    cursor:pointer;box-shadow:var(--shadow);
+    transition:transform .06s ease, box-shadow .06s ease, background .15s;
+    -webkit-user-select:none;user-select:none;touch-action:manipulation;
+  }
+  button:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(58,51,87,.16);}
+  button:disabled{opacity:.45;cursor:default;box-shadow:none;transform:none;}
+
+  /* ---------- HOME ---------- */
+  .title{
+    text-align:center;margin:6px 0 2px;
+    font-size:clamp(30px,9vw,42px);font-weight:900;letter-spacing:.02em;
+    color:var(--ink);
+    text-shadow:0 3px 0 #FFE0A6;
+  }
+  .subtitle{text-align:center;color:var(--ink-soft);font-weight:800;margin:0 0 14px;font-size:clamp(14px,3.6vw,17px);}
+  .mascot{display:block;margin:2px auto 6px;width:clamp(110px,34vw,150px);height:auto;}
+
+  .panel{
+    background:#fff;border-radius:26px;padding:16px;margin:12px 0;
+    box-shadow:0 8px 22px rgba(120,90,150,.14);
+  }
+  .panel h2{margin:2px 4px 12px;font-size:clamp(17px,4.6vw,20px);font-weight:900;}
+
+  .diff-row{display:flex;gap:8px;}
+  .diff-btn{
+    flex:1;padding:14px 6px;border-radius:20px;background:var(--cream);
+    font-size:clamp(14px,3.8vw,16px);line-height:1.3;text-align:center;
+  }
+  .diff-btn small{display:block;font-weight:700;color:var(--ink-soft);font-size:.72em;margin-top:3px;}
+  .diff-btn.on{background:var(--sun);color:#5a4600;box-shadow:0 6px 0 #d9a800;}
+
+  .levels{display:flex;flex-direction:column;gap:12px;}
+  .level-card{
+    display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+    padding:16px 16px;border-radius:24px;background:#fff;
+    border:3px solid #F0E8F5;
+  }
+  .level-card .num{
+    flex:0 0 auto;width:52px;height:52px;border-radius:16px;color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px;font-weight:900;
+  }
+  .level-card .txt{flex:1;}
+  .level-card .txt b{display:block;font-size:clamp(17px,4.8vw,20px);}
+  .level-card .txt span{display:block;color:var(--ink-soft);font-weight:800;font-size:clamp(12px,3.4vw,14px);margin-top:2px;}
+  .level-card .go{font-size:22px;color:var(--ink-soft);}
+  .lv1 .num{background:var(--l1);} .lv2 .num{background:var(--l2);}
+  .lv3 .num{background:var(--l3);} .lv4 .num{background:var(--l4);}
+  .lv5 .num{background:var(--l5);} .lv6 .num{background:var(--l6);}
+  /* ---------- GAME ---------- */
+  .topbar{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .icon-btn{padding:10px 14px;border-radius:18px;background:#fff;font-size:16px;}
+  .lv-chip{
+    flex:1;text-align:center;padding:10px 8px;border-radius:18px;color:#fff;
+    font-weight:900;font-size:clamp(14px,4vw,17px);
+  }
+  .progress{
+    display:flex;align-items:center;gap:8px;margin:4px 2px 10px;
+  }
+  .progress .bar{flex:1;height:14px;background:#F0E4EF;border-radius:99px;overflow:hidden;}
+  .progress .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#FFD23F,#FF9F45);border-radius:99px;transition:width .3s;}
+  .progress .count{font-weight:900;color:var(--ink-soft);font-size:15px;white-space:nowrap;}
+
+  .clock-stage{display:flex;flex-direction:column;align-items:center;}
+  svg.clock{width:min(74vw,320px);height:min(74vw,320px);display:block;}
+  .clock-face{fill:#fff;stroke:#EBD9C4;stroke-width:3;}
+  .rim{fill:none;stroke:#FFD98A;stroke-width:6;}
+  .num-txt{font-family:inherit;font-weight:900;fill:var(--ink);}
+  .minnum-txt{font-family:inherit;font-weight:800;fill:var(--blue);opacity:.85;}
+  .tick{stroke:#D9C7B4;} .tick.big{stroke:#B9A48D;}
+  .hand-min{stroke:var(--blue);stroke-width:6.5;stroke-linecap:round;}
+  .hand-hour{stroke:var(--red);stroke-width:9;stroke-linecap:round;}
+  .knob-min{fill:var(--blue);}
+  .knob-hour{fill:var(--red);}
+  .center-dot{fill:var(--ink);}
+
+  .legend{display:flex;gap:10px;justify-content:center;margin:8px 0 2px;flex-wrap:wrap;}
+  .legend .chip{display:flex;align-items:center;gap:7px;background:#fff;padding:7px 12px;border-radius:99px;font-weight:900;font-size:clamp(12px,3.4vw,14px);box-shadow:0 3px 0 rgba(58,51,87,.08);}
+  .legend .dot{width:16px;height:16px;border-radius:6px;}
+  .legend .dot.min{background:var(--blue);} .legend .dot.hour{background:var(--red);}
+
+  .question{
+    text-align:center;font-size:clamp(22px,6.6vw,30px);font-weight:900;
+    margin:12px 4px 6px;line-height:1.35;
+  }
+  .question .hi-min{color:var(--blue);} .question .hi-hour{color:var(--red);}
+  .step-note{text-align:center;color:var(--ink-soft);font-weight:800;font-size:clamp(13px,3.6vw,15px);margin:0 0 8px;}
+
+  /* number grid */
+  .numgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:6px 2px;}
+  .numgrid.mins{grid-template-columns:repeat(4,1fr);}
+  .numgrid button{
+    aspect-ratio:1/1;font-size:clamp(22px,6vw,28px);border-radius:20px;
+    background:#fff;display:flex;align-items:center;justify-content:center;
+  }
+  .numgrid.mins button{aspect-ratio:auto;padding:16px 4px;font-size:clamp(18px,5vw,22px);}
+  .numgrid button.pick{background:var(--sun);color:#5a4600;box-shadow:0 6px 0 #d9a800;}
+  .numgrid button.right{background:var(--l4);color:#fff;box-shadow:0 6px 0 #3ea866;}
+  .numgrid button.wrong{background:var(--red);color:#fff;box-shadow:0 6px 0 #b83b3b;}
+
+  .sub-head{text-align:center;font-weight:900;color:var(--ink-soft);margin:12px 0 4px;font-size:clamp(14px,4vw,16px);}
+
+  /* level4 combined */
+  .combo-check{width:100%;padding:16px;border-radius:22px;background:var(--l4);color:#fff;font-size:clamp(18px,5vw,22px);box-shadow:0 6px 0 #3ea866;margin-top:12px;}
+  .combo-check:disabled{background:#cfe9d8;box-shadow:none;}
+
+  /* feedback */
+  .feedback{
+    text-align:center;border-radius:24px;padding:16px 14px;margin:12px 2px;
+    font-weight:900;display:none;
+  }
+  .feedback.show{display:block;animation:pop .35s cubic-bezier(.2,1.4,.4,1);}
+  .feedback.ok{background:var(--l4);color:#fff;}
+  .feedback.ng{background:#FFF0D6;color:#8a5b00;}
+  .feedback .big{font-size:clamp(26px,8vw,38px);line-height:1.2;}
+  .feedback .small{font-size:clamp(15px,4.2vw,18px);margin-top:6px;font-weight:800;}
+  .feedback .bigtime{font-size:clamp(34px,11vw,52px);letter-spacing:.02em;margin-top:4px;}
+
+  /* count-by-5 explainer */
+  .count5{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0 4px;}
+  .count5 .c{
+    background:#fff;color:var(--blue);border-radius:12px;padding:6px 10px;
+    font-weight:900;font-size:clamp(15px,4.4vw,19px);opacity:0;
+    animation:popin .3s ease forwards;box-shadow:0 3px 0 rgba(58,51,87,.1);
+  }
+  .count5 .c.last{background:var(--sun);color:#5a4600;box-shadow:0 4px 0 #d9a800;}
+  .count5 .arrow{align-self:center;color:#fff;font-weight:900;opacity:.85;}
+  @keyframes popin{0%{opacity:0;transform:scale(.5) translateY(6px);}100%{opacity:1;transform:scale(1) translateY(0);}}
+
+  .hint-band{
+    text-align:center;background:var(--blue-soft);color:#2b6597;border-radius:16px;
+    padding:9px 12px;margin:2px 2px 8px;font-weight:800;font-size:clamp(13px,3.7vw,15px);
+  }
+  .next-btn{margin:6px auto 0;padding:15px 34px;border-radius:22px;background:var(--sun);color:#5a4600;font-size:clamp(18px,5vw,22px);box-shadow:0 6px 0 #d9a800;}
+
+  /* correspondence table (level1) */
+  .table-wrap{margin:14px 2px 2px;}
+  .table-wrap h3{text-align:center;font-size:clamp(14px,4vw,16px);margin:0 0 8px;color:var(--ink-soft);font-weight:900;}
+  .corr{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+  .corr .cell{
+    background:#fff;border-radius:14px;padding:8px 4px;text-align:center;
+    font-weight:900;font-size:clamp(13px,3.6vw,15px);box-shadow:0 3px 0 rgba(58,51,87,.06);
+    line-height:1.25;
+  }
+  .corr .cell b{color:var(--blue);font-size:1.15em;}
+  .corr .cell.hot{background:var(--sun);color:#5a4600;box-shadow:0 5px 0 #d9a800;transform:translateY(-1px);}
+  .corr .cell.hot b{color:#5a4600;}
+
+  /* level5 make-clock */
+  .make-target{text-align:center;background:var(--l5);color:#fff;border-radius:22px;padding:14px;margin:2px 2px 10px;font-weight:900;font-size:clamp(20px,5.5vw,26px);}
+  .make-target.l6bg{background:var(--l6);}
+  .hint-band.l6hint{background:#E7ECFF;color:#3a4fb0;}
+  .make-hint{text-align:center;color:var(--ink-soft);font-weight:800;font-size:clamp(13px,3.6vw,15px);margin:6px 2px 8px;}
+  .made-btn{width:100%;padding:16px;border-radius:22px;background:var(--l5);color:#fff;font-size:clamp(19px,5.2vw,24px);box-shadow:0 6px 0 #d98829;margin-top:6px;}
+
+  /* ---------- RESULT ---------- */
+  .result{text-align:center;padding:8px 4px;}
+  .result .rmascot{width:clamp(120px,36vw,160px);margin:6px auto;}
+  .result .rtitle{font-size:clamp(26px,8vw,38px);font-weight:900;margin:6px 0;}
+  .result .score{
+    background:#fff;border-radius:26px;padding:18px;margin:12px 0;box-shadow:0 8px 22px rgba(120,90,150,.14);
+  }
+  .result .score .big{font-size:clamp(40px,14vw,64px);font-weight:900;color:var(--l4);line-height:1;}
+  .result .score .lab{font-weight:900;color:var(--ink-soft);margin-top:6px;font-size:clamp(15px,4.2vw,18px);}
+  .stars{font-size:clamp(28px,9vw,42px);margin:6px 0 2px;letter-spacing:4px;}
+  .result-btns{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+  .result-btns button{padding:16px;border-radius:22px;font-size:clamp(17px,4.8vw,20px);}
+  .btn-retry{background:var(--l5);color:#fff;box-shadow:0 6px 0 #d98829;}
+  .btn-home{background:#fff;color:var(--ink);}
+
+  /* confetti */
+  #confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50;}
+  .confetti-piece{position:absolute;top:-40px;font-size:26px;will-change:transform;animation:fall linear forwards;}
+  @keyframes fall{
+    0%{transform:translateY(-40px) rotate(0);opacity:1;}
+    100%{transform:translateY(112vh) rotate(540deg);opacity:1;}
+  }
+  @keyframes pop{0%{transform:scale(.6);opacity:0;}100%{transform:scale(1);opacity:1;}}
+  @keyframes wob{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
+  .wob{animation:wob .5s ease-in-out 2;}
+
+  .hidden{display:none!important;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001s!important;transition:none!important;}
+  }
+</style>
+</head>
+<body>
+<div id="confetti"></div>
+<div class="wrap">
+
+  <!-- ================= HOME ================= -->
+  <section id="home">
+    <h1 class="title">とけい はじめて</h1>
+    <p class="subtitle">ながい はり と みじかい はり を おぼえよう！</p>
+
+    <svg class="mascot" viewBox="0 0 200 200" aria-hidden="true">
+      <circle cx="100" cy="104" r="78" fill="#fff" stroke="#FFD98A" stroke-width="8"/>
+      <circle cx="100" cy="104" r="66" fill="#FFF7EC"/>
+      <circle cx="72" cy="92" r="9" fill="#3A3357"/>
+      <circle cx="128" cy="92" r="9" fill="#3A3357"/>
+      <circle cx="70" cy="112" r="7" fill="#FFB3B3" opacity=".8"/>
+      <circle cx="130" cy="112" r="7" fill="#FFB3B3" opacity=".8"/>
+      <path d="M78 120 q22 22 44 0" fill="none" stroke="#3A3357" stroke-width="6" stroke-linecap="round"/>
+      <line x1="100" y1="104" x2="100" y2="66" stroke="#E85D5D" stroke-width="9" stroke-linecap="round"/>
+      <line x1="100" y1="104" x2="132" y2="118" stroke="#3B82C4" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="100" cy="104" r="6" fill="#3A3357"/>
+      <path d="M60 40 l10 -18 l10 18" fill="none" stroke="#FFB3B3" stroke-width="6" stroke-linecap="round"/>
+      <path d="M140 40 l-10 -18 l-10 18" fill="none" stroke="#FFB3B3" stroke-width="6" stroke-linecap="round"/>
+    </svg>
+
+    <div class="panel">
+      <h2>むずかしさ を えらぶ</h2>
+      <div class="diff-row" id="diffRow">
+        <button class="diff-btn on" data-diff="easy">やさしい<small>0ふん・30ぷん</small></button>
+        <button class="diff-btn" data-diff="normal">ふつう<small>15ふん・45ふんも</small></button>
+        <button class="diff-btn" data-diff="hard">むずかしい<small>5ふんきざみ</small></button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>レベル を えらぶ</h2>
+      <div class="levels">
+        <button class="level-card lv1" data-level="1">
+          <span class="num">1</span>
+          <span class="txt"><b>ながい はり</b><span>なんぷん か おぼえる</span></span>
+          <span class="go">▶</span>
+        </button>
+        <button class="level-card lv2" data-level="2">
+          <span class="num">2</span>
+          <span class="txt"><b>みじかい はり</b><span>なんじ か おぼえる</span></span>
+          <span class="go">▶</span>
+        </button>
+        <button class="level-card lv3" data-level="3">
+          <span class="num">3</span>
+          <span class="txt"><b>じ と ふん を わけて</b><span>ゆっくり かんがえる</span></span>
+          <span class="go">▶</span>
+        </button>
+        <button class="level-card lv4" data-level="4">
+          <span class="num">4</span>
+          <span class="txt"><b>なんじ なんぷん？</b><span>じぶんで よんでみる</span></span>
+          <span class="go">▶</span>
+        </button>
+        <button class="level-card lv5" data-level="5">
+          <span class="num">5</span>
+          <span class="txt"><b>とけいを つくる</b><span>はりを うごかして あわせる</span></span>
+          <span class="go">▶</span>
+        </button>
+        <button class="level-card lv6" data-level="6">
+          <span class="num">6</span>
+          <span class="txt"><b>24じかん（ごご）</b><span>16じ＝ごご4じ を おぼえる</span></span>
+          <span class="go">▶</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= GAME ================= -->
+  <section id="game" class="hidden">
+    <div class="topbar">
+      <button class="icon-btn" id="btnHome">← おうち</button>
+      <div class="lv-chip" id="lvChip">レベル1</div>
+      <button class="icon-btn" id="btnSound">🔊</button>
+    </div>
+    <div class="progress">
+      <div class="bar"><i id="progFill"></i></div>
+      <div class="count" id="progCount">1 / 10</div>
+    </div>
+
+    <div class="clock-stage">
+      <svg class="clock" id="clock" viewBox="0 0 200 200"></svg>
+      <div class="legend">
+        <span class="chip"><span class="dot min"></span>ながい はり</span>
+        <span class="chip"><span class="dot hour"></span>みじかい はり</span>
+      </div>
+    </div>
+
+    <div id="qArea"></div>
+    <div class="feedback" id="feedback"></div>
+  </section>
+
+  <!-- ================= RESULT ================= -->
+  <section id="result" class="hidden">
+    <div class="result">
+      <svg class="rmascot" viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="104" r="78" fill="#fff" stroke="#FFD98A" stroke-width="8"/>
+        <circle cx="100" cy="104" r="66" fill="#FFF7EC"/>
+        <circle cx="74" cy="94" r="8" fill="#3A3357"/>
+        <circle cx="126" cy="94" r="8" fill="#3A3357"/>
+        <circle cx="72" cy="114" r="7" fill="#FFB3B3"/>
+        <circle cx="128" cy="114" r="7" fill="#FFB3B3"/>
+        <path d="M74 118 q26 30 52 0" fill="none" stroke="#3A3357" stroke-width="6" stroke-linecap="round"/>
+      </svg>
+      <div class="rtitle" id="rTitle">よくできました！</div>
+      <div class="stars" id="rStars">⭐️⭐️⭐️</div>
+      <div class="score">
+        <div class="big" id="rScore">8</div>
+        <div class="lab">10もんちゅう <span id="rScore2">8</span>もん せいかい！</div>
+      </div>
+      <div class="result-btns">
+        <button class="btn-retry" id="btnRetry">もういちど やる 🔁</button>
+        <button class="btn-home" id="btnResultHome">おうちに もどる 🏠</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+/* ============ state ============ */
+const MINUTE_SETS = {
+  easy:   [0,30],
+  normal: [0,15,30,45],
+  hard:   [0,5,10,15,20,25,30,35,40,45,50,55]
+};
+const LEVEL_COLORS = {1:'#4EA8DE',2:'#FF7A7A',3:'#A87BDB',4:'#57C784',5:'#FFA94D',6:'#5C7CFA'};
+const TOTAL_Q = 10;
+
+let state = {
+  diff:'easy',
+  level:1,
+  qIndex:0,
+  correct:0,
+  q:null,        // current question
+  step:0,        // sub-step for guided levels
+  answeredFirstTry:true,
+  soundOn:true
+};
+
+/* ============ helpers ============ */
+const $ = s => document.querySelector(s);
+const pad2 = m => String(m).padStart(2,'0');
+const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+const numFromMinute = m => (m===0?12:m/5);        // long hand points to number
+const minuteFromNum = n => (n%12)*5;              // number -> minutes
+// 分の読み方: 0=0ふん、10・20・30・40・50=ぷん、5・15・25・35・45・55=ふん
+function minLabel(m){
+  if(m===0) return '0ふん';
+  return m + (m%10===0 ? 'ぷん' : 'ふん');
+}
+function timeLabel(h,m){
+  return m===0 ? (h+'じ ちょうど') : (h+'じ'+minLabel(m));
+}
+
+function minuteSet(){ return MINUTE_SETS[state.diff]; }
+
+/* ============ sound (WebAudio, no files) ============ */
+let audioCtx=null;
+function beep(freq,start,dur,type='sine',vol=0.14){
+  if(!state.soundOn) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq;
+    o.connect(g); g.connect(audioCtx.destination);
+    const t=audioCtx.currentTime+start;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.start(t); o.stop(t+dur+0.02);
+  }catch(e){}
+}
+function sndCorrect(){ beep(660,0,0.16,'triangle'); beep(880,0.12,0.22,'triangle'); }
+function sndWrong(){ beep(300,0,0.18,'sine',0.12); }
+function sndTap(){ beep(520,0,0.06,'square',0.06); }
+
+/* ============ clock rendering ============ */
+const NS='http://www.w3.org/2000/svg';
+function el(name,attrs){
+  const e=document.createElementNS(NS,name);
+  for(const k in attrs) e.setAttribute(k,attrs[k]);
+  return e;
+}
+function buildFace(svg){
+  svg.innerHTML='';
+  svg.appendChild(el('circle',{class:'rim',cx:100,cy:100,r:92}));
+  svg.appendChild(el('circle',{class:'clock-face',cx:100,cy:100,r:86}));
+  // ticks (near the edge)
+  for(let i=0;i<60;i++){
+    const a=i*6*Math.PI/180;
+    const big=(i%5===0);
+    const r1=big?80:82, r2=85;
+    const line=el('line',{
+      class:'tick'+(big?' big':''),
+      x1:100+r1*Math.sin(a), y1:100-r1*Math.cos(a),
+      x2:100+r2*Math.sin(a), y2:100-r2*Math.cos(a),
+      'stroke-width':big?3:1.6,'stroke-linecap':'round'
+    });
+    svg.appendChild(line);
+  }
+  // minute numbers ring (blue) — shows "5ずつ ふえる" so kids can COUNT
+  const gmn=el('g',{id:'minNums'});
+  for(let n=1;n<=12;n++){
+    const a=n*30*Math.PI/180, r=72;
+    const mv=(n%12)*5;
+    const t=el('text',{
+      class:'minnum-txt', x:100+r*Math.sin(a), y:100-r*Math.cos(a),
+      'text-anchor':'middle','dominant-baseline':'central','font-size':10
+    });
+    t.textContent=mv;
+    gmn.appendChild(t);
+  }
+  svg.appendChild(gmn);
+  // hour numbers (dark, bold)
+  for(let n=1;n<=12;n++){
+    const a=n*30*Math.PI/180, r=53;
+    const t=el('text',{
+      class:'num-txt', x:100+r*Math.sin(a), y:100-r*Math.cos(a),
+      'text-anchor':'middle','dominant-baseline':'central','font-size':17
+    });
+    t.textContent=n;
+    svg.appendChild(t);
+  }
+  // hour hand
+  const gh=el('g',{id:'gHour'});
+  gh.appendChild(el('line',{class:'hand-hour',id:'handHour',x1:100,y1:100,x2:100,y2:60}));
+  svg.appendChild(gh);
+  // minute hand
+  const gm=el('g',{id:'gMin'});
+  gm.appendChild(el('line',{class:'hand-min',id:'handMin',x1:100,y1:100,x2:100,y2:34}));
+  svg.appendChild(gm);
+  // center
+  svg.appendChild(el('circle',{class:'center-dot',cx:100,cy:100,r:6}));
+}
+function showMinuteNums(on){
+  const g=$('#minNums'); if(g) g.style.display=on?'':'none';
+}
+function setHands(hour, minute, showHour, showMin){
+  const gh=$('#gHour'), gm=$('#gMin');
+  const hourAngle=((hour%12)+minute/60)*30;
+  const minAngle=minute*6;
+  gh.setAttribute('transform',`rotate(${hourAngle} 100 100)`);
+  gm.setAttribute('transform',`rotate(${minAngle} 100 100)`);
+  gh.style.display=showHour?'':'none';
+  gm.style.display=showMin?'':'none';
+}
+
+/* ============ screen switching ============ */
+function show(id){
+  ['home','game','result'].forEach(s=>$('#'+s).classList.add('hidden'));
+  $('#'+id).classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+
+/* ============ HOME wiring ============ */
+document.querySelectorAll('.diff-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.diff-btn').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    state.diff=b.dataset.diff;
+    sndTap();
+  });
+});
+document.querySelectorAll('.level-card').forEach(b=>{
+  b.addEventListener('click',()=>{ startLevel(parseInt(b.dataset.level,10)); });
+});
+$('#btnHome').addEventListener('click',()=>{ show('home'); });
+$('#btnResultHome').addEventListener('click',()=>{ show('home'); });
+$('#btnRetry').addEventListener('click',()=>{ startLevel(state.level); });
+$('#btnSound').addEventListener('click',()=>{
+  state.soundOn=!state.soundOn;
+  $('#btnSound').textContent=state.soundOn?'🔊':'🔇';
+  if(state.soundOn) sndTap();
+});
+
+/* ============ start / flow ============ */
+function startLevel(level){
+  state.level=level;
+  state.qIndex=0;
+  state.correct=0;
+  buildFace($('#clock'));
+  $('#lvChip').textContent='レベル'+level;
+  $('#lvChip').style.background=LEVEL_COLORS[level];
+  $('#btnSound').textContent=state.soundOn?'🔊':'🔇';
+  show('game');
+  nextQuestion();
+}
+function updateProgress(){
+  $('#progCount').textContent=(state.qIndex+1)+' / '+TOTAL_Q;
+  $('#progFill').style.width=(state.qIndex/TOTAL_Q*100)+'%';
+}
+function makeQuestion(){
+  const level=state.level;
+  const set=minuteSet();
+  if(level===6){
+    // 13..23 o'clock -> afternoon (ごご) hour = h24-12
+    const h24=13+Math.floor(Math.random()*11);
+    return {hour:h24-12, minute:0, h24};
+  }
+  let hour=1+Math.floor(Math.random()*12);
+  let minute = level===2 ? 0 : rand(set);
+  return {hour,minute};
+}
+function nextQuestion(){
+  if(state.qIndex>=TOTAL_Q){ finish(); return; }
+  state.q=makeQuestion();
+  state.step=0;
+  state.answeredFirstTry=true;
+  updateProgress();
+  hideFeedback();
+  renderLevel();
+}
+function finish(){
+  $('#progFill').style.width='100%';
+  const s=state.correct;
+  $('#rScore').textContent=s;
+  $('#rScore2').textContent=s;
+  let title,stars;
+  if(s===10){title='パーフェクト！ 🏆';stars='⭐️⭐️⭐️⭐️⭐️';}
+  else if(s>=8){title='すごい！ よくできたね';stars='⭐️⭐️⭐️⭐️';}
+  else if(s>=5){title='よくできました！';stars='⭐️⭐️⭐️';}
+  else {title='がんばったね！ もういちど 🔁';stars='⭐️⭐️';}
+  $('#rTitle').textContent=title;
+  $('#rStars').textContent=stars;
+  show('result');
+  if(s>=5) burst();
+}
+
+/* ============ feedback ============ */
+function hideFeedback(){ const f=$('#feedback'); f.className='feedback'; f.innerHTML=''; }
+function showFeedback(html,ok){
+  const f=$('#feedback');
+  f.className='feedback show '+(ok?'ok':'ng');
+  f.innerHTML=html;
+  f.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function advanceOnCorrect(){
+  if(state.answeredFirstTry) state.correct++;
+  state.qIndex++;
+}
+
+/* ============ render per level ============ */
+function renderLevel(){
+  const L=state.level;
+  showMinuteNums(L===1||L===3||L===4||L===5); // hide for hour-only levels
+  if(L===1) renderL1();
+  else if(L===2) renderL2();
+  else if(L===3) renderL3();
+  else if(L===4) renderL4();
+  else if(L===5) renderL5();
+  else if(L===6) renderL6();
+}
+
+/* number grid helper */
+function numGridHTML(){
+  let h='<div class="numgrid" id="numGrid">';
+  for(let n=1;n<=12;n++) h+=`<button data-n="${n}">${n}</button>`;
+  h+='</div>';
+  return h;
+}
+
+/* count-by-5 explainer: shows WHY number n = (n*5) minutes */
+function count5HTML(n){
+  let h='<div class="count5">';
+  for(let k=1;k<=n;k++){
+    if(k>1) h+='<span class="arrow">→</span>';
+    const last=(k===n);
+    h+=`<span class="c${last?' last':''}" style="animation-delay:${(k*0.14).toFixed(2)}s">${k*5}</span>`;
+  }
+  h+='</div>';
+  return h;
+}
+
+/* ---- LEVEL 1: long hand only ---- */
+function renderL1(){
+  const q=state.q;
+  setHands(0,q.minute,false,true);   // only long hand
+  const order=[12,1,2,3,4,5,6,7,8,9,10,11];
+  let corr='<div class="table-wrap"><h3>ながい はり の ひょう（5ふん ずつ ふえる）</h3><div class="corr">';
+  order.forEach(n=>{
+    corr+=`<div class="cell" data-cell="${n}"><b>${n}</b><br>${minLabel(minuteFromNum(n))}</div>`;
+  });
+  corr+='</div></div>';
+  $('#qArea').innerHTML =
+    `<p class="question"><span class="hi-min">ながい はり</span>は どこ？</p>
+     <p class="step-note">あおい はり が さす すうじ を おそう</p>
+     <div class="hint-band">とけいの あおい すうじ を 12から <b>5ふん ずつ</b> かぞえよう 👣</div>`
+     + numGridHTML() + corr;
+  wireNumGrid(pickL1);
+}
+function pickL1(n,btn){
+  const q=state.q;
+  const answer=numFromMinute(q.minute);
+  if(n===answer){
+    btn.classList.add('right');
+    const cell=document.querySelector(`.corr .cell[data-cell="${answer}"]`);
+    if(cell) cell.classList.add('hot');
+    sndCorrect();
+    let explain;
+    if(answer===12){
+      explain=`<div class="small">12は とけいの スタート！ <span style="font-size:1.3em">0ふん</span> だよ 🚩</div>`;
+    }else{
+      explain=`${count5HTML(answer)}
+        <div class="small">5ふん ずつ かぞえると… <b>${answer}</b>は <span style="font-size:1.3em">${minLabel(q.minute)}</span>！</div>`;
+    }
+    showFeedback(`<div class="big">そう！ ⭕️</div>${explain}`, true);
+    lockGrid();
+    addNext();
+  }else{
+    btn.classList.add('wrong');
+    state.answeredFirstTry=false;
+    sndWrong();
+    showFeedback(`<div class="big">もういちど！</div><div class="small">あおい すうじ を 5ふん ずつ かぞえてみよう 👀</div>`,false);
+    setTimeout(()=>btn.classList.remove('wrong'),700);
+  }
+}
+
+/* ---- LEVEL 2: short hand only ---- */
+function renderL2(){
+  const q=state.q;
+  setHands(q.hour,0,true,false);  // only short hand, on the hour
+  $('#qArea').innerHTML =
+    `<p class="question"><span class="hi-hour">みじかい はり</span>は なんじ？</p>
+     <p class="step-note">あかい はり が さす すうじ が「じ」だよ</p>`
+     + numGridHTML();
+  wireNumGrid(pickL2);
+}
+function pickL2(n,btn){
+  const q=state.q;
+  if(n===(q.hour%12===0?12:q.hour)){
+    btn.classList.add('right');
+    sndCorrect();
+    showFeedback(`<div class="big">そう！ ⭕️</div><div class="small"><span style="font-size:1.5em">${q.hour}じ</span> だね！</div>`,true);
+    lockGrid(); addNext();
+  }else{
+    btn.classList.add('wrong');
+    state.answeredFirstTry=false;
+    sndWrong();
+    showFeedback(`<div class="big">もういちど！</div><div class="small">あかい はり を よく みてね 👀</div>`,false);
+    setTimeout(()=>btn.classList.remove('wrong'),700);
+  }
+}
+
+/* ---- LEVEL 3: guided minute -> hour -> full ---- */
+function renderL3(){
+  const q=state.q;
+  setHands(q.hour,q.minute,true,true);
+  if(state.step===0){
+    $('#qArea').innerHTML =
+      `<p class="question">① <span class="hi-min">ながい はり</span>は？</p>
+       <p class="step-note">あおい はり が さす すうじ を おそう</p>`
+       + numGridHTML();
+    wireNumGrid(pickL3min);
+  }else{
+    $('#qArea').innerHTML =
+      `<p class="question">② <span class="hi-hour">みじかい はり</span>は？</p>
+       <p class="step-note">あかい はり が とおりすぎた すうじ が「じ」だよ</p>`
+       + numGridHTML();
+    wireNumGrid(pickL3hour);
+  }
+}
+function pickL3min(n,btn){
+  const q=state.q;
+  if(n===numFromMinute(q.minute)){
+    btn.classList.add('right'); sndCorrect();
+    const cnt = (n===12) ? '' : count5HTML(n);
+    showFeedback(`<div class="big">→ ${minLabel(q.minute)} ⭕️</div>${cnt}<div class="small">つぎは みじかい はり を みよう</div>`,true);
+    lockGrid();
+    addBtn('つぎへ ▶',()=>{ state.step=1; hideFeedback(); renderLevel(); });
+  }else{
+    btn.classList.add('wrong'); state.answeredFirstTry=false; sndWrong();
+    showFeedback(`<div class="big">もういちど！</div><div class="small">あおい すうじ を 5ふん ずつ かぞえてね</div>`,false);
+    setTimeout(()=>btn.classList.remove('wrong'),700);
+  }
+}
+function pickL3hour(n,btn){
+  const q=state.q;
+  const hourAns=(q.hour%12===0?12:q.hour);
+  if(n===hourAns){
+    btn.classList.add('right'); sndCorrect();
+    showFeedback(
+      `<div class="small">→ ${q.hour}じ ⭕️</div>
+       <div class="bigtime">${timeLabel(q.hour,q.minute)}</div>
+       <div class="small">よめたね！ 🎉</div>`,true);
+    lockGrid(); burst(); advanceReady();
+  }else{
+    btn.classList.add('wrong'); state.answeredFirstTry=false; sndWrong();
+    let hint = q.minute===0 ? 'あかい はり が さす すうじ だよ' : `${(q.hour)}と${(q.hour%12)+1}の あいだ を みてね`;
+    showFeedback(`<div class="big">もういちど！</div><div class="small">${hint}</div>`,false);
+    setTimeout(()=>btn.classList.remove('wrong'),700);
+  }
+}
+
+/* ---- LEVEL 4: read it yourself (combined) ---- */
+function renderL4(){
+  const q=state.q;
+  setHands(q.hour,q.minute,true,true);
+  const set=minuteSet();
+  let hourBtns='<div class="numgrid" id="hourGrid">';
+  for(let n=1;n<=12;n++) hourBtns+=`<button data-h="${n}">${n}</button>`;
+  hourBtns+='</div>';
+  let minBtns='<div class="numgrid mins" id="minGrid">';
+  set.forEach(m=> minBtns+=`<button data-m="${m}">${minLabel(m)}</button>`);
+  minBtns+='</div>';
+  $('#qArea').innerHTML =
+    `<p class="question">なんじ なんぷん？</p>
+     <p class="step-note">① ながい はり → ② みじかい はり の じゅんばん で かんがえよう</p>
+     <div class="sub-head">みじかい はり（なんじ）</div>${hourBtns}
+     <div class="sub-head">ながい はり（なんぷん）</div>${minBtns}
+     <button class="combo-check" id="comboCheck" disabled>こたえあわせ</button>`;
+  let selH=null, selM=null;
+  const hourGrid=$('#hourGrid'), minGrid=$('#minGrid'), chk=$('#comboCheck');
+  hourGrid.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return; sndTap();
+    hourGrid.querySelectorAll('button').forEach(x=>x.classList.remove('pick'));
+    b.classList.add('pick'); selH=parseInt(b.dataset.h,10);
+    chk.disabled=!(selH!==null&&selM!==null);
+  });
+  minGrid.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return; sndTap();
+    minGrid.querySelectorAll('button').forEach(x=>x.classList.remove('pick'));
+    b.classList.add('pick'); selM=parseInt(b.dataset.m,10);
+    chk.disabled=!(selH!==null&&selM!==null);
+  });
+  chk.addEventListener('click',()=>{
+    const hourAns=(q.hour%12===0?12:q.hour);
+    if(selH===hourAns && selM===q.minute){
+      sndCorrect();
+      showFeedback(`<div class="bigtime">${timeLabel(q.hour,q.minute)}</div><div class="small">せいかい！ 🎉</div>`,true);
+      chk.disabled=true;
+      hourGrid.style.pointerEvents='none'; minGrid.style.pointerEvents='none';
+      burst(); advanceReady();
+    }else{
+      state.answeredFirstTry=false; sndWrong();
+      showFeedback(`<div class="big">おしい！ もういちど</div><div class="small">はり を もういちど よく みてね 👀</div>`,false);
+    }
+  });
+}
+
+/* ---- LEVEL 5: make the clock (drag) ---- */
+let drag={active:null, hour:12, minute:0};
+function renderL5(){
+  const q=state.q;
+  drag.hour=12; drag.minute=0; drag.active=null;
+  setHands(12,0,true,true);
+  addKnobs();
+  $('#qArea').innerHTML =
+    `<div class="make-target">🕐 ${timeLabel(q.hour,q.minute)} に してください</div>
+     <p class="make-hint">はり を ゆびで うごかして あわせよう<br>あおい＝ながい はり ／ あかい＝みじかい はり</p>
+     <button class="made-btn" id="madeBtn">できた！ ✅</button>`;
+  $('#madeBtn').addEventListener('click',checkL5);
+}
+function addKnobs(){
+  // remove old knobs
+  document.querySelectorAll('.knob-min,.knob-hour').forEach(k=>k.remove());
+  const gm=$('#gMin'), gh=$('#gHour');
+  gm.appendChild(el('circle',{class:'knob-min',cx:100,cy:34,r:13,'data-hand':'min'}));
+  gh.appendChild(el('circle',{class:'knob-hour',cx:100,cy:58,r:15,'data-hand':'hour'}));
+  const svg=$('#clock');
+  svg.style.touchAction='none';
+  svg.onpointerdown=onDown;
+  svg.onpointermove=onMove;
+  svg.onpointerup=onUp;
+  svg.onpointercancel=onUp;
+}
+function svgAngle(evt){
+  const svg=$('#clock');
+  const r=svg.getBoundingClientRect();
+  const scale=r.width/200;
+  const cx=r.left+100*scale, cy=r.top+100*scale;
+  const dx=evt.clientX-cx, dy=evt.clientY-cy;
+  let deg=Math.atan2(dx,-dy)*180/Math.PI;
+  if(deg<0) deg+=360;
+  return deg;
+}
+function onDown(evt){
+  const t=evt.target;
+  if(t.classList.contains('knob-min')) drag.active='min';
+  else if(t.classList.contains('knob-hour')) drag.active='hour';
+  else return;
+  evt.preventDefault();
+  try{ $('#clock').setPointerCapture(evt.pointerId); }catch(e){}
+  onMove(evt);
+}
+function onMove(evt){
+  if(!drag.active) return;
+  evt.preventDefault();
+  const deg=svgAngle(evt);
+  if(drag.active==='min'){
+    // live: rotate minute freely
+    $('#gMin').setAttribute('transform',`rotate(${deg} 100 100)`);
+    drag._minDeg=deg;
+  }else{
+    $('#gHour').setAttribute('transform',`rotate(${deg} 100 100)`);
+    drag._hourDeg=deg;
+  }
+}
+function onUp(evt){
+  if(!drag.active) return;
+  const set=minuteSet();
+  if(drag.active==='min'){
+    let m=Math.round((drag._minDeg||0)/6)%60;
+    // snap to nearest allowed minute
+    let best=set[0], bd=99;
+    set.forEach(s=>{ let d=Math.min(Math.abs(s-m),60-Math.abs(s-m)); if(d<bd){bd=d;best=s;} });
+    drag.minute=best;
+  }else{
+    let h=Math.round((drag._hourDeg||0)/30)%12; if(h===0) h=12;
+    drag.hour=h;
+  }
+  drag.active=null;
+  // redraw consistently (hour hand takes minute offset so it looks real)
+  setHands(drag.hour, drag.minute, true, true);
+  sndTap();
+}
+function checkL5(){
+  const q=state.q;
+  const hourAns=(q.hour%12===0?12:q.hour);
+  if(drag.hour===hourAns && drag.minute===q.minute){
+    sndCorrect();
+    showFeedback(`<div class="big">ピンポーン！ 🔔</div><div class="small" style="font-size:1.3em">やったね！ 🎉</div>`,true);
+    $('#madeBtn').disabled=true;
+    $('#clock').onpointerdown=null;
+    burst(); advanceReady();
+  }else{
+    state.answeredFirstTry=false; sndWrong();
+    showFeedback(`<div class="big">もういちど！</div><div class="small">${timeLabel(q.hour,q.minute)} に なってるかな？</div>`,false);
+  }
+}
+
+/* ---- LEVEL 6: 24-hour -> afternoon (ごご) ---- */
+function renderL6(){
+  const q=state.q;                 // q.h24 (13..23), q.hour = ごご hour (1..11)
+  setHands(q.hour,0,true,false);   // show short hand at the same 12h position (helper)
+  // reference strip 13..23 -> ごご1..11
+  let strip='<div class="table-wrap"><h3>24じかん の ひょう</h3><div class="corr h24">';
+  for(let h=13;h<=23;h++){
+    strip+=`<div class="cell" data-cell="${h}"><b>${h}じ</b><br>ごご${h-12}じ</div>`;
+  }
+  strip+='</div></div>';
+  $('#qArea').innerHTML =
+    `<div class="make-target l6bg">🌆 ${q.h24}じ は？</div>
+     <p class="question">ごご なんじ？</p>
+     <p class="step-note">おひるの 12じ を すぎたら 13, 14, 15… と つづくよ</p>
+     <div class="hint-band l6hint"><b>${q.h24} ひく 12</b> を すると ごごの じかん！</div>`
+     + numGridHTML() + strip;
+  wireNumGrid(pickL6);
+}
+function pickL6(n,btn){
+  const q=state.q;
+  if(n===q.hour){
+    btn.classList.add('right');
+    const cell=document.querySelector(`.corr .cell[data-cell="${q.h24}"]`);
+    if(cell) cell.classList.add('hot');
+    sndCorrect();
+    showFeedback(
+      `<div class="big">そう！ ⭕️</div>
+       <div class="count5"><span class="c" style="animation-delay:.05s">${q.h24}</span><span class="arrow">−</span><span class="c" style="animation-delay:.2s">12</span><span class="arrow">＝</span><span class="c last" style="animation-delay:.35s">${q.hour}</span></div>
+       <div class="small"><span style="font-size:1.3em">${q.h24}じ</span> は <span style="font-size:1.3em">ごご${q.hour}じ</span> だよ！</div>`, true);
+    lockGrid(); burst(); advanceReady();
+  }else{
+    btn.classList.add('wrong'); state.answeredFirstTry=false; sndWrong();
+    showFeedback(`<div class="big">もういちど！</div><div class="small">${q.h24} から 12 を ひいてみよう</div>`,false);
+    setTimeout(()=>btn.classList.remove('wrong'),700);
+  }
+}
+
+/* ============ number grid wiring ============ */
+function wireNumGrid(handler){
+  const grid=$('#numGrid');
+  if(!grid) return;
+  grid.addEventListener('click',e=>{
+    const b=e.target.closest('button');
+    if(!b || grid.dataset.locked) return;
+    sndTap();
+    handler(parseInt(b.dataset.n,10), b);
+  });
+}
+function lockGrid(){ const g=$('#numGrid'); if(g) g.dataset.locked='1'; }
+
+/* ============ "next" buttons ============ */
+function advanceNext(){
+  if(state.answeredFirstTry) state.correct++;
+  state.qIndex++;
+  nextQuestion();
+}
+function addNext(){ addBtn('つぎへ ▶', advanceNext); }
+function advanceReady(){ addBtn('つぎへ ▶', advanceNext); }
+function addBtn(label,fn){
+  const f=$('#feedback');
+  const b=document.createElement('button');
+  b.className='next-btn';
+  b.textContent=label;
+  b.addEventListener('click',fn);
+  const wrap=document.createElement('div');
+  wrap.style.marginTop='10px';
+  wrap.appendChild(b);
+  f.appendChild(wrap);
+}
+
+/* ============ confetti ============ */
+function burst(){
+  const box=$('#confetti');
+  const emojis=['🎉','✨','⭐️','🌟','🎊','💛','💙'];
+  for(let i=0;i<26;i++){
+    const s=document.createElement('div');
+    s.className='confetti-piece';
+    s.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    s.style.left=Math.random()*100+'vw';
+    s.style.fontSize=(18+Math.random()*22)+'px';
+    s.style.animationDuration=(1.6+Math.random()*1.4)+'s';
+    s.style.animationDelay=(Math.random()*0.3)+'s';
+    box.appendChild(s);
+    setTimeout(()=>s.remove(),3400);
+  }
+}
+
+/* ============ init ============ */
+buildFace($('#clock'));
+</script>
+</body>
+</html>

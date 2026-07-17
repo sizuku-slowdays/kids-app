@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#8fd8c7">
+  <meta name="description" content="家族の毎日を支える、わが家アプリのホームです。">
+  <title>わが家アプリ</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./img/icon-192.png">
+  <link rel="stylesheet" href="./css/wagaya.css">
+  <script src="./js/apps.js" defer></script>
+</head>
+<body data-page="home">
+  <main class="page-shell">
+    <header class="welcome" aria-labelledby="welcome-title">
+      <div>
+        <p class="eyebrow" id="today">今日</p>
+        <h1 id="welcome-title"><span id="greeting">こんにちは</span><span aria-hidden="true"> 🌿</span></h1>
+        <p class="welcome-copy">今日も、わが家の一日をここから。</p>
+      </div>
+      <div class="home-mark" aria-hidden="true">⌂</div>
+    </header>
+
+    <section class="calendar-panel" aria-labelledby="calendar-heading">
+      <div class="section-heading compact">
+        <div>
+          <p class="section-kicker">みんなの予定</p>
+          <h2 id="calendar-heading">家族カレンダー</h2>
+        </div>
+        <span class="large-icon" aria-hidden="true">📅</span>
+      </div>
+      <div class="calendar-actions">
+        <a class="button button-primary" href="https://cetus.fun/kanriapp/calendar.html">
+          <span aria-hidden="true">📅</span> カレンダーを開く
+        </a>
+        <!-- 既存カレンダーに「追加画面を直接開く」確認済みURLがないため、同じ既存URLを使用しています。 -->
+        <a class="button button-secondary" href="https://cetus.fun/kanriapp/calendar.html">
+          <span aria-hidden="true">＋</span> 予定を追加する
+        </a>
+      </div>
+    </section>
+
+    <section class="apps-section" aria-labelledby="frequent-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">すぐに開ける</p>
+          <h2 id="frequent-heading">よく使うアプリ</h2>
+        </div>
+      </div>
+      <div class="app-grid" id="featured-apps" aria-live="polite">
+        <p class="loading-message">アプリを読み込んでいます…</p>
+      </div>
+      <a class="all-apps-link" href="./apps.html">
+        <span>すべてのアプリを見る</span><span aria-hidden="true">›</span>
+      </a>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item active" href="./index.html" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">⌂</span><span>ホーム</span>
+    </a>
+    <a class="nav-item" href="https://cetus.fun/kanriapp/calendar.html">
+      <span class="nav-icon" aria-hidden="true">▦</span><span>カレンダー</span>
+    </a>
+    <a class="nav-item" href="./apps.html">
+      <span class="nav-icon" aria-hidden="true">⊞</span><span>アプリ</span>
+    </a>
+  </nav>
+</body>
+</html>

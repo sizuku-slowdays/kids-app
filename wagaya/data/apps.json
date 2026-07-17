@@ -1,0 +1,76 @@
+{
+  "categories": [
+    { "id": "daily", "name": "毎日のこと" },
+    { "id": "money", "name": "お金" },
+    { "id": "record", "name": "記録" }
+  ],
+  "apps": [
+    {
+      "id": "calendar",
+      "name": "家族カレンダー",
+      "description": "みんなの予定を確認・追加",
+      "url": "https://cetus.fun/kanriapp/calendar.html",
+      "icon": "📅",
+      "color": "mint",
+      "category": "daily",
+      "featured": true,
+      "order": 1
+    },
+    {
+      "id": "school-check",
+      "name": "学校チェック",
+      "description": "朝・学校・帰宅後の準備",
+      "url": "https://cetus.fun/kanriapp/school-check.html",
+      "icon": "🎒",
+      "color": "sky",
+      "category": "daily",
+      "featured": true,
+      "order": 2
+    },
+    {
+      "id": "mama-bank",
+      "name": "ママ銀行",
+      "description": "おこづかいを確認",
+      "url": "https://cetus.fun/kanriapp/mama-bank.html",
+      "icon": "🏦",
+      "color": "yellow",
+      "category": "money",
+      "featured": true,
+      "order": 3
+    },
+    {
+      "id": "karada",
+      "name": "からだカレンダー",
+      "description": "からだの記録を確認",
+      "url": "https://cetus.fun/kanriapp/karada_calendar.html",
+      "icon": "🌷",
+      "color": "pink",
+      "category": "record",
+      "featured": true,
+      "order": 4
+    },
+    {
+      "id": "iikoto-saru",
+      "name": "きょうのいいこと 🐒",
+      "description": "今日のいいことを記録",
+      "url": "https://cetus.fun/kanriapp/iikoto1.html",
+      "icon": "🐒",
+      "color": "orange",
+      "category": "record",
+      "featured": false,
+      "order": 5
+    },
+    {
+      "id": "iikoto-unicorn",
+      "name": "きょうのいいこと 🦄",
+      "description": "今日のいいことを記録",
+      "url": "https://cetus.fun/kanriapp/iikoto2.html",
+      "icon": "🦄",
+      "color": "purple",
+      "category": "record",
+      "featured": false,
+      "order": 6
+    }
+  ],
+  "notes": "URLは2026-07-17に公開先で応答を確認済み。既存の画像ファイル名は推測せず、初期版は絵文字アイコンを使用。"
+}

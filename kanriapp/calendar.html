@@ -308,7 +308,10 @@
 
   /* ── 週表示 ── */
   #week-view { display: none; padding: 12px; }
-  .week-grid { display: grid; grid-template-columns: 44px repeat(7,1fr); gap: 3px; min-width: 480px; }
+  .week-allday-grid { display: grid; grid-template-columns: 44px repeat(7,1fr); gap: 2px; margin-bottom: 6px; background: var(--surface); border-radius: var(--radius); padding: 6px; box-shadow: var(--shadow-sm); }
+  .week-allday-label { font-size: 10px; color: var(--text-light); text-align: right; padding-right: 6px; padding-top: 4px; font-weight: 600; }
+  .week-allday-col { min-height: 24px; }
+  .week-grid { display: grid; grid-template-columns: 44px repeat(7,1fr); gap: 3px; }
   .week-col-header {
     text-align: center; font-size: 12px; padding: 8px 3px; border-radius: var(--radius-sm);
     background: var(--surface); border: 1px solid var(--border-light);
@@ -562,11 +565,11 @@
     <div id="ev-dt-row">
       <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label>開始日</label><input type="date" id="ev-start-date" onchange="onStartDateChange()"></div>
-        <div><label>開始時刻</label><input type="time" id="ev-start-time" value="09:00" onchange="onStartTimeChange()"></div>
+        <div><label>開始時刻</label><input type="time" id="ev-start-time" value="09:00" step="1800" onchange="onStartTimeChange()"></div>
       </div>
       <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label>終了日</label><input type="date" id="ev-end-date" onchange="onEndDateChange()"></div>
-        <div><label>終了時刻</label><input type="time" id="ev-end-time" value="10:00" onchange="onEndTimeChange()"></div>
+        <div><label>終了時刻</label><input type="time" id="ev-end-time" value="10:00" step="1800" onchange="onEndTimeChange()"></div>
       </div>
     </div>
     <div id="ev-d-row" style="display:none">
@@ -944,20 +947,47 @@ function renderWeek() {
   document.getElementById('btn-month').classList.remove('active'); document.getElementById('btn-week').classList.add('active');
   const wv = document.getElementById('week-view'), today = new Date(), ws = new Date(currentDate);
   ws.setDate(currentDate.getDate() - currentDate.getDay());
-  const DAYS = ['日','月','火','水','木','金','土'], ae = allEvents(), H = 44;
-  let html = `<div class="week-grid"><div></div>`;
-  for (let d = 0; d < 7; d++) { const dt = new Date(ws); dt.setDate(ws.getDate() + d); const isToday = dt.toDateString() === today.toDateString(); html += `<div class="week-col-header${isToday?' today':''}"><div class="dow">${DAYS[d]}</div><div class="dnum">${dt.getDate()}</div></div>`; }
+  const DAYS = ['日','月','火','水','木','金','土'], ae = allEvents(), H = 48;
+
+  // 終日予定エリア
+  let allDayHtml = '<div class="week-allday-grid"><div class="week-allday-label">終日</div>';
+  for (let d = 0; d < 7; d++) {
+    const dt = new Date(ws); dt.setDate(ws.getDate() + d); const ds = dateStr(dt);
+    const dayAllDay = ae.filter(e => evOnDate(e, ds) && e.all_day);
+    allDayHtml += `<div class="week-allday-col">`;
+    dayAllDay.forEach(e => { allDayHtml += `<div class="event-chip" style="background:${getColor(e)};margin-bottom:2px" onclick='openDetail(${JSON.stringify(e).replace(/"/g,"&quot;")})'>${e.title}</div>`; });
+    allDayHtml += `</div>`;
+  }
+  allDayHtml += '</div>';
+
+  // 時間軸エリア
+  let html = `<div style="overflow-x:auto"><div class="week-grid" style="min-width:520px">`;
+  html += `<div></div>`;
+  for (let d = 0; d < 7; d++) {
+    const dt = new Date(ws); dt.setDate(ws.getDate() + d); const isToday = dt.toDateString() === today.toDateString();
+    const dow = dt.getDay();
+    const dowColor = dow===0 ? 'color:#FF7875' : dow===6 ? 'color:#6B9EFF' : '';
+    html += `<div class="week-col-header${isToday?' today':''}"><div class="dow" style="${dowColor}">${DAYS[d]}</div><div class="dnum" style="${dowColor}">${dt.getDate()}</div></div>`;
+  }
   html += `<div class="week-time-col">`;
   for (let h = 0; h < 24; h++) html += `<div class="time-label">${h}:00</div>`;
   html += `</div>`;
   for (let d = 0; d < 7; d++) {
-    const dt = new Date(ws); dt.setDate(ws.getDate() + d); const isToday = dt.toDateString() === today.toDateString(), ds = dateStr(dt);
+    const dt = new Date(ws); dt.setDate(ws.getDate() + d);
+    const isToday = dt.toDateString() === today.toDateString(), ds = dateStr(dt);
     html += `<div class="week-day-col${isToday?' today':''}" style="height:${24*H}px">`;
     for (let h = 0; h < 24; h++) html += `<div class="hour-line" style="top:${h*H}px"></div>`;
-    ae.filter(e => evOnDate(e, ds) && !e.all_day).forEach(e => { const s = new Date(e.start_datetime), en = new Date(e.end_datetime); const top = (s.getHours()*60 + s.getMinutes()) / 60 * H, ht = Math.max(((en - s) / 3600000) * H, 18); const eJson = JSON.stringify(e).replace(/"/g,'&quot;'); html += `<div class="week-event" style="top:${top}px;height:${ht}px;background:${getColor(e)}" onclick='openDetail(${eJson})'>${e.title}</div>`; });
+    ae.filter(e => evOnDate(e, ds) && !e.all_day).forEach(e => {
+      const s = new Date(e.start_datetime), en = new Date(e.end_datetime);
+      const top = (s.getHours()*60 + s.getMinutes()) / 60 * H;
+      const ht = Math.max(((en - s) / 3600000) * H, 22);
+      const eJson = JSON.stringify(e).replace(/"/g,'&quot;');
+      html += `<div class="week-event" style="top:${top}px;height:${ht}px;background:${getColor(e)}" onclick='openDetail(${eJson})'>${e.title}</div>`;
+    });
     html += `</div>`;
   }
-  html += `</div>`; wv.innerHTML = html;
+  html += `</div></div>`;
+  wv.innerHTML = allDayHtml + html;
 }
 
 function dateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }

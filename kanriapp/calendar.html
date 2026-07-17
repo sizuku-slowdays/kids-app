@@ -561,12 +561,12 @@
     <div class="frow"><label class="cb-row"><input type="checkbox" id="ev-allday" onchange="toggleAllDay()"> 終日</label></div>
     <div id="ev-dt-row">
       <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><label>開始日</label><input type="date" id="ev-start-date"></div>
-        <div><label>開始時刻</label><input type="text" id="ev-start-time" placeholder="0900" maxlength="5" oninput="autoSetEndTime()" onblur="formatTimeInput(this)"></div>
+        <div><label>開始日</label><input type="date" id="ev-start-date" onchange="onStartDateChange()"></div>
+        <div><label>開始時刻</label><input type="time" id="ev-start-time" value="09:00" onchange="onStartTimeChange()"></div>
       </div>
       <div class="frow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><label>終了日</label><input type="date" id="ev-end-date"></div>
-        <div><label>終了時刻</label><input type="text" id="ev-end-time" placeholder="1000" maxlength="5" onblur="formatTimeInput(this)"></div>
+        <div><label>終了日</label><input type="date" id="ev-end-date" onchange="onEndDateChange()"></div>
+        <div><label>終了時刻</label><input type="time" id="ev-end-time" value="10:00" onchange="onEndTimeChange()"></div>
       </div>
     </div>
     <div id="ev-d-row" style="display:none">
@@ -990,12 +990,14 @@ function openEvModal(ev, defaultDate) {
     document.getElementById('ev-allday').checked = !!ev.all_day;
     document.getElementById('ev-notify').value = ev.notify_before ?? -1;
     setRecurrenceForm(ev); setListForm(ev); sel.value = ev.calendar_id;
+    _endDateManual = true; _endTimeManual = true; // 編集時は自動補完しない
     if (ev.all_day) { document.getElementById('ev-start-d').value = ev.start_datetime.slice(0,10); document.getElementById('ev-end-d').value = ev.end_datetime.slice(0,10); }
     else { const [sd, st] = ev.start_datetime.slice(0,16).split('T'), [ed, et] = ev.end_datetime.slice(0,16).split('T'); document.getElementById('ev-start-date').value = sd; document.getElementById('ev-start-time').value = st; document.getElementById('ev-end-date').value = ed; document.getElementById('ev-end-time').value = et; }
   } else {
     document.getElementById('ev-title').value = ''; document.getElementById('ev-desc').value = '';
     document.getElementById('ev-allday').checked = false; document.getElementById('ev-notify').value = -1;
     setRecurrenceForm({ recurrence_type: 'none' }); setListForm({ list_type: 'none' });
+    _endDateManual = false; _endTimeManual = false;
     const base = defaultDate || dateStr(new Date());
     document.getElementById('ev-start-date').value = base; document.getElementById('ev-start-time').value = '09:00';
     document.getElementById('ev-end-date').value = base; document.getElementById('ev-end-time').value = '10:00';
@@ -1005,8 +1007,46 @@ function openEvModal(ev, defaultDate) {
 }
 function closeEvModal(e) { if (e && e.target !== document.getElementById('ev-overlay')) return; document.getElementById('ev-overlay').classList.remove('open'); }
 function toggleAllDay() { const checked = document.getElementById('ev-allday').checked; document.getElementById('ev-dt-row').style.display = checked ? 'none' : ''; document.getElementById('ev-d-row').style.display = checked ? '' : 'none'; document.getElementById('ev-notify').closest('.frow').style.display = checked ? 'none' : ''; }
-function formatTimeInput(el) { let val = el.value.replace(/\D/g, ''); if (val.length === 3) val = '0' + val; if (val.length === 4) val = val.slice(0,2) + ':' + val.slice(2); el.value = val; }
-function autoSetEndTime() { const val = document.getElementById('ev-start-time').value; if (!/^\d{2}:\d{2}$/.test(val)) return; const [h, m] = val.split(':').map(Number); const endH = (h + 1) % 24; document.getElementById('ev-end-time').value = `${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}`; const startDate = document.getElementById('ev-start-date').value; if (startDate) document.getElementById('ev-end-date').value = startDate; }
+// ── 日時自動補完 ──────────────────────────────────────
+let _endDateManual = false;
+let _endTimeManual = false;
+
+function onStartDateChange() {
+  if (!_endDateManual) {
+    document.getElementById('ev-end-date').value = document.getElementById('ev-start-date').value;
+  }
+}
+
+function onEndDateChange() {
+  _endDateManual = true;
+}
+
+function onStartTimeChange() {
+  if (_endTimeManual) return;
+  const val = document.getElementById('ev-start-time').value;
+  if (!val) return;
+  const [h, m] = val.split(':').map(Number);
+  const totalMin = h * 60 + m + 60;
+  const newH = Math.floor(totalMin / 60) % 24;
+  const newM = totalMin % 60;
+  document.getElementById('ev-end-time').value = `${String(newH).padStart(2,'0')}:${String(newM).padStart(2,'0')}`;
+  // 日またぎ
+  if (!_endDateManual && totalMin >= 1440) {
+    const startDate = document.getElementById('ev-start-date').value;
+    if (startDate) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + 1);
+      document.getElementById('ev-end-date').value = d.toISOString().slice(0, 10);
+    }
+  } else if (!_endDateManual) {
+    const startDate = document.getElementById('ev-start-date').value;
+    if (startDate) document.getElementById('ev-end-date').value = startDate;
+  }
+}
+
+function onEndTimeChange() {
+  _endTimeManual = true;
+}
 
 async function saveEvent() {
   const title = document.getElementById('ev-title').value.trim(), calId = document.getElementById('ev-cal').value, allDay = document.getElementById('ev-allday').checked;

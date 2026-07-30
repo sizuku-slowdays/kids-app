@@ -34,8 +34,15 @@
     .card{background:rgba(255,255,255,.94);border:1px solid rgba(234,223,201,.9);
       border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
 
+    /* 収入/支出 切り替え */
+    .type-switch{display:flex;border-radius:999px;background:#f0ead8;padding:4px;gap:4px;margin-bottom:16px;width:fit-content;margin-left:auto;margin-right:auto}
+    .type-btn{border:none;border-radius:999px;padding:9px 24px;font-size:1rem;font-weight:800;
+      cursor:pointer;background:transparent;color:var(--muted);transition:all .15s}
+    .type-btn.active-expense{background:linear-gradient(135deg,#ffb84d,#ff8c00);color:#3e2600;box-shadow:0 3px 8px rgba(180,100,0,.2)}
+    .type-btn.active-income{background:linear-gradient(135deg,#4ecb7f,#2e9f62);color:#fff;box-shadow:0 3px 8px rgba(30,120,60,.2)}
+
     /* 金額入力（一番目立つ） */
-    .amount-section{text-align:center;padding:20px 18px}
+    .amount-section{text-align:center;padding:16px 18px 20px}
     .amount-label{font-size:.88rem;font-weight:700;color:var(--muted);margin-bottom:8px}
     .amount-input-wrap{position:relative;display:inline-flex;align-items:center;gap:0}
     .amount-prefix{font-size:2rem;font-weight:800;color:#b06800;margin-right:4px;line-height:1}
@@ -88,7 +95,7 @@
       min-height:56px;resize:vertical;font-family:inherit}
     #memo:focus{outline:none;border-color:var(--main)}
 
-    /* クイックカテゴリボタン */
+    /* クイックメモボタン */
     .quick-label{font-size:.8rem;color:var(--muted);margin:8px 0 6px;font-weight:700}
     .quick-btns{display:flex;flex-wrap:wrap;gap:6px}
     .quick-btn{border:1px solid var(--line);border-radius:999px;padding:6px 12px;
@@ -154,7 +161,11 @@
 
     <!-- 金額（一番目立つ） -->
     <div class="card amount-section">
-      <div class="amount-label">いくら使いましたか？</div>
+      <div class="type-switch">
+        <button type="button" class="type-btn active-expense" id="typeExpense">💸 支出</button>
+        <button type="button" class="type-btn" id="typeIncome">💰 収入</button>
+      </div>
+      <div class="amount-label" id="amountLabel">いくら使いましたか？</div>
       <div class="amount-input-wrap">
         <span class="amount-prefix">¥</span>
         <input type="number" id="amount" inputmode="numeric" min="0" step="1" placeholder="0" autofocus>
@@ -172,13 +183,13 @@
 
     <!-- 支払い元 -->
     <div class="card">
-      <div class="section-label">💳 支払い元（必ず選択）</div>
+      <div class="section-label" id="paymentLabel">💳 支払い元（必ず選択）</div>
       <div class="payment-buttons">
-        <button type="button" class="pay-btn pink-pay" data-payment="楽天pink">
+        <button type="button" class="pay-btn pink-pay" data-payment="楽天PINK">
           <span class="pay-icon">🌸</span>
           <span class="pay-name">楽天PINK</span>
         </button>
-        <button type="button" class="pay-btn" data-payment="楽天visa">
+        <button type="button" class="pay-btn" data-payment="楽天VISA">
           <span class="pay-icon">💳</span>
           <span class="pay-name">楽天VISA</span>
         </button>
@@ -193,36 +204,26 @@
       </div>
     </div>
 
-    <!-- よく使うカテゴリ -->
-    <div class="card">
-      <div class="quick-label">🗂 よく使うカテゴリ：</div>
-      <div class="quick-btns">
-        <button type="button" class="quick-btn" data-category="日用品">日用品</button>
-        <button type="button" class="quick-btn" data-category="食費">食費</button>
-        <button type="button" class="quick-btn" data-category="交通・ガソリン">ガソリン</button>
-        <button type="button" class="quick-btn" data-category="学校">学校</button>
-        <button type="button" class="quick-btn" data-category="子ども">子ども</button>
-        <button type="button" class="quick-btn" data-category="医療費">病院</button>
-        <button type="button" class="quick-btn" data-category="外食">外食</button>
-        <button type="button" class="quick-btn" data-category="仕事立替">立替-仕事</button>
-        <button type="button" class="quick-btn" data-category="ゲーム・娯楽">ゲーム・娯楽</button>
-        <button type="button" class="quick-btn" data-category="宝くじ">宝くじ</button>
-        <button type="button" class="quick-btn" data-category="美容">美容</button>
-        <button type="button" class="quick-btn" data-category="犬">犬</button>
-        <button type="button" class="quick-btn" data-category="固定費">固定費</button>
-        <button type="button" class="quick-btn" data-category="定期">定期</button>
-        <button type="button" class="quick-btn" data-category="祖母（医療費）">祖母（医療費）</button>
-        <button type="button" class="quick-btn" data-category="祖母（立替）">祖母（立替）</button>
-        <button type="button" class="quick-btn" data-category="祖母">祖母</button>
-        <button type="button" class="quick-btn" data-category="その他">その他</button>
-      </div>
-      <div class="settle-hint" id="categoryHint">カテゴリ：その他</div>
-    </div>
-
-    <!-- メモ -->
+    <!-- メモ（クイックボタン付き） -->
     <div class="card">
       <div class="memo-label">📝 メモ（任意）</div>
-      <textarea id="memo" placeholder="例：買ったもの・店名・補足など"></textarea>
+      <textarea id="memo" placeholder="例：日用品・外食・学校など"></textarea>
+      <div class="quick-label">よく使うメモ：</div>
+      <div class="quick-btns">
+        <button type="button" class="quick-btn" data-memo="立替">立替</button>
+        <button type="button" class="quick-btn" data-memo="祖母">祖母</button>
+        <button type="button" class="quick-btn" data-memo="祖母（立替）">祖母（立替）</button>
+        <button type="button" class="quick-btn" data-memo="祖母（医療費）">祖母（医療費）</button>
+        <button type="button" class="quick-btn" data-memo="日用品">日用品</button>
+        <button type="button" class="quick-btn" data-memo="食費">食費</button>
+        <button type="button" class="quick-btn" data-memo="ガソリン">ガソリン</button>
+        <button type="button" class="quick-btn" data-memo="学校">学校</button>
+        <button type="button" class="quick-btn" data-memo="子ども">子ども</button>
+        <button type="button" class="quick-btn" data-memo="病院">病院</button>
+        <button type="button" class="quick-btn" data-memo="外食">外食</button>
+        <button type="button" class="quick-btn" data-memo="立替-仕事">立替-仕事</button>
+        <button type="button" class="quick-btn" data-memo="楽天">楽天</button>
+      </div>
     </div>
 
     <!-- カテゴリ（折りたたみ・任意） -->
@@ -234,21 +235,17 @@
           <option value="食費">食費</option>
           <option value="日用品">日用品</option>
           <option value="医療費">医療費</option>
-          <option value="祖母（医療費）">祖母（医療費）</option>
-          <option value="祖母（立替）">祖母（立替）</option>
-          <option value="祖母">祖母</option>
           <option value="子ども">子ども</option>
           <option value="学校">学校</option>
           <option value="習い事">習い事</option>
           <option value="ゲーム・娯楽">ゲーム・娯楽</option>
-          <option value="宝くじ">宝くじ</option>          
           <option value="美容">美容</option>
           <option value="犬">犬</option>
           <option value="交通・ガソリン">交通・ガソリン</option>
           <option value="外食">外食</option>
           <option value="仕事立替">仕事立替</option>
           <option value="固定費">固定費</option>
-          <option value="定期">定期</option>
+          <option value="特別費">特別費</option>
         </select>
       </details>
     </div>
@@ -286,6 +283,7 @@
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
 
     let selectedPayment = "";
+    let entryType = "expense"; // "expense" or "income"
 
     /* ── ユーティリティ ── */
     function $(id){return document.getElementById(id)}
@@ -304,7 +302,9 @@
 
     function suggestedSettle(){
       const date = $("date").value || todayString();
-      return isCreditPayment(selectedPayment) ? addMonths(date,1) : addMonths(date,0);
+      // 収入は常に当月、支出はクレジットなら翌月
+      const isCredit = entryType === "expense" && isCreditPayment(selectedPayment);
+      return addMonths(date, isCredit ? 1 : 0);
     }
 
     function syncSettle(){
@@ -349,6 +349,19 @@
       }catch(e){ /* サイレント失敗 */ }
     }
 
+    /* ── 収入/支出 切り替え ── */
+    function selectType(type){
+      entryType = type;
+      const isIncome = type === "income";
+      $("typeExpense").className = "type-btn" + (!isIncome ? " active-expense" : "");
+      $("typeIncome").className  = "type-btn" + ( isIncome ? " active-income"  : "");
+      $("amountLabel").textContent  = isIncome ? "いくら入ってきましたか？" : "いくら使いましたか？";
+      $("paymentLabel").textContent = isIncome ? "💰 入金先（必ず選択）" : "💳 支払い元（必ず選択）";
+      document.querySelector("header h1").textContent = isIncome ? "💰 収入を入力" : "💸 支出を入力";
+      // 収入はクレジット引落ではないので当月固定
+      syncSettle();
+    }
+
     /* ── 支払いボタン選択 ── */
     function selectPayment(name){
       selectedPayment = name;
@@ -358,10 +371,9 @@
       syncSettle();
     }
 
-    /* ── クイックカテゴリ ── */
-    function applyQuickCategory(category){
-      $("category").value = category;
-      $("categoryHint").textContent = "カテゴリ：" + category;
+    /* ── クイックメモ ── */
+    function applyQuickMemo(memo){
+      $("memo").value = memo;
     }
 
     /* ── トースト表示 ── */
@@ -378,9 +390,9 @@
       $("date").value = todayString();
       $("memo").value = "";
       $("category").value = "その他";
-      if($("categoryHint")) $("categoryHint").textContent = "カテゴリ：その他";
       selectedPayment = "";
       document.querySelectorAll(".pay-btn").forEach(btn => btn.classList.remove("selected"));
+      // 種別はリセットせず継続（続けて収入入力しやすいように）
       syncSettle();
       $("amount").focus();
     }
@@ -404,7 +416,7 @@
       const entry = {
         id:          makeId(),
         date:        date,
-        type:        "expense",
+        type:        entryType,
         amount:      amount,
         payment:     selectedPayment,
         category:    $("category").value || "その他",
@@ -421,7 +433,7 @@
       // クラウド自動保存
       await saveToCloud(entries);
 
-      showToast("✅ 登録しました！");
+      showToast(entryType === "income" ? "💰 収入を登録しました！" : "✅ 支出を登録しました！");
       return true;
     }
 
@@ -430,19 +442,18 @@
       $("date").value = todayString();
       syncSettle();
 
+      // 収入/支出 切り替え
+      $("typeExpense").addEventListener("click", () => selectType("expense"));
+      $("typeIncome").addEventListener("click",  () => selectType("income"));
+
       // 支払いボタン
       document.querySelectorAll(".pay-btn").forEach(btn => {
         btn.addEventListener("click", () => selectPayment(btn.dataset.payment));
       });
 
-      // よく使うカテゴリ
+      // クイックメモ
       document.querySelectorAll(".quick-btn").forEach(btn => {
-        btn.addEventListener("click", () => applyQuickCategory(btn.dataset.category));
-      });
-
-      // セレクトでカテゴリを変えた時も表示を更新
-      $("category").addEventListener("change", () => {
-        $("categoryHint").textContent = "カテゴリ：" + $("category").value;
+        btn.addEventListener("click", () => applyQuickMemo(btn.dataset.memo));
       });
 
       // 日付変更で引落月を再計算

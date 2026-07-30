@@ -520,7 +520,9 @@
       <button class="nav-btn" id="btn-month" onclick="setView('month')">月</button>
       <button class="nav-btn" id="btn-week"  onclick="setView('week')">週</button>
     </div>
-    <button id="notify-permission-btn" onclick="requestNotifyPermission()">🔕 通知を許可する</button>
+    <div style="font-size:12px;color:var(--text-sub);padding:8px 12px">
+      🔔 通知は「通知センター」アプリから届きます
+    </div>
     <div class="avatar" id="avatar-btn" onclick="toggleUserMenu()"></div>
   </header>
 
@@ -581,7 +583,7 @@
     <div class="frow"><label>カレンダー *</label><select id="ev-cal"></select></div>
     <div class="frow">
       <label>通知</label>
-      <select id="ev-notify">
+      <select id="ev-notify" onchange="toggleNotifyRecipient()">
         <option value="-1">通知なし</option>
         <option value="0">開始時刻</option>
         <option value="5">5分前</option>
@@ -589,6 +591,15 @@
         <option value="30">30分前</option>
         <option value="60">1時間前</option>
         <option value="1440">1日前</option>
+      </select>
+    </div>
+    <div class="frow" id="ev-notify-recipient-row" style="display:none">
+      <label>通知する相手</label>
+      <select id="ev-notify-recipient">
+        <option value="all">家族全員</option>
+        <option value="mama">ママ</option>
+        <option value="child1">うさぎ</option>
+        <option value="child2">ユニコーン</option>
       </select>
     </div>
     <div class="frow" id="ev-recurrence-row">
@@ -858,10 +869,21 @@ function showApp() {
   const savedToken = sessionStorage.getItem('gapi_token');
   const savedExpire = sessionStorage.getItem('gapi_token_expire');
   if (savedToken && savedExpire && Date.now() < parseInt(savedExpire)) gapiAccessToken = savedToken;
-  updateNotifyBtn(); updateAvatar(); loadAll();
+  updateAvatar(); loadAll(); resyncNotificationsOnce();
+}
+async function resyncNotificationsOnce() {
+  const key = 'calendar_notification_sync_v1';
+  if (localStorage.getItem(key) === 'done') return;
+  try {
+    const result = await api('/notifications/resync', 'POST', {});
+    if (result.ok) localStorage.setItem(key, 'done');
+    else console.warn('通知の初回同期に一部失敗しました', result.errors || result);
+  } catch (e) {
+    console.warn('通知の初回同期に失敗しました', e);
+  }
 }
 function updateAvatar() { if (!myProfile) return; const btn = document.getElementById('avatar-btn'); btn.style.background = myProfile.avatar_color; btn.textContent = myProfile.display_name.charAt(0); document.getElementById('menu-name').textContent = myProfile.display_name; }
-async function loadAll() { calendars = await api('/calendars'); renderLegend(); await loadEvents(); scheduleNotifications(); }
+async function loadAll() { calendars = await api('/calendars'); renderLegend(); await loadEvents(); }
 
 let gapiReady = false, gapiAccessToken = null;
 function loadGapi() {
@@ -1019,6 +1041,7 @@ function openEvModal(ev, defaultDate) {
     document.getElementById('ev-desc').value = ev.description || '';
     document.getElementById('ev-allday').checked = !!ev.all_day;
     document.getElementById('ev-notify').value = ev.notify_before ?? -1;
+    document.getElementById('ev-notify-recipient').value = ev.notification_recipient || 'all';
     setRecurrenceForm(ev); setListForm(ev); sel.value = ev.calendar_id;
     _endDateManual = true; _endTimeManual = true; // 編集時は自動補完しない
     if (ev.all_day) { document.getElementById('ev-start-d').value = ev.start_datetime.slice(0,10); document.getElementById('ev-end-d').value = ev.end_datetime.slice(0,10); }
@@ -1026,6 +1049,7 @@ function openEvModal(ev, defaultDate) {
   } else {
     document.getElementById('ev-title').value = ''; document.getElementById('ev-desc').value = '';
     document.getElementById('ev-allday').checked = false; document.getElementById('ev-notify').value = -1;
+    document.getElementById('ev-notify-recipient').value = 'all';
     setRecurrenceForm({ recurrence_type: 'none' }); setListForm({ list_type: 'none' });
     _endDateManual = false; _endTimeManual = false;
     const base = defaultDate || dateStr(new Date());
@@ -1034,9 +1058,15 @@ function openEvModal(ev, defaultDate) {
     document.getElementById('ev-start-d').value = base; document.getElementById('ev-end-d').value = base;
   }
   toggleAllDay();
+  toggleNotifyRecipient();
 }
 function closeEvModal(e) { if (e && e.target !== document.getElementById('ev-overlay')) return; document.getElementById('ev-overlay').classList.remove('open'); }
-function toggleAllDay() { const checked = document.getElementById('ev-allday').checked; document.getElementById('ev-dt-row').style.display = checked ? 'none' : ''; document.getElementById('ev-d-row').style.display = checked ? '' : 'none'; document.getElementById('ev-notify').closest('.frow').style.display = checked ? 'none' : ''; }
+function toggleAllDay() { const checked = document.getElementById('ev-allday').checked; document.getElementById('ev-dt-row').style.display = checked ? 'none' : ''; document.getElementById('ev-d-row').style.display = checked ? '' : 'none'; document.getElementById('ev-notify').closest('.frow').style.display = checked ? 'none' : ''; toggleNotifyRecipient(); }
+function toggleNotifyRecipient() {
+  const allDay = document.getElementById('ev-allday').checked;
+  const enabled = parseInt(document.getElementById('ev-notify').value, 10) >= 0;
+  document.getElementById('ev-notify-recipient-row').style.display = !allDay && enabled ? '' : 'none';
+}
 // ── 日時自動補完 ──────────────────────────────────────
 let _endDateManual = false;
 let _endTimeManual = false;
@@ -1086,14 +1116,15 @@ async function saveEvent() {
   if (allDay) { start = document.getElementById('ev-start-d').value; end = document.getElementById('ev-end-d').value; }
   else { const sd = document.getElementById('ev-start-date').value, st = document.getElementById('ev-start-time').value, ed = document.getElementById('ev-end-date').value, et = document.getElementById('ev-end-time').value; if (!sd || !st || !ed || !et) { alert('日付と時刻を入力してください'); return; } start = `${sd}T${st}`; end = `${ed}T${et}`; }
   const cal = calendars.find(c => c.id === calId), notify_before = parseInt(document.getElementById('ev-notify').value), recurData = getRecurrenceData();
-  const body = { title, description: document.getElementById('ev-desc').value, start_datetime: start, end_datetime: end, all_day: allDay, calendar_id: calId, color: cal?.color || '#5b8dee', notify_before, ...recurData, list_type: currentListType !== 'none' ? currentListType : null, list_items: currentListType !== 'none' ? getListItems() : null };
+  const notification_recipient = document.getElementById('ev-notify-recipient').value;
+  const body = { title, description: document.getElementById('ev-desc').value, start_datetime: start, end_datetime: end, all_day: allDay, calendar_id: calId, color: cal?.color || '#5b8dee', notify_before, notification_recipient, ...recurData, list_type: currentListType !== 'none' ? currentListType : null, list_items: currentListType !== 'none' ? getListItems() : null };
   const editId = document.getElementById('ev-id').value;
   try {
     if (editId) {
       if (_editRecurMode && _editRecurDate && _editRecurParentId) { await api(`/events/${_editRecurParentId}?mode=${_editRecurMode}&date=${_editRecurDate}`, 'PUT', body); _editRecurMode = null; _editRecurDate = null; _editRecurParentId = null; }
       else { const ev = events.find(e => e.id === editId || e.id.startsWith(editId + '_')); const isRecurring = ev && ev.recurrence_type && ev.recurrence_type !== 'none'; if (isRecurring) { const eventDate = (ev.start_datetime || '').slice(0, 10); document.getElementById('ev-overlay').classList.remove('open'); openRecurModal('edit', editId, eventDate, ev); _recurEventObj = { ...body, _pendingBody: body }; return; } await api(`/events/${editId}`, 'PUT', body); }
     } else { await api('/events', 'POST', body); }
-    document.getElementById('ev-overlay').classList.remove('open'); scheduleNotifications(); await loadEvents();
+    document.getElementById('ev-overlay').classList.remove('open'); await loadEvents();
   } catch(e) { alert('保存失敗: ' + e.message); }
 }
 
@@ -1262,28 +1293,6 @@ function renderDayPanel(ds) {
   list.innerHTML = ae.map(e => { const color = getColor(e), time = e.all_day ? '終日' : (e.start_datetime || '').slice(11, 16); return `<div class="day-panel-item" onclick="openDetail(${JSON.stringify(e).replace(/"/g,'&quot;')})"><div class="day-panel-dot" style="background:${color}"></div><div class="day-panel-time">${time}</div><div class="day-panel-name">${e.title}</div></div>`; }).join('');
 }
 
-// 通知
-let notifyTimers = [];
-async function requestNotifyPermission() {
-  if (!('Notification' in window)) { alert('このブラウザ（Safari/iOS）はWeb通知に対応していません。\nPWAとしてホーム画面に追加すると通知が使えるようになります。'); return; }
-  const result = await Notification.requestPermission();
-  if (result === 'granted') { alert('通知を許可しました！'); scheduleNotifications(); } else { alert('通知が拒否されました。ブラウザの設定から許可してください。'); }
-  updateNotifyBtn();
-}
-function updateNotifyBtn() { const btn = document.getElementById('notify-permission-btn'); if (!btn) return; if (!('Notification' in window)) { btn.style.display = 'none'; return; } if (Notification.permission === 'granted') { btn.textContent = '🔔 通知オン'; btn.style.background = '#43a047'; } else { btn.textContent = '🔕 通知を許可する'; btn.style.background = '#fb8c00'; } }
-async function scheduleNotifications() {
-  notifyTimers.forEach(t => clearTimeout(t)); notifyTimers = [];
-  if (!('Notification' in window)) return; if (Notification.permission !== 'granted') return;
-  const now = Date.now(), sw = navigator.serviceWorker?.controller;
-  events.forEach(e => {
-    if (e.all_day) return; const nb = e.notify_before ?? -1; if (nb === -1) return;
-    const startTime = new Date(e.start_datetime).getTime(), notifyTime = startTime - nb * 60 * 1000, diff = notifyTime - now;
-    if (diff < 0 || diff > 7 * 24 * 60 * 60 * 1000) return;
-    const label = nb === 0 ? '開始時刻です' : `${nb >= 60 ? nb/60+'時間' : nb+'分'}前です`, title = `📅 ${e.title}`, body = `${label} ${fmtDt(e.start_datetime, false)}`;
-    if (sw) sw.postMessage({ type: 'SCHEDULE_NOTIFICATION', title, body, delay: diff });
-    else { const timer = setTimeout(() => { new Notification(title, { body, icon: '/kanriapp/calendar.png' }); }, diff); notifyTimers.push(timer); }
-  });
-}
 </script>
 </body>
 </html>

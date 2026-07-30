@@ -121,6 +121,64 @@
     .history-amount{font-weight:800;white-space:nowrap;text-align:right}
     .history-amount.income{color:var(--safe)}
 
+    /* 履歴アイテム：編集ボタン付きレイアウト */
+    .history-item{padding:10px 4px;border-bottom:1px solid var(--line);font-size:.88rem}
+    .history-item:last-child{border-bottom:none}
+    .history-item-top{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+    .history-edit-btn{margin-top:6px;border:1px solid var(--line);border-radius:999px;
+      padding:4px 12px;font-size:.78rem;font-weight:700;cursor:pointer;
+      background:#fff9ed;color:#5b3a05;box-shadow:none;display:inline-flex;gap:4px}
+    .history-edit-btn:active{background:#ffe8a0}
+
+    /* 編集モーダル */
+    .edit-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;
+      align-items:flex-end;justify-content:center}
+    .edit-overlay.open{display:flex}
+    .edit-modal{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:560px;
+      max-height:88svh;overflow-y:auto;padding:0 0 40px;
+      box-shadow:0 -8px 40px rgba(0,0,0,.22)}
+    .edit-handle{width:40px;height:4px;background:#ddd;border-radius:999px;margin:12px auto 8px}
+    .edit-head{padding:10px 18px 14px;border-bottom:1px solid var(--line);
+      display:flex;align-items:center;justify-content:space-between}
+    .edit-head h3{margin:0;font-size:1rem;font-weight:800}
+    .edit-close-btn{border:none;background:#f0f0f0;border-radius:999px;width:32px;height:32px;
+      font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:none}
+    .edit-body{padding:16px 18px;display:grid;gap:14px}
+    .edit-field label{display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:5px}
+    .edit-field input,.edit-field select,.edit-field textarea{
+      width:100%;border:1px solid var(--line);border-radius:10px;
+      padding:10px 12px;font-size:1rem;background:#fffdf8;color:var(--text);font-family:inherit}
+    .edit-field textarea{min-height:54px;resize:vertical}
+    .edit-field input:focus,.edit-field select:focus,.edit-field textarea:focus{
+      outline:none;border-color:var(--main)}
+    /* 支払い元クイック選択 */
+    .edit-pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+    .edit-pay-btn{border:2px solid var(--line);border-radius:12px;padding:10px 8px;
+      font-size:.88rem;font-weight:800;cursor:pointer;background:#fffdf8;color:var(--text);
+      text-align:center;box-shadow:none;transition:all .12s}
+    .edit-pay-btn.sel{border-color:var(--main);background:linear-gradient(135deg,#fff3cc,#ffe8a0);color:#3e2600}
+    .edit-pay-btn.sel-pink{border-color:#ff7baa;background:linear-gradient(135deg,#ffe3ef,#ffd0e3);color:#a6164b}
+    /* 収入/支出 切り替え */
+    .edit-type-row{display:flex;gap:8px}
+    .edit-type-btn{flex:1;border:2px solid var(--line);border-radius:12px;padding:10px;
+      font-size:.9rem;font-weight:800;cursor:pointer;background:#fffdf8;color:var(--muted);
+      text-align:center;box-shadow:none;transition:all .12s}
+    .edit-type-btn.sel-expense{border-color:#ff8c00;background:linear-gradient(135deg,#ffb84d,#ff8c00);color:#3e2600}
+    .edit-type-btn.sel-income{border-color:#2e9f62;background:linear-gradient(135deg,#4ecb7f,#2e9f62);color:#fff}
+    /* フッターボタン */
+    .edit-footer{padding:0 18px;display:flex;gap:10px}
+    .edit-save-btn{flex:1;border:none;border-radius:999px;padding:14px;font-size:1rem;font-weight:900;
+      cursor:pointer;background:linear-gradient(135deg,#ffb84d,#ff8c00);color:#3e2600;
+      box-shadow:0 4px 12px rgba(180,100,0,.22)}
+    .edit-delete-btn{border:1px solid #f4a7af;border-radius:999px;padding:14px 16px;
+      font-size:.88rem;font-weight:700;cursor:pointer;background:#fff1f2;color:#a4161a;box-shadow:none}
+    /* トースト */
+    .toast{display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);
+      background:#2e9f62;color:#fff;border-radius:999px;padding:12px 24px;
+      font-size:.95rem;font-weight:800;z-index:400;box-shadow:0 6px 20px rgba(30,100,50,.28);
+      white-space:nowrap;animation:toastIn .2s ease}
+    @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
     /* PINKメーター */
     .pink-box{background:linear-gradient(135deg,#ffe3ef,#fff7fb);border:2px solid #ffc3dc}
     .pink-title{display:flex;justify-content:space-between;align-items:center;
@@ -266,6 +324,80 @@
       <div id="drawerList"></div>
     </div>
   </div>
+
+  <!-- 入力1件 編集モーダル -->
+  <div class="edit-overlay" id="editOverlay">
+    <div class="edit-modal">
+      <div class="edit-handle"></div>
+      <div class="edit-head">
+        <h3>✏️ 入力を修正する</h3>
+        <button type="button" class="edit-close-btn" id="editCloseBtn">✕</button>
+      </div>
+      <div class="edit-body">
+        <!-- 収入/支出 -->
+        <div class="edit-field">
+          <label>種別</label>
+          <div class="edit-type-row">
+            <button type="button" class="edit-type-btn" id="editTypeExpense">💸 支出</button>
+            <button type="button" class="edit-type-btn" id="editTypeIncome">💰 収入</button>
+          </div>
+        </div>
+        <!-- 日付 -->
+        <div class="edit-field">
+          <label for="editDate">📅 日付</label>
+          <input type="date" id="editDate">
+        </div>
+        <!-- 金額 -->
+        <div class="edit-field">
+          <label for="editAmount">💴 金額（円）</label>
+          <input type="number" id="editAmount" inputmode="numeric" min="0" step="1">
+        </div>
+        <!-- 支払い元 -->
+        <div class="edit-field">
+          <label>💳 支払い元</label>
+          <div class="edit-pay-grid" id="editPayGrid"></div>
+        </div>
+        <!-- メモ -->
+        <div class="edit-field">
+          <label for="editMemo">📝 メモ</label>
+          <textarea id="editMemo" placeholder="メモ（任意）"></textarea>
+        </div>
+        <!-- カテゴリ -->
+        <div class="edit-field">
+          <label for="editCategory">🗂 カテゴリ</label>
+          <select id="editCategory">
+            <option value="その他">その他</option>
+            <option value="食費">食費</option>
+            <option value="日用品">日用品</option>
+            <option value="医療費">医療費</option>
+            <option value="子ども">子ども</option>
+            <option value="学校">学校</option>
+            <option value="習い事">習い事</option>
+            <option value="ゲーム・娯楽">ゲーム・娯楽</option>
+            <option value="美容">美容</option>
+            <option value="犬">犬</option>
+            <option value="交通・ガソリン">交通・ガソリン</option>
+            <option value="外食">外食</option>
+            <option value="仕事立替">仕事立替</option>
+            <option value="固定費">固定費</option>
+            <option value="特別費">特別費</option>
+          </select>
+        </div>
+        <!-- 引落月 -->
+        <div class="edit-field">
+          <label for="editSettleMonth">🗓 引落・反映月</label>
+          <input type="month" id="editSettleMonth">
+        </div>
+      </div>
+      <div class="edit-footer">
+        <button type="button" class="edit-delete-btn" id="editDeleteBtn">🗑 削除</button>
+        <button type="button" class="edit-save-btn" id="editSaveBtn">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト -->
+  <div class="toast" id="toast"></div>
 
   <!-- 入力ボタン（固定） -->
   <div class="fab-area">
@@ -555,14 +687,142 @@
         const isIncome = e.type === "income";
         const settle   = e.settleMonth || String(e.date||"").slice(0,7);
         return `<div class="history-item">
-          <span class="history-date">${htmlEsc(e.date||"")}</span>
-          <div class="history-detail">
-            <div class="history-memo">${htmlEsc(e.memo || e.category || (isIncome?"収入":"支出"))}</div>
-            <div class="history-sub">引落：${htmlEsc(settle)}　${htmlEsc(e.category||"")}</div>
+          <div class="history-item-top">
+            <span class="history-date">${htmlEsc(e.date||"")}</span>
+            <div class="history-detail">
+              <div class="history-memo">${htmlEsc(e.memo || e.category || (isIncome?"収入":"支出"))}</div>
+              <div class="history-sub">引落：${htmlEsc(settle)}　${htmlEsc(e.category||"")}</div>
+            </div>
+            <span class="history-amount${isIncome?" income":""}">${isIncome?"+":""}${yen(e.amount)}</span>
           </div>
-          <span class="history-amount${isIncome?" income":""}">${isIncome?"+":""}${yen(e.amount)}</span>
+          <button type="button" class="history-edit-btn" data-id="${htmlEsc(e.id)}">✏️ 編集・削除</button>
         </div>`;
       }).join("");
+
+      // 編集ボタンにイベント登録
+      $("drawerList").querySelectorAll(".history-edit-btn").forEach(btn => {
+        btn.addEventListener("click", () => openEditModal(btn.dataset.id));
+      });
+    }
+
+    /* ── 編集モーダル ── */
+    let editingId   = null;
+    let editingType = "expense";
+
+    function openEditModal(id){
+      const e = entries.find(x => x.id === id);
+      if(!e) return;
+      editingId   = id;
+      editingType = e.type || "expense";
+
+      $("editDate").value         = e.date || "";
+      $("editAmount").value       = e.amount || "";
+      $("editMemo").value         = e.memo || "";
+      $("editSettleMonth").value  = e.settleMonth || String(e.date||"").slice(0,7);
+      $("editCategory").value     = e.category || "その他";
+
+      // 種別ボタン
+      setEditType(editingType);
+
+      // 支払い元グリッド
+      renderEditPayGrid(e.payment);
+
+      $("editOverlay").classList.add("open");
+    }
+
+    function setEditType(type){
+      editingType = type;
+      $("editTypeExpense").className = "edit-type-btn" + (type==="expense" ? " sel-expense" : "");
+      $("editTypeIncome").className  = "edit-type-btn" + (type==="income"  ? " sel-income"  : "");
+    }
+
+    function renderEditPayGrid(current){
+      $("editPayGrid").innerHTML = PAYMENTS.map(p => {
+        const isPink = normalizePaymentName(p) === normalizePaymentName("楽天PINK");
+        const isSel  = normalizePaymentName(current) === normalizePaymentName(p);
+        const cls    = isSel ? (isPink ? " sel-pink" : " sel") : "";
+        return `<button type="button" class="edit-pay-btn${cls}" data-pay="${htmlEsc(p)}">${htmlEsc(p)}</button>`;
+      }).join("");
+      $("editPayGrid").querySelectorAll(".edit-pay-btn").forEach(btn => {
+        btn.addEventListener("click", () => renderEditPayGrid(btn.dataset.pay));
+      });
+    }
+
+    function getEditSelectedPayment(){
+      const sel = $("editPayGrid").querySelector(".sel,.sel-pink");
+      return sel ? sel.dataset.pay : "";
+    }
+
+    function closeEditModal(){
+      $("editOverlay").classList.remove("open");
+      editingId = null;
+    }
+
+    function showToast(msg, color){
+      const t = $("toast");
+      t.textContent = msg;
+      t.style.background = color || "#2e9f62";
+      t.style.display = "block";
+      clearTimeout(t._t);
+      t._t = setTimeout(() => { t.style.display="none"; }, 2200);
+    }
+
+    async function saveEdit(){
+      const amount = Number($("editAmount").value);
+      if(!amount || amount <= 0){ alert("金額を入力してください。"); return; }
+      const date = $("editDate").value;
+      if(!date){ alert("日付を入力してください。"); return; }
+      const payment = getEditSelectedPayment();
+      if(!payment){ alert("支払い元を選択してください。"); return; }
+
+      const idx = entries.findIndex(e => e.id === editingId);
+      if(idx < 0) return;
+
+      entries[idx] = normalizeEntry({
+        ...entries[idx],
+        type:        editingType,
+        date,
+        amount,
+        payment,
+        memo:        $("editMemo").value.trim(),
+        category:    $("editCategory").value || "その他",
+        settleMonth: $("editSettleMonth").value || date.slice(0,7),
+        updatedAt:   new Date().toISOString()
+      });
+
+      saveLocal();
+      await saveToCloudSilent();
+      render();
+      renderDrawerFilter();
+      renderDrawerList();
+      closeEditModal();
+      showToast("✅ 保存しました");
+    }
+
+    async function deleteEntry(){
+      if(!confirm("この1件を削除しますか？")) return;
+      entries = entries.filter(e => e.id !== editingId);
+      saveLocal();
+      await saveToCloudSilent();
+      render();
+      renderDrawerFilter();
+      renderDrawerList();
+      closeEditModal();
+      showToast("🗑 削除しました", "#e63946");
+    }
+
+    /* サイレントクラウド保存（入力画面と同じロジック） */
+    async function saveToCloudSilent(){
+      const s = getCloudSettings();
+      if(!s.password || !s.autoCloudSave) return;
+      try{
+        const payload = { app:APP_KEY, version:APP_VERSION, entries:entries.map(normalizeEntry), savedAt:new Date().toISOString() };
+        await fetch(s.apiUrl, {
+          method:"POST",
+          headers:{"Content-Type":"application/json","X-App-Password":s.password},
+          body:JSON.stringify({key:APP_KEY, app:APP_KEY, data:payload})
+        });
+      }catch(e){ /* サイレント失敗 */ }
     }
 
     function renderPink(expenses){
@@ -622,6 +882,13 @@
 
       $("drawerClose").addEventListener("click", closeDrawer);
       $("drawerOverlay").addEventListener("click", closeDrawer);
+
+      $("editCloseBtn").addEventListener("click", closeEditModal);
+      $("editOverlay").addEventListener("click", e => { if(e.target===$("editOverlay")) closeEditModal(); });
+      $("editTypeExpense").addEventListener("click", () => setEditType("expense"));
+      $("editTypeIncome").addEventListener("click",  () => setEditType("income"));
+      $("editSaveBtn").addEventListener("click", saveEdit);
+      $("editDeleteBtn").addEventListener("click", deleteEntry);
 
       $("prevMonth").addEventListener("click", () => { currentMonth.setMonth(currentMonth.getMonth()-1); render(); });
       $("nextMonth").addEventListener("click", () => { currentMonth.setMonth(currentMonth.getMonth()+1); render(); });

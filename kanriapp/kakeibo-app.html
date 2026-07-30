@@ -187,6 +187,14 @@
     .meter-fill{height:100%;width:0%;background:linear-gradient(90deg,#ff7baa,#ff2f79);
       border-radius:999px;transition:width .3s ease}
     .pink-message{margin-top:8px;font-size:.88rem;font-weight:700}
+    .budget-list{display:grid;gap:10px}
+    .budget-row{padding:11px 12px;background:#fff9ed;border:1px solid var(--line);border-radius:12px}
+    .budget-head{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;font-weight:800}
+    .budget-track{height:9px;background:#eee5d4;border-radius:999px;overflow:hidden;margin-top:7px}
+    .budget-fill{height:100%;background:var(--safe);border-radius:999px}
+    .budget-note{font-size:.77rem;color:var(--muted);margin-top:5px}
+    .plan-link{display:inline-flex;margin-top:10px;text-decoration:none;border-radius:999px;
+      padding:8px 14px;background:#fff3d1;border:1px solid #ebd19a;color:#5b3a05;font-size:.84rem;font-weight:800}
 
     /* 最近の入力 */
     .recent-list{display:grid;gap:8px}
@@ -211,11 +219,11 @@
 
     /* 入力FABボタン */
     .fab-area{position:fixed;bottom:0;left:0;right:0;z-index:100;
-      display:flex;justify-content:center;padding:12px 16px;
+      display:flex;justify-content:center;gap:8px;padding:12px 16px;
       background:linear-gradient(to top,var(--bg) 70%,transparent);
       pointer-events:none}
     .fab{pointer-events:auto;border:none;border-radius:999px;
-      padding:16px 36px;font-size:1.15rem;font-weight:900;
+      padding:15px 22px;font-size:1rem;font-weight:900;
       cursor:pointer;background:linear-gradient(135deg,#ffb84d,#ff8c00);color:#3e2600;
       box-shadow:0 6px 24px rgba(180,100,0,.32);letter-spacing:.04em}
 
@@ -297,7 +305,21 @@
       </div>
       <div class="meter"><div class="meter-fill" id="pinkMeter"></div></div>
       <div class="pink-message" id="pinkMessage"></div>
-      <p class="hint">目標：50,000円 ／ 警告：100,000円</p>
+      <p class="hint" id="pinkHint"></p>
+    </div>
+
+    <!-- 予算状況 -->
+    <div class="card">
+      <h2>🎯 今月の予算</h2>
+      <div class="budget-list" id="budgetList"></div>
+      <a class="plan-link" href="kakeibo-plan.html">予算・積み立てを設定する →</a>
+    </div>
+
+    <!-- 積み立て残高 -->
+    <div class="card">
+      <h2>🌱 目的別積み立て</h2>
+      <div class="budget-list" id="fundList"></div>
+      <a class="plan-link" href="kakeibo-plan.html#funds">積み立てを管理する →</a>
     </div>
 
     <!-- 最近の入力 -->
@@ -368,6 +390,7 @@
           <select id="editCategory">
             <option value="その他">その他</option>
             <option value="食費">食費</option>
+            <option value="おやつ">おやつ</option>
             <option value="日用品">日用品</option>
             <option value="医療費">医療費</option>
             <option value="子ども">子ども</option>
@@ -401,20 +424,28 @@
 
   <!-- 入力ボタン（固定） -->
   <div class="fab-area">
+    <button class="fab" id="goPlan" style="background:#fff3d1">🎯 予算</button>
     <button class="fab" id="goInput">＋ 支出を入力する</button>
   </div>
 
   <script>
     const STORAGE_KEY  = "kakeibo-app-stable-v3";
+    const PLAN_KEY     = "kakeibo-plan-v1";
     const SETTINGS_KEY = "kakeibo-cloud-settings-v1";
     const APP_KEY      = "kakeibo-app";
-    const APP_VERSION  = 3;
+    const APP_VERSION  = 4;
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
-    const PINK_GOAL    = 50000;
-    const PINK_WARNING = 100000;
+    const DEFAULT_PLAN = {
+      version:1,
+      pinkGoal:50000,
+      categoryBudgets:{"おやつ":4000},
+      funds:[],
+      fundTransactions:[]
+    };
     const PAYMENTS     = ["楽天PINK","楽天VISA","現金","auじぶん銀行"];
 
     let entries      = [];
+    let plan         = structuredClone(DEFAULT_PLAN);
     let currentMonth = new Date();
     currentMonth.setDate(1);
 
@@ -441,8 +472,24 @@
         category:    e.category || "その他",
         settleMonth: e.settleMonth || (e.date ? String(e.date).slice(0,7) : monthString(new Date())),
         memo:        e.memo || "",
+        receiptId:   e.receiptId || "",
+        receiptTotal:Number(e.receiptTotal || 0),
+        splitIndex:  Number(e.splitIndex || 0),
+        splitCount:  Number(e.splitCount || 0),
         createdAt:   e.createdAt || new Date().toISOString(),
         updatedAt:   e.updatedAt || e.createdAt || new Date().toISOString()
+      };
+    }
+
+    function normalizePlan(raw){
+      const p = raw && typeof raw === "object" ? raw : {};
+      return {
+        version:1,
+        pinkGoal:Math.max(0,Number(p.pinkGoal ?? DEFAULT_PLAN.pinkGoal)),
+        categoryBudgets:p.categoryBudgets && typeof p.categoryBudgets === "object"
+          ? p.categoryBudgets : {...DEFAULT_PLAN.categoryBudgets},
+        funds:Array.isArray(p.funds) ? p.funds : [],
+        fundTransactions:Array.isArray(p.fundTransactions) ? p.fundTransactions : []
       };
     }
 
@@ -458,8 +505,13 @@
         entries = [];
       }catch(e){ entries = []; }
     }
+    function loadPlan(){
+      try{ plan = normalizePlan(JSON.parse(localStorage.getItem(PLAN_KEY)||"null")); }
+      catch(e){ plan = normalizePlan(null); }
+    }
     function saveLocal(){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
     }
 
     /* ── クラウド設定 ── */
@@ -515,7 +567,7 @@
       if(!s.password){ if(!silent)setSyncStatus("パスワードを入力してから保存してください。","ng"); return; }
       try{
         if(!silent)setSyncStatus("クラウドへ保存中…");
-        const payload = { app:APP_KEY, version:APP_VERSION, entries:entries.map(normalizeEntry), savedAt:new Date().toISOString() };
+        const payload = { app:APP_KEY, version:APP_VERSION, entries:entries.map(normalizeEntry), plan:normalizePlan(plan), savedAt:new Date().toISOString() };
         const res = await fetch(s.apiUrl, {
           method:"POST",
           headers:{"Content-Type":"application/json","X-App-Password":s.password},
@@ -545,6 +597,7 @@
         const cloudData = Array.isArray(data.entries) ? data : (Array.isArray(root.entries) ? root : null);
         if(!cloudData || !Array.isArray(cloudData.entries)) throw new Error("クラウドに家計簿データが見つかりません。");
         entries = cloudData.entries.map(normalizeEntry);
+        if(cloudData.plan) plan = normalizePlan(cloudData.plan);
         saveLocal();
         render();
         const savedAt = cloudData.savedAt ? new Date(cloudData.savedAt).toLocaleString("ja-JP") : "不明";
@@ -582,7 +635,9 @@
       $("incomeNote").textContent   = (viewMode()==="use" ? "利用日" : "引落・反映月") + "ベースで集計しています。";
 
       renderPayments(expenses);
-      renderPink(expenses);
+      renderPink(m);
+      renderBudgets(m);
+      renderFunds();
       renderRecent(monthEntries);
     }
 
@@ -816,7 +871,7 @@
       const s = getCloudSettings();
       if(!s.password || !s.autoCloudSave) return;
       try{
-        const payload = { app:APP_KEY, version:APP_VERSION, entries:entries.map(normalizeEntry), savedAt:new Date().toISOString() };
+        const payload = { app:APP_KEY, version:APP_VERSION, entries:entries.map(normalizeEntry), plan:normalizePlan(plan), savedAt:new Date().toISOString() };
         await fetch(s.apiUrl, {
           method:"POST",
           headers:{"Content-Type":"application/json","X-App-Password":s.password},
@@ -825,21 +880,78 @@
       }catch(e){ /* サイレント失敗 */ }
     }
 
-    function renderPink(expenses){
+    function forecastForMonth(total, m){
+      const now = new Date();
+      const todayMonth = monthString(new Date(now.getFullYear(),now.getMonth(),1));
+      if(m !== todayMonth) return total;
+      const days = new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+      return Math.round(total / Math.max(1,now.getDate()) * days);
+    }
+
+    function renderPink(m){
+      const expenses = entries.filter(e => e.type === "expense" && String(e.date||"").slice(0,7) === m);
       const total = expenses
         .filter(e => normalizePaymentName(e.payment) === normalizePaymentName("楽天PINK"))
         .reduce((s,e) => s+Number(e.amount||0), 0);
+      const goal = Math.max(1,Number(plan.pinkGoal||50000));
+      const forecast = forecastForMonth(total,m);
       $("pinkTotal").textContent = yen(total);
-      $("pinkMeter").style.width = Math.min((total/PINK_WARNING)*100, 100) + "%";
-      if(total===0)                 $("pinkMessage").textContent = "今月のPINK利用はまだ0円。";
-      else if(total<=PINK_GOAL)     $("pinkMessage").textContent = "目標5万円まであと "+yen(PINK_GOAL-total)+"。安全圏！";
-      else if(total<PINK_WARNING)   $("pinkMessage").textContent = "5万円を "+yen(total-PINK_GOAL)+" オーバー。慎重に！";
-      else                          $("pinkMessage").textContent = "10万円ライン到達。PINKブラックゾーン。";
+      $("pinkMeter").style.width = Math.min((total/goal)*100, 100) + "%";
+      $("pinkMeter").style.background = total >= goal ? "var(--danger)" : total >= goal*.7 ? "#f0a020" : "linear-gradient(90deg,#ff7baa,#ff2f79)";
+      $("pinkHint").textContent = "利用日ベースの目標："+yen(goal);
+      if(total===0) $("pinkMessage").textContent = "今月のPINK利用はまだ0円。";
+      else if(total>goal) $("pinkMessage").textContent = "目標を "+yen(total-goal)+" オーバー。";
+      else if(forecast>goal) $("pinkMessage").textContent = "このペースだと月末 "+yen(forecast)+"。約 "+yen(forecast-goal)+" オーバー予想。";
+      else $("pinkMessage").textContent = "あと "+yen(goal-total)+"。月末予想は "+yen(forecast)+"。";
+    }
+
+    function renderBudgets(m){
+      const area = $("budgetList");
+      const budgets = Object.entries(plan.categoryBudgets||{}).filter(([,v]) => Number(v)>0);
+      if(!budgets.length){ area.innerHTML='<div class="empty">予算はまだ設定されていません</div>'; return; }
+      const useExpenses = entries.filter(e => e.type==="expense" && String(e.date||"").slice(0,7)===m);
+      area.innerHTML = budgets.map(([name,limit]) => {
+        limit=Number(limit);
+        const used=useExpenses.filter(e=>e.category===name).reduce((s,e)=>s+Number(e.amount||0),0);
+        const pct=Math.min(used/limit*100,100);
+        const forecast=forecastForMonth(used,m);
+        const color=used>=limit?"var(--danger)":forecast>limit?"#f0a020":"var(--safe)";
+        const note=used>limit ? yen(used-limit)+"オーバー"
+          : forecast>limit ? "月末予想 "+yen(forecast)+"（超過見込み）"
+          : "残り "+yen(limit-used)+" ／ 月末予想 "+yen(forecast);
+        return `<div class="budget-row"><div class="budget-head"><span>${htmlEsc(name)}</span><span>${yen(used)} / ${yen(limit)}</span></div>
+          <div class="budget-track"><div class="budget-fill" style="width:${pct}%;background:${color}"></div></div>
+          <div class="budget-note">${note}</div></div>`;
+      }).join("");
+    }
+
+    function renderFunds(){
+      const area=$("fundList");
+      const funds=Array.isArray(plan.funds)?plan.funds:[];
+      if(!funds.length){ area.innerHTML='<div class="empty">積み立て先はまだありません</div>'; return; }
+      area.innerHTML=funds.map(f=>{
+        const balance=(plan.fundTransactions||[]).filter(t=>t.fundId===f.id)
+          .reduce((s,t)=>s+(t.type==="withdraw"?-1:1)*Number(t.amount||0),0);
+        return `<div class="budget-row"><div class="budget-head"><span>${htmlEsc(f.name)}</span><span>${yen(balance)}</span></div>
+          <div class="budget-note">毎月の目安 ${yen(f.monthlyTarget||0)}</div></div>`;
+      }).join("");
     }
 
     function renderRecent(monthEntries){
       const area = $("recentList");
-      const list = [...monthEntries]
+      const grouped = [];
+      const receipts = new Map();
+      monthEntries.forEach(e => {
+        if(!e.receiptId){ grouped.push(e); return; }
+        if(!receipts.has(e.receiptId)){
+          const item={...e,amount:Number(e.receiptTotal||e.amount),category:"",_categories:[]};
+          receipts.set(e.receiptId,item); grouped.push(item);
+        }
+        const item=receipts.get(e.receiptId);
+        if(e.category && !item._categories.includes(e.category)) item._categories.push(e.category);
+        item.category=item._categories.join("・");
+      });
+      const list = grouped
         .sort((a,b) => String(b.date||"").localeCompare(String(a.date||"")))
         .slice(0,20);
       if(list.length === 0){
@@ -866,6 +978,7 @@
     /* ── 初期化 ── */
     function init(){
       loadEntries();
+      loadPlan();
       loadCloudSettingsToForm();
       render();
 
@@ -895,9 +1008,10 @@
       document.querySelectorAll("input[name='viewMode']").forEach(r => r.addEventListener("change", render));
 
       $("goInput").addEventListener("click", () => { location.href = "kakeibo-input.html"; });
+      $("goPlan").addEventListener("click", () => { location.href = "kakeibo-plan.html"; });
 
       document.addEventListener("visibilitychange", () => {
-        if(!document.hidden){ loadEntries(); render(); }
+        if(!document.hidden){ loadEntries(); loadPlan(); render(); }
       });
     }
 

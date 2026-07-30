@@ -87,6 +87,18 @@
     details[open].category-details summary::before{content:"▼"}
     #category{width:100%;border:1px solid var(--line);border-radius:10px;
       padding:10px 12px;font-size:.95rem;background:#fffdf8;color:var(--text);margin-top:8px}
+    .split-toggle{display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:800;cursor:pointer}
+    .split-toggle input{width:20px;height:20px}
+    .split-area{display:none;margin-top:12px}
+    .split-area.open{display:block}
+    .split-row{display:grid;grid-template-columns:1fr 120px 36px;gap:7px;margin-bottom:8px}
+    .split-row select,.split-row input{min-width:0;width:100%;border:1px solid var(--line);border-radius:10px;
+      padding:9px 8px;font-size:.9rem;background:#fffdf8}
+    .split-remove{border:none;border-radius:10px;background:#fff1f2;color:#a4161a;font-weight:900}
+    .split-summary{font-size:.82rem;font-weight:700;margin-top:8px;color:var(--muted)}
+    .split-summary.ng{color:var(--danger)}
+    .split-add{border:1px solid #ebd19a;border-radius:999px;background:#fff3d1;color:#5b3a05;
+      padding:8px 13px;font-size:.84rem;font-weight:800}
 
     /* メモ */
     .memo-label{font-size:.88rem;font-weight:700;color:var(--muted);margin-bottom:8px}
@@ -233,6 +245,7 @@
         <select id="category">
           <option value="その他">選択しない（その他）</option>
           <option value="食費">食費</option>
+          <option value="おやつ">おやつ</option>
           <option value="日用品">日用品</option>
           <option value="医療費">医療費</option>
           <option value="子ども">子ども</option>
@@ -248,6 +261,20 @@
           <option value="特別費">特別費</option>
         </select>
       </details>
+    </div>
+
+    <!-- レシート内訳 -->
+    <div class="card" id="splitCard">
+      <label class="split-toggle">
+        <input type="checkbox" id="splitEnabled">
+        🧾 レシートの内訳を分ける
+      </label>
+      <div class="split-area" id="splitArea">
+        <p class="settle-hint">食費とおやつなど、予算管理したいものだけ分ければOKです。</p>
+        <div id="splitRows"></div>
+        <button type="button" class="split-add" id="addSplit">＋ 内訳を追加</button>
+        <div class="split-summary" id="splitSummary"></div>
+      </div>
     </div>
 
     <!-- 引落月 -->
@@ -278,12 +305,14 @@
   <script>
     const STORAGE_KEY  = "kakeibo-app-stable-v3";
     const SETTINGS_KEY = "kakeibo-cloud-settings-v1";
+    const PLAN_KEY     = "kakeibo-plan-v1";
     const APP_KEY      = "kakeibo-app";
-    const APP_VERSION  = 3;
+    const APP_VERSION  = 4;
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
 
     let selectedPayment = "";
     let entryType = "expense"; // "expense" or "income"
+    const CATEGORIES = ["その他","食費","おやつ","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","仕事立替","固定費","特別費"];
 
     /* ── ユーティリティ ── */
     function $(id){return document.getElementById(id)}
@@ -340,7 +369,9 @@
       const s = getCloudSettings();
       if(!s.password || !s.autoCloudSave) return;
       try{
-        const payload = { app:APP_KEY, version:APP_VERSION, entries, savedAt:new Date().toISOString() };
+        let plan=null;
+        try{ plan=JSON.parse(localStorage.getItem(PLAN_KEY)||"null"); }catch(e){}
+        const payload = { app:APP_KEY, version:APP_VERSION, entries, plan, savedAt:new Date().toISOString() };
         await fetch(s.apiUrl, {
           method:"POST",
           headers:{"Content-Type":"application/json","X-App-Password":s.password},
@@ -376,6 +407,41 @@
       $("memo").value = memo;
     }
 
+    function splitRow(category,amount){
+      const row=document.createElement("div");
+      row.className="split-row";
+      row.innerHTML=`<select aria-label="内訳カテゴリ">${CATEGORIES.map(c=>`<option value="${c}"${c===category?" selected":""}>${c}</option>`).join("")}</select>
+        <input type="number" inputmode="numeric" min="0" step="1" placeholder="金額" value="${amount||""}" aria-label="内訳金額">
+        <button type="button" class="split-remove" aria-label="内訳を削除">×</button>`;
+      row.querySelector(".split-remove").addEventListener("click",()=>{row.remove();updateSplitSummary();});
+      row.querySelectorAll("select,input").forEach(el=>el.addEventListener("input",updateSplitSummary));
+      $("splitRows").appendChild(row);
+    }
+
+    function resetSplits(){
+      $("splitRows").innerHTML="";
+      splitRow("食費","");
+      splitRow("おやつ","");
+      updateSplitSummary();
+    }
+
+    function getSplits(){
+      return [...$("splitRows").querySelectorAll(".split-row")].map(row=>({
+        category:row.querySelector("select").value,
+        amount:Number(row.querySelector("input").value||0)
+      })).filter(x=>x.amount>0);
+    }
+
+    function updateSplitSummary(){
+      const total=Number($("amount").value||0);
+      const sum=getSplits().reduce((s,x)=>s+x.amount,0);
+      const diff=total-sum;
+      $("splitSummary").textContent=diff===0 && total>0 ? "✓ レシート合計と一致しています"
+        : diff>0 ? "あと "+diff.toLocaleString("ja-JP")+"円を振り分けてください"
+        : Math.abs(diff).toLocaleString("ja-JP")+"円オーバーしています";
+      $("splitSummary").classList.toggle("ng",diff!==0);
+    }
+
     /* ── トースト表示 ── */
     function showToast(msg){
       const t = $("toast");
@@ -390,6 +456,9 @@
       $("date").value = todayString();
       $("memo").value = "";
       $("category").value = "その他";
+      $("splitEnabled").checked=false;
+      $("splitArea").classList.remove("open");
+      resetSplits();
       selectedPayment = "";
       document.querySelectorAll(".pay-btn").forEach(btn => btn.classList.remove("selected"));
       // 種別はリセットせず継続（続けて収入入力しやすいように）
@@ -413,8 +482,7 @@
       }
 
       const now = new Date().toISOString();
-      const entry = {
-        id:          makeId(),
+      const baseEntry = {
         date:        date,
         type:        entryType,
         amount:      amount,
@@ -427,7 +495,20 @@
       };
 
       const entries = loadEntries();
-      entries.push(entry);
+      if(entryType==="expense" && $("splitEnabled").checked){
+        const splits=getSplits();
+        const splitTotal=splits.reduce((s,x)=>s+x.amount,0);
+        if(!splits.length || splitTotal!==amount){
+          alert("内訳の合計をレシート金額と一致させてください。"); return;
+        }
+        const receiptId=makeId();
+        splits.forEach((part,index)=>entries.push({
+          ...baseEntry,id:makeId(),amount:part.amount,category:part.category,
+          receiptId,receiptTotal:amount,splitIndex:index,splitCount:splits.length
+        }));
+      }else{
+        entries.push({...baseEntry,id:makeId()});
+      }
       saveEntries(entries);
 
       // クラウド自動保存
@@ -440,6 +521,7 @@
     /* ── 初期化 ── */
     function init(){
       $("date").value = todayString();
+      resetSplits();
       syncSettle();
 
       // 収入/支出 切り替え
@@ -458,6 +540,12 @@
 
       // 日付変更で引落月を再計算
       $("date").addEventListener("change", syncSettle);
+      $("amount").addEventListener("input", updateSplitSummary);
+      $("splitEnabled").addEventListener("change",()=>{
+        $("splitArea").classList.toggle("open",$("splitEnabled").checked);
+        updateSplitSummary();
+      });
+      $("addSplit").addEventListener("click",()=>splitRow("その他",""));
 
       // 登録ボタン
       $("saveBtn").addEventListener("click", async () => {

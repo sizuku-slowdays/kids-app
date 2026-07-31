@@ -14,7 +14,7 @@
   :root{
     --bg:#eef1f6; --panel:#fff; --panel-2:#f7f9fc; --ink:#26313d; --muted:#78889a; --line:#dfe5ee;
     --accent:#5b6ee1; --accent-soft:#e7eaff; --danger:#e0607a; --ok:#3fa98a; --later:#e6a23c;
-    --mama:#ff9db4; --child1:#ffbe63; --child2:#b39ddb; --all:#6fd3b8;
+    --mama:#ff9db4; --child1:#ffbe63; --child2:#b39ddb; --grandpa:#66a6d9; --grandma:#e58fb1; --all:#6fd3b8;
     --radius:18px; --shadow:0 2px 10px rgba(38,49,61,.06);
     --font:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
   }
@@ -60,6 +60,8 @@
   .chip[data-r="mama"][aria-pressed="true"]{background:var(--mama)}
   .chip[data-r="child1"][aria-pressed="true"]{background:var(--child1)}
   .chip[data-r="child2"][aria-pressed="true"]{background:var(--child2)}
+  .chip[data-r="grandpa"][aria-pressed="true"]{background:var(--grandpa)}
+  .chip[data-r="grandma"][aria-pressed="true"]{background:var(--grandma)}
   .chip[data-r="all"][aria-pressed="true"]{background:var(--all)}
   .chip[data-r=""][aria-pressed="true"]{background:var(--accent)}
 
@@ -100,9 +102,11 @@
 <section class="card">
   <div class="chips" id="filter">
     <button type="button" class="chip" data-r="" aria-pressed="true">👨‍👩‍👧‍👦 家族ぜんいん</button>
-    <button type="button" class="chip" data-r="mama" aria-pressed="false">🌸 ママ</button>
-    <button type="button" class="chip" data-r="child1" aria-pressed="false">🐒 長女</button>
-    <button type="button" class="chip" data-r="child2" aria-pressed="false">🦄 次女</button>
+    <button type="button" class="chip" data-r="mama" data-label-r="mama" aria-pressed="false">🌸 ママ</button>
+    <button type="button" class="chip" data-r="child1" data-label-r="child1" aria-pressed="false">🐒 長女</button>
+    <button type="button" class="chip" data-r="child2" data-label-r="child2" aria-pressed="false">🦄 次女</button>
+    <button type="button" class="chip" data-r="grandpa" data-label-r="grandpa" aria-pressed="false">👴 祖父</button>
+    <button type="button" class="chip" data-r="grandma" data-label-r="grandma" aria-pressed="false">👵 祖母</button>
   </div>
   <div id="record"><div class="empty">読み込み中…</div></div>
   <p class="hint" style="margin-top:10px">「＋」を押すと、通知がなくても「できた」を記録できます。</p>
@@ -118,14 +122,31 @@
    - 通知ルール(notification_rules)とは別テーブルで管理
    ================================================================ */
 
-const LS = { api:'nc_api_base', pw:'nc_app_password', recipient:'nc_device_recipient' };
-const LABEL = { mama:'🌸 ママ', child1:'🐒 長女', child2:'🦄 次女', all:'👨‍👩‍👧‍👦 ぜんいん' };
-const COLOR = { mama:'var(--mama)', child1:'var(--child1)', child2:'var(--child2)', all:'var(--all)' };
-const ORDER = ['mama','child1','child2','all'];
+const LS = { api:'nc_api_base', pw:'nc_app_password', recipient:'nc_device_recipient', names:'family_recipient_names' };
+const META = {
+  mama:{ icon:'🌸', name:'ママ' },
+  child1:{ icon:'🐒', name:'長女' },
+  child2:{ icon:'🦄', name:'次女' },
+  grandpa:{ icon:'👴', name:'祖父' },
+  grandma:{ icon:'👵', name:'祖母' },
+  all:{ icon:'👨‍👩‍👧‍👦', name:'ぜんいん' },
+};
+let savedNames = {};
+try{ savedNames = JSON.parse(localStorage.getItem(LS.names) || '{}'); }catch(_){}
+const LABEL = Object.fromEntries(Object.entries(META).map(([k,v]) => [k, `${v.icon} ${savedNames[k] || v.name}`]));
+const COLOR = {
+  mama:'var(--mama)', child1:'var(--child1)', child2:'var(--child2)',
+  grandpa:'var(--grandpa)', grandma:'var(--grandma)', all:'var(--all)'
+};
+const ORDER = ['mama','child1','child2','grandpa','grandma','all'];
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const state = { date:'', rules:[], completions:[], filter:'' };
+
+document.querySelectorAll('[data-label-r]').forEach((el) => {
+  el.textContent = LABEL[el.dataset.labelR] || el.dataset.labelR;
+});
 
 function toast(msg){
   const t = $('toast'); t.textContent = msg; t.classList.add('show');

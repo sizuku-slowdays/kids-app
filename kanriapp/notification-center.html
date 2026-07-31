@@ -30,6 +30,8 @@
     --mama:#ff9db4;
     --child1:#ffbe63;
     --child2:#b39ddb;
+    --grandpa:#66a6d9;
+    --grandma:#e58fb1;
     --all:#6fd3b8;
 
     --radius:18px;
@@ -109,6 +111,8 @@
   .chip[data-r="mama"][aria-pressed="true"]{background:var(--mama)}
   .chip[data-r="child1"][aria-pressed="true"]{background:var(--child1)}
   .chip[data-r="child2"][aria-pressed="true"]{background:var(--child2)}
+  .chip[data-r="grandpa"][aria-pressed="true"]{background:var(--grandpa)}
+  .chip[data-r="grandma"][aria-pressed="true"]{background:var(--grandma)}
   .chip[data-r="all"][aria-pressed="true"]{background:var(--all)}
 
   /* ルール一覧 */
@@ -207,16 +211,34 @@
     <div class="field">
       <label>この端末は誰のもの？</label>
       <div class="chips" id="deviceRecipient">
-        <button type="button" class="chip" data-r="mama"   aria-pressed="false">🌸 ママ</button>
-        <button type="button" class="chip" data-r="child1" aria-pressed="false">🐒 長女</button>
-        <button type="button" class="chip" data-r="child2" aria-pressed="false">🦄 次女</button>
-        <button type="button" class="chip" data-r="all"    aria-pressed="false">👨‍👩‍👧‍👦 家族共用</button>
+        <button type="button" class="chip" data-r="mama" data-label-r="mama" aria-pressed="false">🌸 ママ</button>
+        <button type="button" class="chip" data-r="child1" data-label-r="child1" aria-pressed="false">🐒 長女</button>
+        <button type="button" class="chip" data-r="child2" data-label-r="child2" aria-pressed="false">🦄 次女</button>
+        <button type="button" class="chip" data-r="grandpa" data-label-r="grandpa" aria-pressed="false">👴 祖父</button>
+        <button type="button" class="chip" data-r="grandma" data-label-r="grandma" aria-pressed="false">👵 祖母</button>
+        <button type="button" class="chip" data-r="all" data-label-r="all" aria-pressed="false">👨‍👩‍👧‍👦 家族共用</button>
       </div>
       <p class="hint">「家族共用」にすると、すべての通知がこの端末に届きます。</p>
     </div>
     <div class="field">
       <label for="deviceName">端末の名前</label>
       <input type="text" id="deviceName" placeholder="ママのiPhone">
+    </div>
+    <div class="field">
+      <label>画面に表示する家族の名前</label>
+      <div class="row">
+        <input type="text" id="nameMama" maxlength="20" placeholder="ママ">
+        <input type="text" id="nameChild1" maxlength="20" placeholder="長女">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="nameChild2" maxlength="20" placeholder="次女">
+        <input type="text" id="nameGrandpa" maxlength="20" placeholder="祖父">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="nameGrandma" maxlength="20" placeholder="祖母">
+        <button type="button" class="btn sub" id="btnSaveNames">表示名を保存</button>
+      </div>
+      <p class="hint">この端末のカレンダーと通知センターで共通して使います。</p>
     </div>
 
     <div class="row">
@@ -233,10 +255,12 @@
   <h2>🕐 今日 鳴るタイミング</h2>
   <div class="tl-wrap" id="timeline"></div>
   <div class="tl-legend">
-    <b><i class="swatch" style="background:var(--mama)"></i>ママ</b>
-    <b><i class="swatch" style="background:var(--child1)"></i>長女</b>
-    <b><i class="swatch" style="background:var(--child2)"></i>次女</b>
-    <b><i class="swatch" style="background:var(--all)"></i>ぜんいん</b>
+    <b><i class="swatch" style="background:var(--mama)"></i><span data-name-r="mama">ママ</span></b>
+    <b><i class="swatch" style="background:var(--child1)"></i><span data-name-r="child1">長女</span></b>
+    <b><i class="swatch" style="background:var(--child2)"></i><span data-name-r="child2">次女</span></b>
+    <b><i class="swatch" style="background:var(--grandpa)"></i><span data-name-r="grandpa">祖父</span></b>
+    <b><i class="swatch" style="background:var(--grandma)"></i><span data-name-r="grandma">祖母</span></b>
+    <b><i class="swatch" style="background:var(--all)"></i><span data-name-r="all">ぜんいん</span></b>
   </div>
 </section>
 
@@ -245,10 +269,12 @@
   <h2>🔔 通知の設定</h2>
   <div class="chips" id="filterChips" style="margin-bottom:6px">
     <button type="button" class="chip" data-f="" aria-pressed="true">すべて</button>
-    <button type="button" class="chip" data-r="mama"   data-f="mama"   aria-pressed="false">🌸 ママ</button>
-    <button type="button" class="chip" data-r="child1" data-f="child1" aria-pressed="false">🐒 長女</button>
-    <button type="button" class="chip" data-r="child2" data-f="child2" aria-pressed="false">🦄 次女</button>
-    <button type="button" class="chip" data-r="all"    data-f="all"    aria-pressed="false">👨‍👩‍👧‍👦 ぜんいん</button>
+    <button type="button" class="chip" data-r="mama" data-f="mama" data-label-r="mama" aria-pressed="false">🌸 ママ</button>
+    <button type="button" class="chip" data-r="child1" data-f="child1" data-label-r="child1" aria-pressed="false">🐒 長女</button>
+    <button type="button" class="chip" data-r="child2" data-f="child2" data-label-r="child2" aria-pressed="false">🦄 次女</button>
+    <button type="button" class="chip" data-r="grandpa" data-f="grandpa" data-label-r="grandpa" aria-pressed="false">👴 祖父</button>
+    <button type="button" class="chip" data-r="grandma" data-f="grandma" data-label-r="grandma" aria-pressed="false">👵 祖母</button>
+    <button type="button" class="chip" data-r="all" data-f="all" data-label-r="all" aria-pressed="false">👨‍👩‍👧‍👦 ぜんいん</button>
   </div>
   <div id="ruleList"><div class="empty">読み込み中…</div></div>
 </section>
@@ -301,10 +327,12 @@
     <div class="field">
       <label>だれに送る？</label>
       <div class="chips" id="fRecipient">
-        <button type="button" class="chip" data-r="mama"   aria-pressed="false">🌸 ママ</button>
-        <button type="button" class="chip" data-r="child1" aria-pressed="false">🐒 長女</button>
-        <button type="button" class="chip" data-r="child2" aria-pressed="false">🦄 次女</button>
-        <button type="button" class="chip" data-r="all"    aria-pressed="true">👨‍👩‍👧‍👦 ぜんいん</button>
+        <button type="button" class="chip" data-r="mama" data-label-r="mama" aria-pressed="false">🌸 ママ</button>
+        <button type="button" class="chip" data-r="child1" data-label-r="child1" aria-pressed="false">🐒 長女</button>
+        <button type="button" class="chip" data-r="child2" data-label-r="child2" aria-pressed="false">🦄 次女</button>
+        <button type="button" class="chip" data-r="grandpa" data-label-r="grandpa" aria-pressed="false">👴 祖父</button>
+        <button type="button" class="chip" data-r="grandma" data-label-r="grandma" aria-pressed="false">👵 祖母</button>
+        <button type="button" class="chip" data-r="all" data-label-r="all" aria-pressed="true">👨‍👩‍👧‍👦 ぜんいん</button>
       </div>
     </div>
 
@@ -416,12 +444,32 @@ const LS = {
   pw: 'nc_app_password',
   recipient: 'nc_device_recipient',
   device: 'nc_device_name',
+  names: 'family_recipient_names',
 };
 
-const RECIPIENT_LABEL = { mama:'🌸 ママ', child1:'🐒 長女', child2:'🦄 次女', all:'👨‍👩‍👧‍👦 ぜんいん' };
-const RECIPIENT_COLOR = { mama:'var(--mama)', child1:'var(--child1)', child2:'var(--child2)', all:'var(--all)' };
+const RECIPIENT_META = {
+  mama:{ icon:'🌸', defaultName:'ママ' },
+  child1:{ icon:'🐒', defaultName:'長女' },
+  child2:{ icon:'🦄', defaultName:'次女' },
+  grandpa:{ icon:'👴', defaultName:'祖父' },
+  grandma:{ icon:'👵', defaultName:'祖母' },
+  all:{ icon:'👨‍👩‍👧‍👦', defaultName:'ぜんいん' },
+};
+function loadRecipientNames(){
+  const defaults = Object.fromEntries(Object.entries(RECIPIENT_META).map(([k,v]) => [k, v.defaultName]));
+  try{ return { ...defaults, ...JSON.parse(localStorage.getItem(LS.names) || '{}') }; }
+  catch(_){ return defaults; }
+}
+let RECIPIENT_NAMES = loadRecipientNames();
+let RECIPIENT_LABEL = Object.fromEntries(
+  Object.entries(RECIPIENT_META).map(([k,v]) => [k, `${v.icon} ${RECIPIENT_NAMES[k]}`])
+);
+const RECIPIENT_COLOR = {
+  mama:'var(--mama)', child1:'var(--child1)', child2:'var(--child2)',
+  grandpa:'var(--grandpa)', grandma:'var(--grandma)', all:'var(--all)'
+};
 const DOW = ['日','月','火','水','木','金','土'];
-const TEXT_RECIPIENTS = ['mama','child1','child2'];
+const TEXT_RECIPIENTS = ['mama','child1','child2','grandpa','grandma'];
 
 /* 他アプリとの連携先。キー文字列はアプリ側のコードで決まっているので、ここから選ぶだけにする。 */
 const EXT_KEYS = [
@@ -434,6 +482,8 @@ const TEXT_PLACEHOLDER = {
   mama:   { title:'15時です。肩回しを50回しましょう', body:'（本文・任意）' },
   child1: { title:'マウスピースした？',               body:'（本文・任意）' },
   child2: { title:'🦷 まうすぴーす！',                body:'はめてね' },
+  grandpa:{ title:'（祖父向けタイトル・任意）',       body:'（本文・任意）' },
+  grandma:{ title:'（祖母向けタイトル・任意）',       body:'（本文・任意）' },
 };
 
 const state = {
@@ -469,6 +519,47 @@ function setChips(container, value){
 function getChips(container){
   const on = container.querySelector('.chip[aria-pressed="true"]');
   return on ? on.dataset.r : null;
+}
+
+function refreshRecipientLabels(){
+  RECIPIENT_NAMES = loadRecipientNames();
+  RECIPIENT_LABEL = Object.fromEntries(
+    Object.entries(RECIPIENT_META).map(([k,v]) => [k, `${v.icon} ${RECIPIENT_NAMES[k]}`])
+  );
+  document.querySelectorAll('[data-label-r]').forEach((el) => {
+    el.textContent = RECIPIENT_LABEL[el.dataset.labelR] || el.dataset.labelR;
+  });
+  document.querySelectorAll('[data-name-r]').forEach((el) => {
+    el.textContent = RECIPIENT_NAMES[el.dataset.nameR] || el.dataset.nameR;
+  });
+}
+
+function fillRecipientNameInputs(){
+  $('nameMama').value = RECIPIENT_NAMES.mama;
+  $('nameChild1').value = RECIPIENT_NAMES.child1;
+  $('nameChild2').value = RECIPIENT_NAMES.child2;
+  $('nameGrandpa').value = RECIPIENT_NAMES.grandpa;
+  $('nameGrandma').value = RECIPIENT_NAMES.grandma;
+}
+
+function saveRecipientNames(){
+  const next = {
+    ...RECIPIENT_NAMES,
+    mama: $('nameMama').value.trim() || 'ママ',
+    child1: $('nameChild1').value.trim() || '長女',
+    child2: $('nameChild2').value.trim() || '次女',
+    grandpa: $('nameGrandpa').value.trim() || '祖父',
+    grandma: $('nameGrandma').value.trim() || '祖母',
+  };
+  localStorage.setItem(LS.names, JSON.stringify(next));
+  refreshRecipientLabels();
+  renderTextsEditor();
+  renderRules();
+  renderTimeline();
+  renderDevices();
+  renderPresets();
+  refreshStatus();
+  toast('家族の表示名を保存しました');
 }
 
 /* ---------- API ---------- */
@@ -1156,6 +1247,7 @@ function bindEvents(){
   $('btnSubscribe').addEventListener('click', subscribeThisDevice);
   $('btnUnsubscribe').addEventListener('click', unsubscribeThisDevice);
   $('btnTest').addEventListener('click', sendTest);
+  $('btnSaveNames').addEventListener('click', saveRecipientNames);
 
   // フィルタ
   $('filterChips').addEventListener('click', (e) => {
@@ -1209,6 +1301,8 @@ function bindEvents(){
 }
 
 async function init(){
+  refreshRecipientLabels();
+  fillRecipientNameInputs();
   $('apiBase').value = localStorage.getItem(LS.api) || '';
   $('appPassword').value = localStorage.getItem(LS.pw) || '';
   $('deviceName').value = localStorage.getItem(LS.device) || '';

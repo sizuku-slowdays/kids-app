@@ -580,12 +580,13 @@
       }catch(err){ setSyncStatus("クラウド保存に失敗しました："+err.message,"ng"); }
     }
 
-    async function loadFromCloud(){
+    async function loadFromCloud(opts){
+      const silent = !!(opts && opts.silent);
       const s = saveCloudSettings();
-      if(!s.password){ setSyncStatus("パスワードを入力してから読み込んでください。","ng"); return; }
-      if(entries.length>0 && !confirm("クラウドのデータでこの端末の表示を置き換えますか？")) return;
+      if(!s.password){ if(!silent)setSyncStatus("パスワードを入力してから読み込んでください。","ng"); return false; }
+      if(!silent && entries.length>0 && !confirm("クラウドのデータでこの端末の表示を置き換えますか？")) return false;
       try{
-        setSyncStatus("クラウドから読み込み中…");
+        setSyncStatus(silent ? "起動時にクラウドと同期中…" : "クラウドから読み込み中…");
         const url = new URL(s.apiUrl);
         url.searchParams.set("key",APP_KEY);
         const res = await fetch(url.toString(), {method:"GET", headers:{"X-App-Password":s.password}});
@@ -596,13 +597,25 @@
         const data = root.data && typeof root.data === "object" ? root.data : root;
         const cloudData = Array.isArray(data.entries) ? data : (Array.isArray(root.entries) ? root : null);
         if(!cloudData || !Array.isArray(cloudData.entries)) throw new Error("クラウドに家計簿データが見つかりません。");
+        if(silent && entries.length && cloudData.savedAt){
+          const localLatest = Math.max(...entries.map(e => Date.parse(e.updatedAt||e.createdAt||0)||0));
+          const cloudSaved = Date.parse(cloudData.savedAt)||0;
+          if(localLatest > cloudSaved){
+            setSyncStatus("端末内にクラウドより新しい入力があるため、端末内データを表示しています。","ok");
+            return false;
+          }
+        }
         entries = cloudData.entries.map(normalizeEntry);
         if(cloudData.plan) plan = normalizePlan(cloudData.plan);
         saveLocal();
         render();
         const savedAt = cloudData.savedAt ? new Date(cloudData.savedAt).toLocaleString("ja-JP") : "不明";
-        setSyncStatus("クラウドから読み込みました。クラウド保存日時："+savedAt,"ok");
-      }catch(err){ setSyncStatus("クラウド読込に失敗しました："+err.message,"ng"); }
+        setSyncStatus((silent ? "自動同期しました。最終保存：" : "クラウドから読み込みました。クラウド保存日時：")+savedAt,"ok");
+        return true;
+      }catch(err){
+        setSyncStatus("クラウド読込に失敗しました。端末内データを表示します："+err.message,"ng");
+        return false;
+      }
     }
 
     /* ── 表示モード ── */
@@ -976,7 +989,7 @@
     }
 
     /* ── 初期化 ── */
-    function init(){
+    async function init(){
       loadEntries();
       loadPlan();
       loadCloudSettingsToForm();
@@ -1009,6 +1022,9 @@
 
       $("goInput").addEventListener("click", () => { location.href = "kakeibo-input.html"; });
       $("goPlan").addEventListener("click", () => { location.href = "kakeibo-plan.html"; });
+
+      // パスワード設定済みなら、起動時はクラウドを自動で最新化する
+      if(_s.password) await loadFromCloud({silent:true});
 
       document.addEventListener("visibilitychange", () => {
         if(!document.hidden){ loadEntries(); loadPlan(); render(); }

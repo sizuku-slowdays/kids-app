@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -443,7 +442,7 @@
       funds:[],
       fundTransactions:[]
     };
-    const PAYMENTS     = ["楽天PINK","楽天VISA","現金","auじぶん銀行"];
+    const PAYMENTS     = ["楽天PINK","楽天VISA","現金","auじぶん銀行","ゆうちょ銀行","福岡中央銀行","福岡銀行"];
 
     let entries      = [];
     let plan         = structuredClone(DEFAULT_PLAN);
@@ -1011,28 +1010,4 @@
       $("drawerOverlay").addEventListener("click", closeDrawer);
 
       $("editCloseBtn").addEventListener("click", closeEditModal);
-      $("editOverlay").addEventListener("click", e => { if(e.target===$("editOverlay")) closeEditModal(); });
-      $("editTypeExpense").addEventListener("click", () => setEditType("expense"));
-      $("editTypeIncome").addEventListener("click",  () => setEditType("income"));
-      $("editSaveBtn").addEventListener("click", saveEdit);
-      $("editDeleteBtn").addEventListener("click", deleteEntry);
-
-      $("prevMonth").addEventListener("click", () => { currentMonth.setMonth(currentMonth.getMonth()-1); render(); });
-      $("nextMonth").addEventListener("click", () => { currentMonth.setMonth(currentMonth.getMonth()+1); render(); });
-      document.querySelectorAll("input[name='viewMode']").forEach(r => r.addEventListener("change", render));
-
-      $("goInput").addEventListener("click", () => { location.href = "kakeibo-input.html"; });
-      $("goPlan").addEventListener("click", () => { location.href = "kakeibo-plan.html"; });
-
-      // パスワード設定済みなら、起動時はクラウドを自動で最新化する
-      if(_s.password) await loadFromCloud({silent:true});
-
-      document.addEventListener("visibilitychange", () => {
-        if(!document.hidden){ loadEntries(); loadPlan(); render(); }
-      });
-    }
-
-    window.addEventListener("DOMContentLoaded", init);
-  </script>
-</body>
-</html>
+      $("editOverlay").addEventListener("click", e => { if(e.target===$("

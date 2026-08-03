@@ -3,268 +3,581 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>予算・積み立て</title>
+  <title>支出を入力</title>
   <link rel="apple-touch-icon" href="img/kakeibo.png">
   <link rel="icon" type="image/png" href="img/kakeibo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="家計簿">
   <meta name="theme-color" content="#fff3c4">
   <style>
-    :root{--bg:#fff8e7;--main:#ffb84d;--safe:#2e9f62;--danger:#e63946;--text:#333;
-      --muted:#777;--line:#eadfc9;--shadow:0 8px 20px rgba(130,90,30,.12);--radius:18px}
+    :root{
+      --bg:#fff8e7;--main:#ffb84d;--safe:#2e9f62;--danger:#e63946;
+      --text:#333;--muted:#777;--line:#eadfc9;
+      --shadow:0 8px 20px rgba(130,90,30,.12);--radius:18px
+    }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background:linear-gradient(180deg,#fff2bf 0%,var(--bg) 220px);color:var(--text);line-height:1.6;padding-bottom:100px}
-    header{padding:16px;display:flex;align-items:center;gap:12px}
-    header h1{font-size:1.35rem;margin:0}
-    .back{border:1px solid #ebd19a;border-radius:999px;background:#fff3d1;color:#5b3a05;
-      padding:8px 14px;font-weight:800;text-decoration:none}
-    main{width:min(620px,100%);margin:auto;padding:0 14px}
-    .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);
-      box-shadow:var(--shadow);padding:17px;margin-bottom:14px}
-    h2{font-size:1.05rem;margin:0 0 12px}
-    .hint{font-size:.8rem;color:var(--muted);margin:5px 0 12px}
-    label.field{display:block;font-size:.86rem;font-weight:800;color:var(--muted);margin-bottom:5px}
-    input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;
-      font-size:1rem;background:#fffdf8;color:var(--text)}
-    .money{display:flex;align-items:center;gap:8px}.money input{flex:1}.money span{font-weight:800}
-    .budget-row,.fund-card{border:1px solid var(--line);background:#fff9ed;border-radius:13px;padding:11px;margin-bottom:9px}
-    .budget-grid{display:grid;grid-template-columns:1fr 130px 36px;gap:7px;align-items:center}
-    .remove{width:36px;height:40px;border:none;border-radius:10px;background:#fff1f2;color:#a4161a;font-weight:900}
-    button{border:none;border-radius:999px;padding:10px 15px;font-size:.9rem;font-weight:900;
-      background:var(--main);color:#3e2600;cursor:pointer}
-    .secondary{background:#fff3d1;border:1px solid #ebd19a}
-    .fund-head{display:flex;justify-content:space-between;align-items:start;gap:8px}
-    .fund-name{font-weight:900}.fund-balance{font-size:1.12rem;font-weight:900;color:var(--safe)}
-    .fund-meta{font-size:.8rem;color:var(--muted)}
-    .fund-action{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
-    .fund-action input{font-size:.9rem;padding:8px}
-    .fund-action button{padding:8px;font-size:.8rem}
-    .withdraw{background:#fff1f2;color:#a4161a;border:1px solid #f4a7af}
-    .history{font-size:.78rem;color:var(--muted);margin-top:8px}
-    .recurring-form{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
-    .recurring-form .wide{grid-column:1/-1}
-    .recurring-item{border:1px solid var(--line);background:#fff9ed;border-radius:13px;padding:11px;margin-bottom:9px}
-    .recurring-head{display:flex;justify-content:space-between;gap:8px;font-weight:900}
-    .recurring-actions{display:flex;gap:7px;margin-top:8px}
-    .recurring-actions button{padding:7px 12px;font-size:.8rem}
-    .total-box{background:#f0fff7;border:1px solid #c6ead6;border-radius:12px;padding:12px;
-      display:flex;justify-content:space-between;font-weight:900;margin-bottom:10px}
-    .save-area{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 20px;
-      background:linear-gradient(to top,var(--bg) 75%,transparent);z-index:10}
-    .save{display:block;width:min(580px,100%);margin:auto;padding:15px;font-size:1.05rem;
-      background:linear-gradient(135deg,#ffb84d,#ff8c00)}
-    .toast{display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);
-      background:var(--safe);color:white;padding:11px 20px;border-radius:999px;font-weight:900;z-index:20}
-    @media(max-width:420px){.budget-grid{grid-template-columns:1fr 105px 34px}.fund-action{grid-template-columns:1fr 1fr}.fund-action input{grid-column:1/-1}.recurring-form{grid-template-columns:1fr}}
+      background:linear-gradient(180deg,#fff2bf 0%,var(--bg) 220px);
+      color:var(--text);line-height:1.6;padding-bottom:120px;min-height:100svh}
+
+    /* ヘッダー */
+    header{padding:16px 16px 8px;display:flex;align-items:center;gap:12px}
+    .back-btn{border:none;background:#fff3d1;border:1px solid #ebd19a;border-radius:999px;
+      padding:8px 14px;font-size:.88rem;font-weight:700;cursor:pointer;color:#5b3a05;white-space:nowrap}
+    header h1{margin:0;font-size:1.35rem;font-weight:800;letter-spacing:.02em}
+
+    /* メインエリア */
+    .app{width:min(560px,100%);margin:0 auto;padding:4px 14px}
+
+    /* カード共通 */
+    .card{background:rgba(255,255,255,.94);border:1px solid rgba(234,223,201,.9);
+      border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+
+    /* 収入/支出 切り替え */
+    .type-switch{display:flex;border-radius:999px;background:#f0ead8;padding:4px;gap:4px;margin-bottom:16px;width:fit-content;margin-left:auto;margin-right:auto}
+    .type-btn{border:none;border-radius:999px;padding:9px 24px;font-size:1rem;font-weight:800;
+      cursor:pointer;background:transparent;color:var(--muted);transition:all .15s}
+    .type-btn.active-expense{background:linear-gradient(135deg,#ffb84d,#ff8c00);color:#3e2600;box-shadow:0 3px 8px rgba(180,100,0,.2)}
+    .type-btn.active-income{background:linear-gradient(135deg,#4ecb7f,#2e9f62);color:#fff;box-shadow:0 3px 8px rgba(30,120,60,.2)}
+
+    /* 金額入力（一番目立つ） */
+    .amount-section{text-align:center;padding:16px 18px 20px}
+    .amount-label{font-size:.88rem;font-weight:700;color:var(--muted);margin-bottom:8px}
+    .amount-input-wrap{position:relative;display:inline-flex;align-items:center;gap:0}
+    .amount-prefix{font-size:2rem;font-weight:800;color:#b06800;margin-right:4px;line-height:1}
+    #amount{
+      width:200px;border:none;border-bottom:3px solid var(--main);border-radius:0;
+      padding:6px 4px;font-size:2.4rem;font-weight:900;background:transparent;
+      color:#3e2600;text-align:right;outline:none;
+      -moz-appearance:textfield
+    }
+    #amount::-webkit-outer-spin-button,#amount::-webkit-inner-spin-button{-webkit-appearance:none}
+    #amount:focus{border-bottom-color:#ff8c00}
+    .amount-suffix{font-size:2rem;font-weight:800;color:#b06800;margin-left:4px;line-height:1}
+
+    /* 日付 */
+    .date-row{display:flex;align-items:center;gap:10px}
+    .date-row label{font-size:.88rem;font-weight:700;white-space:nowrap;color:var(--muted)}
+    #date{flex:1;border:1px solid var(--line);border-radius:10px;
+      padding:10px 12px;font-size:1rem;background:#fffdf8;color:var(--text)}
+
+    /* 支払い元ボタン */
+    .section-label{font-size:.88rem;font-weight:700;color:var(--muted);margin-bottom:10px}
+    .payment-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .pay-btn{border:2px solid var(--line);border-radius:14px;padding:14px 10px;
+      font-size:1rem;font-weight:800;cursor:pointer;background:#fffdf8;color:var(--text);
+      text-align:center;transition:all .15s ease;line-height:1.3}
+    .pay-btn:active{transform:scale(.96)}
+    .pay-btn.selected{border-color:var(--main);background:linear-gradient(135deg,#fff3cc,#ffe8a0);color:#3e2600;
+      box-shadow:0 4px 12px rgba(180,120,0,.18)}
+    .pay-btn.pink-pay.selected{border-color:#ff7baa;background:linear-gradient(135deg,#ffe3ef,#ffd0e3);
+      box-shadow:0 4px 12px rgba(200,50,100,.18)}
+    .pay-btn.pink-pay{border-color:#ffc3dc}
+    .pay-icon{font-size:1.3rem;display:block;margin-bottom:2px}
+    .pay-name{font-size:.88rem}
+
+    /* カテゴリ（任意） */
+    details.category-details{margin-top:0}
+    details.category-details summary{
+      font-size:.88rem;font-weight:700;color:var(--muted);cursor:pointer;
+      padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px
+    }
+    details.category-details summary::before{content:"▶";font-size:.7rem;transition:.2s}
+    details[open].category-details summary::before{content:"▼"}
+    #category{width:100%;border:1px solid var(--line);border-radius:10px;
+      padding:10px 12px;font-size:.95rem;background:#fffdf8;color:var(--text);margin-top:8px}
+    .split-toggle{display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:800;cursor:pointer}
+    .split-toggle input{width:20px;height:20px}
+    .split-area{display:none;margin-top:12px}
+    .split-area.open{display:block}
+    .split-row{display:grid;grid-template-columns:1fr 120px 36px;gap:7px;margin-bottom:8px}
+    .split-row select,.split-row input{min-width:0;width:100%;border:1px solid var(--line);border-radius:10px;
+      padding:9px 8px;font-size:.9rem;background:#fffdf8}
+    .split-remove{border:none;border-radius:10px;background:#fff1f2;color:#a4161a;font-weight:900}
+    .split-summary{font-size:.82rem;font-weight:700;margin-top:8px;color:var(--muted)}
+    .split-summary.ng{color:var(--danger)}
+    .split-add{border:1px solid #ebd19a;border-radius:999px;background:#fff3d1;color:#5b3a05;
+      padding:8px 13px;font-size:.84rem;font-weight:800}
+
+    /* メモ */
+    .memo-label{font-size:.88rem;font-weight:700;color:var(--muted);margin-bottom:8px}
+    #memo{width:100%;border:1px solid var(--line);border-radius:10px;
+      padding:10px 12px;font-size:1rem;background:#fffdf8;color:var(--text);
+      min-height:56px;resize:vertical;font-family:inherit}
+    #memo:focus{outline:none;border-color:var(--main)}
+
+    /* クイックメモボタン */
+    .quick-label{font-size:.8rem;color:var(--muted);margin:8px 0 6px;font-weight:700}
+    .quick-btns{display:flex;flex-wrap:wrap;gap:6px}
+    .quick-btn{border:1px solid var(--line);border-radius:999px;padding:6px 12px;
+      font-size:.82rem;font-weight:700;cursor:pointer;background:#fff9ed;color:#5b3a05;
+      white-space:nowrap;transition:all .12s}
+    .quick-btn:active{background:#ffe8a0;border-color:#ddb850}
+
+    /* 引落月 */
+    .settle-row{display:flex;align-items:center;gap:10px;margin-top:2px}
+    .settle-row label{font-size:.85rem;font-weight:700;white-space:nowrap;color:var(--muted)}
+    #settleMonth{flex:1;border:1px solid var(--line);border-radius:10px;
+      padding:9px 12px;font-size:.95rem;background:#fffdf8;color:var(--text)}
+    .settle-hint{font-size:.78rem;color:var(--muted);margin-top:4px}
+
+    /* 完了メッセージ */
+    .toast{
+      display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);
+      background:#2e9f62;color:#fff;border-radius:999px;
+      padding:12px 24px;font-size:1rem;font-weight:800;z-index:200;
+      box-shadow:0 6px 20px rgba(30,100,50,.28);white-space:nowrap;
+      animation:toastIn .2s ease
+    }
+    @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+    /* 下部ボタン */
+    .bottom-buttons{position:fixed;bottom:0;left:0;right:0;
+      background:linear-gradient(to top,var(--bg) 70%,transparent);
+      padding:12px 16px;display:flex;flex-direction:column;gap:8px;
+      align-items:stretch;max-width:560px;margin:0 auto}
+    /* fixedはmax-width効かないので中央寄せ工夫 */
+    .bottom-buttons-outer{position:fixed;bottom:0;left:0;right:0;z-index:100;
+      background:linear-gradient(to top,var(--bg) 75%,transparent);
+      padding:12px 16px 20px}
+    .bottom-buttons-inner{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+
+    .save-btn{border:none;border-radius:999px;padding:16px;font-size:1.1rem;font-weight:900;
+      cursor:pointer;background:linear-gradient(135deg,#ffb84d,#ff8c00);color:#3e2600;
+      box-shadow:0 5px 16px rgba(180,100,0,.28);letter-spacing:.03em}
+    .save-btn:active{transform:scale(.97)}
+    .sub-buttons{display:flex;gap:10px}
+    .continue-btn,.back-link{flex:1;border:none;border-radius:999px;padding:12px;
+      font-size:.9rem;font-weight:800;cursor:pointer;text-align:center;text-decoration:none;
+      display:flex;align-items:center;justify-content:center}
+    .continue-btn{background:#fff3d1;border:1px solid #ebd19a;color:#5b3a05}
+    .back-link{background:#f0f0f0;border:1px solid #ddd;color:#555}
+
+    /* セパレータ付き非活性状態 */
+    .save-btn:disabled{opacity:.5;pointer-events:none}
+
+    @media(max-width:360px){
+      .payment-buttons{grid-template-columns:1fr 1fr}
+      .pay-btn{padding:12px 8px;font-size:.9rem}
+    }
   </style>
 </head>
 <body>
-  <header><a class="back" href="kakeibo-app.html">← 戻る</a><h1>🎯 予算・積み立て</h1></header>
-  <main>
-    <section class="card">
-      <h2>🌸 楽天PINKの月目標</h2>
-      <p class="hint">超えてからではなく、今のペースで超えそうな時点から家計簿画面で知らせます。</p>
-      <label class="field" for="pinkGoal">毎月の利用上限</label>
-      <div class="money"><input id="pinkGoal" type="number" inputmode="numeric" min="0" step="1000"><span>円</span></div>
-    </section>
+  <header>
+    <button class="back-btn" id="backBtn">← 戻る</button>
+    <h1>💸 支出を入力</h1>
+  </header>
 
-    <section class="card">
-      <h2>🍪 カテゴリ別の月予算</h2>
-      <p class="hint">管理したい項目だけでOK。使わなかった分は月末にリセットします。</p>
-      <div id="budgetRows"></div>
-      <button type="button" class="secondary" id="addBudget">＋ 予算項目を追加</button>
-    </section>
+  <main class="app">
 
-    <section class="card" id="recurring">
-      <h2>🔁 毎月の定期入力</h2>
-      <p class="hint">指定日を過ぎて家計簿を開くと自動計上します。31日は短い月のみ月末扱いです。</p>
-      <div class="recurring-form">
-        <select id="recType" aria-label="収入または支出"><option value="expense">支出</option><option value="income">収入</option></select>
-        <input id="recMemo" class="wide" type="text" placeholder="名前（例：国保）">
-        <input id="recAmount" type="number" inputmode="numeric" min="1" step="1" placeholder="金額">
-        <input id="recDay" type="number" inputmode="numeric" min="1" max="31" placeholder="毎月の日付">
-        <select id="recPayment" aria-label="口座">
-          <option>楽天PINK</option><option>楽天VISA</option><option>現金</option><option>auじぶん銀行</option>
-          <option>ゆうちょ銀行</option><option>福岡中央銀行</option><option>福岡銀行</option>
-        </select>
-        <select id="recCategory" aria-label="カテゴリ"></select>
-        <input id="recStartMonth" type="month" class="wide" aria-label="開始月">
-        <button type="button" class="wide" id="saveRecurring">＋ 定期入力を登録</button>
+    <!-- 金額（一番目立つ） -->
+    <div class="card amount-section">
+      <div class="type-switch">
+        <button type="button" class="type-btn active-expense" id="typeExpense">💸 支出</button>
+        <button type="button" class="type-btn" id="typeIncome">💰 収入</button>
       </div>
-      <div id="recurringList"></div>
-    </section>
+      <div class="amount-label" id="amountLabel">いくら使いましたか？</div>
+      <div class="amount-input-wrap">
+        <span class="amount-prefix">¥</span>
+        <input type="number" id="amount" inputmode="numeric" min="0" step="1" placeholder="0" autofocus>
+        <span class="amount-suffix">円</span>
+      </div>
+    </div>
 
-    <section class="card" id="funds">
-      <h2>🌱 目的別積み立て</h2>
-      <p class="hint">「確保」で残高が増え、「使用」で減ります。月をまたいでも残高は残ります。</p>
-      <div class="total-box"><span>積み立て合計</span><span id="fundTotal">0円</span></div>
-      <div id="fundList"></div>
-      <button type="button" class="secondary" id="addFund">＋ 積み立て先を追加</button>
-    </section>
+    <!-- 日付 -->
+    <div class="card">
+      <div class="date-row">
+        <label for="date">📅 日付</label>
+        <input type="date" id="date">
+      </div>
+    </div>
+
+    <!-- 支払い元 -->
+    <div class="card">
+      <div class="section-label" id="paymentLabel">💳 支払い元（必ず選択）</div>
+      <div class="payment-buttons">
+        <button type="button" class="pay-btn pink-pay" data-payment="楽天PINK">
+          <span class="pay-icon">🌸</span>
+          <span class="pay-name">楽天PINK</span>
+        </button>
+        <button type="button" class="pay-btn" data-payment="楽天VISA">
+          <span class="pay-icon">💳</span>
+          <span class="pay-name">楽天VISA</span>
+        </button>
+        <button type="button" class="pay-btn" data-payment="現金">
+          <span class="pay-icon">💴</span>
+          <span class="pay-name">現金</span>
+        </button>
+        <button type="button" class="pay-btn" data-payment="auじぶん銀行">
+          <span class="pay-icon">🏦</span>
+          <span class="pay-name">auじぶん銀行</span>
+        </button>
+        <button type="button" class="pay-btn" data-payment="ゆうちょ銀行">
+          <span class="pay-icon">🏣</span>
+          <span class="pay-name">ゆうちょ銀行</span>
+        </button>
+        <button type="button" class="pay-btn" data-payment="福岡中央銀行">
+          <span class="pay-icon">🏦</span>
+          <span class="pay-name">福岡中央銀行</span>
+        </button>
+        <button type="button" class="pay-btn" data-payment="福岡銀行">
+          <span class="pay-icon">🏦</span>
+          <span class="pay-name">福岡銀行</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- メモ（クイックボタン付き） -->
+    <div class="card">
+      <div class="memo-label">📝 メモ（任意）</div>
+      <textarea id="memo" placeholder="例：日用品・外食・学校など"></textarea>
+      <div class="quick-label">よく使うメモ：</div>
+      <div class="quick-btns">
+        <button type="button" class="quick-btn" data-memo="立替">立替</button>
+        <button type="button" class="quick-btn" data-memo="祖母">祖母</button>
+        <button type="button" class="quick-btn" data-memo="祖母（立替）">祖母（立替）</button>
+        <button type="button" class="quick-btn" data-memo="祖母（医療費）">祖母（医療費）</button>
+        <button type="button" class="quick-btn" data-memo="日用品">日用品</button>
+        <button type="button" class="quick-btn" data-memo="食費">食費</button>
+        <button type="button" class="quick-btn" data-memo="ガソリン">ガソリン</button>
+        <button type="button" class="quick-btn" data-memo="学校">学校</button>
+        <button type="button" class="quick-btn" data-memo="子ども">子ども</button>
+        <button type="button" class="quick-btn" data-memo="病院">病院</button>
+        <button type="button" class="quick-btn" data-memo="外食">外食</button>
+        <button type="button" class="quick-btn" data-memo="立替-仕事">立替-仕事</button>
+        <button type="button" class="quick-btn" data-memo="楽天">楽天</button>
+      </div>
+    </div>
+
+    <!-- カテゴリ（折りたたみ・任意） -->
+    <div class="card">
+      <details class="category-details">
+        <summary>🗂 カテゴリ（任意・開いて選択）</summary>
+        <select id="category">
+          <option value="その他">選択しない（その他）</option>
+          <option value="食費">食費</option>
+          <option value="おやつ">おやつ</option>
+          <option value="日用品">日用品</option>
+          <option value="医療費">医療費</option>
+          <option value="子ども">子ども</option>
+          <option value="学校">学校</option>
+          <option value="習い事">習い事</option>
+          <option value="ゲーム・娯楽">ゲーム・娯楽</option>
+          <option value="美容">美容</option>
+          <option value="犬">犬</option>
+          <option value="交通・ガソリン">交通・ガソリン</option>
+          <option value="外食">外食</option>
+          <option value="仕事立替">仕事立替</option>
+          <option value="固定費">固定費</option>
+          <option value="特別費">特別費</option>
+        </select>
+      </details>
+    </div>
+
+    <!-- レシート内訳 -->
+    <div class="card" id="splitCard">
+      <label class="split-toggle">
+        <input type="checkbox" id="splitEnabled">
+        🧾 レシートの内訳を分ける
+      </label>
+      <div class="split-area" id="splitArea">
+        <p class="settle-hint">食費とおやつなど、予算管理したいものだけ分ければOKです。</p>
+        <div id="splitRows"></div>
+        <button type="button" class="split-add" id="addSplit">＋ 内訳を追加</button>
+        <div class="split-summary" id="splitSummary"></div>
+      </div>
+    </div>
+
+    <!-- 引落月 -->
+    <div class="card">
+      <div class="settle-row">
+        <label for="settleMonth">🗓 引落・反映月</label>
+        <input type="month" id="settleMonth">
+      </div>
+      <div class="settle-hint" id="settleHint">クレジットは翌月、現金は当月が自動でセットされます。</div>
+    </div>
+
   </main>
-  <div class="toast" id="toast">保存しました</div>
-  <div class="save-area"><button type="button" class="save" id="saveBtn">設定を保存する</button></div>
+
+  <!-- トースト -->
+  <div class="toast" id="toast">✅ 登録しました！</div>
+
+  <!-- 下部ボタン -->
+  <div class="bottom-buttons-outer">
+    <div class="bottom-buttons-inner">
+      <button type="button" class="save-btn" id="saveBtn">登録する</button>
+      <div class="sub-buttons">
+        <button type="button" class="continue-btn" id="continueBtn">続けて入力</button>
+        <a class="back-link" id="homeLink" href="kakeibo-app.html">今月の状況にもどる</a>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const STORAGE_KEY="kakeibo-app-stable-v3";
-    const PLAN_KEY="kakeibo-plan-v1";
-    const SETTINGS_KEY="kakeibo-cloud-settings-v1";
-    const APP_KEY="kakeibo-app";
-    const APP_VERSION=4;
-    const DEFAULT_API="https://api.cetus.fun/api/app-data";
-    const CATEGORIES=["おやつ","食費","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","固定費","特別費"];
-    let plan;
-    let editingRecurringId=null;
-    const $=id=>document.getElementById(id);
-    const yen=v=>Number(v||0).toLocaleString("ja-JP")+"円";
-    const makeId=()=>crypto.randomUUID?crypto.randomUUID():"id-"+Date.now()+"-"+Math.random().toString(36).slice(2);
-    const pad=n=>String(n).padStart(2,"0");
-    const today=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
-    const localMonth=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)};
+    const STORAGE_KEY  = "kakeibo-app-stable-v3";
+    const SETTINGS_KEY = "kakeibo-cloud-settings-v1";
+    const PLAN_KEY     = "kakeibo-plan-v1";
+    const APP_KEY      = "kakeibo-app";
+    const APP_VERSION  = 4;
+    const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
 
-    function normalizePlan(raw){
-      const p=raw&&typeof raw==="object"?raw:{};
-      return {version:1,pinkGoal:Math.max(0,Number(p.pinkGoal??50000)),
-        categoryBudgets:p.categoryBudgets&&typeof p.categoryBudgets==="object"?p.categoryBudgets:{"おやつ":4000},
-        funds:Array.isArray(p.funds)?p.funds:[],fundTransactions:Array.isArray(p.fundTransactions)?p.fundTransactions:[],
-        recurringRules:Array.isArray(p.recurringRules)?p.recurringRules:[]};
+    let selectedPayment = "";
+    let entryType = "expense"; // "expense" or "income"
+    const CATEGORIES = ["その他","食費","おやつ","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","仕事立替","固定費","特別費"];
+
+    /* ── ユーティリティ ── */
+    function $(id){return document.getElementById(id)}
+    function pad(n){return String(n).padStart(2,"0")}
+    function todayString(){const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+    function monthString(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)}
+    function makeId(){return crypto.randomUUID ? crypto.randomUUID() : "id-"+Date.now()+"-"+Math.random().toString(36).slice(2)}
+    function isCreditPayment(p){const lc=String(p||"").toLowerCase().replace(/\s/g,"");return lc.includes("pink")||lc.includes("visa")}
+
+    function addMonths(dateStr, months){
+      if(!dateStr) return monthString(new Date());
+      const [y,m] = dateStr.split("-").map(Number);
+      const d = new Date(y, m-1+months, 1);
+      return monthString(d);
     }
-    function load(){
-      try{plan=normalizePlan(JSON.parse(localStorage.getItem(PLAN_KEY)||"null"))}
-      catch(e){plan=normalizePlan(null)}
+
+    function suggestedSettle(){
+      const date = $("date").value || todayString();
+      // 収入は常に当月、支出はクレジットなら翌月
+      const isCredit = entryType === "expense" && isCreditPayment(selectedPayment);
+      return addMonths(date, isCredit ? 1 : 0);
     }
-    function categoryOptions(selected){
-      const all=CATEGORIES.includes(selected)?CATEGORIES:[...CATEGORIES,selected];
-      return all.map(c=>`<option value="${c}"${c===selected?" selected":""}>${c}</option>`).join("");
+
+    function syncSettle(){
+      $("settleMonth").value = suggestedSettle();
+      const hint = isCreditPayment(selectedPayment)
+        ? "クレジットのため翌月引落に設定しました。"
+        : "現金・銀行振込のため当月反映に設定しました。";
+      $("settleHint").textContent = hint;
     }
-    function addBudgetRow(name="おやつ",amount=""){
-      const row=document.createElement("div");row.className="budget-row";
-      row.innerHTML=`<div class="budget-grid"><select aria-label="予算カテゴリ">${categoryOptions(name)}</select>
-        <input type="number" inputmode="numeric" min="0" step="100" placeholder="月予算" value="${amount||""}" aria-label="月予算">
-        <button type="button" class="remove" aria-label="削除">×</button></div>`;
-      row.querySelector(".remove").onclick=()=>row.remove();
-      $("budgetRows").appendChild(row);
+
+    /* ── localStorage ── */
+    function loadEntries(){
+      try{
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved||"[]") : [];
+      }catch(e){ return []; }
     }
-    function fundBalance(id){
-      return plan.fundTransactions.filter(t=>t.fundId===id).reduce((s,t)=>s+(t.type==="withdraw"?-1:1)*Number(t.amount||0),0);
+
+    function saveEntries(list){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     }
-    function renderFunds(){
-      const area=$("fundList");
-      if(!plan.funds.length){area.innerHTML='<p class="hint">まだ積み立て先がありません。</p>'}
-      else area.innerHTML=plan.funds.map(f=>{
-        const recent=plan.fundTransactions.filter(t=>t.fundId===f.id).slice(-3).reverse();
-        return `<div class="fund-card" data-id="${f.id}">
-          <div class="fund-head"><div><div class="fund-name">${escapeHtml(f.name)}</div>
-          <div class="fund-meta">毎月の目安 ${yen(f.monthlyTarget)}</div></div>
-          <div class="fund-balance">${yen(fundBalance(f.id))}</div></div>
-          <div class="fund-action"><input type="number" inputmode="numeric" min="0" step="100" placeholder="金額">
-          <button type="button" data-action="deposit">＋ 確保</button>
-          <button type="button" class="withdraw" data-action="withdraw">− 使用</button></div>
-          <div class="history">${recent.map(t=>`${t.date}　${t.type==="withdraw"?"使用":"確保"} ${yen(t.amount)}`).join("<br>")}</div>
-          <button type="button" class="remove-fund secondary" style="margin-top:9px;padding:6px 11px">積み立て先を削除</button>
-        </div>`;
-      }).join("");
-      area.querySelectorAll("[data-action]").forEach(btn=>btn.onclick=()=>fundAction(btn));
-      area.querySelectorAll(".remove-fund").forEach(btn=>btn.onclick=()=>removeFund(btn.closest(".fund-card").dataset.id));
-      $("fundTotal").textContent=yen(plan.funds.reduce((s,f)=>s+fundBalance(f.id),0));
+
+    /* ── クラウド設定 ── */
+    function getCloudSettings(){
+      try{
+        const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}");
+        return { apiUrl:s.apiUrl||DEFAULT_API, password:s.password||"", autoCloudSave:!!s.autoCloudSave };
+      }catch(e){ return {apiUrl:DEFAULT_API,password:"",autoCloudSave:false}; }
     }
-    function escapeHtml(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
-    function fundAction(btn){
-      const card=btn.closest(".fund-card"),amount=Number(card.querySelector("input").value||0);
-      if(amount<=0){alert("金額を入力してください。");return}
-      const type=btn.dataset.action;
-      if(type==="withdraw"&&amount>fundBalance(card.dataset.id)){if(!confirm("現在残高を超えますが、このまま記録しますか？"))return}
-      plan.fundTransactions.push({id:makeId(),fundId:card.dataset.id,type,amount,date:today(),createdAt:new Date().toISOString()});
-      saveLocal();renderFunds();saveCloud();
+
+    /* ── クラウド保存（サイレント） ── */
+    async function saveToCloud(entries){
+      const s = getCloudSettings();
+      if(!s.password || !s.autoCloudSave) return;
+      try{
+        let plan=null;
+        try{ plan=JSON.parse(localStorage.getItem(PLAN_KEY)||"null"); }catch(e){}
+        const payload = { app:APP_KEY, version:APP_VERSION, entries, plan, savedAt:new Date().toISOString() };
+        await fetch(s.apiUrl, {
+          method:"POST",
+          headers:{"Content-Type":"application/json","X-App-Password":s.password},
+          body:JSON.stringify({key:APP_KEY, app:APP_KEY, data:payload})
+        });
+      }catch(e){ /* サイレント失敗 */ }
     }
-    function removeFund(id){
-      const f=plan.funds.find(x=>x.id===id);
-      if(!confirm(`「${f?.name||"積み立て先"}」と履歴を削除しますか？`))return;
-      plan.funds=plan.funds.filter(x=>x.id!==id);
-      plan.fundTransactions=plan.fundTransactions.filter(t=>t.fundId!==id);
-      saveLocal();renderFunds();
+
+    /* ── 収入/支出 切り替え ── */
+    function selectType(type){
+      entryType = type;
+      const isIncome = type === "income";
+      $("typeExpense").className = "type-btn" + (!isIncome ? " active-expense" : "");
+      $("typeIncome").className  = "type-btn" + ( isIncome ? " active-income"  : "");
+      $("amountLabel").textContent  = isIncome ? "いくら入ってきましたか？" : "いくら使いましたか？";
+      $("paymentLabel").textContent = isIncome ? "💰 入金先（必ず選択）" : "💳 支払い元（必ず選択）";
+      document.querySelector("header h1").textContent = isIncome ? "💰 収入を入力" : "💸 支出を入力";
+      // 収入はクレジット引落ではないので当月固定
+      syncSettle();
     }
-    function addFund(){
-      const name=prompt("積み立て先の名前（例：犬関係）");
-      if(!name||!name.trim())return;
-      const target=Number(prompt("毎月いくら積み立てる目安にしますか？","1000")||0);
-      plan.funds.push({id:makeId(),name:name.trim(),monthlyTarget:Math.max(0,target),createdAt:new Date().toISOString()});
-      saveLocal();renderFunds();
-    }
-    function resetRecurringForm(){
-      editingRecurringId=null;
-      $("recType").value="expense";$("recMemo").value="";$("recAmount").value="";$("recDay").value="";
-      $("recPayment").value="福岡中央銀行";$("recCategory").value="固定費";
-      $("recStartMonth").value=localMonth();
-      $("saveRecurring").textContent="＋ 定期入力を登録";
-    }
-    function renderRecurring(){
-      const area=$("recurringList"),rules=plan.recurringRules||[];
-      if(!rules.length){area.innerHTML='<p class="hint">定期入力はまだありません。</p>';return}
-      area.innerHTML=rules.map(r=>`<div class="recurring-item" data-id="${r.id}">
-        <div class="recurring-head"><span>${escapeHtml(r.memo||"定期入力")}</span><span>${yen(r.amount)}</span></div>
-        <div class="fund-meta">毎月${Number(r.day)}日・${escapeHtml(r.payment)}・${escapeHtml(r.category)}・${r.type==="income"?"収入":"支出"}</div>
-        <div class="recurring-actions"><button type="button" class="secondary edit-recurring">変更</button>
-        <button type="button" class="withdraw delete-recurring">削除</button></div></div>`).join("");
-      area.querySelectorAll(".edit-recurring").forEach(b=>b.onclick=()=>editRecurring(b.closest(".recurring-item").dataset.id));
-      area.querySelectorAll(".delete-recurring").forEach(b=>b.onclick=()=>deleteRecurring(b.closest(".recurring-item").dataset.id));
-    }
-    function editRecurring(id){
-      const r=plan.recurringRules.find(x=>x.id===id);if(!r)return;
-      editingRecurringId=id;$("recType").value=r.type;$("recMemo").value=r.memo;$("recAmount").value=r.amount;
-      $("recDay").value=r.day;$("recPayment").value=r.payment;$("recCategory").value=r.category;
-      $("recStartMonth").value=r.startMonth;$("saveRecurring").textContent="変更を保存";
-      document.getElementById("recurring").scrollIntoView({behavior:"smooth"});
-    }
-    function deleteRecurring(id){
-      const r=plan.recurringRules.find(x=>x.id===id);
-      if(!confirm(`「${r?.memo||"定期入力"}」を削除しますか？\n過去に計上済みの履歴は残ります。`))return;
-      plan.recurringRules=plan.recurringRules.filter(x=>x.id!==id);saveLocal();renderRecurring();saveCloud();
-      if(editingRecurringId===id)resetRecurringForm();
-    }
-    function saveRecurringRule(){
-      const memo=$("recMemo").value.trim(),amount=Number($("recAmount").value),day=Number($("recDay").value);
-      if(!memo){alert("定期入力の名前を入力してください。");return}
-      if(amount<=0){alert("金額を入力してください。");return}
-      if(day<1||day>31){alert("日付は1〜31で入力してください。");return}
-      const rule={id:editingRecurringId||makeId(),type:$("recType").value,memo,amount,day,
-        payment:$("recPayment").value,category:$("recCategory").value,startMonth:$("recStartMonth").value||localMonth(),active:true};
-      const idx=plan.recurringRules.findIndex(x=>x.id===rule.id);
-      if(idx>=0)plan.recurringRules[idx]=rule;else plan.recurringRules.push(rule);
-      saveLocal();renderRecurring();saveCloud();resetRecurringForm();
-    }
-    function collect(){
-      plan.pinkGoal=Math.max(0,Number($("pinkGoal").value||0));
-      plan.categoryBudgets={};
-      $("budgetRows").querySelectorAll(".budget-row").forEach(row=>{
-        const name=row.querySelector("select").value,amount=Number(row.querySelector("input").value||0);
-        if(name&&amount>0)plan.categoryBudgets[name]=amount;
+
+    /* ── 支払いボタン選択 ── */
+    function selectPayment(name){
+      selectedPayment = name;
+      document.querySelectorAll(".pay-btn").forEach(btn => {
+        btn.classList.toggle("selected", btn.dataset.payment === name);
       });
+      syncSettle();
     }
-    function saveLocal(){localStorage.setItem(PLAN_KEY,JSON.stringify(plan))}
-    function cloudSettings(){
-      try{const s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}");return{apiUrl:s.apiUrl||DEFAULT_API,password:s.password||"",autoCloudSave:!!s.autoCloudSave}}
-      catch(e){return{apiUrl:DEFAULT_API,password:"",autoCloudSave:false}}
+
+    /* ── クイックメモ ── */
+    function applyQuickMemo(memo){
+      $("memo").value = memo;
     }
-    async function saveCloud(){
-      const s=cloudSettings();if(!s.password||!s.autoCloudSave)return;
-      let entries=[];try{entries=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch(e){}
-      try{await fetch(s.apiUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Password":s.password},
-        body:JSON.stringify({key:APP_KEY,app:APP_KEY,data:{app:APP_KEY,version:APP_VERSION,entries,plan,savedAt:new Date().toISOString()}})})}catch(e){}
+
+    function splitRow(category,amount){
+      const row=document.createElement("div");
+      row.className="split-row";
+      row.innerHTML=`<select aria-label="内訳カテゴリ">${CATEGORIES.map(c=>`<option value="${c}"${c===category?" selected":""}>${c}</option>`).join("")}</select>
+        <input type="number" inputmode="numeric" min="0" step="1" placeholder="金額" value="${amount||""}" aria-label="内訳金額">
+        <button type="button" class="split-remove" aria-label="内訳を削除">×</button>`;
+      row.querySelector(".split-remove").addEventListener("click",()=>{row.remove();updateSplitSummary();});
+      row.querySelectorAll("select,input").forEach(el=>el.addEventListener("input",updateSplitSummary));
+      $("splitRows").appendChild(row);
     }
-    async function save(){
-      collect();saveLocal();await saveCloud();
-      $("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",1800);
+
+    function resetSplits(){
+      $("splitRows").innerHTML="";
+      splitRow("食費","");
+      splitRow("おやつ","");
+      updateSplitSummary();
     }
+
+    function getSplits(){
+      return [...$("splitRows").querySelectorAll(".split-row")].map(row=>({
+        category:row.querySelector("select").value,
+        amount:Number(row.querySelector("input").value||0)
+      })).filter(x=>x.amount>0);
+    }
+
+    function updateSplitSummary(){
+      const total=Number($("amount").value||0);
+      const sum=getSplits().reduce((s,x)=>s+x.amount,0);
+      const diff=total-sum;
+      $("splitSummary").textContent=diff===0 && total>0 ? "✓ レシート合計と一致しています"
+        : diff>0 ? "あと "+diff.toLocaleString("ja-JP")+"円を振り分けてください"
+        : Math.abs(diff).toLocaleString("ja-JP")+"円オーバーしています";
+      $("splitSummary").classList.toggle("ng",diff!==0);
+    }
+
+    /* ── トースト表示 ── */
+    function showToast(msg){
+      const t = $("toast");
+      t.textContent = msg || "✅ 登録しました！";
+      t.style.display = "block";
+      setTimeout(() => { t.style.display = "none"; }, 2000);
+    }
+
+    /* ── フォームリセット ── */
+    function resetForm(){
+      $("amount").value = "";
+      $("date").value = todayString();
+      $("memo").value = "";
+      $("category").value = "その他";
+      $("splitEnabled").checked=false;
+      $("splitArea").classList.remove("open");
+      resetSplits();
+      selectedPayment = "";
+      document.querySelectorAll(".pay-btn").forEach(btn => btn.classList.remove("selected"));
+      // 種別はリセットせず継続（続けて収入入力しやすいように）
+      syncSettle();
+      $("amount").focus();
+    }
+
+    /* ── 登録処理 ── */
+    async function doSave(){
+      const amount = Number($("amount").value);
+      const date   = $("date").value;
+
+      if(!date){
+        alert("日付を確認してください。"); return;
+      }
+      if(!amount || amount <= 0){
+        alert("金額を入力してください。"); return;
+      }
+      if(!selectedPayment){
+        alert("支払い元を選択してください。"); return;
+      }
+
+      const now = new Date().toISOString();
+      const baseEntry = {
+        date:        date,
+        type:        entryType,
+        amount:      amount,
+        payment:     selectedPayment,
+        category:    $("category").value || "その他",
+        settleMonth: $("settleMonth").value || date.slice(0,7),
+        memo:        $("memo").value.trim(),
+        createdAt:   now,
+        updatedAt:   now
+      };
+
+      const entries = loadEntries();
+      if(entryType==="expense" && $("splitEnabled").checked){
+        const splits=getSplits();
+        const splitTotal=splits.reduce((s,x)=>s+x.amount,0);
+        if(!splits.length || splitTotal!==amount){
+          alert("内訳の合計をレシート金額と一致させてください。"); return;
+        }
+        const receiptId=makeId();
+        splits.forEach((part,index)=>entries.push({
+          ...baseEntry,id:makeId(),amount:part.amount,category:part.category,
+          receiptId,receiptTotal:amount,splitIndex:index,splitCount:splits.length
+        }));
+      }else{
+        entries.push({...baseEntry,id:makeId()});
+      }
+      saveEntries(entries);
+
+      // クラウド自動保存
+      await saveToCloud(entries);
+
+      showToast(entryType === "income" ? "💰 収入を登録しました！" : "✅ 支出を登録しました！");
+      return true;
+    }
+
+    /* ── 初期化 ── */
     function init(){
-      load();$("pinkGoal").value=plan.pinkGoal;
-      $("recCategory").innerHTML=CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join("");
-      Object.entries(plan.categoryBudgets).forEach(([n,a])=>addBudgetRow(n,a));
-      renderFunds();
-      renderRecurring();resetRecurringForm();
-      $("addBudget").onclick=()=>addBudgetRow("おやつ","");
-      $("addFund").onclick=addFund;$("saveRecurring").onclick=saveRecurringRule;$("saveBtn").onclick=save;
+      $("date").value = todayString();
+      resetSplits();
+      syncSettle();
+
+      // 収入/支出 切り替え
+      $("typeExpense").addEventListener("click", () => selectType("expense"));
+      $("typeIncome").addEventListener("click",  () => selectType("income"));
+
+      // 支払いボタン
+      document.querySelectorAll(".pay-btn").forEach(btn => {
+        btn.addEventListener("click", () => selectPayment(btn.dataset.payment));
+      });
+
+      // クイックメモ
+      document.querySelectorAll(".quick-btn").forEach(btn => {
+        btn.addEventListener("click", () => applyQuickMemo(btn.dataset.memo));
+      });
+
+      // 日付変更で引落月を再計算
+      $("date").addEventListener("change", syncSettle);
+      $("amount").addEventListener("input", updateSplitSummary);
+      $("splitEnabled").addEventListener("change",()=>{
+        $("splitArea").classList.toggle("open",$("splitEnabled").checked);
+        updateSplitSummary();
+      });
+      $("addSplit").addEventListener("click",()=>splitRow("その他",""));
+
+      // 登録ボタン
+      $("saveBtn").addEventListener("click", async () => {
+        const ok = await doSave();
+        if(ok) resetForm();
+      });
+
+      // 続けて入力
+      $("continueBtn").addEventListener("click", async () => {
+        const ok = await doSave();
+        if(ok) resetForm();
+      });
+
+      // 戻るボタン
+      $("backBtn").addEventListener("click", () => { location.href = "kakeibo-app.html"; });
+
+      // 戻るリンクはhrefで対応済み
     }
-    window.addEventListener("DOMContentLoaded",init);
+
+    window.addEventListener("DOMContentLoaded", init);
   </script>
 </body>
 </html>

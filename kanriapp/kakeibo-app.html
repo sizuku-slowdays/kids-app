@@ -440,10 +440,9 @@
       pinkGoal:50000,
       categoryBudgets:{"おやつ":4000},
       funds:[],
-      fundTransactions:[],
-      recurringRules:[]
+      fundTransactions:[]
     };
-    const PAYMENTS     = ["楽天PINK","楽天VISA","現金","auじぶん銀行","ゆうちょ銀行","福岡中央銀行","福岡銀行"];
+    const PAYMENTS     = ["楽天PINK","楽天VISA","現金","auじぶん銀行"];
 
     let entries      = [];
     let plan         = structuredClone(DEFAULT_PLAN);
@@ -477,8 +476,6 @@
         receiptTotal:Number(e.receiptTotal || 0),
         splitIndex:  Number(e.splitIndex || 0),
         splitCount:  Number(e.splitCount || 0),
-        recurringRuleId:e.recurringRuleId || "",
-        recurringMonth:e.recurringMonth || "",
         createdAt:   e.createdAt || new Date().toISOString(),
         updatedAt:   e.updatedAt || e.createdAt || new Date().toISOString()
       };
@@ -492,57 +489,8 @@
         categoryBudgets:p.categoryBudgets && typeof p.categoryBudgets === "object"
           ? p.categoryBudgets : {...DEFAULT_PLAN.categoryBudgets},
         funds:Array.isArray(p.funds) ? p.funds : [],
-        fundTransactions:Array.isArray(p.fundTransactions) ? p.fundTransactions : [],
-        recurringRules:Array.isArray(p.recurringRules) ? p.recurringRules : []
+        fundTransactions:Array.isArray(p.fundTransactions) ? p.fundTransactions : []
       };
-    }
-
-    function addMonthsToMonth(month,delta){
-      const [y,m]=month.split("-").map(Number);
-      return monthString(new Date(y,m-1+delta,1));
-    }
-
-    function scheduledDate(month,day){
-      const [y,m]=month.split("-").map(Number);
-      const last=new Date(y,m,0).getDate();
-      return month+"-"+pad(Math.min(Math.max(1,Number(day||1)),last));
-    }
-
-    async function ensureRecurringEntries(){
-      const rules=(plan.recurringRules||[]).filter(r=>r.active!==false);
-      if(!rules.length) return 0;
-      const now=new Date();
-      const today=now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate());
-      const current=monthString(new Date(now.getFullYear(),now.getMonth(),1));
-      let added=0;
-      for(const rule of rules){
-        let month=rule.startMonth||current;
-        let guard=0;
-        while(month<=current && guard++<120){
-          const date=scheduledDate(month,rule.day);
-          const exists=entries.some(e=>e.recurringRuleId===rule.id && e.recurringMonth===month);
-          if(!exists && date<=today){
-            const isCredit=rule.type!=="income" && /pink|visa/i.test(String(rule.payment||""));
-            entries.push(normalizeEntry({
-              id:makeId(),date,type:rule.type==="income"?"income":"expense",
-              amount:Number(rule.amount||0),payment:rule.payment||"その他",
-              category:rule.category||"固定費",memo:rule.memo||"定期入力",
-              settleMonth:rule.type==="income"?month:(isCredit?addMonthsToMonth(month,1):month),
-              recurringRuleId:rule.id,recurringMonth:month,
-              createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
-            }));
-            added++;
-          }
-          month=addMonthsToMonth(month,1);
-        }
-      }
-      if(added){
-        saveLocal();
-        await saveToCloudSilent();
-        render();
-        showToast("🔁 定期入力を "+added+"件、自動計上しました");
-      }
-      return added;
     }
 
     /* ── ストレージ ── */
@@ -1077,7 +1025,6 @@
 
       // パスワード設定済みなら、起動時はクラウドを自動で最新化する
       if(_s.password) await loadFromCloud({silent:true});
-      await ensureRecurringEntries();
 
       document.addEventListener("visibilitychange", () => {
         if(!document.hidden){ loadEntries(); loadPlan(); render(); }

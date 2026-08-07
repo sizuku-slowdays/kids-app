@@ -40,12 +40,6 @@
     .fund-action button{padding:8px;font-size:.8rem}
     .withdraw{background:#fff1f2;color:#a4161a;border:1px solid #f4a7af}
     .history{font-size:.78rem;color:var(--muted);margin-top:8px}
-    .recurring-form{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
-    .recurring-form .wide{grid-column:1/-1}
-    .recurring-item{border:1px solid var(--line);background:#fff9ed;border-radius:13px;padding:11px;margin-bottom:9px}
-    .recurring-head{display:flex;justify-content:space-between;gap:8px;font-weight:900}
-    .recurring-actions{display:flex;gap:7px;margin-top:8px}
-    .recurring-actions button{padding:7px 12px;font-size:.8rem}
     .total-box{background:#f0fff7;border:1px solid #c6ead6;border-radius:12px;padding:12px;
       display:flex;justify-content:space-between;font-weight:900;margin-bottom:10px}
     .save-area{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 20px;
@@ -54,7 +48,7 @@
       background:linear-gradient(135deg,#ffb84d,#ff8c00)}
     .toast{display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);
       background:var(--safe);color:white;padding:11px 20px;border-radius:999px;font-weight:900;z-index:20}
-    @media(max-width:420px){.budget-grid{grid-template-columns:1fr 105px 34px}.fund-action{grid-template-columns:1fr 1fr}.fund-action input{grid-column:1/-1}.recurring-form{grid-template-columns:1fr}}
+    @media(max-width:420px){.budget-grid{grid-template-columns:1fr 105px 34px}.fund-action{grid-template-columns:1fr 1fr}.fund-action input{grid-column:1/-1}}
   </style>
 </head>
 <body>
@@ -72,25 +66,6 @@
       <p class="hint">管理したい項目だけでOK。使わなかった分は月末にリセットします。</p>
       <div id="budgetRows"></div>
       <button type="button" class="secondary" id="addBudget">＋ 予算項目を追加</button>
-    </section>
-
-    <section class="card" id="recurring">
-      <h2>🔁 毎月の定期入力</h2>
-      <p class="hint">指定日を過ぎて家計簿を開くと自動計上します。31日は短い月のみ月末扱いです。</p>
-      <div class="recurring-form">
-        <select id="recType" aria-label="収入または支出"><option value="expense">支出</option><option value="income">収入</option></select>
-        <input id="recMemo" class="wide" type="text" placeholder="名前（例：国保）">
-        <input id="recAmount" type="number" inputmode="numeric" min="1" step="1" placeholder="金額">
-        <input id="recDay" type="number" inputmode="numeric" min="1" max="31" placeholder="毎月の日付">
-        <select id="recPayment" aria-label="口座">
-          <option>楽天PINK</option><option>楽天VISA</option><option>現金</option><option>auじぶん銀行</option>
-          <option>ゆうちょ銀行</option><option>福岡中央銀行</option><option>福岡銀行</option>
-        </select>
-        <select id="recCategory" aria-label="カテゴリ"></select>
-        <input id="recStartMonth" type="month" class="wide" aria-label="開始月">
-        <button type="button" class="wide" id="saveRecurring">＋ 定期入力を登録</button>
-      </div>
-      <div id="recurringList"></div>
     </section>
 
     <section class="card" id="funds">
@@ -113,20 +88,16 @@
     const DEFAULT_API="https://api.cetus.fun/api/app-data";
     const CATEGORIES=["おやつ","食費","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","固定費","特別費"];
     let plan;
-    let editingRecurringId=null;
     const $=id=>document.getElementById(id);
     const yen=v=>Number(v||0).toLocaleString("ja-JP")+"円";
     const makeId=()=>crypto.randomUUID?crypto.randomUUID():"id-"+Date.now()+"-"+Math.random().toString(36).slice(2);
-    const pad=n=>String(n).padStart(2,"0");
-    const today=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
-    const localMonth=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)};
+    const today=()=>{const d=new Date();return d.toISOString().slice(0,10)};
 
     function normalizePlan(raw){
       const p=raw&&typeof raw==="object"?raw:{};
       return {version:1,pinkGoal:Math.max(0,Number(p.pinkGoal??50000)),
         categoryBudgets:p.categoryBudgets&&typeof p.categoryBudgets==="object"?p.categoryBudgets:{"おやつ":4000},
-        funds:Array.isArray(p.funds)?p.funds:[],fundTransactions:Array.isArray(p.fundTransactions)?p.fundTransactions:[],
-        recurringRules:Array.isArray(p.recurringRules)?p.recurringRules:[]};
+        funds:Array.isArray(p.funds)?p.funds:[],fundTransactions:Array.isArray(p.fundTransactions)?p.fundTransactions:[]};
     }
     function load(){
       try{plan=normalizePlan(JSON.parse(localStorage.getItem(PLAN_KEY)||"null"))}
@@ -190,48 +161,6 @@
       plan.funds.push({id:makeId(),name:name.trim(),monthlyTarget:Math.max(0,target),createdAt:new Date().toISOString()});
       saveLocal();renderFunds();
     }
-    function resetRecurringForm(){
-      editingRecurringId=null;
-      $("recType").value="expense";$("recMemo").value="";$("recAmount").value="";$("recDay").value="";
-      $("recPayment").value="福岡中央銀行";$("recCategory").value="固定費";
-      $("recStartMonth").value=localMonth();
-      $("saveRecurring").textContent="＋ 定期入力を登録";
-    }
-    function renderRecurring(){
-      const area=$("recurringList"),rules=plan.recurringRules||[];
-      if(!rules.length){area.innerHTML='<p class="hint">定期入力はまだありません。</p>';return}
-      area.innerHTML=rules.map(r=>`<div class="recurring-item" data-id="${r.id}">
-        <div class="recurring-head"><span>${escapeHtml(r.memo||"定期入力")}</span><span>${yen(r.amount)}</span></div>
-        <div class="fund-meta">毎月${Number(r.day)}日・${escapeHtml(r.payment)}・${escapeHtml(r.category)}・${r.type==="income"?"収入":"支出"}</div>
-        <div class="recurring-actions"><button type="button" class="secondary edit-recurring">変更</button>
-        <button type="button" class="withdraw delete-recurring">削除</button></div></div>`).join("");
-      area.querySelectorAll(".edit-recurring").forEach(b=>b.onclick=()=>editRecurring(b.closest(".recurring-item").dataset.id));
-      area.querySelectorAll(".delete-recurring").forEach(b=>b.onclick=()=>deleteRecurring(b.closest(".recurring-item").dataset.id));
-    }
-    function editRecurring(id){
-      const r=plan.recurringRules.find(x=>x.id===id);if(!r)return;
-      editingRecurringId=id;$("recType").value=r.type;$("recMemo").value=r.memo;$("recAmount").value=r.amount;
-      $("recDay").value=r.day;$("recPayment").value=r.payment;$("recCategory").value=r.category;
-      $("recStartMonth").value=r.startMonth;$("saveRecurring").textContent="変更を保存";
-      document.getElementById("recurring").scrollIntoView({behavior:"smooth"});
-    }
-    function deleteRecurring(id){
-      const r=plan.recurringRules.find(x=>x.id===id);
-      if(!confirm(`「${r?.memo||"定期入力"}」を削除しますか？\n過去に計上済みの履歴は残ります。`))return;
-      plan.recurringRules=plan.recurringRules.filter(x=>x.id!==id);saveLocal();renderRecurring();saveCloud();
-      if(editingRecurringId===id)resetRecurringForm();
-    }
-    function saveRecurringRule(){
-      const memo=$("recMemo").value.trim(),amount=Number($("recAmount").value),day=Number($("recDay").value);
-      if(!memo){alert("定期入力の名前を入力してください。");return}
-      if(amount<=0){alert("金額を入力してください。");return}
-      if(day<1||day>31){alert("日付は1〜31で入力してください。");return}
-      const rule={id:editingRecurringId||makeId(),type:$("recType").value,memo,amount,day,
-        payment:$("recPayment").value,category:$("recCategory").value,startMonth:$("recStartMonth").value||localMonth(),active:true};
-      const idx=plan.recurringRules.findIndex(x=>x.id===rule.id);
-      if(idx>=0)plan.recurringRules[idx]=rule;else plan.recurringRules.push(rule);
-      saveLocal();renderRecurring();saveCloud();resetRecurringForm();
-    }
     function collect(){
       plan.pinkGoal=Math.max(0,Number($("pinkGoal").value||0));
       plan.categoryBudgets={};
@@ -257,12 +186,10 @@
     }
     function init(){
       load();$("pinkGoal").value=plan.pinkGoal;
-      $("recCategory").innerHTML=CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join("");
       Object.entries(plan.categoryBudgets).forEach(([n,a])=>addBudgetRow(n,a));
       renderFunds();
-      renderRecurring();resetRecurringForm();
       $("addBudget").onclick=()=>addBudgetRow("おやつ","");
-      $("addFund").onclick=addFund;$("saveRecurring").onclick=saveRecurringRule;$("saveBtn").onclick=save;
+      $("addFund").onclick=addFund;$("saveBtn").onclick=save;
     }
     window.addEventListener("DOMContentLoaded",init);
   </script>

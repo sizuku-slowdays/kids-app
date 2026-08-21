@@ -29,6 +29,12 @@
     .card{background:rgba(255,255,255,.94);border:1px solid rgba(234,223,201,.9);
       border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
     .card h2{margin:0 0 12px;font-size:1.05rem;font-weight:800}
+    .collapse-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      cursor:pointer;user-select:none;-webkit-user-select:none}
+    .card h2.collapse-head{margin-bottom:12px}
+    .collapsible-card.collapsed .collapse-head{margin-bottom:0}
+    .collapse-icon{font-size:.78rem;color:var(--muted);font-weight:900;flex:0 0 auto}
+    .collapse-content[hidden]{display:none}
 
     /* ── クラウド設定（常に最上部・アコーディオン） ── */
     .sync-box{background:linear-gradient(135deg,#eef8ff,#fff);border:2px solid #bfe4ff}
@@ -196,6 +202,20 @@
     .plan-link{display:inline-flex;margin-top:10px;text-decoration:none;border-radius:999px;
       padding:8px 14px;background:#fff3d1;border:1px solid #ebd19a;color:#5b3a05;font-size:.84rem;font-weight:800}
 
+    /* カテゴリ別集計 */
+    .grandma-summary{padding:13px 14px;margin-bottom:12px;border-radius:14px;
+      background:linear-gradient(135deg,#f4ecff,#fff9ff);border:2px solid #d9c2f3}
+    .grandma-total{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      font-size:1rem;font-weight:900;color:#633790}
+    .grandma-total strong{font-size:1.25rem;white-space:nowrap}
+    .grandma-breakdown{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px;
+      font-size:.8rem;font-weight:700;color:#735b86}
+    .category-list{display:grid;gap:8px}
+    .category-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:10px 12px;background:#fff9ed;border:1px solid var(--line);border-radius:12px}
+    .category-name{font-size:.9rem;font-weight:800}
+    .category-amount{font-size:.95rem;font-weight:900;white-space:nowrap}
+
     /* 最近の入力 */
     .recent-list{display:grid;gap:8px}
     .recent-item{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;
@@ -279,7 +299,7 @@
     </div>
 
     <!-- 今月の合計 -->
-    <div class="card">
+    <div class="card" data-collapse-key="summary">
       <h2>📊 今月の合計</h2>
       <div class="summary-grid">
         <div class="summary-box"><div class="summary-label">収入</div><div class="summary-value" id="incomeTotal">―</div></div>
@@ -290,15 +310,30 @@
     </div>
 
     <!-- 支払い元別 -->
-    <div class="card">
+    <div class="card" data-collapse-key="payments">
       <h2>💳 支払い元別 支出</h2>
       <div class="payment-list" id="paymentList">
         <div class="loading">読み込み中…</div>
       </div>
     </div>
 
+    <!-- カテゴリ別 -->
+    <div class="card" data-collapse-key="categories">
+      <h2>🗂 カテゴリ別 支出</h2>
+      <div class="grandma-summary">
+        <div class="grandma-total"><span>👵 祖母関連 合計</span><strong id="grandmaTotal">0円</strong></div>
+        <div class="grandma-breakdown">
+          <span>医療費：<strong id="grandmaMedical">0円</strong></span>
+          <span>利用分：<strong id="grandmaUse">0円</strong></span>
+        </div>
+      </div>
+      <div class="category-list" id="categoryList">
+        <div class="loading">読み込み中…</div>
+      </div>
+    </div>
+
     <!-- PINKカード監視 -->
-    <div class="card pink-box">
+    <div class="card pink-box" data-collapse-key="pink">
       <div class="pink-title">
         <span>🌸 楽天PINKカード</span>
         <span id="pinkTotal">―</span>
@@ -309,21 +344,21 @@
     </div>
 
     <!-- 予算状況 -->
-    <div class="card">
+    <div class="card" data-collapse-key="budgets">
       <h2>🎯 今月の予算</h2>
       <div class="budget-list" id="budgetList"></div>
       <a class="plan-link" href="kakeibo-plan.html">予算・積み立てを設定する →</a>
     </div>
 
     <!-- 積み立て残高 -->
-    <div class="card">
+    <div class="card" data-collapse-key="funds">
       <h2>🌱 目的別積み立て</h2>
       <div class="budget-list" id="fundList"></div>
       <a class="plan-link" href="kakeibo-plan.html#funds">積み立てを管理する →</a>
     </div>
 
     <!-- 最近の入力 -->
-    <div class="card">
+    <div class="card" data-collapse-key="recent">
       <h2>🕐 最近の入力</h2>
       <div class="recent-list" id="recentList">
         <div class="loading">読み込み中…</div>
@@ -438,6 +473,7 @@
     const APP_KEY      = "kakeibo-app";
     const APP_VERSION  = 4;
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
+    const COLLAPSE_KEY = "kakeibo-collapsed-sections-v1";
     const DEFAULT_PLAN = {
       version:1,
       pinkGoal:50000,
@@ -463,6 +499,56 @@
       return String(n||"").toLowerCase().replace(/\s/g,"")
         .replace("楽天ピンク","楽天pink").replace("rakutenpink","楽天pink")
         .replace("楽天ビザ","楽天visa");
+    }
+
+    /* ── 各カードの折りたたみ ── */
+    function loadCollapsedSections(){
+      try{
+        const saved = JSON.parse(localStorage.getItem(COLLAPSE_KEY)||"null");
+        if(saved && typeof saved === "object") return saved;
+      }catch(e){}
+      // 初回は「今月の合計」と「カテゴリ別」だけ開く
+      return {summary:false,payments:true,categories:false,pink:true,budgets:true,funds:true,recent:true};
+    }
+
+    function setupCollapsibleCards(){
+      const states = loadCollapsedSections();
+      document.querySelectorAll("main.app > .card[data-collapse-key]").forEach(card => {
+        const key = card.dataset.collapseKey;
+        const head = card.querySelector(":scope > h2, :scope > .pink-title");
+        if(!head) return;
+
+        card.classList.add("collapsible-card");
+        head.classList.add("collapse-head");
+        head.setAttribute("role","button");
+        head.setAttribute("tabindex","0");
+
+        const content = document.createElement("div");
+        content.className = "collapse-content";
+        while(head.nextSibling) content.appendChild(head.nextSibling);
+        card.appendChild(content);
+
+        const icon = document.createElement("span");
+        icon.className = "collapse-icon";
+        head.appendChild(icon);
+
+        function setCollapsed(collapsed,save){
+          card.classList.toggle("collapsed",collapsed);
+          content.hidden = collapsed;
+          icon.textContent = collapsed ? "▶ 開く" : "▼ 閉じる";
+          head.setAttribute("aria-expanded",String(!collapsed));
+          if(save){
+            states[key] = collapsed;
+            localStorage.setItem(COLLAPSE_KEY,JSON.stringify(states));
+          }
+        }
+        function toggle(){ setCollapsed(!card.classList.contains("collapsed"),true); }
+        head.addEventListener("click",toggle);
+        head.addEventListener("keydown",e=>{
+          if(e.key==="Enter" || e.key===" "){ e.preventDefault(); toggle(); }
+        });
+        setCollapsed(!!states[key],false);
+      });
     }
 
     function normalizeEntry(e){
@@ -651,6 +737,7 @@
       $("incomeNote").textContent   = (viewMode()==="use" ? "利用日" : "引落・反映月") + "ベースで集計しています。";
 
       renderPayments(expenses);
+      renderCategories(expenses);
       renderPink(m);
       renderBudgets(m);
       renderFunds();
@@ -688,6 +775,29 @@
       area.querySelectorAll(".payment-row[data-payment]").forEach(row => {
         row.addEventListener("click", () => openDrawer(row.dataset.payment));
       });
+    }
+
+    function renderCategories(expenses){
+      const totals = new Map();
+      expenses.forEach(e => {
+        const category = e.category || "その他";
+        totals.set(category, (totals.get(category)||0) + Number(e.amount||0));
+      });
+
+      const grandmaMedical = totals.get("祖母・医療費") || 0;
+      const grandmaUse = totals.get("祖母・利用分") || 0;
+      $("grandmaMedical").textContent = yen(grandmaMedical);
+      $("grandmaUse").textContent = yen(grandmaUse);
+      $("grandmaTotal").textContent = yen(grandmaMedical + grandmaUse);
+
+      const rows = [...totals.entries()].sort((a,b) => b[1]-a[1]);
+      const area = $("categoryList");
+      if(!rows.length){
+        area.innerHTML = '<div class="empty">今月の支出はまだありません</div>'; return;
+      }
+      area.innerHTML = rows.map(([name,total]) =>
+        `<div class="category-row"><span class="category-name">${htmlEsc(name)}</span><span class="category-amount">${yen(total)}</span></div>`
+      ).join("");
     }
 
     /* ── 履歴ドロワー ── */
@@ -996,6 +1106,7 @@
       loadEntries();
       loadPlan();
       loadCloudSettingsToForm();
+      setupCollapsibleCards();
       render();
 
       // アコーディオン：パスワード未設定なら最初から開く

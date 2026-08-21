@@ -215,6 +215,9 @@
       padding:10px 12px;background:#fff9ed;border:1px solid var(--line);border-radius:12px}
     .category-name{font-size:.9rem;font-weight:800}
     .category-amount{font-size:.95rem;font-weight:900;white-space:nowrap}
+    .category-detail-toggle{width:100%;margin:0 0 10px;padding:9px 12px;
+      background:#fff3d1;border:1px solid #ebd19a;box-shadow:none;color:#5b3a05;
+      font-size:.84rem}
 
     /* 最近の入力 */
     .recent-list{display:grid;gap:8px}
@@ -327,8 +330,11 @@
           <span>利用分：<strong id="grandmaUse">0円</strong></span>
         </div>
       </div>
-      <div class="category-list" id="categoryList">
-        <div class="loading">読み込み中…</div>
+      <button type="button" class="category-detail-toggle" id="toggleCategoryDetails">▶ その他のカテゴリを開く</button>
+      <div id="categoryDetails" hidden>
+        <div class="category-list" id="categoryList">
+          <div class="loading">読み込み中…</div>
+        </div>
       </div>
     </div>
 
@@ -474,6 +480,7 @@
     const APP_VERSION  = 4;
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
     const COLLAPSE_KEY = "kakeibo-collapsed-sections-v1";
+    const CATEGORY_DETAIL_KEY = "kakeibo-category-details-open-v1";
     const DEFAULT_PLAN = {
       version:1,
       pinkGoal:50000,
@@ -549,6 +556,23 @@
         });
         setCollapsed(!!states[key],false);
       });
+    }
+
+    function setupCategoryDetails(){
+      const details = $("categoryDetails");
+      const button = $("toggleCategoryDetails");
+      let isOpen = localStorage.getItem(CATEGORY_DETAIL_KEY) === "1";
+      function apply(){
+        details.hidden = !isOpen;
+        button.textContent = isOpen ? "▼ その他のカテゴリを閉じる" : "▶ その他のカテゴリを開く";
+        button.setAttribute("aria-expanded",String(isOpen));
+      }
+      button.addEventListener("click",()=>{
+        isOpen = !isOpen;
+        localStorage.setItem(CATEGORY_DETAIL_KEY,isOpen ? "1" : "0");
+        apply();
+      });
+      apply();
     }
 
     function normalizeEntry(e){
@@ -790,10 +814,12 @@
       $("grandmaUse").textContent = yen(grandmaUse);
       $("grandmaTotal").textContent = yen(grandmaMedical + grandmaUse);
 
-      const rows = [...totals.entries()].sort((a,b) => b[1]-a[1]);
+      const rows = [...totals.entries()]
+        .filter(([name]) => name !== "祖母・医療費" && name !== "祖母・利用分")
+        .sort((a,b) => b[1]-a[1]);
       const area = $("categoryList");
       if(!rows.length){
-        area.innerHTML = '<div class="empty">今月の支出はまだありません</div>'; return;
+        area.innerHTML = '<div class="empty">その他のカテゴリ支出はありません</div>'; return;
       }
       area.innerHTML = rows.map(([name,total]) =>
         `<div class="category-row"><span class="category-name">${htmlEsc(name)}</span><span class="category-amount">${yen(total)}</span></div>`
@@ -1107,6 +1133,7 @@
       loadPlan();
       loadCloudSettingsToForm();
       setupCollapsibleCards();
+      setupCategoryDetails();
       render();
 
       // アコーディオン：パスワード未設定なら最初から開く

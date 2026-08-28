@@ -95,6 +95,11 @@
     .payment-row.pink{background:linear-gradient(135deg,#ffe3ef,#fff7fb);border-color:#ffc3dc}
     .payment-row.pink:hover,.payment-row.pink:active{background:#ffd8ea}
     .payment-row.pink .payment-name{color:#a6164b}
+    .rakuten-total{display:flex;justify-content:space-between;align-items:center;
+      padding:13px 14px;margin-bottom:2px;border:2px solid #f3a7c5;border-radius:14px;
+      background:linear-gradient(135deg,#ffd8e8,#fff2f7);color:#8f1747}
+    .rakuten-total-label{font-size:.95rem;font-weight:800}
+    .rakuten-total-amount{font-size:1.25rem;font-weight:900}
 
     /* 履歴ドロワー */
     .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200}
@@ -843,10 +848,17 @@
         return {name, total};
       });
       const grandTotal = rows.reduce((s,r) => s+r.total, 0);
+      const rakutenTotal = rows
+        .filter(r => ["楽天PINK","楽天VISA"].some(name =>
+          normalizePaymentName(r.name) === normalizePaymentName(name)))
+        .reduce((s,r) => s+r.total, 0);
       if(grandTotal === 0){
         area.innerHTML = '<div class="empty">今月の支出はまだありません</div>'; return;
       }
-      area.innerHTML = rows.map(r => {
+      area.innerHTML = `<div class="rakuten-total">
+        <span class="rakuten-total-label">💳 楽天カード2枚 合計</span>
+        <span class="rakuten-total-amount">${yen(rakutenTotal)}</span>
+      </div>` + rows.map(r => {
         const isPink = normalizePaymentName(r.name) === normalizePaymentName("楽天PINK");
         return `<div class="payment-row${isPink?" pink":""}" data-payment="${htmlEsc(r.name)}">
           <div class="payment-name-wrap">

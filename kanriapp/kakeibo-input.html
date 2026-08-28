@@ -266,8 +266,10 @@
     const STORAGE_KEY  = "kakeibo-app-stable-v3";
     const SETTINGS_KEY = "kakeibo-cloud-settings-v1";
     const PLAN_KEY     = "kakeibo-plan-v1";
+    const DELETED_KEY  = "kakeibo-deleted-ids-v1";
+    const BACKUP_KEY   = "kakeibo-local-backups-v1";
     const APP_KEY      = "kakeibo-app";
-    const APP_VERSION  = 4;
+    const APP_VERSION  = 5;
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
 
     let selectedPayment = "";
@@ -316,6 +318,44 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     }
 
+    function loadDeletedIds(){
+      try{ const v=JSON.parse(localStorage.getItem(DELETED_KEY)||"[]"); return Array.isArray(v)?v:[]; }
+      catch(e){ return []; }
+    }
+    function saveDeletedIds(list){ localStorage.setItem(DELETED_KEY,JSON.stringify(list)); }
+
+    function backupLocal(entries,reason){
+      try{
+        const backups=JSON.parse(localStorage.getItem(BACKUP_KEY)||"[]");
+        const list=Array.isArray(backups)?backups:[];
+        list.unshift({savedAt:new Date().toISOString(),reason:reason||"自動バックアップ",entries,deletedIds:loadDeletedIds()});
+        localStorage.setItem(BACKUP_KEY,JSON.stringify(list.slice(0,5)));
+      }catch(e){ /* 容量不足時も本体保存は続行 */ }
+    }
+
+    function mergeDeletedIds(a,b){
+      const map=new Map();
+      [...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])].forEach(x=>{
+        const item=typeof x==="string"?{id:x,deletedAt:""}:x;
+        if(!item||!item.id)return;
+        const old=map.get(item.id);
+        if(!old||String(item.deletedAt||"")>String(old.deletedAt||""))map.set(item.id,item);
+      });
+      return [...map.values()];
+    }
+
+    function mergeEntries(a,b,deletedIds){
+      const deleted=new Set((deletedIds||[]).map(x=>typeof x==="string"?x:x.id));
+      const map=new Map();
+      [...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])].forEach(e=>{
+        if(!e||!e.id||deleted.has(e.id))return;
+        const old=map.get(e.id);
+        const stamp=x=>Date.parse(x.updatedAt||x.createdAt||0)||0;
+        if(!old||stamp(e)>=stamp(old))map.set(e.id,e);
+      });
+      return [...map.values()];
+    }
+
     /* ── クラウド設定 ── */
     function getCloudSettings(){
       try{
@@ -324,20 +364,44 @@
       }catch(e){ return {apiUrl:DEFAULT_API,password:"",autoCloudSave:false}; }
     }
 
-    /* ── クラウド保存（サイレント） ── */
-    async function saveToCloud(entries){
+    async function fetchCloudData(s){
+      const url=new URL(s.apiUrl);
+      url.searchParams.set("key",APP_KEY);
+      const res=await fetch(url.toString(),{method:"GET",headers:{"X-App-Password":s.password}});
+      const text=await res.text();
+      let json={};try{json=text?JSON.parse(text):{};}catch(e){}
+      if(!res.ok)throw new Error((json&&(json.error||json.message))||"HTTP "+res.status);
+      const root=json&&typeof json==="object"?json:{};
+      const data=root.data&&typeof root.data==="object"?root.data:root;
+      if(!data||!Array.isArray(data.entries))throw new Error("クラウドデータを確認できません");
+      return data;
+    }
+
+    /* ── 安全なクラウド保存：取得できないときは絶対に上書きしない ── */
+    async function saveToCloud(localEntries){
       const s = getCloudSettings();
-      if(!s.password || !s.autoCloudSave) return;
+      if(!s.password || !s.autoCloudSave) return {synced:false,reason:"disabled"};
       try{
+        const cloud=await fetchCloudData(s);
+        const deletedIds=mergeDeletedIds(loadDeletedIds(),cloud.deletedIds);
+        const merged=mergeEntries(cloud.entries,localEntries,deletedIds);
+        backupLocal(localEntries,"クラウド合流前");
+        saveDeletedIds(deletedIds);
+        saveEntries(merged);
         let plan=null;
         try{ plan=JSON.parse(localStorage.getItem(PLAN_KEY)||"null"); }catch(e){}
-        const payload = { app:APP_KEY, version:APP_VERSION, entries, plan, savedAt:new Date().toISOString() };
-        await fetch(s.apiUrl, {
+        const payload = { app:APP_KEY, version:APP_VERSION, entries:merged, deletedIds, plan:plan||cloud.plan||null, savedAt:new Date().toISOString() };
+        const res=await fetch(s.apiUrl, {
           method:"POST",
           headers:{"Content-Type":"application/json","X-App-Password":s.password},
           body:JSON.stringify({key:APP_KEY, app:APP_KEY, data:payload})
         });
-      }catch(e){ /* サイレント失敗 */ }
+        if(!res.ok)throw new Error("HTTP "+res.status);
+        return {synced:true,entries:merged};
+      }catch(e){
+        // 取得失敗時は端末保存だけ残し、クラウドは変更しない
+        return {synced:false,reason:"error",error:e};
+      }
     }
 
     /* ── 収入/支出 切り替え ── */
@@ -470,6 +534,7 @@
       };
 
       const entries = loadEntries();
+      backupLocal(entries,"新規入力前");
       if(entryType==="expense" && $("splitEnabled").checked){
         const splits=getSplits();
         const splitTotal=splits.reduce((s,x)=>s+x.amount,0);
@@ -487,9 +552,10 @@
       saveEntries(entries);
 
       // クラウド自動保存
-      await saveToCloud(entries);
+      const syncResult=await saveToCloud(entries);
 
-      showToast(entryType === "income" ? "💰 収入を登録しました！" : "✅ 支出を登録しました！");
+      const baseMsg=entryType === "income" ? "💰 収入を登録しました！" : "✅ 支出を登録しました！";
+      showToast(syncResult.reason==="error" ? baseMsg+"（端末保存のみ）" : baseMsg);
       return true;
     }
 

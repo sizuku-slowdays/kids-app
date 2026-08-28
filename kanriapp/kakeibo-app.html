@@ -476,8 +476,10 @@
     const STORAGE_KEY  = "kakeibo-app-stable-v3";
     const PLAN_KEY     = "kakeibo-plan-v1";
     const SETTINGS_KEY = "kakeibo-cloud-settings-v1";
+    const DELETED_KEY  = "kakeibo-deleted-ids-v1";
+    const BACKUP_KEY   = "kakeibo-local-backups-v1";
     const APP_KEY      = "kakeibo-app";
-    const APP_VERSION  = 4;
+    const APP_VERSION  = 5;
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
     const COLLAPSE_KEY = "kakeibo-collapsed-sections-v1";
     const CATEGORY_DETAIL_KEY = "kakeibo-category-details-open-v1";
@@ -506,6 +508,47 @@
       return String(n||"").toLowerCase().replace(/\s/g,"")
         .replace("楽天ピンク","楽天pink").replace("rakutenpink","楽天pink")
         .replace("楽天ビザ","楽天visa");
+    }
+
+    function loadDeletedIds(){
+      try{ const v=JSON.parse(localStorage.getItem(DELETED_KEY)||"[]"); return Array.isArray(v)?v:[]; }
+      catch(e){ return []; }
+    }
+    function saveDeletedIds(list){ localStorage.setItem(DELETED_KEY,JSON.stringify(list)); }
+    function addDeletedId(id){
+      const merged=mergeDeletedIds(loadDeletedIds(),[{id,deletedAt:new Date().toISOString()}]);
+      saveDeletedIds(merged);
+    }
+    function backupLocal(reason){
+      try{
+        const raw=JSON.parse(localStorage.getItem(BACKUP_KEY)||"[]");
+        const list=Array.isArray(raw)?raw:[];
+        list.unshift({savedAt:new Date().toISOString(),reason:reason||"自動バックアップ",entries:entries.map(normalizeEntry),deletedIds:loadDeletedIds(),plan:normalizePlan(plan)});
+        localStorage.setItem(BACKUP_KEY,JSON.stringify(list.slice(0,5)));
+      }catch(e){ /* 容量不足時も本体処理は続行 */ }
+    }
+    function mergeDeletedIds(a,b){
+      const map=new Map();
+      [...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])].forEach(x=>{
+        const item=typeof x==="string"?{id:x,deletedAt:""}:x;
+        if(!item||!item.id)return;
+        const old=map.get(item.id);
+        if(!old||String(item.deletedAt||"")>String(old.deletedAt||""))map.set(item.id,item);
+      });
+      return [...map.values()];
+    }
+    function mergeEntries(a,b,deletedIds){
+      const deleted=new Set((deletedIds||[]).map(x=>typeof x==="string"?x:x.id));
+      const map=new Map();
+      [...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])].forEach(raw=>{
+        if(!raw)return;
+        const e=normalizeEntry(raw);
+        if(deleted.has(e.id))return;
+        const old=map.get(e.id);
+        const stamp=x=>Date.parse(x.updatedAt||x.createdAt||0)||0;
+        if(!old||stamp(e)>=stamp(old))map.set(e.id,e);
+      });
+      return [...map.values()];
     }
 
     /* ── 各カードの折りたたみ ── */
@@ -673,57 +716,80 @@
       }
     }
 
-    /* ── クラウド保存・読み込み ── */
+    /* ── 安全なクラウド同期：必ず取得→合流→保存 ── */
+    async function fetchCloudData(s){
+      const url=new URL(s.apiUrl);
+      url.searchParams.set("key",APP_KEY);
+      const res=await fetch(url.toString(),{method:"GET",headers:{"X-App-Password":s.password}});
+      const text=await res.text();
+      let json={};try{json=text?JSON.parse(text):{};}catch(e){}
+      if(!res.ok)throw new Error((json&&(json.error||json.message))||"HTTP "+res.status);
+      const root=json&&typeof json==="object"?json:{};
+      const data=root.data&&typeof root.data==="object"?root.data:root;
+      if(!data||!Array.isArray(data.entries))throw new Error("クラウドデータを確認できません");
+      return data;
+    }
+
+    async function postCloudData(s,payload){
+      const res=await fetch(s.apiUrl,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","X-App-Password":s.password},
+        body:JSON.stringify({key:APP_KEY,app:APP_KEY,data:payload})
+      });
+      const text=await res.text();
+      let json={};try{json=text?JSON.parse(text):{};}catch(e){}
+      if(!res.ok)throw new Error((json&&(json.error||json.message))||"HTTP "+res.status);
+    }
+
+    async function mergeAndSaveCloud(s){
+      // GETに失敗したらPOSTへ進まない。少ない端末データでの全件上書きを禁止する。
+      const cloud=await fetchCloudData(s);
+      const deletedIds=mergeDeletedIds(loadDeletedIds(),cloud.deletedIds);
+      const merged=mergeEntries(cloud.entries,entries,deletedIds);
+      backupLocal("クラウド合流前");
+      entries=merged;
+      saveDeletedIds(deletedIds);
+      if(cloud.plan)plan=normalizePlan(cloud.plan);
+      saveLocal();
+      const payload={app:APP_KEY,version:APP_VERSION,entries:merged,deletedIds,plan:normalizePlan(plan),savedAt:new Date().toISOString()};
+      await postCloudData(s,payload);
+      render();
+      return payload;
+    }
+
     async function saveToCloud(opts){
-      const silent = opts && opts.silent;
-      const s = saveCloudSettings();
-      if(!s.password){ if(!silent)setSyncStatus("パスワードを入力してから保存してください。","ng"); return; }
+      const silent=opts&&opts.silent;
+      const s=saveCloudSettings();
+      if(!s.password){if(!silent)setSyncStatus("パスワードを入力してから保存してください。","ng");return false;}
       try{
-        if(!silent)setSyncStatus("クラウドへ保存中…");
-        const payload = { app:APP_KEY, version:APP_VERSION, entries:entries.map(normalizeEntry), plan:normalizePlan(plan), savedAt:new Date().toISOString() };
-        const res = await fetch(s.apiUrl, {
-          method:"POST",
-          headers:{"Content-Type":"application/json","X-App-Password":s.password},
-          body:JSON.stringify({key:APP_KEY, app:APP_KEY, data:payload})
-        });
-        const text = await res.text();
-        let json = {}; try{ json=text?JSON.parse(text):{}; }catch(e){}
-        if(!res.ok) throw new Error((json&&(json.error||json.message))||"HTTP "+res.status);
-        setSyncStatus("クラウド保存できました。最終保存："+new Date().toLocaleString("ja-JP"),"ok");
-      }catch(err){ setSyncStatus("クラウド保存に失敗しました："+err.message,"ng"); }
+        if(!silent)setSyncStatus("クラウド最新版を確認して安全に合流中…");
+        await mergeAndSaveCloud(s);
+        setSyncStatus("クラウドと安全に合流・保存しました："+new Date().toLocaleString("ja-JP"),"ok");
+        return true;
+      }catch(err){
+        setSyncStatus("安全確認できないためクラウドを変更しませんでした："+err.message,"ng");
+        return false;
+      }
     }
 
     async function loadFromCloud(opts){
       const silent = !!(opts && opts.silent);
       const s = saveCloudSettings();
       if(!s.password){ if(!silent)setSyncStatus("パスワードを入力してから読み込んでください。","ng"); return false; }
-      if(!silent && entries.length>0 && !confirm("クラウドのデータでこの端末の表示を置き換えますか？")) return false;
+      if(!silent && !confirm("端末データとクラウドデータを安全に合流しますか？（どちらか一方だけで上書きはしません）")) return false;
       try{
         setSyncStatus(silent ? "起動時にクラウドと同期中…" : "クラウドから読み込み中…");
-        const url = new URL(s.apiUrl);
-        url.searchParams.set("key",APP_KEY);
-        const res = await fetch(url.toString(), {method:"GET", headers:{"X-App-Password":s.password}});
-        const text = await res.text();
-        let json = {}; try{ json=text?JSON.parse(text):{}; }catch(e){}
-        if(!res.ok) throw new Error((json&&(json.error||json.message))||"HTTP "+res.status);
-        const root = json && typeof json === "object" ? json : {};
-        const data = root.data && typeof root.data === "object" ? root.data : root;
-        const cloudData = Array.isArray(data.entries) ? data : (Array.isArray(root.entries) ? root : null);
-        if(!cloudData || !Array.isArray(cloudData.entries)) throw new Error("クラウドに家計簿データが見つかりません。");
-        if(silent && entries.length && cloudData.savedAt){
-          const localLatest = Math.max(...entries.map(e => Date.parse(e.updatedAt||e.createdAt||0)||0));
-          const cloudSaved = Date.parse(cloudData.savedAt)||0;
-          if(localLatest > cloudSaved){
-            setSyncStatus("端末内にクラウドより新しい入力があるため、端末内データを表示しています。","ok");
-            return false;
-          }
-        }
-        entries = cloudData.entries.map(normalizeEntry);
+        const cloudData=await fetchCloudData(s);
+        const deletedIds=mergeDeletedIds(loadDeletedIds(),cloudData.deletedIds);
+        backupLocal("クラウド読込・合流前");
+        entries=mergeEntries(cloudData.entries,entries,deletedIds);
+        saveDeletedIds(deletedIds);
         if(cloudData.plan) plan = normalizePlan(cloudData.plan);
         saveLocal();
+        await postCloudData(s,{app:APP_KEY,version:APP_VERSION,entries:entries.map(normalizeEntry),deletedIds,plan:normalizePlan(plan),savedAt:new Date().toISOString()});
         render();
         const savedAt = cloudData.savedAt ? new Date(cloudData.savedAt).toLocaleString("ja-JP") : "不明";
-        setSyncStatus((silent ? "自動同期しました。最終保存：" : "クラウドから読み込みました。クラウド保存日時：")+savedAt,"ok");
+        setSyncStatus((silent ? "端末とクラウドを自動合流しました。クラウド保存：" : "端末とクラウドを合流しました。クラウド保存：")+savedAt,"ok");
         return true;
       }catch(err){
         setSyncStatus("クラウド読込に失敗しました。端末内データを表示します："+err.message,"ng");
@@ -985,6 +1051,7 @@
       const idx = entries.findIndex(e => e.id === editingId);
       if(idx < 0) return;
 
+      backupLocal("編集前");
       entries[idx] = normalizeEntry({
         ...entries[idx],
         type:        editingType,
@@ -1008,6 +1075,8 @@
 
     async function deleteEntry(){
       if(!confirm("この1件を削除しますか？")) return;
+      backupLocal("削除前");
+      addDeletedId(editingId);
       entries = entries.filter(e => e.id !== editingId);
       saveLocal();
       await saveToCloudSilent();
@@ -1018,18 +1087,17 @@
       showToast("🗑 削除しました", "#e63946");
     }
 
-    /* サイレントクラウド保存（入力画面と同じロジック） */
+    /* サイレントクラウド保存も必ず取得→合流。取得失敗時は上書き禁止。 */
     async function saveToCloudSilent(){
       const s = getCloudSettings();
-      if(!s.password || !s.autoCloudSave) return;
+      if(!s.password || !s.autoCloudSave) return false;
       try{
-        const payload = { app:APP_KEY, version:APP_VERSION, entries:entries.map(normalizeEntry), plan:normalizePlan(plan), savedAt:new Date().toISOString() };
-        await fetch(s.apiUrl, {
-          method:"POST",
-          headers:{"Content-Type":"application/json","X-App-Password":s.password},
-          body:JSON.stringify({key:APP_KEY, app:APP_KEY, data:payload})
-        });
-      }catch(e){ /* サイレント失敗 */ }
+        await mergeAndSaveCloud(s);
+        return true;
+      }catch(e){
+        setSyncStatus("端末には保存しましたが、安全確認できないためクラウドは変更していません。","ng");
+        return false;
+      }
     }
 
     function forecastForMonth(total, m){

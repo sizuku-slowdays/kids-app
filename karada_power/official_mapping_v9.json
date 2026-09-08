@@ -1,0 +1,90 @@
+{
+  "いわし": {
+    "mext_id": "10047",
+    "official_name": "まいわし/生",
+    "protein_g": 19.2,
+    "fat_g": 9.2,
+    "calcium_mg": 74,
+    "iron_mg": 2.1,
+    "zinc_mg": 1.6,
+    "vitamin_d_ug": 32.0,
+    "vitamin_e_mg": 2.5,
+    "vitamin_b6_mg": 0.49,
+    "vitamin_b12_ug": 16.0,
+    "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10047_7"
+  },
+  "さば": {
+    "mext_id": "10154",
+    "official_name": "まさば/生",
+    "calcium_mg": 6,
+    "iron_mg": 1.2,
+    "zinc_mg": 1.1,
+    "vitamin_d_ug": 5.1,
+    "vitamin_e_mg": 1.3,
+    "vitamin_b6_mg": 0.59,
+    "vitamin_b12_ug": 13.0,
+    "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10154_7"
+  },
+  "鮭": {
+    "mext_id": "10134",
+    "official_name": "しろさけ/生",
+    "protein_g": 22.3,
+    "fat_g": 4.1,
+    "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10134_7"
+  },
+  "しらす": {
+    "mext_id": "10056",
+    "official_name": "しらす干し/半乾燥品",
+    "protein_g": 40.5,
+    "calcium_mg": 520,
+    "iron_mg": 0.8,
+    "zinc_mg": 3.0,
+    "vitamin_d_ug": 61.0,
+    "vitamin_e_mg": 1.5,
+    "vitamin_b12_ug": 6.3,
+    "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10056_6"
+  },
+  "ほうれん草": {
+    "mext_id": "06267",
+    "official_name": "ほうれんそう/葉/通年平均/生",
+    "protein_g": 2.2,
+    "fat_g": 0.4,
+    "calcium_mg": 49,
+    "iron_mg": 2.0,
+    "zinc_mg": 0.7,
+    "vitamin_a_rae_ug": 350,
+    "vitamin_e_mg": 2.1,
+    "vitamin_k_ug": 270,
+    "vitamin_b6_mg": 0.14,
+    "folate_ug": 210,
+    "vitamin_c_mg": 35,
+    "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=6_06267_7"
+  },
+  "小松菜": {
+    "mext_id": "06087",
+    "official_name": "こまつな/葉/ゆで",
+    "calcium_mg": 150,
+    "iron_mg": 2.1,
+    "zinc_mg": 0.3,
+    "vitamin_a_rae_ug": 260,
+    "vitamin_e_mg": 1.5,
+    "vitamin_k_ug": 320,
+    "folate_ug": 86,
+    "vitamin_c_mg": 21,
+    "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=6_06087_7"
+  },
+  "鶏卵": {
+    "mext_id": "12004",
+    "official_name": "鶏卵/全卵/生",
+    "calcium_mg": 46,
+    "iron_mg": 1.5,
+    "zinc_mg": 1.1,
+    "vitamin_a_rae_ug": 210,
+    "vitamin_d_ug": 3.8,
+    "vitamin_e_mg": 1.3,
+    "vitamin_k_ug": 12,
+    "vitamin_b12_ug": 1.1,
+    "folate_ug": 49,
+    "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=12_12004_7"
+  }
+}

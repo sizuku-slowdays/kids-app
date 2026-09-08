@@ -1,0 +1,310 @@
+[
+  {
+    "id": "snack_jagarico",
+    "category": "おやつ",
+    "name": "じゃがりこ サラダ",
+    "reading": "じゃがりこ サラダ",
+    "emoji": "🥔",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 0,
+    "immunity": 0,
+    "nutrient_list": [
+      "炭水化物",
+      "脂質"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [
+      "炭水化物",
+      "脂質"
+    ],
+    "label_check": true,
+    "brand": "カルビー",
+    "allergens": [
+      "乳成分",
+      "大豆"
+    ],
+    "product_nutrition": null,
+    "product_verified": true
+  },
+  {
+    "id": "snack_gummy",
+    "category": "おやつ",
+    "name": "グミ",
+    "reading": "グミ",
+    "emoji": "🍬",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 0,
+    "immunity": 0,
+    "nutrient_list": [
+      "炭水化物"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [
+      "炭水化物"
+    ],
+    "label_check": true,
+    "brand": "商品による",
+    "allergens": [],
+    "product_nutrition": null,
+    "product_verified": false
+  },
+  {
+    "id": "snack_mow_v",
+    "category": "おやつ",
+    "name": "MOW バニラ",
+    "reading": "MOW バニラ",
+    "emoji": "🍨",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 0,
+    "immunity": 0,
+    "nutrient_list": [
+      "たんぱく質",
+      "脂質",
+      "炭水化物"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [
+      "脂質",
+      "炭水化物"
+    ],
+    "label_check": true,
+    "brand": "森永乳業",
+    "allergens": [
+      "卵",
+      "乳成分"
+    ],
+    "product_nutrition": {
+      "basis": "1カップ140ml",
+      "kcal": 221,
+      "protein": 4.3,
+      "fat": 10.1,
+      "carb": 28.1,
+      "salt": 0.12
+    },
+    "product_verified": true
+  },
+  {
+    "id": "snack_mow_s",
+    "category": "おやつ",
+    "name": "MOW 練乳いちご",
+    "reading": "MOW 練乳いちご",
+    "emoji": "🍓",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 0,
+    "immunity": 0,
+    "nutrient_list": [
+      "たんぱく質",
+      "脂質",
+      "炭水化物"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [
+      "脂質",
+      "炭水化物"
+    ],
+    "label_check": true,
+    "brand": "森永乳業",
+    "allergens": [
+      "卵",
+      "乳成分"
+    ],
+    "product_nutrition": {
+      "basis": "1カップ140ml",
+      "kcal": 210,
+      "protein": 3.3,
+      "fat": 9.8,
+      "carb": 27.2,
+      "salt": 0.09
+    },
+    "product_verified": true
+  },
+  {
+    "id": "snack_chips",
+    "category": "おやつ",
+    "name": "ポテトチップス うすしお味",
+    "reading": "ポテトチップス うすしお味",
+    "emoji": "🥔",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 0,
+    "immunity": 0,
+    "nutrient_list": [
+      "炭水化物",
+      "脂質"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [
+      "炭水化物",
+      "脂質"
+    ],
+    "label_check": true,
+    "brand": "カルビー",
+    "allergens": [],
+    "product_nutrition": {
+      "basis": "1袋55g",
+      "kcal": 308,
+      "protein": 2.8,
+      "fat": 19.8,
+      "carb": 29.7,
+      "salt": 0.5
+    },
+    "product_verified": true
+  },
+  {
+    "id": "snack_onisen",
+    "category": "おやつ",
+    "name": "おにぎりせんべい",
+    "reading": "おにぎりせんべい",
+    "emoji": "🍘",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 0,
+    "immunity": 0,
+    "nutrient_list": [
+      "炭水化物",
+      "脂質"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [
+      "炭水化物",
+      "脂質"
+    ],
+    "label_check": true,
+    "brand": "マスヤ",
+    "allergens": [
+      "小麦",
+      "卵",
+      "ごま",
+      "大豆",
+      "豚肉"
+    ],
+    "product_nutrition": {
+      "basis": "小袋23g",
+      "kcal": 110,
+      "protein": 1.4,
+      "fat": 4.7,
+      "carb": 15.5,
+      "salt": 0.41
+    },
+    "product_verified": true
+  },
+  {
+    "id": "snack_ebisen",
+    "category": "おやつ",
+    "name": "かっぱえびせん",
+    "reading": "かっぱえびせん",
+    "emoji": "🦐",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 1,
+    "immunity": 0,
+    "nutrient_list": [
+      "炭水化物",
+      "脂質",
+      "カルシウム"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [
+      "炭水化物",
+      "脂質"
+    ],
+    "label_check": true,
+    "brand": "カルビー",
+    "allergens": [
+      "小麦",
+      "えび"
+    ],
+    "product_nutrition": {
+      "basis": "1袋77g",
+      "kcal": 380,
+      "protein": 5.1,
+      "fat": 17.0,
+      "carb": 51.6,
+      "salt": 1.7,
+      "calcium": 111
+    },
+    "product_verified": true
+  },
+  {
+    "id": "snack_umaibo",
+    "category": "おやつ",
+    "name": "うまい棒 コーンポタージュ味",
+    "reading": "うまい棒 コーンポタージュ味",
+    "emoji": "🌽",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 0,
+    "immunity": 0,
+    "nutrient_list": [
+      "炭水化物",
+      "脂質"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [
+      "炭水化物",
+      "脂質"
+    ],
+    "label_check": true,
+    "brand": "やおきん",
+    "allergens": [
+      "小麦",
+      "乳成分",
+      "大豆",
+      "鶏肉",
+      "豚肉",
+      "ごま"
+    ],
+    "product_nutrition": {
+      "basis": "1本6g",
+      "kcal": 43,
+      "protein": 0.5,
+      "fat": 2.7,
+      "carb": 4.3,
+      "salt": 0.1
+    },
+    "product_verified": true
+  },
+  {
+    "id": "processed_tamago_tofu",
+    "category": "たまご",
+    "name": "たまご豆腐",
+    "reading": "たまご豆腐",
+    "emoji": "🥚",
+    "head": 0,
+    "sparkle": 0,
+    "muscle": 0,
+    "bone": 0,
+    "immunity": 0,
+    "nutrient_list": [
+      "たんぱく質"
+    ],
+    "kids_text": "食べたものとして記録できるよ。商品によって材料や栄養がちがうこともあるよ。",
+    "food_type": "processed",
+    "energy_tags": [],
+    "label_check": true,
+    "brand": "商品による",
+    "allergens": [],
+    "product_nutrition": null,
+    "product_verified": false
+  }
+]

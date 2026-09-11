@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#8fd8c7">
+  <meta name="description" content="家族の毎日を支える、わが家アプリのホームです。">
+  <title>わが家アプリ｜ママ</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./img/icon-192.png">
+  <link rel="stylesheet" href="./css/wagaya.css">
+  <style>
+    .home-switch {
+      display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 18px;
+    }
+    .home-switch a {
+      text-decoration:none;text-align:center;padding:12px 10px;border-radius:16px;
+      font-weight:800;background:#eef4f2;color:#2e4f48;
+    }
+    .home-switch a.active {background:#8fd8c7;color:#183a33;}
+    .quick-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    .quick-card {
+      display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid #e4ebe8;
+      border-radius:20px;padding:16px;box-shadow:0 8px 22px rgba(0,0,0,.05);
+    }
+    .quick-card .emoji {font-size:34px;line-height:1;margin-bottom:10px;}
+    .quick-card strong {display:block;font-size:17px;margin-bottom:4px;}
+    .quick-card small {color:#71807c;line-height:1.5;}
+    .section-gap {margin-top:18px;}
+    @media (max-width:520px) {
+      .quick-grid {grid-template-columns:1fr 1fr;}
+      .quick-card {padding:14px;}
+    }
+  </style>
+</head>
+<body data-page="home">
+  <main class="page-shell">
+    <header class="welcome" aria-labelledby="welcome-title">
+      <div>
+        <p class="eyebrow">ママホーム</p>
+        <h1 id="welcome-title">おつかれさま 🌿</h1>
+        <p class="welcome-copy">家のこと、管理のことをここから。</p>
+      </div>
+      <div class="home-mark" aria-hidden="true">⌂</div>
+    </header>
+
+    <div class="home-switch">
+      <a href="./kids.html">こども用</a>
+      <a class="active" href="./mama.html">ママ用</a>
+    </div>
+
+    <section class="calendar-panel">
+      <div class="section-heading compact">
+        <div><p class="section-kicker">みんなの予定</p><h2>家族カレンダー</h2></div>
+        <span class="large-icon" aria-hidden="true">📅</span>
+      </div>
+      <div class="calendar-actions">
+        <a class="button button-primary" href="https://cetus.fun/kanriapp/calendar.html">
+          <span aria-hidden="true">📅</span> カレンダーを開く
+        </a>
+        <a class="button button-secondary" href="https://cetus.fun/kanriapp/calendar.html">
+          <span aria-hidden="true">＋</span> 予定を追加する
+        </a>
+      </div>
+    </section>
+
+    <section class="apps-section section-gap">
+      <div class="section-heading">
+        <div><p class="section-kicker">管理</p><h2>よく使うもの</h2></div>
+      </div>
+      <div class="quick-grid">
+        <a class="quick-card" href="https://cetus.fun/kanriapp/points/">
+          <div class="emoji">🎁</div><strong>ポイント</strong>
+          <small>ポイント交換・管理</small>
+        </a>
+        <a class="quick-card" href="https://cetus.fun/kanriapp/kakeibo-app.html">
+          <div class="emoji">💰</div><strong>家計簿</strong>
+          <small>支出・残高の確認</small>
+        </a>
+        <a class="quick-card" href="https://cetus.fun/kanriapp/karada_calendar.html">
+          <div class="emoji">🍚</div><strong>からだ・食事</strong>
+          <small>家族の記録</small>
+        </a>
+        <a class="quick-card" href="./apps.html">
+          <div class="emoji">🧰</div><strong>すべてのアプリ</strong>
+          <small>その他の管理ツール</small>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item active" href="./mama.html" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">⌂</span><span>ホーム</span>
+    </a>
+    <a class="nav-item" href="https://cetus.fun/kanriapp/calendar.html">
+      <span class="nav-icon" aria-hidden="true">▦</span><span>カレンダー</span>
+    </a>
+    <a class="nav-item" href="./apps.html">
+      <span class="nav-icon" aria-hidden="true">⊞</span><span>アプリ</span>
+    </a>
+  </nav>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#8fd8c7">
+  <meta name="description" content="家族の毎日を支える、わが家アプリのホームです。">
+  <title>わが家アプリ｜こども</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./img/icon-192.png">
+  <link rel="stylesheet" href="./css/wagaya.css">
+  <style>
+    .home-switch {
+      display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 18px;
+    }
+    .home-switch a {
+      text-decoration:none;text-align:center;padding:12px 10px;border-radius:16px;
+      font-weight:800;background:#eef4f2;color:#2e4f48;
+    }
+    .home-switch a.active {background:#8fd8c7;color:#183a33;}
+    .quick-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    .quick-card {
+      display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid #e4ebe8;
+      border-radius:20px;padding:16px;box-shadow:0 8px 22px rgba(0,0,0,.05);
+    }
+    .quick-card .emoji {font-size:34px;line-height:1;margin-bottom:10px;}
+    .quick-card strong {display:block;font-size:17px;margin-bottom:4px;}
+    .quick-card small {color:#71807c;line-height:1.5;}
+    .section-gap {margin-top:18px;}
+    @media (max-width:520px) {
+      .quick-grid {grid-template-columns:1fr 1fr;}
+      .quick-card {padding:14px;}
+    }
+  </style>
+</head>
+<body data-page="home">
+  <main class="page-shell">
+    <header class="welcome" aria-labelledby="welcome-title">
+      <div>
+        <p class="eyebrow">こどもホーム</p>
+        <h1 id="welcome-title">きょうも がんばろう 🌟</h1>
+        <p class="welcome-copy">べんきょうも、あそびも、ここから。</p>
+      </div>
+      <div class="home-mark" aria-hidden="true">⌂</div>
+    </header>
+
+    <div class="home-switch">
+      <a class="active" href="./kids.html">こども用</a>
+      <a href="./mama.html">ママ用</a>
+    </div>
+
+    <section class="apps-section">
+      <div class="section-heading">
+        <div><p class="section-kicker">おべんきょう</p><h2>計算ゲーム</h2></div>
+      </div>
+      <div class="quick-grid">
+        <a class="quick-card" href="https://cetus.fun/kids-app/keisan/keisan-flash.html">
+          <div class="emoji">🧮</div><strong>計算フラッシュ</strong>
+          <small>九九・足し算・引き算・逆九九</small>
+        </a>
+        <a class="quick-card" href="https://cetus.fun/kids-app/keisan/5mon-challenge.html">
+          <div class="emoji">⭐</div><strong>5もんチャレンジ</strong>
+          <small>5問できたらミニゲーム！</small>
+        </a>
+      </div>
+    </section>
+
+    <section class="calendar-panel section-gap">
+      <div class="section-heading compact">
+        <div><p class="section-kicker">みんなの予定</p><h2>家族カレンダー</h2></div>
+        <span class="large-icon" aria-hidden="true">📅</span>
+      </div>
+      <div class="calendar-actions">
+        <a class="button button-primary" href="https://cetus.fun/kanriapp/calendar.html">
+          <span aria-hidden="true">📅</span> カレンダーを見る
+        </a>
+      </div>
+    </section>
+
+    <section class="apps-section section-gap">
+      <div class="section-heading">
+        <div><p class="section-kicker">ほかのアプリ</p><h2>いつものアプリ</h2></div>
+      </div>
+      <a class="all-apps-link" href="./apps.html">
+        <span>すべてのアプリを見る</span><span aria-hidden="true">›</span>
+      </a>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item active" href="./kids.html" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">⌂</span><span>ホーム</span>
+    </a>
+    <a class="nav-item" href="https://cetus.fun/kids-app/keisan/keisan-flash.html">
+      <span class="nav-icon" aria-hidden="true">＋</span><span>計算</span>
+    </a>
+    <a class="nav-item" href="./apps.html">
+      <span class="nav-icon" aria-hidden="true">⊞</span><span>アプリ</span>
+    </a>
+  </nav>
+</body>
+</html>

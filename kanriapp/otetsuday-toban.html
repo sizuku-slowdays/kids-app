@@ -142,6 +142,17 @@
   .btn-approve { background: var(--accent2); color: #fff; }
   .btn-reject { background: #e05; color: #fff; margin-left: 6px; }
 
+  /* 折りたたみ */
+  details.collapse-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
+  details.collapse-card > summary { list-style: none; cursor: pointer; padding: 14px 16px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  details.collapse-card > summary::-webkit-details-marker { display: none; }
+  details.collapse-card > summary::after { content: '▼'; font-size: 0.72rem; color: var(--muted); transition: transform 0.2s; }
+  details.collapse-card:not([open]) > summary::after { transform: rotate(-90deg); }
+  .collapse-body { padding: 0 16px 16px; }
+  .reorder-tools { display:flex; gap:6px; margin-left:auto; flex-shrink:0; }
+  .reorder-btn { width:32px; height:32px; border:1.5px solid var(--border); border-radius:9px; background:#fff; cursor:pointer; font-weight:700; color:var(--muted); }
+  .bank-link { display:block; width:100%; margin-top:12px; padding:12px; text-align:center; text-decoration:none; background:#fff; border:2px solid var(--border); border-radius:12px; color:var(--text); font-weight:700; }
+
   .loading { text-align: center; padding: 30px; color: var(--muted); }
   .empty { text-align: center; padding: 20px; color: var(--muted); font-size: 0.9rem; }
 
@@ -184,27 +195,35 @@
 
 <!-- ======================== いつでも ======================== -->
 <div class="page" id="page-anytime">
-  <div class="card" style="margin-bottom:4px;">
-    <div class="setting-title" style="margin-bottom:10px;">✨ 一回限りのおてつだい</div>
-    <div style="display:grid;gap:8px;">
-      <div style="display:flex;gap:8px;">
-        <input id="quickIcon" placeholder="🧹" style="width:54px;padding:8px;border:2px solid var(--border);border-radius:8px;text-align:center;font-size:1.2rem;">
-        <input id="quickName" placeholder="作業名（例：おかいもの手伝い）" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;">
-      </div>
-      <div style="display:flex;gap:8px;">
-        <div style="flex:1;">
-          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:3px;">⭐ ポイント</div>
-          <input id="quickPoints" type="number" placeholder="50" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
+  <details class="collapse-card" open>
+    <summary>✨ 一回限りのおてつだい</summary>
+    <div class="collapse-body">
+      <div style="display:grid;gap:8px;">
+        <div style="display:flex;gap:8px;">
+          <input id="quickIcon" placeholder="🧹" style="width:54px;padding:8px;border:2px solid var(--border);border-radius:8px;text-align:center;font-size:1.2rem;">
+          <input id="quickName" placeholder="作業名（例：おかいもの手伝い）" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;">
         </div>
-        <div style="flex:1;">
-          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:3px;">💴 金額（0でもOK）</div>
-          <input id="quickMoney" type="number" placeholder="0" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;">
+            <div style="font-size:0.75rem;color:var(--muted);margin-bottom:3px;">⭐ ポイント</div>
+            <input id="quickPoints" type="number" placeholder="50" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:0.75rem;color:var(--muted);margin-bottom:3px;">💴 金額（0でもOK）</div>
+            <input id="quickMoney" type="number" placeholder="0" min="0" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
+          </div>
         </div>
+        <button onclick="openQuickYatta()" style="padding:11px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;">やった！ →</button>
       </div>
-      <button onclick="openQuickYatta()" style="padding:11px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;">やった！ →</button>
     </div>
-  </div>
-  <div id="anytimeList" class="loading">よみこみ中…</div>
+  </details>
+
+  <details class="collapse-card" open>
+    <summary>👐 いつでもおてつだい <span style="font-size:0.75rem;color:var(--muted);font-weight:400;">▲▼で並べ替え</span></summary>
+    <div class="collapse-body" id="anytimeList" style="padding-top:4px;">
+      <div class="loading">よみこみ中…</div>
+    </div>
+  </details>
 </div>
 
 <!-- ======================== カレンダー ======================== -->
@@ -233,17 +252,25 @@
       <button onclick="sumNext()">▶</button>
     </div>
   </div>
+
+  <details class="collapse-card" open>
+    <summary>💸 ママ銀行連携</summary>
+    <div class="collapse-body">
+      <div id="bankPending"></div>
+      <button onclick="loadBankPending()" style="margin-top:8px;width:100%;padding:10px 18px;border:2px solid var(--border);border-radius:10px;background:#fff;font-weight:700;cursor:pointer;">🔍 未反映ログを確認する</button>
+    </div>
+  </details>
+
   <div id="summaryContent" class="loading">よみこみ中…</div>
+  <a class="bank-link" id="mamaBankPageLink" href="https://cetus.fun/kanriapp/mama-bank-view.html" target="_blank" rel="noopener">🏦 ママ銀行を開く</a>
 </div>
 
 <!-- ======================== 設定 ======================== -->
 <div class="page" id="page-settings">
+
   <div class="card">
-    <div class="setting-section">
-      <div class="setting-title">🏡 作業リスト</div>
-      <div id="choreSettings" class="loading">よみこみ中…</div>
-    </div>
-    <div style="margin-top:12px;display:grid;gap:8px;">
+    <div class="setting-title" style="margin-bottom:10px;">➕ 作業を追加</div>
+    <div style="display:grid;gap:8px;">
       <div style="display:flex;gap:8px;">
         <input id="newChoreIcon" placeholder="🧹" style="width:60px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;text-align:center;font-size:1.2rem;">
         <input id="newChoreName" placeholder="作業名（例：おさらはこび）" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
@@ -265,33 +292,40 @@
       <button onclick="addChore()" style="padding:10px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">＋ 作業を追加</button>
     </div>
   </div>
-  <div class="card">
-    <div class="setting-section">
-      <div class="setting-title">🔄 ローテーション</div>
+
+  <details class="collapse-card" open>
+    <summary>🏡 作業リスト</summary>
+    <div class="collapse-body">
+      <div id="choreSettings" class="loading">よみこみ中…</div>
+    </div>
+  </details>
+
+  <details class="collapse-card">
+    <summary>🔄 ローテーション</summary>
+    <div class="collapse-body">
       <div id="rotationSettings" class="loading">よみこみ中…</div>
     </div>
-  </div>
+  </details>
+
   <div class="card">
-    <div class="setting-section">
-      <div class="setting-title">🎁 ごほうびリスト</div>
-      <div id="rewardSettings" class="loading">よみこみ中…</div>
-    </div>
-    <div style="margin-top:12px;display:grid;gap:8px;">
+    <div class="setting-title" style="margin-bottom:10px;">➕ ごほうびを追加</div>
+    <div style="display:grid;gap:8px;">
       <div style="display:flex;gap:8px;">
         <input id="newRewardName" placeholder="ごほうび名" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
         <input id="newRewardPts" type="number" placeholder="pt" style="width:80px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
       </div>
-      <input id="newRewardImg" placeholder="画像URL（例: https://cetus.fun/kids-app/kanriapp/points/ice.jpg）" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.82rem;">
+      <input id="newRewardImg" placeholder="画像URL（画像アップロード対応は次段階）" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.82rem;">
       <button onclick="addReward()" style="padding:8px 14px;background:var(--accent2);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">追加</button>
     </div>
   </div>
-  <div class="card">
-    <div class="setting-section">
-      <div class="setting-title">💸 ママ銀行連携</div>
-      <div id="bankPending"></div>
-      <button onclick="loadBankPending()" style="margin-top:8px;padding:10px 18px;border:2px solid var(--border);border-radius:10px;background:#fff;font-weight:700;cursor:pointer;">🔍 未反映ログを確認する</button>
+
+  <details class="collapse-card" open>
+    <summary>🎁 ごほうびリスト</summary>
+    <div class="collapse-body">
+      <div id="rewardSettings" class="loading">よみこみ中…</div>
     </div>
-  </div>
+  </details>
+
 </div>
 
 <!-- ======================== ポイント ======================== -->
@@ -407,7 +441,7 @@ document.querySelectorAll('.tab').forEach(t => {
     document.getElementById('page-' + t.dataset.tab).classList.add('active');
     if (t.dataset.tab === 'anytime') loadAnytime();
     if (t.dataset.tab === 'calendar') renderCalendar();
-    if (t.dataset.tab === 'summary') loadSummary();
+    if (t.dataset.tab === 'summary') { loadSummary(); loadBankPending(); }
     if (t.dataset.tab === 'settings') loadSettings();
     if (t.dataset.tab === 'points') loadPoints();
   });
@@ -425,8 +459,12 @@ async function loadAnytime() {
     el.innerHTML = '<div class="empty" style="padding:16px;">いつでもおてつだいはまだないよ<br>↓から追加してね</div>';
     return;
   }
-  el.innerHTML = anytimeChores.map(c => `
-    <div class="card">
+  const savedOrder = JSON.parse(localStorage.getItem('anytime_chore_order') || '[]');
+  const orderMap = new Map(savedOrder.map((id, i) => [id, i]));
+  anytimeChores.sort((a, b) => (orderMap.get(a.id) ?? 9999) - (orderMap.get(b.id) ?? 9999));
+
+  el.innerHTML = anytimeChores.map((c, idx) => `
+    <div class="card" style="margin-bottom:10px;">
       <div class="chore-card">
         <div class="chore-icon">${c.icon}</div>
         <div class="chore-info">
@@ -437,12 +475,30 @@ async function loadAnytime() {
             ${c.money > 0 ? `<span class="chore-yen">💴 ${c.money.toLocaleString()}円</span>` : ''}
           </div>
         </div>
-        <button class="btn-yatta" onclick="openYatta('${c.id}')">やった！</button>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <button class="btn-yatta" onclick="openYatta('${c.id}')">やった！</button>
+          <div class="reorder-tools">
+            <button class="reorder-btn" onclick="moveAnytime('${c.id}',-1)" ${idx===0?'disabled':''}>▲</button>
+            <button class="reorder-btn" onclick="moveAnytime('${c.id}',1)" ${idx===anytimeChores.length-1?'disabled':''}>▼</button>
+          </div>
+        </div>
       </div>
     </div>
   `).join('');
   // いつでもタブ用にchoresを更新
   chores = allChores;
+}
+
+function moveAnytime(id, direction) {
+  const anytimeIds = chores.filter(c => c.no_rotation).map(c => c.id);
+  const savedOrder = JSON.parse(localStorage.getItem('anytime_chore_order') || '[]');
+  const normalized = [...savedOrder.filter(x => anytimeIds.includes(x)), ...anytimeIds.filter(x => !savedOrder.includes(x))];
+  const i = normalized.indexOf(id);
+  const j = i + direction;
+  if (i < 0 || j < 0 || j >= normalized.length) return;
+  [normalized[i], normalized[j]] = [normalized[j], normalized[i]];
+  localStorage.setItem('anytime_chore_order', JSON.stringify(normalized));
+  loadAnytime();
 }
 
 // ──────── メンバー読み込み ────────

@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>5もんチャレンジ</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;background:#f7f7fb;color:#20232a;
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+  display:flex;justify-content:center;padding:18px;
+}
+.app{width:min(720px,100%)}
+.card{
+  background:#fff;border-radius:28px;box-shadow:0 12px 36px #00000012;
+  padding:22px;margin-top:10px;
+}
+h1{margin:0;text-align:center;font-size:clamp(28px,7vw,44px)}
+.sub{text-align:center;color:#777;margin:8px 0 18px}
+.progress{
+  display:flex;gap:6px;justify-content:center;margin:12px 0 20px;flex-wrap:wrap
+}
+.dot{
+  width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  background:#eceef3;font-size:13px;font-weight:900;color:#777
+}
+.dot.done{background:#222;color:#fff}
+.dot.now{outline:3px solid #222;outline-offset:2px}
+.problem{
+  min-height:180px;display:grid;place-items:center;text-align:center;
+  font-size:clamp(58px,18vw,120px);font-weight:900;letter-spacing:-.05em
+}
+.answer{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px
+}
+.answer button,.mainbtn{
+  border:0;border-radius:18px;padding:18px 10px;font-size:24px;font-weight:900;cursor:pointer
+}
+.answer button{background:#eef0f4;color:#222}
+.mainbtn{width:100%;background:#222;color:#fff;font-size:18px}
+.feedback{
+  text-align:center;min-height:38px;font-size:22px;font-weight:900;margin-top:12px
+}
+.small{text-align:center;color:#777;font-size:13px;line-height:1.6}
+.hidden{display:none!important}
+
+/* mini game */
+.gameTitle{text-align:center;font-size:30px;font-weight:900;margin-bottom:8px}
+.gameSub{text-align:center;color:#777;margin-bottom:18px}
+.gameArea{
+  height:340px;border-radius:24px;background:#fafbfe;border:2px solid #e7e9ef;
+  position:relative;overflow:hidden
+}
+.tapIcon{
+  position:absolute;cursor:pointer;user-select:none;touch-action:manipulation;
+  width:58px;height:58px;display:grid;place-items:center;
+  font-size:42px;border-radius:50%;
+  animation:pop .16s ease-out;
+  transition:transform .12s ease,opacity .12s ease;
+}
+.tapIcon:active{transform:scale(.82)}
+.tapIcon.fade{opacity:0;transform:scale(.6)}
+@keyframes pop{from{transform:scale(.45)}to{transform:scale(1)}}
+.score{
+  position:absolute;left:14px;top:12px;font-weight:900;color:#555
+}
+.timer{
+  position:absolute;right:14px;top:12px;font-weight:900;color:#555
+}
+.gameMsg{
+  position:absolute;inset:0;display:grid;place-items:center;text-align:center;
+  font-size:28px;font-weight:900;padding:20px;pointer-events:none
+}
+.badge{
+  display:inline-block;padding:8px 14px;border-radius:999px;background:#eef0f4;
+  font-size:14px;font-weight:900;margin:4px
+}
+@media(max-width:520px){
+  .card{padding:17px;border-radius:22px}
+  .problem{min-height:155px}
+  .answer button{font-size:22px;padding:16px 6px}
+  .gameArea{height:300px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<section id="startScreen" class="card">
+  <h1>5もんチャレンジ</h1>
+  <div class="sub">5問できたら、ミニゲーム！</div>
+  <p class="small">
+    5問 → ミニゲーム → 5問 → ミニゲーム → クリア<br>
+    まずは足し算・引き算のやさしい問題で遊べます。
+  </p>
+  <button id="startBtn" class="mainbtn">スタート</button>
+</section>
+
+<section id="quizScreen" class="card hidden">
+  <div id="roundLabel" class="small"></div>
+  <div id="progress" class="progress"></div>
+  <div id="problem" class="problem"></div>
+  <div id="answers" class="answer"></div>
+  <div id="feedback" class="feedback"></div>
+</section>
+
+<section id="gameScreen" class="card hidden">
+  <div class="gameTitle">⭐ 星タップゲーム ⭐</div>
+  <div class="gameSub">星を見つけてタップ！ ⭐1点・🌟2点・💫3点／どうぶつは0点</div>
+  <div id="gameArea" class="gameArea">
+    <div id="gameScore" class="score">0こ</div>
+    <div id="gameTimer" class="timer">10秒</div>
+    <div id="gameMsg" class="gameMsg"></div>
+  </div>
+  <button id="nextBtn" class="mainbtn hidden" style="margin-top:14px">つぎへ</button>
+</section>
+
+<section id="finishScreen" class="card hidden">
+  <h1>クリア！🎉</h1>
+  <div class="sub">10問ぜんぶできた！</div>
+  <div id="resultBadges" style="text-align:center;margin:18px 0"></div>
+  <button id="againBtn" class="mainbtn">もう一回</button>
+</section>
+
+</div>
+
+<script>
+const startScreen=document.getElementById('startScreen');
+const quizScreen=document.getElementById('quizScreen');
+const gameScreen=document.getElementById('gameScreen');
+const finishScreen=document.getElementById('finishScreen');
+
+const problemEl=document.getElementById('problem');
+const answersEl=document.getElementById('answers');
+const feedbackEl=document.getElementById('feedback');
+const progressEl=document.getElementById('progress');
+const roundLabel=document.getElementById('roundLabel');
+
+let qIndex=0;
+let correctCount=0;
+let gameRound=0;
+let gameScores=[];
+let currentAnswer=0;
+
+function show(el){
+  [startScreen,quizScreen,gameScreen,finishScreen].forEach(x=>x.classList.add('hidden'));
+  el.classList.remove('hidden');
+}
+
+function makeQuestion(){
+  const isAdd=Math.random()<0.55;
+  let a,b,ans,text;
+
+  if(isAdd){
+    a=Math.floor(Math.random()*10)+1;
+    b=Math.floor(Math.random()*9)+1;
+    ans=a+b;
+    text=`${a}＋${b}`;
+  }else{
+    a=Math.floor(Math.random()*17)+3;
+    b=Math.floor(Math.random()*Math.min(9,a))+1;
+    ans=a-b;
+    text=`${a}−${b}`;
+  }
+  return {text,ans};
+}
+
+function choices(ans){
+  const set=new Set([ans]);
+  while(set.size<3){
+    let n=ans+(Math.floor(Math.random()*7)-3);
+    if(n<0) n=ans+Math.floor(Math.random()*5)+1;
+    set.add(n);
+  }
+  return [...set].sort(()=>Math.random()-.5);
+}
+
+function renderProgress(){
+  progressEl.innerHTML='';
+  for(let i=0;i<10;i++){
+    const d=document.createElement('div');
+    d.className='dot';
+    d.textContent=i+1;
+    if(i<qIndex)d.classList.add('done');
+    if(i===qIndex)d.classList.add('now');
+    progressEl.appendChild(d);
+  }
+  roundLabel.textContent = qIndex<5 ? '前半 5問' : '後半 5問';
+}
+
+function nextQuestion(){
+  if(qIndex===5 && gameRound===0){
+    startMiniGame();
+    return;
+  }
+  if(qIndex===10 && gameRound===1){
+    startMiniGame();
+    return;
+  }
+
+  show(quizScreen);
+  renderProgress();
+  feedbackEl.textContent='';
+  answersEl.innerHTML='';
+
+  const q=makeQuestion();
+  currentAnswer=q.ans;
+  problemEl.textContent=q.text;
+
+  choices(q.ans).forEach(n=>{
+    const b=document.createElement('button');
+    b.textContent=n;
+    b.onclick=()=>answer(n,b);
+    answersEl.appendChild(b);
+  });
+}
+
+function answer(n,btn){
+  [...answersEl.children].forEach(b=>b.disabled=true);
+
+  if(n===currentAnswer){
+    feedbackEl.textContent='せいかい！ 🎉';
+    correctCount++;
+  }else{
+    feedbackEl.textContent=`おしい！ こたえは ${currentAnswer}`;
+  }
+
+  qIndex++;
+  setTimeout(nextQuestion,700);
+}
+
+function startMiniGame(){
+  gameRound++;
+  show(gameScreen);
+  document.getElementById('nextBtn').classList.add('hidden');
+
+  const area=document.getElementById('gameArea');
+  const msg=document.getElementById('gameMsg');
+
+  let score=0;
+  let remain=10;
+  let running=true;
+  let wave=0;
+  let waveTimer=null;
+
+  const animals=['🐶','🐱','🐰','🐼','🦊','🐸','🐵','🐯','🐨'];
+  const starTypes=[
+    {icon:'⭐',points:1},
+    {icon:'🌟',points:2},
+    {icon:'💫',points:3}
+  ];
+
+  document.getElementById('gameScore').textContent='0点';
+  document.getElementById('gameTimer').textContent='10秒';
+  msg.textContent='スタート！';
+
+  function rankText(points){
+    if(points>=32) return '👑 すごすぎ！';
+    if(points>=24) return '🌟 めちゃうま！';
+    if(points>=16) return '✨ いい感じ！';
+    if(points>=9)  return '👍 ナイス！';
+    return '😊 もう一回いける！';
+  }
+
+  function clearIcons(){
+    area.querySelectorAll('.tapIcon').forEach(el=>el.remove());
+  }
+
+  function makePositions(count){
+    const margin=14, topSafe=48, size=58;
+    const maxX=Math.max(margin,area.clientWidth-size-margin);
+    const maxY=Math.max(topSafe,area.clientHeight-size-margin);
+    const pos=[];
+
+    for(let i=0;i<count;i++){
+      let best={x:margin,y:topSafe};
+      let bestDist=-1;
+
+      for(let t=0;t<30;t++){
+        const x=margin+Math.random()*(maxX-margin);
+        const y=topSafe+Math.random()*(maxY-topSafe);
+        let minDist=9999;
+
+        for(const p of pos){
+          minDist=Math.min(minDist,Math.hypot(x-p.x,y-p.y));
+        }
+        if(pos.length===0) minDist=9999;
+
+        if(minDist>bestDist){
+          bestDist=minDist;
+          best={x,y};
+        }
+        if(minDist>72) break;
+      }
+      pos.push(best);
+    }
+    return pos;
+  }
+
+  function spawnWave(){
+    if(!running)return;
+    clearIcons();
+    wave++;
+
+    // 4〜7個を同時表示。だんだん少し増える。
+    const count=Math.min(7,4+Math.floor(wave/3));
+    const positions=makePositions(count);
+
+    // 最低1個、最大3個は星
+    const starCount=Math.min(3,1+Math.floor(Math.random()*3));
+    const items=[];
+
+    for(let i=0;i<starCount;i++){
+      const roll=Math.random();
+      let type;
+      if(roll>0.85) type=starTypes[2];
+      else if(roll>0.58) type=starTypes[1];
+      else type=starTypes[0];
+      items.push({icon:type.icon,points:type.points,isStar:true});
+    }
+
+    while(items.length<count){
+      items.push({
+        icon:animals[Math.floor(Math.random()*animals.length)],
+        points:0,
+        isStar:false
+      });
+    }
+
+    items.sort(()=>Math.random()-.5);
+
+    items.forEach((item,i)=>{
+      const el=document.createElement('div');
+      el.className='tapIcon';
+      el.textContent=item.icon;
+      el.style.left=positions[i].x+'px';
+      el.style.top=positions[i].y+'px';
+
+      el.onclick=(e)=>{
+        e.stopPropagation();
+        if(!running || el.dataset.hit==='1') return;
+        el.dataset.hit='1';
+
+        if(item.isStar){
+          score+=item.points;
+          document.getElementById('gameScore').textContent=score+'点';
+          el.textContent='✅';
+        }else{
+          el.textContent='✖️';
+        }
+
+        el.style.pointerEvents='none';
+        setTimeout(()=>{
+          el.classList.add('fade');
+          setTimeout(()=>el.remove(),120);
+        },110);
+      };
+
+      area.appendChild(el);
+    });
+
+    // 徐々にテンポUP
+    const nextDelay=Math.max(700,1250-wave*45);
+    waveTimer=setTimeout(spawnWave,nextDelay);
+  }
+
+  setTimeout(()=>{
+    msg.textContent='';
+    spawnWave();
+  },450);
+
+  const timer=setInterval(()=>{
+    remain--;
+    document.getElementById('gameTimer').textContent=remain+'秒';
+
+    if(remain<=0){
+      clearInterval(timer);
+      if(waveTimer) clearTimeout(waveTimer);
+      running=false;
+      clearIcons();
+
+      msg.innerHTML=`${score}点！<br><span style="font-size:22px">${rankText(score)}</span>`;
+      gameScores.push(score);
+
+      const nb=document.getElementById('nextBtn');
+      nb.classList.remove('hidden');
+      nb.textContent = qIndex>=10 ? '結果を見る' : 'つぎの5問へ';
+    }
+  },1000);
+}
+
+document.getElementById('nextBtn').onclick=()=>{
+  if(qIndex>=10){
+    finish();
+  }else{
+    nextQuestion();
+  }
+};
+
+function finish(){
+  show(finishScreen);
+  const badges=document.getElementById('resultBadges');
+  badges.innerHTML=
+    `<span class="badge">正解 ${correctCount}/10</span>`+
+    gameScores.map((s,i)=>`<span class="badge">ゲーム${i+1} ${s}こ</span>`).join('');
+}
+
+function reset(){
+  qIndex=0;
+  correctCount=0;
+  gameRound=0;
+  gameScores=[];
+  nextQuestion();
+}
+
+document.getElementById('startBtn').onclick=reset;
+document.getElementById('againBtn').onclick=reset;
+</script>
+</body>
+</html>

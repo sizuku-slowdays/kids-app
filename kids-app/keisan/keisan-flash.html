@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>計算フラッシュ</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;display:grid;place-items:center;
+  background:#f6f7fb;color:#15171c;
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+  padding:18px;
+}
+.app{
+  width:min(720px,100%);background:#fff;border-radius:28px;padding:24px;
+  box-shadow:0 12px 40px #00000012;
+}
+h1{text-align:center;margin:0;font-size:clamp(28px,7vw,44px)}
+.sub{text-align:center;color:#777;margin:8px 0 20px}
+.caption{font-size:13px;color:#777;margin:12px 0 7px;font-weight:700}
+
+.modes,.levels{display:grid;gap:8px}
+.modes{grid-template-columns:repeat(4,1fr)}
+.levels{grid-template-columns:repeat(5,1fr)}
+.modes input,.levels input{display:none}
+
+.modes label,.levels label{
+  display:block;text-align:center;border:2px solid #e4e6eb;border-radius:14px;
+  padding:11px 4px;font-weight:800;cursor:pointer;background:#fff;
+}
+.modes input:checked+label,.levels input:checked+label{
+  background:#15171c;color:#fff;border-color:#15171c;
+}
+
+.screen{
+  height:320px;margin-top:18px;border:2px solid #e7e8ed;border-radius:24px;
+  display:grid;place-items:center;position:relative;overflow:hidden;background:white;
+}
+.problem{
+  font-size:clamp(64px,18vw,130px);font-weight:900;letter-spacing:-.06em;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.message{text-align:center;font-size:28px;font-weight:900;line-height:1.5;padding:20px}
+.message.countdown{font-size:clamp(120px,30vw,200px);line-height:1;padding:0}
+.counter{position:absolute;right:18px;top:14px;color:#777;font-weight:700}
+
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+button{
+  border:0;border-radius:16px;padding:16px;font-size:18px;font-weight:900;cursor:pointer;
+}
+#start{background:#15171c;color:#fff}
+#stop,#answers{background:#eef0f4;color:#15171c}
+button:disabled{opacity:.45;cursor:default}
+#answers{width:100%;margin-top:10px}
+
+#answerList{
+  margin-top:12px;padding:16px;border-radius:16px;background:#f7f7fb;
+  font-weight:700;line-height:1.9;
+}
+.note{text-align:center;color:#777;font-size:13px;line-height:1.6;margin-top:12px}
+
+@media(max-width:520px){
+  .app{padding:17px;border-radius:22px}
+  .modes{grid-template-columns:repeat(2,1fr)}
+  .levels label{font-size:12px;padding:9px 1px}
+  .screen{height:285px}
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>計算フラッシュ</h1>
+  <div class="sub">10問をパッと見て、頭の中で答えよう！</div>
+
+  <div class="caption">問題の種類</div>
+  <div class="modes">
+    <input id="mul" name="mode" type="radio" value="mul" checked>
+    <label for="mul">九九<br>×</label>
+
+    <input id="add" name="mode" type="radio" value="add">
+    <label for="add">足し算<br>＋</label>
+
+    <input id="sub" name="mode" type="radio" value="sub">
+    <label for="sub">引き算<br>−</label>
+
+    <input id="div" name="mode" type="radio" value="div">
+    <label for="div">逆九九<br>÷</label>
+  </div>
+
+  <div class="caption">難易度（1問の表示時間）</div>
+  <div class="levels">
+    <input id="l1" name="lv" type="radio" value="5000" checked>
+    <label for="l1">Lv.1<br>5秒</label>
+    <input id="l2" name="lv" type="radio" value="4000">
+    <label for="l2">Lv.2<br>4秒</label>
+    <input id="l3" name="lv" type="radio" value="3000">
+    <label for="l3">Lv.3<br>3秒</label>
+    <input id="l4" name="lv" type="radio" value="2000">
+    <label for="l4">Lv.4<br>2秒</label>
+    <input id="l5" name="lv" type="radio" value="1000">
+    <label for="l5">Lv.5<br>1秒</label>
+  </div>
+
+  <section class="screen">
+    <div class="counter" id="counter"></div>
+    <div class="message" id="message">種類と難易度を選んで<br>スタート！</div>
+    <div class="problem" id="problem" hidden></div>
+  </section>
+
+  <div class="controls">
+    <button id="start">スタート</button>
+    <button id="stop" disabled>中止</button>
+  </div>
+
+  <button id="answers" hidden>答え合わせ</button>
+  <div id="answerList" hidden></div>
+
+  <div class="note">
+    九九・足し算・引き算・逆九九の4種類。<br>
+    足し算・引き算は低学年向けで、Lvが上がるほど少しずつ難しくなります。<br>
+    逆九九は「42÷6」のように必ず割り切れ、答えは1〜9です。
+  </div>
+</main>
+
+<script>
+const problemEl = document.getElementById('problem');
+const messageEl = document.getElementById('message');
+const counterEl = document.getElementById('counter');
+const startBtn = document.getElementById('start');
+const stopBtn = document.getElementById('stop');
+const answersBtn = document.getElementById('answers');
+const answerList = document.getElementById('answerList');
+
+let timers = [];
+let running = false;
+let questions = [];
+let index = 0;
+
+function clearTimers(){
+  timers.forEach(clearTimeout);
+  timers = [];
+}
+
+function currentMode(){
+  return document.querySelector('input[name="mode"]:checked').value;
+}
+function currentMs(){
+  return Number(document.querySelector('input[name="lv"]:checked').value);
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function makeQuestions(mode){
+  const all=[];
+  const lv = Number(document.querySelector('input[name="lv"]:checked').value);
+  // value: 5000=Lv1 ... 1000=Lv5
+  const level = 6 - (lv/1000);
+
+  if(mode==='mul'){
+    for(let a=1;a<=9;a++){
+      for(let b=1;b<=9;b++){
+        all.push({text:`${a}×${b}`,answer:a*b});
+      }
+    }
+  }
+
+  if(mode==='add'){
+    // 次女向け：難易度で少しずつ範囲を広げる
+    for(let i=0;i<160;i++){
+      let a,b;
+      if(level===1){
+        // 1桁＋1桁、答え10以下
+        a=Math.floor(Math.random()*9)+1;
+        b=Math.floor(Math.random()*(10-a))+1;
+      }else if(level===2){
+        // 1桁＋1桁、答え18以下
+        a=Math.floor(Math.random()*9)+1;
+        b=Math.floor(Math.random()*9)+1;
+      }else if(level===3){
+        // 10台＋1桁、繰り上がり少なめ
+        a=Math.floor(Math.random()*10)+10;
+        b=Math.floor(Math.random()*9)+1;
+      }else if(level===4){
+        // 20以下＋1桁
+        a=Math.floor(Math.random()*20)+1;
+        b=Math.floor(Math.random()*9)+1;
+      }else{
+        // 2桁＋1桁中心。答え50以下
+        a=Math.floor(Math.random()*40)+1;
+        b=Math.floor(Math.random()*9)+1;
+      }
+      all.push({text:`${a}＋${b}`,answer:a+b});
+    }
+  }
+
+  if(mode==='sub'){
+    // 次女向け：必ず0以上
+    for(let i=0;i<160;i++){
+      let a,b;
+      if(level===1){
+        // 10以下 − 1桁
+        a=Math.floor(Math.random()*9)+2;
+        b=Math.floor(Math.random()*(a-1))+1;
+      }else if(level===2){
+        // 18以下 − 1桁
+        a=Math.floor(Math.random()*17)+2;
+        b=Math.floor(Math.random()*Math.min(9,a-1))+1;
+      }else if(level===3){
+        // 10台 − 1桁
+        a=Math.floor(Math.random()*10)+10;
+        b=Math.floor(Math.random()*9)+1;
+      }else if(level===4){
+        // 20以下 − 1桁
+        a=Math.floor(Math.random()*19)+2;
+        b=Math.floor(Math.random()*Math.min(9,a-1))+1;
+      }else{
+        // 2桁 − 1桁中心
+        a=Math.floor(Math.random()*40)+10;
+        b=Math.floor(Math.random()*9)+1;
+      }
+      all.push({text:`${a}−${b}`,answer:a-b});
+    }
+  }
+
+  if(mode==='div'){
+    // 九九の逆引き：割る数・答えとも1〜9
+    for(let divisor=1;divisor<=9;divisor++){
+      for(let answer=1;answer<=9;answer++){
+        const dividend=divisor*answer;
+        all.push({text:`${dividend}÷${divisor}`,answer});
+      }
+    }
+  }
+
+  shuffle(all);
+
+  const seen = new Set();
+  const unique = [];
+  for(const q of all){
+    if(!seen.has(q.text)){
+      seen.add(q.text);
+      unique.push(q);
+    }
+    if(unique.length===10) break;
+  }
+  return unique;
+}
+
+function finish(){
+  running=false;
+  problemEl.hidden=true;
+  messageEl.hidden=false;
+  messageEl.classList.remove('countdown');
+  messageEl.innerHTML='終了！<br><span style="font-size:16px;color:#777">10問おつかれさま！</span>';
+  counterEl.textContent='10 / 10';
+  startBtn.disabled=false;
+  stopBtn.disabled=true;
+  startBtn.textContent='もう一回';
+  answersBtn.hidden=false;
+}
+
+function showNext(){
+  if(!running) return;
+  if(index>=questions.length){
+    finish();
+    return;
+  }
+  messageEl.hidden=true;
+  problemEl.hidden=false;
+  problemEl.textContent=questions[index].text;
+  counterEl.textContent=`${index+1} / 10`;
+  index++;
+  timers.push(setTimeout(showNext,currentMs()));
+}
+
+function begin(){
+  clearTimers();
+  running=true;
+  index=0;
+  questions=makeQuestions(currentMode());
+  startBtn.disabled=true;
+  stopBtn.disabled=false;
+  answersBtn.hidden=true;
+  answerList.hidden=true;
+  answerList.innerHTML='';
+  answersBtn.textContent='答え合わせ';
+  problemEl.hidden=true;
+  messageEl.hidden=false;
+  messageEl.classList.add('countdown');
+  counterEl.textContent='';
+
+  let c=3;
+  messageEl.textContent=c;
+
+  timers.push(setTimeout(()=>messageEl.textContent='2',650));
+  timers.push(setTimeout(()=>messageEl.textContent='1',1300));
+  timers.push(setTimeout(()=>{
+    messageEl.classList.remove('countdown');
+    messageEl.textContent='START';
+    timers.push(setTimeout(showNext,450));
+  },1950));
+}
+
+function stop(){
+  clearTimers();
+  running=false;
+  problemEl.hidden=true;
+  messageEl.hidden=false;
+  messageEl.classList.remove('countdown');
+  messageEl.textContent='中止しました';
+  counterEl.textContent='';
+  startBtn.disabled=false;
+  stopBtn.disabled=true;
+  answersBtn.hidden=true;
+  answerList.hidden=true;
+}
+
+answersBtn.addEventListener('click',()=>{
+  answerList.innerHTML=questions.map((q,i)=>
+    `${i+1}問目　${q.text} ＝ ${q.answer}`
+  ).join('<br>');
+  answerList.hidden=!answerList.hidden;
+  answersBtn.textContent=answerList.hidden?'答え合わせ':'答えを隠す';
+});
+
+startBtn.addEventListener('click',begin);
+stopBtn.addEventListener('click',stop);
+</script>
+</body>
+</html>

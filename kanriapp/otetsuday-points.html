@@ -12,99 +12,106 @@
 <meta name="apple-mobile-web-app-title" content="おてつだいポイント">
 <meta name="theme-color" content="#f0f8ff">
 <style>
-  :root {
-    --bg: #f0f8ff;
-    --card: #ffffff;
-    --star: #f5a623;
-    --green: #5cb85c;
-    --pink: #ff6b9d;
-    --purple: #9b59b6;
-    --text: #333;
-    --muted: #888;
-    --border: #e0ecf8;
-    --radius: 20px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Hiragino Maru Gothic ProN', 'BIZ UDPGothic', sans-serif; min-height: 100vh; }
+:root{
+  --bg:#f0f8ff;--card:#fff;--star:#f5a623;--green:#5cb85c;
+  --pink:#ff6b9d;--purple:#9b59b6;--text:#333;--muted:#888;
+  --border:#e0ecf8;--radius:20px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Hiragino Maru Gothic ProN','BIZ UDPGothic',sans-serif;min-height:100vh}
+header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;text-align:center;border-radius:0 0 28px 28px}
+header h1{font-size:1.4rem;font-weight:700}
+header p{font-size:.85rem;opacity:.85;margin-top:4px}
+.member-select{display:flex;gap:12px;padding:20px 16px 0}
+.member-tab{flex:1;background:var(--card);border:3px solid var(--border);border-radius:var(--radius);padding:16px 8px;text-align:center;cursor:pointer;transition:.2s}
+.member-tab .mt-icon{font-size:2.2rem}
+.member-tab .mt-name{font-size:.9rem;font-weight:700;margin-top:6px;color:var(--muted)}
+.member-tab.active-mama{border-color:#e8834a;background:#fff5ee}
+.member-tab.active-mama .mt-name{color:#e8834a}
+.member-tab.active-ane{border-color:var(--pink);background:#fff3f7}
+.member-tab.active-ane .mt-name{color:var(--pink)}
+.member-tab.active-imouto{border-color:var(--purple);background:#f8f0ff}
+.member-tab.active-imouto .mt-name{color:var(--purple)}
+.content{padding:16px}
+.point-banner{border-radius:var(--radius);padding:24px 20px;text-align:center;margin-bottom:16px;color:#fff}
+.point-banner.mama-color{background:linear-gradient(135deg,#e8834a,#f5a623)}
+.point-banner.ane-color{background:linear-gradient(135deg,#ff6b9d,#ff8fab)}
+.point-banner.imouto-color{background:linear-gradient(135deg,#9b59b6,#a78bfa)}
+.pb-stars{font-size:1.8rem;margin-bottom:8px}
+.pb-pts{font-size:3rem;font-weight:700;line-height:1}
+.pb-unit{font-size:1rem;opacity:.9}
+.pb-sub{font-size:.85rem;opacity:.85;margin-top:6px}
 
-  /* ヘッダー */
-  header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 20px; text-align: center; border-radius: 0 0 28px 28px; }
-  header h1 { font-size: 1.4rem; font-weight: 700; }
-  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
-
-  /* メンバー選択 */
-  .member-select { display: flex; gap: 12px; padding: 20px 16px 0; }
-  .member-tab { flex: 1; background: var(--card); border: 3px solid var(--border); border-radius: var(--radius); padding: 16px 8px; text-align: center; cursor: pointer; transition: all 0.2s; }
-  .member-tab .mt-icon { font-size: 2.2rem; }
-  .member-tab .mt-name { font-size: 0.9rem; font-weight: 700; margin-top: 6px; color: var(--muted); }
-  .member-tab.active-mama { border-color: #e8834a; background: #fff5ee; }
-  .member-tab.active-mama .mt-name { color: #e8834a; }
-  .point-banner.mama-color { background: linear-gradient(135deg, #e8834a, #f5a623); }
-  .member-tab.active-ane .mt-name { color: var(--pink); }
-  .member-tab.active-imouto { border-color: var(--purple); background: #f8f0ff; }
-  .member-tab.active-imouto .mt-name { color: var(--purple); }
-
-  /* コンテンツ */
-  .content { padding: 16px; }
-
-  /* ポイントバナー */
-  .point-banner { border-radius: var(--radius); padding: 24px 20px; text-align: center; margin-bottom: 16px; color: #fff; }
-  .point-banner.ane-color { background: linear-gradient(135deg, #ff6b9d, #ff8fab); }
-  .point-banner.imouto-color { background: linear-gradient(135deg, #9b59b6, #a78bfa); }
-  .pb-stars { font-size: 1.8rem; margin-bottom: 8px; }
-  .pb-pts { font-size: 3rem; font-weight: 700; line-height: 1; }
-  .pb-unit { font-size: 1rem; opacity: 0.9; }
-  .pb-sub { font-size: 0.85rem; opacity: 0.85; margin-top: 6px; }
-
-  /* セクション */
-  .section { margin-bottom: 16px; }
-  .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-
-  /* カード */
-  .card { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-
-  /* 履歴ログ */
-  .log-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .log-item:last-child { border-bottom: none; }
-  .log-icon { font-size: 1.8rem; flex-shrink: 0; width: 42px; height: 42px; background: var(--bg); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-  .log-main { flex: 1; }
-  .log-name { font-weight: 700; font-size: 0.95rem; }
-  .log-date { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
-  .log-pts { font-weight: 700; font-size: 1.1rem; color: var(--star); }
-
-  /* ごほうびカード */
-  .reward-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--bg); border-radius: 14px; margin-bottom: 8px; }
-  .reward-icon { font-size: 1.8rem; }
-  .reward-main { flex: 1; }
-  .reward-name { font-weight: 700; font-size: 0.95rem; }
-  .reward-pts { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
-  .reward-pts strong { color: var(--star); }
-  .reward-action { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
-  .reward-need { font-size: 0.78rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
-  .btn-request { border: none; border-radius: 12px; padding: 8px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
-  .btn-request.can { background: linear-gradient(135deg, #5cb85c, #3a9a3a); color: #fff; box-shadow: 0 3px 10px rgba(60,160,60,0.3); }
-  .btn-request.cannot { background: #e0e0e0; color: #999; cursor: default; }
-
-  .loading { text-align: center; padding: 30px; color: var(--muted); font-size: 1rem; }
-  .empty { text-align: center; padding: 20px; color: var(--muted); }
-
-  /* モーダル */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: flex-end; justify-content: center; }
-  .modal-overlay.open { display: flex; }
-  .modal { background: #fff; border-radius: 28px 28px 0 0; width: 100%; max-width: 480px; padding: 28px 20px 40px; text-align: center; }
-  .modal h2 { font-size: 1.2rem; margin-bottom: 16px; }
-  .modal .reward-confirm { font-size: 2.5rem; margin: 10px 0; }
-  .modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
-  .modal-btns { display: flex; gap: 10px; }
-  .btn-cancel { flex: 1; padding: 14px; border: 2px solid var(--border); border-radius: 14px; background: #fff; font-size: 1rem; cursor: pointer; font-weight: 700; }
-  .btn-ok { flex: 2; padding: 14px; border: none; border-radius: 14px; background: linear-gradient(135deg, #f5a623, #f39c12); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
-
-  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
-  .toast.show { opacity: 1; }
+/* 折りたたみ */
+details.fold-section{
+  background:transparent;
+  margin-bottom:14px;
+}
+details.fold-section>summary{
+  list-style:none;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  font-size:1rem;
+  font-weight:700;
+  padding:14px 16px;
+  background:var(--card);
+  border-radius:16px;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+  -webkit-tap-highlight-color:transparent;
+}
+details.fold-section>summary::-webkit-details-marker{display:none}
+details.fold-section>summary::after{
+  content:'▶';
+  color:var(--muted);
+  font-size:.78rem;
+  transition:transform .18s ease;
+}
+details.fold-section[open]>summary::after{transform:rotate(90deg)}
+details.fold-section[open]>summary{border-radius:16px 16px 0 0}
+.fold-body{
+  background:var(--card);
+  border-radius:0 0 16px 16px;
+  padding:8px 16px 16px;
+  box-shadow:0 6px 12px rgba(0,0,0,.04);
+}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.log-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.log-item:last-child{border-bottom:none}
+.log-icon{font-size:1.8rem;flex-shrink:0;width:42px;height:42px;background:var(--bg);border-radius:12px;display:flex;align-items:center;justify-content:center}
+.log-main{flex:1}
+.log-name{font-weight:700;font-size:.95rem}
+.log-date{font-size:.78rem;color:var(--muted);margin-top:2px}
+.log-pts{font-weight:700;font-size:1.1rem;color:var(--star)}
+.reward-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:14px;margin-bottom:8px}
+.reward-icon{font-size:1.8rem}
+.reward-main{flex:1;min-width:0}
+.reward-name{font-weight:700;font-size:.95rem}
+.reward-pts{font-size:.82rem;color:var(--muted);margin-top:2px}
+.reward-pts strong{color:var(--star)}
+.reward-action{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.reward-need{font-size:.78rem;font-weight:700;color:var(--muted);white-space:nowrap}
+.btn-request{border:none;border-radius:12px;padding:8px 16px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-request.can{background:linear-gradient(135deg,#5cb85c,#3a9a3a);color:#fff;box-shadow:0 3px 10px rgba(60,160,60,.3)}
+.btn-request.cannot{background:#e0e0e0;color:#999;cursor:default}
+.loading{text-align:center;padding:30px;color:var(--muted);font-size:1rem}
+.empty{text-align:center;padding:20px;color:var(--muted)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:28px 28px 0 0;width:100%;max-width:480px;padding:28px 20px 40px;text-align:center}
+.modal h2{font-size:1.2rem;margin-bottom:16px}
+.modal .reward-confirm{font-size:2.5rem;margin:10px 0}
+.modal p{color:var(--muted);font-size:.9rem;margin-bottom:20px}
+.modal-btns{display:flex;gap:10px}
+.btn-cancel{flex:1;padding:14px;border:2px solid var(--border);border-radius:14px;background:#fff;font-size:1rem;cursor:pointer;font-weight:700}
+.btn-ok{flex:2;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#f5a623,#f39c12);color:#fff;font-size:1rem;font-weight:700;cursor:pointer}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:24px;font-size:.9rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:200}
+.toast.show{opacity:1}
 </style>
 </head>
 <body>
-
 <header>
   <h1>⭐ おてつだいポイント</h1>
   <p>みんなのがんばりをチェック！</p>
@@ -112,24 +119,18 @@
 
 <div class="member-select">
   <div class="member-tab" id="tab-mama" onclick="selectMember('mama')">
-    <div class="mt-icon">👩</div>
-    <div class="mt-name">ママ</div>
+    <div class="mt-icon">👩</div><div class="mt-name">ママ</div>
   </div>
   <div class="member-tab" id="tab-ane" onclick="selectMember('ane')">
-    <div class="mt-icon">🌸</div>
-    <div class="mt-name">あね</div>
+    <div class="mt-icon">🐰</div><div class="mt-name">あね</div>
   </div>
   <div class="member-tab" id="tab-imouto" onclick="selectMember('imouto')">
-    <div class="mt-icon">🦄</div>
-    <div class="mt-name">いもうと</div>
+    <div class="mt-icon">🦄</div><div class="mt-name">いもうと</div>
   </div>
 </div>
 
-<div class="content" id="mainContent">
-  <div class="loading">よみこみ中…</div>
-</div>
+<div class="content" id="mainContent"><div class="loading">よみこみ中…</div></div>
 
-<!-- こうかんモーダル -->
 <div class="modal-overlay" id="reqModal">
   <div class="modal">
     <h2>こうかんしたい！</h2>
@@ -142,208 +143,197 @@
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'https://otetsudai-api.sslowdayss.workers.dev';
-let currentMember = null;
-let pendingReward = null;
-let rewards = [];
-let memberData = null;
-let chores = [];
+const API='https://otetsudai-api.sslowdayss.workers.dev';
+let currentMember=null,pendingReward=null,rewards=[],memberData=null,chores=[];
+const today=new Date();
+const monthStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
 
-const today = new Date();
-const monthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-
-async function init() {
-  // chore情報を先に取得（アイコン表示用）
-  try {
-    const r = await fetch(`${API}/api/chores/today`);
-    chores = await r.json();
-  } catch(e) {}
-  // 前回選択を復元
-  const saved = localStorage.getItem('otetsuday-member');
-  selectMember(saved || 'ane');
+async function init(){
+  try{
+    const r=await fetch(`${API}/api/chores/today`);
+    chores=await r.json();
+  }catch(e){}
+  const saved=localStorage.getItem('otetsuday-member');
+  selectMember(saved||'ane');
 }
 
-async function selectMember(id) {
-  currentMember = id;
-  localStorage.setItem('otetsuday-member', id);
-
-  // タブのスタイル
-  document.getElementById('tab-mama').className = 'member-tab' + (id==='mama' ? ' active-mama' : '');
-  document.getElementById('tab-ane').className = 'member-tab' + (id==='ane' ? ' active-ane' : '');
-  document.getElementById('tab-imouto').className = 'member-tab' + (id==='imouto' ? ' active-imouto' : '');
-
-  document.getElementById('mainContent').innerHTML = '<div class="loading">よみこみ中…⭐</div>';
+async function selectMember(id){
+  currentMember=id;
+  localStorage.setItem('otetsuday-member',id);
+  document.getElementById('tab-mama').className='member-tab'+(id==='mama'?' active-mama':'');
+  document.getElementById('tab-ane').className='member-tab'+(id==='ane'?' active-ane':'');
+  document.getElementById('tab-imouto').className='member-tab'+(id==='imouto'?' active-imouto':'');
+  document.getElementById('mainContent').innerHTML='<div class="loading">よみこみ中…⭐</div>';
   await loadMemberData(id);
   await loadRewards();
   renderAll();
 }
 
-async function loadMemberData(id) {
-  try {
-    const r = await fetch(`${API}/api/points/member/${id}?month=${monthStr}`);
-    memberData = await r.json();
-    // 申請中（pending）のごほうびを取得して仮引き計算用に追加
-    const rq = await fetch(`${API}/api/rewards/member-pending?member_id=${id}`);
-    if (rq.ok) {
-      const pdata = await rq.json();
-      memberData.pending_points = pdata.pending_points ?? 0;
-      memberData.pending_rewards = pdata.reward_ids ?? [];
+async function loadMemberData(id){
+  try{
+    const r=await fetch(`${API}/api/points/member/${id}?month=${monthStr}`);
+    memberData=await r.json();
+    const rq=await fetch(`${API}/api/rewards/member-pending?member_id=${id}`);
+    if(rq.ok){
+      const pdata=await rq.json();
+      memberData.pending_points=pdata.pending_points??0;
+      memberData.pending_rewards=pdata.reward_ids??[];
     }
-  } catch(e) {
-    memberData = { balance: 0, total_points: 0, used_points: 0, month_points: 0, recent_logs: [], pending_points: 0, pending_rewards: [] };
+  }catch(e){
+    memberData={balance:0,total_points:0,used_points:0,month_points:0,recent_logs:[],pending_points:0,pending_rewards:[]};
   }
 }
 
-async function loadRewards() {
-  try {
-    const r = await fetch(`${API}/api/rewards`);
-    rewards = await r.json();
-  } catch(e) {
-    rewards = [];
-  }
+async function loadRewards(){
+  try{
+    const r=await fetch(`${API}/api/rewards`);
+    rewards=await r.json();
+  }catch(e){ rewards=[]; }
 }
 
-function renderAll() {
-  const isMama = currentMember === 'mama';
-  const isAne = currentMember === 'ane';
-  const colorClass = isMama ? 'mama-color' : isAne ? 'ane-color' : 'imouto-color';
-  const balance = memberData?.balance ?? 0;
-  const monthPts = memberData?.month_points ?? 0;
-  const usedPts = memberData?.used_points ?? 0;
+function renderRewards(balance){
+  if(!rewards.length) return '<div class="empty">ごほうびなし</div>';
+  return rewards.map(r=>{
+    const pendingPts=memberData?.pending_points??0;
+    const effectiveBalance=balance-pendingPts;
+    const outOfStock=r.stock!==null&&r.stock!==undefined&&r.stock<=0;
+    const isPending=(memberData?.pending_rewards??[]).includes(r.id);
+    const canGet=!outOfStock&&!isPending&&effectiveBalance>=r.points;
+    const need=r.points-effectiveBalance;
+    const stockLabel=r.stock===null||r.stock===undefined?''
+      :r.stock<=0?'<span style="color:#e05;font-size:.75rem;font-weight:700;">在庫なし</span>'
+      :`<span style="color:var(--muted);font-size:.75rem;">在庫${r.stock}個</span>`;
 
-  const html = `
-    <!-- ポイントバナー -->
-    <div class="point-banner ${colorClass}">
-      <div class="pb-stars">${isMama ? '👩💪✨' : '⭐⭐⭐'}</div>
-      <div class="pb-pts">${balance.toLocaleString()}<span class="pb-unit"> pt</span></div>
-      <div class="pb-sub">今月：${monthPts}pt${isMama ? '' : ` ／ つかった：${usedPts}pt`}</div>
-    </div>
+    return `<div class="reward-item">
+      ${r.image_url
+        ? `<img src="${r.image_url}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;flex-shrink:0;">`
+        : `<div class="reward-icon">🎁</div>`}
+      <div class="reward-main">
+        <div class="reward-name">${r.name}</div>
+        <div class="reward-pts"><strong>${r.points.toLocaleString()}pt</strong> ひつよう ${stockLabel}</div>
+      </div>
+      <div class="reward-action">
+        ${isPending?'<div class="reward-need" style="color:var(--star);">しんせいちゅう</div>':
+          outOfStock?'':!canGet?`<div class="reward-need">あと${need.toLocaleString()}pt</div>`:''}
+        ${isPending
+          ? `<button class="btn-request cannot">まってね</button>`
+          : outOfStock
+          ? `<button class="btn-request cannot">在庫なし</button>`
+          : canGet
+          ? `<button class="btn-request can" data-id="${r.id}" data-name="${String(r.name).replace(/"/g,'&quot;')}" data-pts="${r.points}" onclick="openRequestFromBtn(this)">こうかん！</button>`
+          : `<button class="btn-request cannot">あとすこし</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
 
-    <!-- 履歴 -->
-    <div class="section">
-      <div class="section-title">📋 さいきんのおてつだい</div>
-      <div class="card">
-        ${(memberData?.recent_logs||[]).length ? (memberData.recent_logs).map(l => {
-          const chore = chores.find(c => c.id === l.chore_id);
-          return `<div class="log-item">
-            <div class="log-icon">${chore?.icon||'📋'}</div>
-            <div class="log-main">
-              <div class="log-name">${l.chore_name}</div>
-              <div class="log-date">${l.completed_date}</div>
-            </div>
-            <div class="log-pts">+${l.points.toLocaleString()}pt</div>
-          </div>`;
-        }).join('') : `<div class="empty">${isMama ? 'まだなし' : 'まだおてつだいなし！<br>がんばろう💪'}</div>`}
+function renderLogs(isMama){
+  const logs=memberData?.recent_logs||[];
+  if(!logs.length) return `<div class="empty">${isMama?'まだなし':'まだおてつだいなし！<br>がんばろう💪'}</div>`;
+  return logs.map(l=>{
+    const chore=chores.find(c=>c.id===l.chore_id);
+    return `<div class="log-item">
+      <div class="log-icon">${chore?.icon||'📋'}</div>
+      <div class="log-main">
+        <div class="log-name">${l.chore_name}</div>
+        <div class="log-date">${l.completed_date}</div>
       </div>
-    </div>
+      <div class="log-pts">+${l.points.toLocaleString()}pt</div>
+    </div>`;
+  }).join('');
+}
 
-    <!-- ごほうび（ママには表示しない） -->
-    ${isMama ? `
-    <div class="section">
-      <div class="card" style="text-align:center;padding:20px;color:var(--muted);">
-        👩 ママはいつもありがとう！<br>
-        <span style="font-size:0.85rem;">ポイントは記録されています</span>
-      </div>
+function renderAll(){
+  const isMama=currentMember==='mama';
+  const isAne=currentMember==='ane';
+  const colorClass=isMama?'mama-color':isAne?'ane-color':'imouto-color';
+  const balance=memberData?.balance??0;
+  const monthPts=memberData?.month_points??0;
+  const usedPts=memberData?.used_points??0;
+
+  const rewardSection=isMama?`
+    <div class="card" style="text-align:center;padding:20px;color:var(--muted);margin-bottom:14px;">
+      👩 ママはいつもありがとう！<br>
+      <span style="font-size:.85rem;">ポイントは記録されています</span>
     </div>
-    ` : `
-    <div class="section">
-      <div class="section-title">🎁 ごほうびいちらん</div>
-      ${rewards.length ? rewards.map(r => {
-        // 申請中のポイントも仮引き（pending分を残高から引く）
-        const pendingPts = (memberData?.pending_points ?? 0);
-        const effectiveBalance = balance - pendingPts;
-        const outOfStock = r.stock !== null && r.stock !== undefined && r.stock <= 0;
-        const isPending = (memberData?.pending_rewards ?? []).includes(r.id);
-        const canGet = !outOfStock && !isPending && effectiveBalance >= r.points;
-        const need = r.points - effectiveBalance;
-        const stockLabel = r.stock === null || r.stock === undefined
-          ? '' : r.stock <= 0
-          ? '<span style="color:#e05;font-size:0.75rem;font-weight:700;">在庫なし</span>'
-          : `<span style="color:var(--muted);font-size:0.75rem;">在庫${r.stock}個</span>`;
-        return `<div class="reward-item">
-          ${r.image_url
-            ? `<img src="${r.image_url}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;flex-shrink:0;">`
-            : `<div class="reward-icon">🎁</div>`}
-          <div class="reward-main">
-            <div class="reward-name">${r.name}</div>
-            <div class="reward-pts"><strong>${r.points.toLocaleString()}pt</strong> ひつよう ${stockLabel}</div>
-          </div>
-          <div class="reward-action">
-            ${isPending ? '<div class="reward-need" style="color:var(--star);">しんせいちゅう</div>' :
-              outOfStock ? '' :
-              !canGet ? `<div class="reward-need">あと${need.toLocaleString()}pt</div>` : ''}
-            ${isPending
-              ? `<button class="btn-request cannot">まってね</button>`
-              : outOfStock
-              ? `<button class="btn-request cannot">在庫なし</button>`
-              : canGet
-              ? `<button class="btn-request can" data-id="${r.id}" data-name="${r.name.replace(/"/g,'&quot;')}" data-pts="${r.points}" onclick="openRequestFromBtn(this)">こうかん！</button>`
-              : `<button class="btn-request cannot">あとすこし</button>`}
-          </div>
-        </div>`;
-      }).join('') : '<div class="empty">ごほうびなし</div>'}
-      <div style="margin-top:8px;font-size:0.78rem;color:var(--muted);text-align:center;">
-        ※こうかんはママがしょうにんしてから！
+  `:`
+    <details class="fold-section">
+      <summary>🎁 ごほうびいちらん</summary>
+      <div class="fold-body">
+        ${renderRewards(balance)}
+        <div style="margin-top:8px;font-size:.78rem;color:var(--muted);text-align:center;">
+          ※こうかんはママがしょうにんしてから！
+        </div>
       </div>
-    </div>
-    `}
+    </details>
   `;
-  document.getElementById('mainContent').innerHTML = html;
+
+  const historySection=`
+    <details class="fold-section">
+      <summary>📋 さいきんのおてつだい</summary>
+      <div class="fold-body">
+        ${renderLogs(isMama)}
+      </div>
+    </details>
+  `;
+
+  document.getElementById('mainContent').innerHTML=`
+    <div class="point-banner ${colorClass}">
+      <div class="pb-stars">${isMama?'👩💪✨':'⭐⭐⭐'}</div>
+      <div class="pb-pts">${balance.toLocaleString()}<span class="pb-unit"> pt</span></div>
+      <div class="pb-sub">今月：${monthPts}pt${isMama?'':` ／ つかった：${usedPts}pt`}</div>
+    </div>
+
+    <!-- ごほうびを先に。両方ともデフォルト閉じる -->
+    ${rewardSection}
+    ${historySection}
+  `;
 }
 
-function openRequestFromBtn(btn) {
-  const id = parseInt(btn.dataset.id);
-  const name = btn.dataset.name;
-  const pts = parseInt(btn.dataset.pts);
-  openRequest(id, name, pts);
+function openRequestFromBtn(btn){
+  openRequest(parseInt(btn.dataset.id),btn.dataset.name,parseInt(btn.dataset.pts));
 }
-
-function openRequest(id, name, pts) {
-  pendingReward = { id, name, pts };
-  document.getElementById('reqName').textContent = `${name}（${pts.toLocaleString()}pt）`;
+function openRequest(id,name,pts){
+  pendingReward={id,name,pts};
+  document.getElementById('reqName').textContent=`${name}（${pts.toLocaleString()}pt）`;
   document.getElementById('reqModal').classList.add('open');
 }
-
-function closeModal() {
+function closeModal(){
   document.getElementById('reqModal').classList.remove('open');
-  pendingReward = null;
+  pendingReward=null;
 }
-
-async function confirmRequest() {
-  if (!pendingReward || !currentMember) return;
-  const reward = { ...pendingReward }; // closeModal前に保存
+async function confirmRequest(){
+  if(!pendingReward||!currentMember)return;
+  const reward={...pendingReward};
   closeModal();
-  try {
-    const r = await fetch(`${API}/api/rewards/request`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ member_id: currentMember, reward_id: reward.id })
+  try{
+    const r=await fetch(`${API}/api/rewards/request`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({member_id:currentMember,reward_id:reward.id})
     });
-    const data = await r.json();
-    if (data.ok) {
-      showToast(`🎁 ママにおねがいしたよ！しょうにんまってね`);
+    const data=await r.json();
+    if(data.ok){
+      showToast('🎁 ママにおねがいしたよ！しょうにんまってね');
       await loadMemberData(currentMember);
       await loadRewards();
       renderAll();
-    } else {
-      showToast(data.error || 'エラーがおきたよ…もういちどためしてね');
+    }else{
+      showToast(data.error||'エラーがおきたよ…もういちどためしてね');
     }
-  } catch(e) {
+  }catch(e){
     showToast('エラーがおきたよ…もういちどためしてね');
   }
 }
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(()=>t.classList.remove('show'),3000);
 }
-
 init();
 </script>
 </body>

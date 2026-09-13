@@ -5,10 +5,28 @@
   const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
 
   document.addEventListener('DOMContentLoaded', () => {
+    applyAudienceContext();
     setTodayAndGreeting();
     renderApps();
     registerServiceWorker();
   });
+
+  function getAudience() {
+    const qs = new URLSearchParams(location.search).get('audience');
+    if (qs === 'mama' || qs === 'kids') return qs;
+    return document.body.dataset.audience === 'mama' ? 'mama' : 'kids';
+  }
+
+  function applyAudienceContext() {
+    const audience = getAudience();
+    document.body.dataset.audience = audience;
+
+    const back = document.querySelector('#appsBack');
+    const homeNav = document.querySelector('#appsHomeNav');
+    const homeHref = audience === 'mama' ? './mama.html' : './index.html';
+    if (back) back.href = homeHref;
+    if (homeNav) homeNav.href = homeHref;
+  }
 
   function setTodayAndGreeting() {
     const today = document.querySelector('#today');
@@ -39,7 +57,10 @@
       if (!response.ok) throw new Error(`apps.json: ${response.status}`);
 
       const data = await response.json();
-      const apps = Array.isArray(data.apps) ? data.apps.filter(isValidApp).sort(byOrder) : [];
+      const audience = getAudience();
+      const apps = Array.isArray(data.apps)
+        ? data.apps.map((app) => resolveAudienceApp(app, audience)).filter(isValidApp).sort(byOrder)
+        : [];
 
       if (featuredRoot) {
         const featured = apps.filter((app) => app.featured).slice(0, 4);
@@ -90,6 +111,22 @@
 
     root.replaceChildren(...sections);
     if (!sections.length) showEmpty(root);
+  }
+
+  function resolveAudienceApp(app, audience) {
+    if (!app || typeof app !== 'object') return app;
+    const copy = { ...app };
+
+    if (app.urls && typeof app.urls === 'object' && app.urls[audience]) {
+      copy.url = app.urls[audience];
+    }
+    if (app.names && typeof app.names === 'object' && app.names[audience]) {
+      copy.name = app.names[audience];
+    }
+    if (app.descriptions && typeof app.descriptions === 'object' && app.descriptions[audience]) {
+      copy.description = app.descriptions[audience];
+    }
+    return copy;
   }
 
   function createAppCard(app) {

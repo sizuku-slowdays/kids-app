@@ -19,21 +19,11 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,B
 h1{font-size:1.35rem;margin:0}
 .grade-tabs,.week-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
 button{font:inherit}
-.tab{
-  border:0;border-radius:14px;padding:12px 10px;font-weight:800;
-  background:#e7efed;color:#57716b;cursor:pointer
-}
+.tab{border:0;border-radius:14px;padding:12px 10px;font-weight:800;background:#e7efed;color:#57716b;cursor:pointer}
 .tab.active{background:var(--mint);color:#173e35}
 .week-tabs .tab.active{background:#fff;border:2px solid var(--mint);padding:10px 8px}
-.card{
-  background:#fff;border-radius:20px;padding:14px;box-shadow:var(--shadow);
-  border:1px solid var(--line)
-}
-.image-frame{
-  min-height:260px;border-radius:16px;background:#f0f5f3;
-  display:flex;align-items:center;justify-content:center;overflow:hidden;
-  border:1px solid var(--line)
-}
+.card{background:#fff;border-radius:20px;padding:14px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.image-frame{min-height:260px;border-radius:16px;background:#f0f5f3;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--line)}
 .image-frame img{display:block;width:100%;height:auto;max-height:70vh;object-fit:contain;background:#fff}
 .empty{text-align:center;color:var(--muted);padding:48px 20px;line-height:1.8}
 .meta{text-align:center;color:var(--muted);font-size:.82rem;margin:10px 0 0}
@@ -43,29 +33,25 @@ details.admin summary::-webkit-details-marker{display:none}
 details.admin summary::after{content:"＋";float:right;color:var(--muted)}
 details.admin[open] summary::after{content:"−"}
 .admin-body{padding:0 16px 16px}
-.upload-box{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  border:2px dashed var(--mint);border-radius:14px;padding:16px;
-  background:#f3fbf8;font-weight:800;cursor:pointer
-}
+.upload-box{display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--mint);border-radius:14px;padding:16px;background:#f3fbf8;font-weight:800;cursor:pointer}
 .upload-box input{display:none}
 .preview{display:none;width:100%;max-height:300px;object-fit:contain;margin-top:10px;border-radius:12px;border:1px solid var(--line)}
 .actions{display:flex;gap:8px;margin-top:10px}
-.btn{
-  flex:1;border:0;border-radius:12px;padding:12px;font-weight:800;cursor:pointer
-}
+.btn{flex:1;border:0;border-radius:12px;padding:12px;font-weight:800;cursor:pointer}
 .btn-save{background:var(--mint);color:#173e35}
 .btn-clear{background:#eef2f1;color:#667772}
 .note{font-size:.8rem;color:var(--muted);line-height:1.6;margin:10px 0 0}
-.status{font-size:.82rem;color:var(--muted);margin-top:8px}
-.badge{display:inline-block;background:var(--mint2);color:#315e55;border-radius:999px;padding:3px 8px;font-size:.75rem;font-weight:800;margin-left:6px}
+.status{font-size:.82rem;color:var(--muted);margin-top:8px;line-height:1.5}
+.server-badge{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:var(--mint2);font-size:.72rem;color:#35685d}
+.migrate{display:none;margin-top:10px;padding:12px;border-radius:12px;background:#fff8dc;border:1px solid #ecd77b;font-size:.82rem;line-height:1.5}
+.migrate button{margin-top:8px;border:0;border-radius:10px;background:#e9cf62;padding:9px 12px;font-weight:800}
 </style>
 </head>
 <body>
 <main class="wrap">
   <div class="top">
     <a class="back" href="./index.html" aria-label="戻る">‹</a>
-    <h1>🗓️ 時間割</h1>
+    <h1>🗓️ 時間割 <span class="server-badge">共有</span></h1>
   </div>
 
   <div class="grade-tabs" aria-label="学年">
@@ -79,11 +65,8 @@ details.admin[open] summary::after{content:"−"}
   </div>
 
   <section class="card">
-    <div class="image-frame" id="imageFrame">
-      <div class="empty" id="emptyState">
-        まだ時間割の画像がありません。<br>
-        下の「時間割を更新」から画像を入れてね。
-      </div>
+    <div class="image-frame">
+      <div class="empty" id="emptyState">よみこみ中…</div>
       <img id="timetableImage" alt="時間割" style="display:none">
     </div>
     <p class="meta" id="imageMeta"></p>
@@ -92,22 +75,30 @@ details.admin[open] summary::after{content:"−"}
   <details class="admin">
     <summary>📷 時間割を更新</summary>
     <div class="admin-body">
-      <p style="margin-top:0;font-weight:800">
-        <span id="uploadGradeLabel">4年生</span>の新しい時間割
-      </p>
+      <p style="margin-top:0;font-weight:800"><span id="uploadGradeLabel">4年生</span>の新しい時間割</p>
+
       <label class="upload-box">
         📷 スクショ・写真を選ぶ
         <input id="imageInput" type="file" accept="image/*">
       </label>
+
       <img id="preview" class="preview" alt="アップロード前のプレビュー">
       <div class="status" id="status"></div>
+
       <div class="actions">
         <button class="btn btn-clear" id="cancelBtn" type="button">キャンセル</button>
         <button class="btn btn-save" id="saveBtn" type="button">この画像を今週にする</button>
       </div>
+
+      <div class="migrate" id="migrateBox">
+        この端末に、前の時間割アプリで保存した画像があります。<br>
+        サーバーへ移すとパソコンなど他の端末でも見られます。
+        <br><button id="migrateBtn" type="button">旧画像を共有へ移す</button>
+      </div>
+
       <p class="note">
-        新しい画像を保存すると、いまの「今週」は自動で「先週」に移動します。<br>
-        4年生と2年生は別々に保存されます。
+        新しい画像を保存すると、現在の「今週」は自動で「先週」に移動します。<br>
+        画像はサーバー保存なので、スマホ・パソコンで同じ時間割が表示されます。
       </p>
     </div>
   </details>
@@ -115,13 +106,13 @@ details.admin[open] summary::after{content:"−"}
 
 <script>
 (() => {
-  const DB_NAME = 'wagaya_timetable_images';
-  const STORE = 'images';
-  const DB_VERSION = 1;
+  const API_BASE = 'https://api.cetus.fun/api';
+  const PASSWORD_KEY = 'cloudflare_app_password';
 
   let grade = '4';
   let week = 'current';
   let pendingImage = null;
+  let serverData = { current:null, previous:null };
 
   const img = document.getElementById('timetableImage');
   const empty = document.getElementById('emptyState');
@@ -130,60 +121,95 @@ details.admin[open] summary::after{content:"−"}
   const preview = document.getElementById('preview');
   const status = document.getElementById('status');
   const uploadGradeLabel = document.getElementById('uploadGradeLabel');
+  const migrateBox = document.getElementById('migrateBox');
 
-  function openDB(){
-    return new Promise((resolve,reject)=>{
-      const req=indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded=()=> {
-        const db=req.result;
-        if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
-      };
-      req.onsuccess=()=>resolve(req.result);
-      req.onerror=()=>reject(req.error);
-    });
-  }
-
-  async function dbGet(key){
-    const db=await openDB();
-    return new Promise((resolve,reject)=>{
-      const tx=db.transaction(STORE,'readonly');
-      const r=tx.objectStore(STORE).get(key);
-      r.onsuccess=()=>resolve(r.result||null);
-      r.onerror=()=>reject(r.error);
-    });
-  }
-
-  async function dbPut(key,value){
-    const db=await openDB();
-    return new Promise((resolve,reject)=>{
-      const tx=db.transaction(STORE,'readwrite');
-      tx.objectStore(STORE).put(value,key);
-      tx.oncomplete=()=>resolve();
-      tx.onerror=()=>reject(tx.error);
-    });
-  }
-
-  async function dbDelete(key){
-    const db=await openDB();
-    return new Promise((resolve,reject)=>{
-      const tx=db.transaction(STORE,'readwrite');
-      tx.objectStore(STORE).delete(key);
-      tx.oncomplete=()=>resolve();
-      tx.onerror=()=>reject(tx.error);
-    });
-  }
-
-  const keyFor=(g,w)=>`grade${g}_${w}`;
+  const serverKey = g => `wagaya-timetable-grade${g}`;
 
   function formatDate(iso){
     if(!iso) return '';
     const d=new Date(iso);
+    if(Number.isNaN(d.getTime())) return '';
     return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
   }
 
-  async function render(){
-    uploadGradeLabel.textContent = `${grade}年生`;
-    const rec=await dbGet(keyFor(grade,week));
+  function unwrap(raw){
+    if(!raw) return null;
+    if(typeof raw === 'string'){
+      try{return unwrap(JSON.parse(raw));}catch{return null;}
+    }
+    if(raw.current !== undefined || raw.previous !== undefined) return raw;
+    for(const k of ['data','value','payload','record']){
+      if(raw[k]){
+        const x=unwrap(raw[k]);
+        if(x) return x;
+      }
+    }
+    return null;
+  }
+
+  async function fetchGrade(g){
+    try{
+      const r=await fetch(`${API_BASE}/app-data-public?key=${encodeURIComponent(serverKey(g))}`, {cache:'no-store'});
+      if(r.status===404) return {current:null,previous:null};
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      return unwrap(await r.json()) || {current:null,previous:null};
+    }catch(e){
+      console.error(e);
+      status.textContent='⚠️ サーバーから時間割を読み込めませんでした';
+      return {current:null,previous:null};
+    }
+  }
+
+  async function saveGrade(g,data){
+    let pw='';
+    try{ pw=localStorage.getItem(PASSWORD_KEY)||''; }catch(e){}
+
+    if(!pw){
+      pw=prompt('時間割を保存するための合言葉を入力してください');
+      if(!pw) throw new Error('保存をキャンセルしました');
+      try{ localStorage.setItem(PASSWORD_KEY,pw); }catch(e){}
+    }
+
+    let r=await fetch(`${API_BASE}/app-data`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-App-Password':pw},
+      body:JSON.stringify({key:serverKey(g),data})
+    });
+
+    if(r.status===401){
+      try{localStorage.removeItem(PASSWORD_KEY);}catch(e){}
+      const retry=prompt('合言葉が違うようです。もう一度入力してください');
+      if(!retry) throw new Error('保存をキャンセルしました');
+      try{localStorage.setItem(PASSWORD_KEY,retry);}catch(e){}
+      r=await fetch(`${API_BASE}/app-data`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-App-Password':retry},
+        body:JSON.stringify({key:serverKey(g),data})
+      });
+    }
+
+    if(!r.ok){
+      let msg=`HTTP ${r.status}`;
+      try{const j=await r.json(); if(j?.error) msg=j.error;}catch(e){}
+      throw new Error(msg);
+    }
+    return true;
+  }
+
+  async function loadAndRender(){
+    empty.style.display='block';
+    empty.textContent='よみこみ中…';
+    img.style.display='none';
+    meta.textContent='';
+
+    serverData=await fetchGrade(grade);
+    render();
+    checkOldLocalData();
+  }
+
+  function render(){
+    uploadGradeLabel.textContent=`${grade}年生`;
+    const rec=serverData?.[week];
 
     if(rec?.dataUrl){
       img.src=rec.dataUrl;
@@ -199,7 +225,7 @@ details.admin[open] summary::after{content:"−"}
     }
   }
 
-  async function compress(file,maxSide=1600,quality=.86){
+  async function compress(file,maxSide=1600,quality=.84){
     const url=URL.createObjectURL(file);
     try{
       const source=await new Promise((resolve,reject)=>{
@@ -210,14 +236,15 @@ details.admin[open] summary::after{content:"−"}
       });
       let w=source.naturalWidth,h=source.naturalHeight;
       const scale=Math.min(1,maxSide/Math.max(w,h));
-      w=Math.round(w*scale); h=Math.round(h*scale);
+      w=Math.max(1,Math.round(w*scale));
+      h=Math.max(1,Math.round(h*scale));
       const canvas=document.createElement('canvas');
       canvas.width=w; canvas.height=h;
-      const ctx=canvas.getContext('2d');
+      const ctx=canvas.getContext('2d',{alpha:false});
       ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h);
       ctx.drawImage(source,0,0,w,h);
       return canvas.toDataURL('image/jpeg',quality);
-    } finally {
+    }finally{
       URL.revokeObjectURL(url);
     }
   }
@@ -230,15 +257,15 @@ details.admin[open] summary::after{content:"−"}
       input.value='';
       preview.style.display='none';
       status.textContent='';
-      await render();
+      await loadAndRender();
     });
   });
 
   document.querySelectorAll('[data-week]').forEach(btn=>{
-    btn.addEventListener('click',async()=>{
+    btn.addEventListener('click',()=>{
       week=btn.dataset.week;
       document.querySelectorAll('[data-week]').forEach(b=>b.classList.toggle('active',b===btn));
-      await render();
+      render();
     });
   });
 
@@ -250,7 +277,7 @@ details.admin[open] summary::after{content:"−"}
       pendingImage=await compress(file);
       preview.src=pendingImage;
       preview.style.display='block';
-      status.textContent='✅ 準備できました';
+      status.textContent='✅ 準備できました。「この画像を今週にする」を押してください';
     }catch(e){
       pendingImage=null;
       preview.style.display='none';
@@ -272,28 +299,92 @@ details.admin[open] summary::after{content:"−"}
       return;
     }
 
-    const current=await dbGet(keyFor(grade,'current'));
-    if(current?.dataUrl){
-      await dbPut(keyFor(grade,'previous'),current);
+    status.textContent='サーバーへ保存中…';
+
+    try{
+      const latest=await fetchGrade(grade);
+      const next={
+        current:{dataUrl:pendingImage,savedAt:new Date().toISOString()},
+        previous:latest?.current?.dataUrl ? latest.current : (latest?.previous || null)
+      };
+
+      await saveGrade(grade,next);
+      serverData=next;
+
+      pendingImage=null;
+      input.value='';
+      preview.removeAttribute('src');
+      preview.style.display='none';
+
+      week='current';
+      document.querySelectorAll('[data-week]').forEach(b=>b.classList.toggle('active',b.dataset.week==='current'));
+      render();
+      status.textContent='✅ 保存しました。スマホ・パソコンで共有されます。';
+    }catch(e){
+      status.textContent='❌ '+e.message;
     }
-
-    await dbPut(keyFor(grade,'current'),{
-      dataUrl:pendingImage,
-      savedAt:new Date().toISOString()
-    });
-
-    pendingImage=null;
-    input.value='';
-    preview.removeAttribute('src');
-    preview.style.display='none';
-    status.textContent='✅ 保存しました。前の今週は「先週」に移動しました。';
-
-    week='current';
-    document.querySelectorAll('[data-week]').forEach(b=>b.classList.toggle('active',b.dataset.week==='current'));
-    await render();
   });
 
-  render();
+  // ---- 旧ローカル版（IndexedDB）からの移行 ----
+  function openOldDB(){
+    return new Promise((resolve,reject)=>{
+      const req=indexedDB.open('wagaya_timetable_images',1);
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error);
+      req.onupgradeneeded=()=>{};
+    });
+  }
+
+  async function oldGet(key){
+    try{
+      const db=await openOldDB();
+      if(!db.objectStoreNames.contains('images')) return null;
+      return await new Promise((resolve,reject)=>{
+        const tx=db.transaction('images','readonly');
+        const r=tx.objectStore('images').get(key);
+        r.onsuccess=()=>resolve(r.result||null);
+        r.onerror=()=>reject(r.error);
+      });
+    }catch(e){ return null; }
+  }
+
+  async function getOldGradeData(g){
+    const [current,previous]=await Promise.all([
+      oldGet(`grade${g}_current`),
+      oldGet(`grade${g}_previous`)
+    ]);
+    return {current,previous};
+  }
+
+  async function checkOldLocalData(){
+    const old=await getOldGradeData(grade);
+    const hasOld=!!(old.current?.dataUrl || old.previous?.dataUrl);
+    const serverEmpty=!(serverData?.current?.dataUrl || serverData?.previous?.dataUrl);
+    migrateBox.style.display=(hasOld && serverEmpty)?'block':'none';
+  }
+
+  document.getElementById('migrateBtn').addEventListener('click',async()=>{
+    status.textContent='旧画像をサーバーへ移しています…';
+    try{
+      const old=await getOldGradeData(grade);
+      if(!(old.current?.dataUrl || old.previous?.dataUrl)){
+        throw new Error('この端末に旧画像がありません');
+      }
+      const next={
+        current:old.current?.dataUrl ? old.current : null,
+        previous:old.previous?.dataUrl ? old.previous : null
+      };
+      await saveGrade(grade,next);
+      serverData=next;
+      migrateBox.style.display='none';
+      render();
+      status.textContent='✅ 旧画像を共有データへ移しました。パソコンでも見られます。';
+    }catch(e){
+      status.textContent='❌ '+e.message;
+    }
+  });
+
+  loadAndRender();
 })();
 </script>
 </body>

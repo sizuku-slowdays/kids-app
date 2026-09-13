@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const DATA_URL = './data/apps.json?v=20260913-2';
+  const DATA_URL = './data/apps.json?v=20260914-1';
   const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -63,7 +63,7 @@
         : [];
 
       if (featuredRoot) {
-        const featured = apps.filter((app) => app.featured).slice(0, 4);
+        const featured = apps.filter((app) => app.featured).slice(0, 5);
         featuredRoot.replaceChildren(...featured.map(createAppCard));
         if (!featured.length) showEmpty(featuredRoot);
       }

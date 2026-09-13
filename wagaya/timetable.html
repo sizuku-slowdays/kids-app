@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#8fd8c7">
+<title>時間割｜わが家アプリ</title>
+<link rel="stylesheet" href="./css/wagaya.css">
+<style>
+body{background:#f7faf9}
+.tt-wrap{max-width:900px;margin:auto;padding:18px 12px 90px}
+.tt-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.tt-top a{text-decoration:none;font-size:2rem;color:#315e55}
+.tt-top h1{font-size:1.45rem;margin:0}
+.person-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.person-tabs button{border:0;border-radius:14px;padding:12px;font-weight:800;font-size:1rem;background:#e8efed}
+.person-tabs button.active{background:#8fd8c7}
+.table-box{overflow-x:auto;background:#fff;border-radius:18px;padding:8px;box-shadow:0 6px 18px rgba(0,0,0,.05)}
+table{width:100%;border-collapse:separate;border-spacing:5px;min-width:620px}
+th{background:#edf5f2;border-radius:10px;padding:10px 6px}
+td{vertical-align:top}
+.period{width:38px;text-align:center;font-weight:800;color:#55716a}
+input.subject{width:100%;box-sizing:border-box;border:1px solid #d9e4e0;border-radius:10px;padding:11px 8px;font-size:1rem;background:#fff}
+.memo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px;min-width:620px}
+.memo{background:#fff;border:1px solid #e1e9e6;border-radius:12px;padding:8px}
+.memo strong{display:block;font-size:.9rem;margin-bottom:5px}
+.memo textarea{width:100%;box-sizing:border-box;min-height:58px;border:0;resize:vertical;font:inherit}
+.save-note{text-align:center;color:#6b7e78;font-size:.9rem;margin-top:10px}
+</style>
+</head>
+<body>
+<main class="tt-wrap">
+  <div class="tt-top">
+    <a href="./index.html" aria-label="戻る">‹</a>
+    <h1>🗓️ 時間割</h1>
+  </div>
+
+  <div class="person-tabs">
+    <button class="active" data-person="usagi">🐰 うさぎ</button>
+    <button data-person="unicorn">🦄 ユニコーン</button>
+  </div>
+
+  <div class="table-box">
+    <table aria-label="時間割">
+      <thead><tr><th></th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th></tr></thead>
+      <tbody id="schedule-body"></tbody>
+    </table>
+    <div class="memo-grid" id="memo-grid"></div>
+  </div>
+  <p class="save-note">入力すると自動でこの端末に保存されます。</p>
+</main>
+
+<script>
+(() => {
+  const days = ['月','火','水','木','金'];
+  const periods = 6;
+  let person = 'usagi';
+  const body = document.querySelector('#schedule-body');
+  const memoGrid = document.querySelector('#memo-grid');
+  const buttons = [...document.querySelectorAll('[data-person]')];
+
+  function key(p, d, n){ return `wagaya_timetable_${p}_${d}_${n}`; }
+  function memoKey(p,d){ return `wagaya_timetable_memo_${p}_${d}`; }
+
+  function render(){
+    body.replaceChildren();
+    for(let p=1;p<=periods;p++){
+      const tr=document.createElement('tr');
+      const first=document.createElement('td');
+      first.className='period'; first.textContent=`${p}`;
+      tr.append(first);
+      days.forEach((d,di)=>{
+        const td=document.createElement('td');
+        const input=document.createElement('input');
+        input.className='subject';
+        input.placeholder='教科';
+        input.value=localStorage.getItem(key(person,di,p))||'';
+        input.addEventListener('input',()=>localStorage.setItem(key(person,di,p),input.value));
+        td.append(input); tr.append(td);
+      });
+      body.append(tr);
+    }
+
+    memoGrid.replaceChildren();
+    days.forEach((d,di)=>{
+      const box=document.createElement('div'); box.className='memo';
+      const label=document.createElement('strong'); label.textContent=`${d} 持ち物`;
+      const ta=document.createElement('textarea'); ta.placeholder='持ち物・メモ';
+      ta.value=localStorage.getItem(memoKey(person,di))||'';
+      ta.addEventListener('input',()=>localStorage.setItem(memoKey(person,di),ta.value));
+      box.append(label,ta); memoGrid.append(box);
+    });
+  }
+
+  buttons.forEach(btn=>btn.addEventListener('click',()=>{
+    person=btn.dataset.person;
+    buttons.forEach(b=>b.classList.toggle('active',b===btn));
+    render();
+  }));
+
+  render();
+})();
+</script>
+</body>
+</html>

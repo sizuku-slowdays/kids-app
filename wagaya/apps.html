@@ -11,10 +11,10 @@
   <link rel="stylesheet" href="./css/wagaya.css">
   <script src="./js/apps.js" defer></script>
 </head>
-<body data-page="apps">
+<body data-page="apps" data-audience="kids">
   <main class="page-shell">
     <header class="page-header">
-      <a class="back-link" href="./index.html" aria-label="ホームへ戻る">‹</a>
+      <a class="back-link" id="appsBack" href="./index.html" aria-label="ホームへ戻る">‹</a>
       <div>
         <p class="eyebrow">わが家の道具箱</p>
         <h1>アプリ一覧</h1>
@@ -35,7 +35,7 @@
   </main>
 
   <nav class="bottom-nav" aria-label="メインメニュー">
-    <a class="nav-item" href="./index.html">
+    <a class="nav-item" id="appsHomeNav" href="./index.html">
       <span class="nav-icon" aria-hidden="true">⌂</span><span>ホーム</span>
     </a>
     <a class="nav-item" href="https://cetus.fun/kids-app/">

@@ -1,17 +1,26 @@
 {
   "categories": [
-    { "id": "daily", "name": "毎日のこと" },
-    { "id": "money", "name": "お金" },
-    { "id": "record", "name": "記録" }
+    {
+      "id": "daily",
+      "name": "毎日のこと"
+    },
+    {
+      "id": "money",
+      "name": "お金"
+    },
+    {
+      "id": "record",
+      "name": "記録"
+    }
   ],
   "apps": [
     {
-      "id": "calendar",
-      "name": "家族カレンダー",
-      "description": "みんなの予定を確認・追加",
-      "url": "https://cetus.fun/kanriapp/calendar.html",
-      "icon": "📅",
-      "color": "mint",
+      "id": "timetable",
+      "name": "時間割",
+      "description": "🐰うさぎ・🦄ユニコーンの時間割",
+      "url": "https://cetus.fun/wagaya/timetable.html",
+      "icon": "🗓️",
+      "color": "yellow",
       "category": "daily",
       "featured": true,
       "order": 1
@@ -39,6 +48,17 @@
       "order": 3
     },
     {
+      "id": "points",
+      "name": "ポイント一覧",
+      "description": "お手伝いポイントを見る",
+      "url": "https://cetus.fun/kanriapp/otetsuday-points.html",
+      "icon": "🎁",
+      "color": "mint",
+      "category": "money",
+      "featured": true,
+      "order": 4
+    },
+    {
       "id": "karada",
       "name": "からだカレンダー",
       "description": "からだの記録を確認",
@@ -46,19 +66,19 @@
       "icon": "🌷",
       "color": "pink",
       "category": "record",
-      "featured": true,
-      "order": 4
+      "featured": false,
+      "order": 5
     },
     {
-      "id": "iikoto-saru",
-      "name": "きょうのいいこと 🐒",
+      "id": "iikoto-usagi",
+      "name": "きょうのいいこと 🐰",
       "description": "今日のいいことを記録",
       "url": "https://cetus.fun/kanriapp/iikoto1.html",
-      "icon": "🐒",
+      "icon": "🐰",
       "color": "orange",
       "category": "record",
       "featured": false,
-      "order": 5
+      "order": 6
     },
     {
       "id": "iikoto-unicorn",
@@ -69,8 +89,8 @@
       "color": "purple",
       "category": "record",
       "featured": false,
-      "order": 6
+      "order": 7
     }
   ],
-  "notes": "URLは2026-07-17に公開先で応答を確認済み。既存の画像ファイル名は推測せず、初期版は絵文字アイコンを使用。"
+  "notes": "家族カレンダーはホーム・一覧から削除。長女アイコンは🐰に統一。"
 }

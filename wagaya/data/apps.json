@@ -17,7 +17,7 @@
     {
       "id": "timetable",
       "name": "時間割",
-      "description": "🐰うさぎ・🦄ユニコーンの時間割",
+      "description": "4年生・2年生の時間割画像",
       "url": "https://cetus.fun/wagaya/timetable.html",
       "icon": "🗓️",
       "color": "yellow",
@@ -39,24 +39,40 @@
     {
       "id": "mama-bank",
       "name": "ママ銀行",
-      "description": "おこづかいを確認",
+      "description": "おこづかい・残高",
       "url": "https://cetus.fun/kanriapp/mama-bank.html",
       "icon": "🏦",
       "color": "yellow",
       "category": "money",
       "featured": true,
-      "order": 3
+      "order": 3,
+      "urls": {
+        "kids": "https://cetus.fun/kanriapp/mama-bank-view.html",
+        "mama": "https://cetus.fun/kanriapp/mama-bank.html"
+      }
     },
     {
       "id": "points",
       "name": "ポイント一覧",
-      "description": "お手伝いポイントを見る",
+      "description": "お手伝いポイント",
       "url": "https://cetus.fun/kanriapp/otetsuday-points.html",
       "icon": "🎁",
       "color": "mint",
       "category": "money",
       "featured": true,
-      "order": 4
+      "order": 4,
+      "urls": {
+        "kids": "https://cetus.fun/kanriapp/otetsuday-points.html",
+        "mama": "https://cetus.fun/kanriapp/otetsuday-toban.html"
+      },
+      "names": {
+        "kids": "ポイント一覧",
+        "mama": "お手伝い当番"
+      },
+      "descriptions": {
+        "kids": "お手伝いポイントを見る",
+        "mama": "当番・ポイント・ごほうびを管理"
+      }
     },
     {
       "id": "karada",

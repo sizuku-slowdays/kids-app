@@ -314,8 +314,16 @@
         <input id="newRewardName" placeholder="ごほうび名" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
         <input id="newRewardPts" type="number" placeholder="pt" style="width:80px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;">
       </div>
-      <input id="newRewardImg" placeholder="画像URL（画像アップロード対応は次段階）" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.82rem;">
-      <button onclick="addReward()" style="padding:8px 14px;background:var(--accent2);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">追加</button>
+      <div style="display:grid;gap:8px;">
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;background:#fff5ee;border:2px dashed var(--accent);border-radius:10px;color:var(--accent);font-weight:700;cursor:pointer;">
+          📷 スクショ・写真を選ぶ
+          <input id="newRewardFile" type="file" accept="image/*" style="display:none;" onchange="handleNewRewardImage(this)">
+        </label>
+        <div id="newRewardImageStatus" style="display:none;font-size:0.78rem;color:var(--muted);"></div>
+        <img id="newRewardPreview" alt="選んだ画像のプレビュー" style="display:none;width:100%;max-height:220px;object-fit:contain;border-radius:12px;border:1.5px solid var(--border);background:#fff;">
+        <input id="newRewardImg" placeholder="画像URL（URLを使う場合だけ）" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.82rem;">
+      </div>
+      <button id="addRewardBtn" onclick="addReward()" style="padding:10px 14px;background:var(--accent2);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">追加</button>
     </div>
   </div>
 
@@ -391,6 +399,11 @@ let chores = [];
 let currentChoreId = null;
 let selectedMember = null;
 let calYear, calMonth, sumYear, sumMonth;
+
+// ごほうび画像：スマホから直接選択した画像を一時保持
+let newRewardImageData = null;
+const pendingRewardImages = {};
+const rewardsById = {};
 
 const today = new Date();
 const todayStr = today.toISOString().slice(0, 10);
@@ -826,27 +839,43 @@ async function loadSettings() {
   // ごほうび
   const r2 = await fetch(`${API}/api/settings/rewards`, { headers: apiHeaders() });
   const rewardList = r2.ok ? await r2.json() : [];
-  document.getElementById('rewardSettings').innerHTML = rewardList.map(r => `
+  Object.keys(rewardsById).forEach(k => delete rewardsById[k]);
+  rewardList.forEach(r => { rewardsById[r.id] = r; });
+
+  document.getElementById('rewardSettings').innerHTML = rewardList.map(r => {
+    const urlValue = (r.image_url && !String(r.image_url).startsWith('data:')) ? r.image_url : '';
+    return `
     <div class="reward-row" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div style="display:flex;align-items:center;gap:10px;">
-        ${r.image_url ? `<img src="${r.image_url}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);">` : `<div style="width:48px;height:48px;border-radius:10px;background:var(--bg);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🎁</div>`}
+        <div id="reward-preview-wrap-${r.id}">
+          ${r.image_url ? `<img id="reward-preview-${r.id}" src="${r.image_url}" style="width:56px;height:56px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);">` : `<div id="reward-preview-${r.id}" style="width:56px;height:56px;border-radius:10px;background:var(--bg);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🎁</div>`}
+        </div>
         <div style="flex:1;">
           <div style="font-weight:700;">${r.name}</div>
           <div style="font-size:0.78rem;color:var(--muted);">⭐${r.points.toLocaleString()}pt　在庫：${r.stock === null || r.stock === undefined ? '無制限' : r.stock + '個'}</div>
         </div>
-        <div class="toggle ${r.enabled?'on':''}" onclick="toggleReward(${r.id},${r.enabled},${JSON.stringify(r).replace(/"/g,'&quot;')})"></div>
+        <div class="toggle ${r.enabled?'on':''}" onclick="toggleRewardById(${r.id})"></div>
         <button onclick="deleteReward(${r.id},'${r.name}')" style="padding:5px 10px;background:#fff0f2;border:1.5px solid #f5c0c8;border-radius:8px;color:#e05;font-size:0.78rem;font-weight:700;cursor:pointer;flex-shrink:0;">削除</button>
       </div>
+
       <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
-        <input id="imgurl-${r.id}" value="${r.image_url||''}" placeholder="画像URL" style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:0.78rem;white-space:nowrap;color:var(--muted);">在庫</span>
-          <input id="stock-${r.id}" type="number" value="${r.stock ?? ''}" placeholder="無制限" min="0" style="width:70px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;">
-          <button onclick="saveRewardSettings(${r.id},${JSON.stringify(r).replace(/"/g,'&quot;')})" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">保存</button>
-        </div>
+        <input id="imgurl-${r.id}" value="${urlValue}" placeholder="画像URL（任意）" style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;min-width:0;">
+        <label style="padding:7px 10px;background:#fff5ee;border:1.5px solid var(--accent);border-radius:8px;color:var(--accent);font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+          📷 画像変更
+          <input type="file" accept="image/*" style="display:none;" onchange="handleRewardImage(${r.id}, this)">
+        </label>
+      </div>
+
+      <div id="imgstatus-${r.id}" style="display:none;font-size:0.76rem;color:var(--muted);"></div>
+
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:0.78rem;white-space:nowrap;color:var(--muted);">在庫</span>
+        <input id="stock-${r.id}" type="number" value="${r.stock ?? ''}" placeholder="無制限" min="0" style="width:70px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;">
+        <button onclick="removeRewardImage(${r.id})" style="padding:6px 10px;background:#fff;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;">画像なし</button>
+        <button onclick="saveRewardSettings(${r.id})" style="margin-left:auto;padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">保存</button>
       </div>
     </div>
-  `).join('') || '<div class="empty">なし</div>';
+  `}).join('') || '<div class="empty">なし</div>';
 }
 
 async function deleteChore(id, name) {
@@ -903,37 +932,194 @@ async function addChore() {
   }
 }
 
-async function saveRewardSettings(id, rewardObj) {
-  const image_url = document.getElementById(`imgurl-${id}`).value.trim();
-  const stockVal = document.getElementById(`stock-${id}`).value.trim();
-  const stock = stockVal === '' ? null : parseInt(stockVal);
-  const updated = { ...rewardObj, image_url: image_url || null, stock };
-  await fetch(`${API}/api/settings/rewards/${id}`, {
-    method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated)
-  });
-  loadSettings();
+// ──────── ごほうび画像（スマホ直選択） ────────
+// GitHubへ画像ファイルを置かず、端末側で縮小・圧縮して data URL として保存します。
+// スクショや写真を選ぶだけで、そのままごほうび画像に使えます。
+async function compressImageFile(file, maxSide = 900, quality = 0.78) {
+  if (!file || !file.type.startsWith('image/')) throw new Error('画像ファイルを選んでください');
+
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('画像を読み込めませんでした'));
+      el.src = sourceUrl;
+    });
+
+    let w = img.naturalWidth || img.width;
+    let h = img.naturalHeight || img.height;
+    if (!w || !h) throw new Error('画像サイズを取得できませんでした');
+
+    const scale = Math.min(1, maxSide / Math.max(w, h));
+    const nw = Math.max(1, Math.round(w * scale));
+    const nh = Math.max(1, Math.round(h * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = nw;
+    canvas.height = nh;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, nw, nh);
+    ctx.drawImage(img, 0, 0, nw, nh);
+
+    return canvas.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
 }
 
-async function toggleReward(id, currentEnabled, rewardObj) {
-  const updated = { ...rewardObj, enabled: currentEnabled ? 0 : 1 };
-  await fetch(`${API}/api/settings/rewards/${id}`, {
+function dataUrlKb(dataUrl) {
+  if (!dataUrl) return 0;
+  const comma = dataUrl.indexOf(',');
+  const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+  return Math.round((b64.length * 3 / 4) / 1024);
+}
+
+async function handleNewRewardImage(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const status = document.getElementById('newRewardImageStatus');
+  const preview = document.getElementById('newRewardPreview');
+  status.style.display = 'block';
+  status.textContent = '画像を準備中…';
+
+  try {
+    newRewardImageData = await compressImageFile(file);
+    preview.src = newRewardImageData;
+    preview.style.display = 'block';
+    status.textContent = `✅ 画像を準備しました（約${dataUrlKb(newRewardImageData)}KB）`;
+    document.getElementById('newRewardImg').value = '';
+  } catch (e) {
+    newRewardImageData = null;
+    preview.style.display = 'none';
+    status.textContent = '❌ ' + e.message;
+  }
+}
+
+async function handleRewardImage(id, input) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const status = document.getElementById(`imgstatus-${id}`);
+  status.style.display = 'block';
+  status.textContent = '画像を準備中…';
+
+  try {
+    const dataUrl = await compressImageFile(file);
+    pendingRewardImages[id] = dataUrl;
+
+    const wrap = document.getElementById(`reward-preview-wrap-${id}`);
+    if (wrap) {
+      wrap.innerHTML = `<img id="reward-preview-${id}" src="${dataUrl}" style="width:56px;height:56px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);">`;
+    }
+    document.getElementById(`imgurl-${id}`).value = '';
+    status.textContent = `✅ 新しい画像を準備しました（約${dataUrlKb(dataUrl)}KB）。「保存」を押してください`;
+  } catch (e) {
+    status.textContent = '❌ ' + e.message;
+  }
+}
+
+function removeRewardImage(id) {
+  pendingRewardImages[id] = null;
+  const wrap = document.getElementById(`reward-preview-wrap-${id}`);
+  if (wrap) {
+    wrap.innerHTML = `<div id="reward-preview-${id}" style="width:56px;height:56px;border-radius:10px;background:var(--bg);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🎁</div>`;
+  }
+  const urlInput = document.getElementById(`imgurl-${id}`);
+  if (urlInput) urlInput.value = '';
+  const status = document.getElementById(`imgstatus-${id}`);
+  if (status) {
+    status.style.display = 'block';
+    status.textContent = '画像を外します。「保存」を押してください';
+  }
+}
+
+async function saveRewardSettings(id) {
+  const rewardObj = rewardsById[id];
+  if (!rewardObj) { alert('ごほうび情報を読み直してください'); return; }
+
+  const urlInput = document.getElementById(`imgurl-${id}`).value.trim();
+  const stockVal = document.getElementById(`stock-${id}`).value.trim();
+  const stock = stockVal === '' ? null : parseInt(stockVal);
+
+  let image_url = rewardObj.image_url || null;
+  if (Object.prototype.hasOwnProperty.call(pendingRewardImages, id)) {
+    image_url = pendingRewardImages[id];
+  } else if (urlInput) {
+    image_url = urlInput;
+  }
+
+  const updated = { ...rewardObj, image_url, stock };
+  const r = await fetch(`${API}/api/settings/rewards/${id}`, {
     method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated)
   });
+
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    alert(`保存できませんでした (${r.status}) ${text}`);
+    return;
+  }
+
+  delete pendingRewardImages[id];
+  await loadSettings();
+}
+
+async function toggleRewardById(id) {
+  const rewardObj = rewardsById[id];
+  if (!rewardObj) return;
+  const updated = { ...rewardObj, enabled: rewardObj.enabled ? 0 : 1 };
+  const r = await fetch(`${API}/api/settings/rewards/${id}`, {
+    method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated)
+  });
+  if (!r.ok) {
+    alert('切り替えに失敗しました');
+    return;
+  }
   loadSettings();
 }
 
 async function addReward() {
   const name = document.getElementById('newRewardName').value.trim();
   const pts = parseInt(document.getElementById('newRewardPts').value);
-  const image_url = document.getElementById('newRewardImg').value.trim();
-  if (!name || !pts) return;
-  await fetch(`${API}/api/settings/rewards`, {
-    method: 'POST', headers: apiHeaders(), body: JSON.stringify({ name, points: pts, image_url: image_url || null })
-  });
-  document.getElementById('newRewardName').value = '';
-  document.getElementById('newRewardPts').value = '';
-  document.getElementById('newRewardImg').value = '';
-  loadSettings();
+  const urlValue = document.getElementById('newRewardImg').value.trim();
+  const image_url = newRewardImageData || urlValue || null;
+
+  if (!name || !pts) {
+    alert('ごほうび名とポイントを入力してください');
+    return;
+  }
+
+  const btn = document.getElementById('addRewardBtn');
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '保存中…';
+
+  try {
+    const r = await fetch(`${API}/api/settings/rewards`, {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({ name, points: pts, image_url })
+    });
+
+    if (!r.ok) {
+      const text = await r.text().catch(() => '');
+      alert(`追加できませんでした (${r.status}) ${text}`);
+      return;
+    }
+
+    document.getElementById('newRewardName').value = '';
+    document.getElementById('newRewardPts').value = '';
+    document.getElementById('newRewardImg').value = '';
+    document.getElementById('newRewardFile').value = '';
+    document.getElementById('newRewardPreview').src = '';
+    document.getElementById('newRewardPreview').style.display = 'none';
+    document.getElementById('newRewardImageStatus').style.display = 'none';
+    newRewardImageData = null;
+    loadSettings();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
 }
 
 // ──────── ママ銀行連携 ────────

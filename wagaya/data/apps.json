@@ -26,6 +26,17 @@
       "order": 1
     },
     {
+      "id": "karada-power",
+      "name": "からだパワー",
+      "description": "毎食の食べたものを記録",
+      "url": "https://cetus.fun/karada_power/",
+      "icon": "🌈",
+      "color": "mint",
+      "category": "record",
+      "featured": true,
+      "order": 2
+    },
+    {
       "id": "school-check",
       "name": "学校チェック",
       "description": "朝・学校・帰宅後の準備",
@@ -34,7 +45,7 @@
       "color": "sky",
       "category": "daily",
       "featured": true,
-      "order": 2
+      "order": 3
     },
     {
       "id": "mama-bank",
@@ -45,7 +56,7 @@
       "color": "yellow",
       "category": "money",
       "featured": true,
-      "order": 3,
+      "order": 4,
       "urls": {
         "kids": "https://cetus.fun/kanriapp/mama-bank-view.html",
         "mama": "https://cetus.fun/kanriapp/mama-bank.html"
@@ -60,7 +71,7 @@
       "color": "mint",
       "category": "money",
       "featured": true,
-      "order": 4,
+      "order": 5,
       "urls": {
         "kids": "https://cetus.fun/kanriapp/otetsuday-points.html",
         "mama": "https://cetus.fun/kanriapp/otetsuday-toban.html"
@@ -83,30 +94,30 @@
       "color": "pink",
       "category": "record",
       "featured": false,
-      "order": 5
+      "order": 6
     },
     {
       "id": "iikoto-usagi",
-      "name": "きょうのいいこと 🐰",
+      "name": "うさぎいいこと",
       "description": "今日のいいことを記録",
       "url": "https://cetus.fun/kanriapp/iikoto1.html",
       "icon": "🐰",
       "color": "orange",
       "category": "record",
       "featured": false,
-      "order": 6
+      "order": 7
     },
     {
       "id": "iikoto-unicorn",
-      "name": "きょうのいいこと 🦄",
+      "name": "ユニコーンいいこと",
       "description": "今日のいいことを記録",
       "url": "https://cetus.fun/kanriapp/iikoto2.html",
       "icon": "🦄",
       "color": "purple",
       "category": "record",
       "featured": false,
-      "order": 7
+      "order": 8
     }
   ],
-  "notes": "家族カレンダーはホーム・一覧から削除。長女アイコンは🐰に統一。"
+  "notes": "家族カレンダーはホーム・一覧から削除。記録は「からだパワー／からだカレンダー／うさぎいいこと／ユニコーンいいこと」の4つ。からだパワーはよく使うアプリで時間割の次。"
 }

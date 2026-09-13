@@ -190,12 +190,17 @@
     <button onclick="setPassword()">✔</button>
     <span id="pwStatus"></span>
   </div>
-  <div id="todayList" class="loading">よみこみ中…</div>
+  <details class="collapse-card">
+    <summary>📋 今日の当番</summary>
+    <div class="collapse-body" id="todayList" style="padding-top:4px;">
+      <div class="loading">よみこみ中…</div>
+    </div>
+  </details>
 </div>
 
 <!-- ======================== いつでも ======================== -->
 <div class="page" id="page-anytime">
-  <details class="collapse-card" open>
+  <details class="collapse-card">
     <summary>✨ 一回限りのおてつだい</summary>
     <div class="collapse-body">
       <div style="display:grid;gap:8px;">
@@ -218,7 +223,7 @@
     </div>
   </details>
 
-  <details class="collapse-card" open>
+  <details class="collapse-card">
     <summary>👐 いつでもおてつだい <span style="font-size:0.75rem;color:var(--muted);font-weight:400;">▲▼で並べ替え</span></summary>
     <div class="collapse-body" id="anytimeList" style="padding-top:4px;">
       <div class="loading">よみこみ中…</div>
@@ -253,7 +258,7 @@
     </div>
   </div>
 
-  <details class="collapse-card" open>
+  <details class="collapse-card">
     <summary>💸 ママ銀行連携</summary>
     <div class="collapse-body">
       <div id="bankPending"></div>
@@ -293,7 +298,7 @@
     </div>
   </div>
 
-  <details class="collapse-card" open>
+  <details class="collapse-card">
     <summary>🏡 作業リスト</summary>
     <div class="collapse-body">
       <div id="choreSettings" class="loading">よみこみ中…</div>
@@ -327,7 +332,7 @@
     </div>
   </div>
 
-  <details class="collapse-card" open>
+  <details class="collapse-card">
     <summary>🎁 ごほうびリスト</summary>
     <div class="collapse-body">
       <div id="rewardSettings" class="loading">よみこみ中…</div>

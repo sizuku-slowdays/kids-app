@@ -318,7 +318,7 @@
   <div id="screen-start">
     <span class="hero-emoji">🦄</span>
     <h1>おくすりタイマー<br>🌟🌈🌟</h1>
-    <p>おくすりをくちにいれたら<br>ボタンをおしてね！<br>ゲームをしながらまとうね✨</p>
+    <p>おくすりを くちにいれたら<br>ボタンをおしてね！<br>ほかのアプリであそんでいても おしらせするよ✨</p>
 
     <!-- ゲーム設定 -->
     <div id="game-settings">
@@ -344,7 +344,7 @@
     </div>
 
     <button class="btn btn-primary" id="btn-start">
-      ✨ おくすりタイマーをはじめる ✨
+      ✨ 1ぷんをはじめる ✨
     </button>
   </div>
 
@@ -353,7 +353,7 @@
     <div class="popup-card" style="background:linear-gradient(135deg,#EDE0FF,#DDD0FF);">
       <button class="btn-close" id="btn-close-one-min">✕</button>
       <span class="emoji">🎉</span>
-      <h2>1ぷんたったよ！<br>おくすりをのみこんでね💜</h2>
+      <h2 id="one-min-title">1ぷんたったよ！<br>おくすりを のみこんでね💜</h2>
       <button class="btn btn-primary" id="btn-swallowed">💫 のみこんだよ！</button>
     </div>
   </div>
@@ -363,9 +363,9 @@
     <div class="popup-card" style="background:linear-gradient(135deg,#FFF8C0,#FFE4A8);">
       <button class="btn-close" id="btn-close-five-done">✕</button>
       <span class="emoji">🌈</span>
-      <h2 style="color:#7B5000;">もう のんでも<br>だいじょうぶだよ！🎊</h2>
+      <h2 id="five-done-title" style="color:#7B5000;">5ふんたったよ！<br>このおくすりは おわりだよ🎊</h2>
       <button class="btn btn-primary" style="background:linear-gradient(135deg,#FFD060,#FFB020);box-shadow:0 6px 18px rgba(200,140,0,0.35);" id="btn-close-five-done2">
-        やったー！とじる
+        <span id="five-done-button-text">やったー！おわる</span>
       </button>
     </div>
   </div>
@@ -541,6 +541,42 @@ let timerSecs = 60, totalSecs = 60;
 let timerEndAt = 0;
 const banner = document.getElementById('timer-banner');
 const TIMER_STORAGE_KEY = 'medicine_game_active_timer_v2';
+const NOTIFY_API = 'https://notification-center-api.sslowdayss.workers.dev';
+
+// 通知センターの毎分Cronへ「この時刻に1回だけ」のPush予約を渡す。
+// 秒単位で早く鳴るのを避けるため、指定時刻以降の最初の分に切り上げる。
+async function scheduleMedicinePush(delaySeconds, title, body, stage) {
+  let password = '';
+  try {
+    password = localStorage.getItem('nc_app_password') ||
+      localStorage.getItem('cloudflare_app_password') || '';
+  } catch(e) {}
+  if (!password) return { ok:false, reason:'not_configured' };
+
+  const target = new Date(Math.ceil((Date.now() + delaySeconds * 1000) / 60000) * 60000);
+  const jst = new Date(target.getTime() + 9 * 60 * 60 * 1000);
+  const date = jst.toISOString().slice(0, 10);
+  const time = jst.toISOString().slice(11, 16);
+  const sourceId = `medicine_${stage}_${Date.now()}`;
+  try {
+    const res = await fetch(NOTIFY_API + '/api/calendar-sync', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-App-Password':password },
+      body: JSON.stringify({
+        source_id: sourceId,
+        title,
+        body,
+        recipient: 'child2',
+        url: '/kids-app/medicine-game.html',
+        occurrences: [{ date, time }]
+      }),
+      keepalive: true
+    });
+    return { ok:res.ok };
+  } catch(e) {
+    return { ok:false, reason:'network' };
+  }
+}
 
 function fmt(s) { return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
 
@@ -620,6 +656,7 @@ document.getElementById('btn-start').addEventListener('click', () => {
   applySettingsToUI();
   initGame();
   startTimer(60, '⏱ おくすりタイマー', onOneMinDone);
+  scheduleMedicinePush(60, '💊 1ぷんたったよ！', 'おくすりを のみこんでね', 'one');
 });
 
 function onOneMinDone() {
@@ -646,6 +683,7 @@ document.getElementById('btn-swallowed').addEventListener('click', () => {
   showEl('five-min-card');
   phase = 'five-min';
   startTimer(300, '🥤 のみものがまんタイマー', onFiveMinDone);
+  scheduleMedicinePush(300, '🥤 5ふんたったよ！', 'このおくすりは おわりだよ', 'five');
 });
 
 function onFiveMinDone() {

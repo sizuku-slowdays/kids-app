@@ -15,6 +15,10 @@
     {
       "id": "reference",
       "name": "何度も見るもの"
+    },
+    {
+      "id": "study",
+      "name": "おべんきょう"
     }
   ],
   "apps": [
@@ -132,6 +136,17 @@
       "category": "record",
       "featured": false,
       "order": 8
+    },
+    {
+      "id": "ohajiki-anzan",
+      "name": "おはじき暗算",
+      "description": "おはじきでくり下がりを練習",
+      "url": "https://cetus.fun/wagaya/keisan/ohajiki-anzan.html",
+      "icon": "🔵",
+      "color": "sky",
+      "category": "study",
+      "featured": false,
+      "order": 10
     }
   ],
   "notes": "家族カレンダーはホーム・一覧から削除。おうちアルバムはピアノとスターデューバレーの参考画像・動画用。"

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#8fd8c7">
+  <meta name="description" content="10のまとまりをおはじきで見て、ひき算を練習する子ども向けアプリ">
+  <title>おはじき暗算</title>
+  <style>
+    :root{
+      --mint:#8fd8c7;--mint-dark:#4da998;--mint-pale:#e8f8f4;
+      --blue:#43b8eb;--blue-dark:#158fc8;--blue-pale:#def4fd;
+      --pink:#ff72aa;--pink-dark:#dc3f83;--pink-pale:#ffe5f0;
+      --yellow:#ffd967;--ink:#31413e;--muted:#6f817c;--paper:#fff;
+      --shadow:0 10px 28px rgba(54,119,105,.13);
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html{background:#eaf8f4}
+    body{margin:0;min-height:100svh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;background:
+      radial-gradient(circle at 8% 8%,rgba(255,217,103,.32),transparent 22rem),
+      radial-gradient(circle at 98% 34%,rgba(255,114,170,.16),transparent 24rem),
+      linear-gradient(180deg,#f7fffd 0%,#e9f8f4 100%)}
+    button{font:inherit;color:inherit}
+    button:focus-visible{outline:4px solid rgba(21,143,200,.35);outline-offset:3px}
+    .app{width:min(100%,720px);min-height:100svh;margin:auto;padding:max(12px,env(safe-area-inset-top)) 14px max(22px,env(safe-area-inset-bottom))}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .home,.sound{border:0;background:rgba(255,255,255,.8);box-shadow:0 4px 14px rgba(54,119,105,.10);border-radius:999px;min-height:44px;padding:0 14px;font-weight:800;text-decoration:none;display:flex;align-items:center;gap:5px}
+    h1{font-size:clamp(1.35rem,6vw,1.75rem);margin:0;font-weight:900;letter-spacing:.03em;color:#357f73}
+    .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;background:rgba(255,255,255,.6);padding:6px;border-radius:18px;margin-bottom:10px}
+    .level{border:0;border-radius:13px;background:transparent;min-height:43px;padding:5px 3px;font-size:.84rem;font-weight:900;color:#68807a}
+    .level.active{background:#fff;color:#317e72;box-shadow:0 4px 12px rgba(63,135,120,.14)}
+    .card{background:rgba(255,255,255,.94);border:3px solid rgba(143,216,199,.72);border-radius:28px;box-shadow:var(--shadow);overflow:hidden}
+    .topline{display:flex;justify-content:space-between;align-items:center;padding:12px 16px 0;color:var(--muted);font-size:.86rem;font-weight:800}
+    .stars{letter-spacing:.08em;font-size:1.15rem}.stars .off{filter:grayscale(1);opacity:.22}
+    .equation{display:flex;justify-content:center;align-items:center;gap:clamp(8px,3vw,20px);padding:3px 12px 7px;font-size:clamp(2.6rem,13vw,4.6rem);font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+    .equation .minus{color:var(--pink-dark)}.equation .answer{min-width:1.1em;text-align:center;color:var(--mint-dark);border-bottom:5px solid var(--mint)}
+    .coach{margin:0 12px 10px;background:var(--mint-pale);border-radius:17px;padding:10px 12px;text-align:center;font-weight:900;line-height:1.45;min-height:45px}
+    .coach b{color:var(--pink-dark);font-size:1.08em}
+    .board{margin:0 10px 10px;padding:12px 8px 11px;border-radius:22px;background:#fbfffe;border:2px dashed #bde7dc;min-height:220px;display:flex;align-items:flex-start;justify-content:center;gap:clamp(14px,7vw,46px);position:relative}
+    .group{position:relative;padding-top:27px;min-width:118px}
+    .group-label{position:absolute;top:0;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:999px;padding:3px 9px;font-size:.76rem;font-weight:900}
+    .tens .group-label{color:var(--blue-dark);background:var(--blue-pale)}
+    .ones .group-label{color:var(--pink-dark);background:var(--pink-pale)}
+    .beads{display:grid;grid-template-columns:repeat(2,48px);grid-auto-rows:48px;gap:5px;justify-content:center;padding:8px;border-radius:21px}
+    .tens .beads{border:3px solid rgba(67,184,235,.55);background:rgba(222,244,253,.45);transition:.35s ease}
+    .tens.broken .beads{border-style:dashed;background:#fff;gap:8px 10px;transform:rotate(-1deg)}
+    .ones .beads{border:3px solid rgba(255,114,170,.35);background:rgba(255,229,240,.45);min-height:64px}
+    .bead{width:48px;height:48px;border:0;border-radius:50%;position:relative;box-shadow:inset -5px -7px 8px rgba(0,0,0,.10),inset 4px 4px 7px rgba(255,255,255,.42),0 4px 7px rgba(48,94,87,.18);transition:transform .2s,opacity .28s,filter .28s;cursor:pointer}
+    .bead.blue{background:linear-gradient(145deg,#5bcef6,var(--blue))}.bead.pink{background:linear-gradient(145deg,#ff8bbb,var(--pink))}
+    .bead:active{transform:scale(.9)}.bead.removed{opacity:.19;filter:grayscale(.35);transform:scale(.78)}
+    .bead.removed::after{content:"×";position:absolute;inset:0;display:grid;place-items:center;color:#b12964;font-size:2.4rem;font-weight:900;opacity:1}
+    .count{grid-column:1/-1;text-align:center;font-size:.78rem;font-weight:900;margin-top:2px;color:var(--muted)}
+    .board.wiggle{animation:wiggle .35s ease}.card.pop{animation:pop .38s ease}
+    @keyframes wiggle{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+    @keyframes pop{50%{transform:scale(1.015)}}
+    .actions{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;padding:0 12px 13px}
+    .btn{border:0;border-radius:17px;min-height:50px;padding:8px 12px;font-weight:900;box-shadow:0 5px 0 rgba(53,126,113,.13);cursor:pointer}
+    .btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(53,126,113,.13)}
+    .demo{background:#eef7f5;color:#4e7069}.reset{background:var(--mint);color:#184f46}
+    .answer-panel{display:none;padding:0 12px 15px}.answer-panel.show{display:block;animation:rise .3s ease}
+    @keyframes rise{from{opacity:0;transform:translateY(8px)}}
+    .answer-title{text-align:center;font-weight:900;margin:0 0 8px}
+    .choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .choice{border:3px solid #cbece4;background:#fff;border-radius:17px;min-height:58px;font-size:1.7rem;font-weight:900;box-shadow:0 4px 0 #cbece4}
+    .choice:active{transform:translateY(3px);box-shadow:0 1px 0 #cbece4}
+    .success{display:none;text-align:center;padding:2px 12px 16px}.success.show{display:block;animation:rise .3s ease}
+    .success-message{font-weight:900;font-size:1.2rem;color:#2d8475;margin-bottom:9px}.next{width:100%;background:var(--yellow);color:#5c4a14}
+    .mini-note{text-align:center;color:#6d827d;font-size:.8rem;font-weight:700;margin:10px 8px 0;line-height:1.5}
+    .burst{position:fixed;pointer-events:none;z-index:9;font-size:1.5rem;animation:burst .9s ease-out forwards}
+    @keyframes burst{to{transform:translate(var(--x),var(--y)) rotate(180deg) scale(.5);opacity:0}}
+    @media(max-width:390px){.app{padding-left:8px;padding-right:8px}.board{gap:8px;min-height:208px}.group{min-width:106px}.beads{grid-template-columns:repeat(2,43px);grid-auto-rows:43px;gap:4px}.bead{width:43px;height:43px}.equation{font-size:3.05rem}.level{font-size:.77rem}.home,.sound{padding:0 10px}.home span{display:none}}
+    @media(min-width:600px){.board{min-height:245px}.beads{grid-template-columns:repeat(5,52px);grid-auto-rows:52px}.bead{width:52px;height:52px}.group{min-width:285px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <a class="home" href="https://cetus.fun/wagaya/" aria-label="我が家アプリへ戻る">⌂ <span>わがや</span></a>
+      <h1>🔵 おはじき暗算</h1>
+      <button class="sound" id="soundBtn" aria-label="問題を読み上げる">🔊 よむ</button>
+    </header>
+
+    <nav class="levels" aria-label="むずかしさ">
+      <button class="level" data-level="easy">10まで</button>
+      <button class="level active" data-level="borrow">くり下がり</button>
+      <button class="level" data-level="mix">まぜまぜ</button>
+    </nav>
+
+    <section class="card" id="gameCard">
+      <div class="topline"><span id="questionNo">1もんめ / 5</span><span class="stars" id="stars" aria-label="0点"><span class="off">★</span><span class="off">★</span><span class="off">★</span><span class="off">★</span><span class="off">★</span></span></div>
+      <div class="equation" aria-live="polite"><span id="a">13</span><span class="minus">−</span><span id="b">5</span><span>＝</span><span class="answer" id="answer">?</span></div>
+      <div class="coach" id="coach" aria-live="polite">ピンクから <b>5こ</b> けしてみよう</div>
+
+      <div class="board" id="board">
+        <div class="group tens" id="tensGroup">
+          <span class="group-label" id="tensLabel">10のまとまり</span>
+          <div class="beads" id="tensBeads"></div>
+        </div>
+        <div class="group ones" id="onesGroup">
+          <span class="group-label">1のばら</span>
+          <div class="beads" id="onesBeads"></div>
+        </div>
+      </div>
+
+      <div class="actions" id="actions">
+        <button class="btn demo" id="demoBtn">👀 おてほん</button>
+        <button class="btn reset" id="resetBtn">↻ もういちど</button>
+      </div>
+
+      <div class="answer-panel" id="answerPanel">
+        <p class="answer-title">のこりは なんこ？</p>
+        <div class="choices" id="choices"></div>
+      </div>
+      <div class="success" id="success">
+        <div class="success-message" id="successMessage">🎉 せいかい！</div>
+        <button class="btn next" id="nextBtn">つぎの もんだい →</button>
+      </div>
+    </section>
+    <p class="mini-note">うすくなったおはじきが「ひいた数」だよ。<br>まちがえても、何回でもやりなおせます。</p>
+  </main>
+
+  <script>
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      a:$('a'), b:$('b'), answer:$('answer'), coach:$('coach'), board:$('board'), card:$('gameCard'),
+      tens:$('tensBeads'), ones:$('onesBeads'), tensGroup:$('tensGroup'), tensLabel:$('tensLabel'),
+      answerPanel:$('answerPanel'), choices:$('choices'), success:$('success'), successMessage:$('successMessage'),
+      questionNo:$('questionNo'), stars:$('stars'), demoBtn:$('demoBtn'), resetBtn:$('resetBtn'), nextBtn:$('nextBtn')
+    };
+    let level = 'borrow';
+    let question = {a:13,b:5};
+    let removed = new Set();
+    let score = 0;
+    let round = 1;
+    let demoRunning = false;
+
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const rand = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
+    const onesCount = () => question.a % 10;
+    const needsBorrow = () => question.a >= 10 && onesCount() < question.b;
+
+    function makeQuestion(first=false){
+      if(first && level==='borrow') return {a:13,b:5};
+      if(level==='easy'){
+        const a=rand(3,10); return {a,b:rand(1,a-1)};
+      }
+      if(level==='borrow'){
+        const a=rand(11,18), one=a%10; return {a,b:rand(one+1,9)};
+      }
+      const a=rand(6,18); return {a,b:rand(1,Math.min(9,a-1))};
+    }
+
+    function bead(color,index){
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className='bead '+color; btn.dataset.key=color+index;
+      btn.setAttribute('aria-label',(color==='pink'?'ピンク':'あお')+'のおはじき '+(index+1));
+      if(removed.has(btn.dataset.key)) btn.classList.add('removed');
+      btn.addEventListener('click',()=>toggleBead(color,index));
+      return btn;
+    }
+
+    function render(){
+      els.a.textContent=question.a; els.b.textContent=question.b;
+      els.answer.textContent=els.success.classList.contains('show') ? question.a-question.b : '?';
+      els.tens.innerHTML=''; els.ones.innerHTML='';
+      const tensN=Math.floor(question.a/10)*10;
+      for(let i=0;i<tensN;i++) els.tens.appendChild(bead('blue',i));
+      for(let i=0;i<onesCount();i++) els.ones.appendChild(bead('pink',i));
+      addCount(els.tens,tensN,'あお'); addCount(els.ones,onesCount(),'ピンク');
+      els.tensGroup.style.display=tensN?'block':'none';
+      const pinkGone=[...removed].filter(k=>k.startsWith('pink')).length===onesCount() && onesCount()>0;
+      els.tensGroup.classList.toggle('broken',needsBorrow()&&pinkGone);
+      els.tensLabel.textContent=needsBorrow()&&pinkGone?'10を ばらしたよ':'10のまとまり';
+      updateCoach();
+      const done=removed.size===question.b;
+      els.answerPanel.classList.toggle('show',done && !els.success.classList.contains('show'));
+      if(done) renderChoices();
+      els.questionNo.textContent=round+'もんめ / 5';
+      els.stars.innerHTML=Array.from({length:5},(_,i)=>'<span class="'+(i<score?'':'off')+'">★</span>').join('');
+      els.stars.setAttribute('aria-label',score+'点');
+    }
+
+    function addCount(parent,n,label){
+      const c=document.createElement('div'); c.className='count'; c.textContent=n+'こ'; c.setAttribute('aria-label',label+n+'こ'); parent.appendChild(c);
+    }
+
+    function updateCoach(){
+      const left=question.b-removed.size;
+      const pinkRemoved=[...removed].filter(k=>k.startsWith('pink')).length;
+      if(left===0){ els.coach.innerHTML='できた！ のこった おはじきを <b>かぞえよう</b>'; return; }
+      if(needsBorrow() && pinkRemoved===onesCount()){
+        els.coach.innerHTML='ピンクは ぜんぶけしたね。<br>あおから あと <b>'+left+'こ</b> けそう';
+      }else{
+        els.coach.innerHTML='ピンクから <b>'+left+'こ</b> けしてみよう';
+      }
+    }
+
+    function toggleBead(color,index){
+      if(demoRunning || removed.size===question.b || els.success.classList.contains('show')) return;
+      const key=color+index;
+      if(removed.has(key)){ removed.delete(key); render(); return; }
+      const pinkRemoved=[...removed].filter(k=>k.startsWith('pink')).length;
+      if(color==='blue' && onesCount()>pinkRemoved){ nudge('まずは ピンクから けそう'); return; }
+      removed.add(key); render();
+    }
+
+    function nudge(message){
+      els.coach.textContent=message; els.board.classList.remove('wiggle'); void els.board.offsetWidth; els.board.classList.add('wiggle');
+      setTimeout(updateCoach,900);
+    }
+
+    function renderChoices(){
+      const correct=question.a-question.b;
+      const pool=new Set([correct]);
+      while(pool.size<3){ const x=Math.max(0,correct+rand(-3,3)); pool.add(x); }
+      const arr=[...pool].sort(()=>Math.random()-.5);
+      els.choices.innerHTML='';
+      arr.forEach(n=>{
+        const btn=document.createElement('button'); btn.type='button'; btn.className='choice'; btn.textContent=n;
+        btn.addEventListener('click',()=>checkAnswer(n)); els.choices.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(n){
+      const correct=question.a-question.b;
+      if(n!==correct){ nudge('おしい！ のこった おはじきを もういちど かぞえよう'); return; }
+      els.answer.textContent=correct; els.answerPanel.classList.remove('show'); els.success.classList.add('show');
+      score++; render(); celebrate();
+      els.successMessage.textContent=round===5?'🏆 5もん がんばったね！':'🎉 せいかい！ すごい！';
+      els.nextBtn.textContent=round===5?'もう 5もん やる':'つぎの もんだい →';
+      speak('せいかい。'+question.a+'ひく'+question.b+'は'+correct+'です');
+    }
+
+    function celebrate(){
+      const marks=['★','●','◆','♥'];
+      for(let i=0;i<18;i++){
+        const s=document.createElement('span'); s.className='burst'; s.textContent=marks[i%marks.length];
+        s.style.left=(45+Math.random()*10)+'vw'; s.style.top=(45+Math.random()*8)+'vh';
+        s.style.color=["#43b8eb","#ff72aa","#ffd967","#8fd8c7"][i%4];
+        s.style.setProperty('--x',(Math.random()*260-130)+'px'); s.style.setProperty('--y',(Math.random()*-220-20)+'px');
+        document.body.appendChild(s); setTimeout(()=>s.remove(),950);
+      }
+      els.card.classList.remove('pop'); void els.card.offsetWidth; els.card.classList.add('pop');
+    }
+
+    function resetQuestion(){ removed.clear(); demoRunning=false; els.success.classList.remove('show'); els.answerPanel.classList.remove('show'); render(); }
+    function nextQuestion(){
+      if(round===5){round=1;score=0}else round++;
+      question=makeQuestion(); resetQuestion();
+    }
+
+    async function demo(){
+      if(demoRunning) return; demoRunning=true; removed.clear(); els.success.classList.remove('show'); render();
+      els.coach.textContent='おてほんを みてね';
+      const order=[];
+      for(let i=0;i<onesCount() && order.length<question.b;i++) order.push('pink'+i);
+      for(let i=0;order.length<question.b;i++) order.push('blue'+i);
+      await wait(650);
+      for(const key of order){ removed.add(key); render(); await wait(480); }
+      demoRunning=false; render();
+    }
+
+    function speak(text){
+      if(!('speechSynthesis' in window)) return;
+      speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text||question.a+'ひく'+question.b+'は、いくつ？');
+      u.lang='ja-JP'; u.rate=.78; u.pitch=1.08; speechSynthesis.speak(u);
+    }
+
+    document.querySelectorAll('.level').forEach(btn=>btn.addEventListener('click',()=>{
+      level=btn.dataset.level; document.querySelectorAll('.level').forEach(x=>x.classList.toggle('active',x===btn));
+      round=1; score=0; question=makeQuestion(level==='borrow'); resetQuestion();
+    }));
+    els.resetBtn.addEventListener('click',resetQuestion);
+    els.demoBtn.addEventListener('click',demo);
+    els.nextBtn.addEventListener('click',nextQuestion);
+    $('soundBtn').addEventListener('click',()=>speak());
+    render();
+  })();
+  </script>
+</body>
+</html>

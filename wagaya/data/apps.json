@@ -11,6 +11,10 @@
     {
       "id": "record",
       "name": "記録"
+    },
+    {
+      "id": "reference",
+      "name": "何度も見るもの"
     }
   ],
   "apps": [
@@ -97,6 +101,17 @@
       "order": 6
     },
     {
+      "id": "home-album",
+      "name": "おうちアルバム",
+      "description": "ピアノ・スターデューの写真と動画",
+      "url": "https://cetus.fun/kanriapp/album/",
+      "icon": "🖼️",
+      "color": "purple",
+      "category": "reference",
+      "featured": false,
+      "order": 9
+    },
+    {
       "id": "iikoto-usagi",
       "name": "うさぎいいこと",
       "description": "今日のいいことを記録",
@@ -119,5 +134,5 @@
       "order": 8
     }
   ],
-  "notes": "家族カレンダーはホーム・一覧から削除。記録は「からだパワー／からだカレンダー／うさぎいいこと／ユニコーンいいこと」の4つ。からだパワーはよく使うアプリで時間割の次。"
+  "notes": "家族カレンダーはホーム・一覧から削除。おうちアルバムはピアノとスターデューバレーの参考画像・動画用。"
 }

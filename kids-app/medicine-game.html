@@ -538,25 +538,76 @@ document.querySelectorAll('.toggle-btn[data-ig-level]').forEach(btn => {
 let phase = 'start';
 let timerInterval = null;
 let timerSecs = 60, totalSecs = 60;
+let timerEndAt = 0;
 const banner = document.getElementById('timer-banner');
+const TIMER_STORAGE_KEY = 'medicine_game_active_timer_v2';
 
 function fmt(s) { return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
 
-function startTimer(seconds, label, onDone) {
+function saveTimerState(label) {
+  try {
+    localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify({
+      phase, endAt: timerEndAt, totalSecs, label
+    }));
+  } catch(e) {}
+}
+
+function clearTimerState() {
+  try { localStorage.removeItem(TIMER_STORAGE_KEY); } catch(e) {}
+}
+
+function startTimer(seconds, label, onDone, savedEndAt) {
   timerSecs = seconds; totalSecs = seconds;
+  timerEndAt = savedEndAt || (Date.now() + seconds * 1000);
   banner.classList.add('active');
   document.getElementById('banner-label').textContent = label;
-  document.getElementById('banner-digits').textContent = fmt(timerSecs);
-  document.getElementById('banner-bar').style.width = '100%';
+  saveTimerState(label);
   clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timerSecs--;
+
+  const tick = () => {
+    timerSecs = Math.max(0, Math.ceil((timerEndAt - Date.now()) / 1000));
     document.getElementById('banner-digits').textContent = fmt(timerSecs);
     document.getElementById('banner-bar').style.width = (timerSecs/totalSecs*100) + '%';
-    if (timerSecs <= 0) { clearInterval(timerInterval); onDone(); }
-  }, 1000);
+    if (timerSecs <= 0) {
+      clearInterval(timerInterval);
+      clearTimerState();
+      onDone();
+    }
+  };
+  tick();
+  if (timerSecs > 0) timerInterval = setInterval(tick, 250);
 }
-function stopTimer() { clearInterval(timerInterval); banner.classList.remove('active'); }
+function stopTimer(clearSaved = true) {
+  clearInterval(timerInterval);
+  banner.classList.remove('active');
+  if (clearSaved) clearTimerState();
+}
+
+function restoreTimerState() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(TIMER_STORAGE_KEY) || 'null'); } catch(e) {}
+  if (!saved || !['one-min','five-min','swallow','done'].includes(saved.phase)) return;
+
+  document.getElementById('screen-start').classList.add('hidden');
+  document.getElementById('game-section').classList.remove('hidden');
+  phase = saved.phase;
+  applySettingsToUI();
+  initGame();
+
+  if (phase === 'one-min') {
+    startTimer(60, saved.label || '⏱ おくすりタイマー', onOneMinDone, Number(saved.endAt));
+  } else if (phase === 'five-min') {
+    showEl('five-min-card');
+    startTimer(300, saved.label || '🥤 のみものがまんタイマー', onFiveMinDone, Number(saved.endAt));
+  } else if (phase === 'swallow') {
+    banner.classList.add('active');
+    document.getElementById('banner-digits').textContent = '0:00';
+    document.getElementById('banner-bar').style.width = '0%';
+    document.getElementById('one-min-overlay').classList.add('active');
+  } else if (phase === 'done') {
+    document.getElementById('five-done-overlay').classList.add('active');
+  }
+}
 
 function showEl(id) { document.getElementById(id).classList.add('active'); }
 function hideEl(id) { document.getElementById(id).classList.remove('active'); }
@@ -573,6 +624,8 @@ document.getElementById('btn-start').addEventListener('click', () => {
 
 function onOneMinDone() {
   playBell(); phase = 'swallow';
+  timerEndAt = 0;
+  saveTimerState('⏱ おくすりタイマー');
   document.getElementById('banner-digits').textContent = '0:00';
   document.getElementById('banner-bar').style.width = '0%';
   const overlay = document.getElementById('one-min-overlay');
@@ -598,8 +651,10 @@ document.getElementById('btn-swallowed').addEventListener('click', () => {
 function onFiveMinDone() {
   playBell();
   hideEl('five-min-card');
-  stopTimer();
+  stopTimer(false);
   phase = 'done';
+  timerEndAt = 0;
+  saveTimerState('🥤 のみものがまんタイマー');
   document.getElementById('five-done-overlay').classList.add('active');
 }
 
@@ -862,6 +917,9 @@ function showFinalResult() {
 
 document.getElementById('btn-next-match').addEventListener('click', () => { matchNum++; initGame(); });
 document.getElementById('btn-play-again').addEventListener('click', resetGameFull);
+
+// 「チェックにもどる」や誤操作で別画面へ移動しても、期限から残り秒数を復元する
+restoreTimerState();
 </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  'family-calendar-v2';
+  'family-calendar-v3';
 
 const ASSETS = [
   '/kanriapp/calendar.html'

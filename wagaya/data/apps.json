@@ -23,6 +23,17 @@
   ],
   "apps": [
     {
+      "id": "family-calendar",
+      "name": "家族カレンダー",
+      "description": "家族みんなの予定を共有",
+      "url": "https://cetus.fun/kanriapp/calendar.html",
+      "icon": "📅",
+      "color": "mint",
+      "category": "daily",
+      "featured": true,
+      "order": 1
+    },
+    {
       "id": "timetable",
       "name": "時間割",
       "description": "4年生・2年生の時間割画像",
@@ -149,5 +160,5 @@
       "order": 10
     }
   ],
-  "notes": "家族カレンダーはホーム・一覧から削除。おうちアルバムはピアノとスターデューバレーの参考画像・動画用。"
+  "notes": "家族カレンダーをホーム・一覧に表示。おうちアルバムはピアノとスターデューバレーの参考画像・動画用。"
 }

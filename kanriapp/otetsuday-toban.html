@@ -1463,7 +1463,16 @@ async function checkPendingBanner() {
 }
 
 // 初期ロード
-loadMembers().then(() => { loadToday(); checkPendingBanner(); });
+loadMembers().then(async () => {
+  loadToday();
+  checkPendingBanner();
+
+  // ママホームのお知らせから来た時は、申請欄まで直接移動する
+  const params = new URLSearchParams(location.search);
+  if (params.get('open') === 'pending-rewards' || location.hash === '#rewardRequestsCard') {
+    await openPendingRewards();
+  }
+});
 </script>
 </body>
 </html>

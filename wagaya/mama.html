@@ -23,6 +23,12 @@
   .important-card{display:block;text-decoration:none;color:inherit;background:#fff8da;border:1px solid #f1df8e;border-radius:20px;padding:16px;margin:0 0 22px}
   .important-card strong{font-size:1.08rem}
   .section-title{margin:18px 0 10px}
+  .points-alert{display:none;width:100%;align-items:center;justify-content:space-between;gap:12px;margin:0 0 18px;padding:14px 15px;border:1px solid #f0c98c;border-radius:18px;color:#6f451c;background:linear-gradient(135deg,#fff8e7,#fff1d6);box-shadow:0 6px 18px rgba(133,86,28,.08);font:inherit;text-align:left;cursor:pointer}
+  .points-alert.show{display:flex}
+  .points-alert-copy{display:grid;gap:2px}
+  .points-alert strong{font-size:1rem}
+  .points-alert small{color:#8a6744;font-weight:700}
+  .points-alert-arrow{flex:0 0 auto;font-size:1.55rem;color:#b87532}
   @media(max-width:520px){.hero-grid{grid-template-columns:1fr 1fr}.hero-card{padding:14px}}
 </style>
 
@@ -35,6 +41,14 @@
     <a href="./index.html">こども</a>
     <a class="active" href="./mama.html">ママ</a>
   </div>
+
+  <button class="points-alert" id="pointsAlert" type="button" aria-label="お手伝いポイントの交換申請を確認する">
+    <span class="points-alert-copy">
+      <strong id="pointsAlertText">🎁 お手伝いポイントのお知らせ</strong>
+      <small>タップして承認・NGをえらぶ</small>
+    </span>
+    <span class="points-alert-arrow" aria-hidden="true">›</span>
+  </button>
 
   <section class="apps-section">
     <div class="section-heading">
@@ -77,5 +91,32 @@
     <span class="nav-icon" aria-hidden="true">⊞</span><span>アプリ</span>
   </a>
 </nav>
+<script>
+(() => {
+  const alertButton = document.getElementById('pointsAlert');
+  const alertText = document.getElementById('pointsAlertText');
+  const password = localStorage.getItem('otetsuday_pw') || '';
+  const destination = 'https://cetus.fun/kanriapp/otetsuday-toban.html?open=pending-rewards#rewardRequestsCard';
+
+  alertButton.addEventListener('click', () => {
+    location.href = destination;
+  });
+
+  if (!password) return;
+
+  fetch('https://otetsudai-api.sslowdayss.workers.dev/api/rewards/pending-count', {
+    headers: { 'X-App-Password': password },
+    cache: 'no-store'
+  })
+    .then((response) => response.ok ? response.json() : Promise.reject())
+    .then((data) => {
+      const count = Number(data.count) || 0;
+      if (count < 1) return;
+      alertText.textContent = `🎁 こうかんしんせいが ${count}件 あります`;
+      alertButton.classList.add('show');
+    })
+    .catch(() => {});
+})();
+</script>
 </body>
 </html>

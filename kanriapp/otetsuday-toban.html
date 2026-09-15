@@ -142,6 +142,33 @@
   .btn-approve { background: var(--accent2); color: #fff; }
   .btn-reject { background: #e05; color: #fff; margin-left: 6px; }
 
+  /* 承認待ち通知：押せる場所と移動先を明確にする */
+  #pendingBanner {
+    display:none;width:100%;border:0;background:linear-gradient(135deg,#f5a623,#e8834a);
+    color:#fff;padding:13px 16px;align-items:center;justify-content:space-between;gap:12px;
+    cursor:pointer;text-align:left;font:inherit;box-shadow:0 3px 10px rgba(232,131,74,.22);
+  }
+  #pendingBanner > span:first-child { display:grid;gap:3px; }
+  #pendingBanner strong { font-size:.95rem; }
+  #pendingBanner small { font-size:.76rem;opacity:.92; }
+  .pending-banner-action {
+    flex-shrink:0;background:#fff;color:#b85d27;border-radius:999px;padding:9px 12px;
+    font-size:.8rem;font-weight:800;box-shadow:0 2px 7px rgba(80,35,10,.12);
+  }
+  #rewardRequestsCard {
+    scroll-margin-top:145px;border:3px solid #f5a623;background:#fffdf7;
+  }
+  #rewardRequestsCard .setting-title { color:#b65e28;font-size:1rem; }
+  .reward-guide {
+    margin:-2px 0 10px;padding:9px 11px;border-radius:10px;background:#fff1d1;
+    color:#7b5722;font-size:.82rem;font-weight:700;line-height:1.45;
+  }
+  #rewardRequestsCard.pending-focus { animation:pendingFocus 1.25s ease 2; }
+  @keyframes pendingFocus {
+    0%,100% { box-shadow:var(--shadow);transform:scale(1); }
+    50% { box-shadow:0 0 0 7px rgba(245,166,35,.28),0 8px 24px rgba(232,131,74,.22);transform:scale(1.012); }
+  }
+
   /* 折りたたみ */
   details.collapse-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
   details.collapse-card > summary { list-style: none; cursor: pointer; padding: 14px 16px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -169,10 +196,13 @@
 </header>
 
 <!-- 承認待ちバナー -->
-<div id="pendingBanner" style="display:none;background:linear-gradient(135deg,#f5a623,#e8834a);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;" onclick="showTab('points', {target: document.querySelector('[data-tab=points]')})">
-  <span id="pendingBannerText" style="font-weight:700;font-size:0.9rem;">🎁 こうかんしんせいがあります</span>
-  <span style="font-size:0.8rem;opacity:0.9;">タップして確認 →</span>
-</div>
+<button id="pendingBanner" type="button" onclick="openPendingRewards()" aria-label="交換申請を確認する">
+  <span>
+    <strong id="pendingBannerText">🎁 こうかんしんせいがあります</strong>
+    <small>承認かNGをえらんでね</small>
+  </span>
+  <span class="pending-banner-action">確認する ➜</span>
+</button>
 
 <div class="tabs">
   <div class="tab active" data-tab="today">📋 今日</div>
@@ -349,8 +379,9 @@
     <div class="pv-btn" data-member="imouto" onclick="selectPointMember('imouto')">🦄 いもうと</div>
   </div>
   <div id="pointsContent" class="loading">よみこみ中…</div>
-  <div class="card" style="margin-top:14px;">
+  <div class="card" id="rewardRequestsCard" style="margin-top:14px;">
     <div class="setting-title">🎁 こうかんリクエスト</div>
+    <div class="reward-guide">「待ち」のごほうびを確認して、<strong>承認</strong> または <strong>NG</strong> を押してください。</div>
     <div id="rewardRequestList" class="loading">よみこみ中…</div>
   </div>
 </div>
@@ -464,6 +495,40 @@ document.querySelectorAll('.tab').forEach(t => {
     if (t.dataset.tab === 'points') loadPoints();
   });
 });
+
+// 承認待ちバナーから、該当する子の申請欄まで移動
+async function openPendingRewards() {
+  const pointTab = document.querySelector('.tab[data-tab="points"]');
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  pointTab.classList.add('active');
+  document.getElementById('page-points').classList.add('active');
+
+  // 承認待ちがある子を自動で選ぶ
+  try {
+    const r = await fetch(`${API}/api/rewards/requests`, { headers: apiHeaders() });
+    if (r.ok) {
+      const requests = await r.json();
+      const pending = requests.find(x => x.status === 'pending');
+      if (pending?.member_id) currentPointMember = pending.member_id;
+    }
+  } catch (e) {}
+
+  document.querySelectorAll('.pv-btn').forEach(
+    b => b.classList.toggle('active', b.dataset.member === currentPointMember)
+  );
+  await loadPoints();
+
+  const card = document.getElementById('rewardRequestsCard');
+  if (!card) return;
+  requestAnimationFrame(() => {
+    card.scrollIntoView({ behavior:'smooth', block:'start' });
+    card.classList.remove('pending-focus');
+    void card.offsetWidth;
+    card.classList.add('pending-focus');
+    setTimeout(() => card.classList.remove('pending-focus'), 2700);
+  });
+}
 
 // ──────── いつでもタブ ────────
 async function loadAnytime() {

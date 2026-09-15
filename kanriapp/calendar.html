@@ -11,7 +11,6 @@
 <link rel="manifest" href="/kanriapp/manifest.json">
 <link rel="apple-touch-icon" href="/kanriapp/calendar.png">
 <title>家族カレンダー</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   /* ── デザイントークン ── */
   :root {
@@ -57,6 +56,14 @@
   #login-screen .logo { font-size: 56px; filter: drop-shadow(0 4px 12px rgba(78,203,168,0.3)); }
   #login-screen h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
   #login-screen p { color: var(--text-sub); font-size: 14px; }
+  .profile-grid { width:min(420px,100%); display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .profile-btn { border:2px solid var(--border); background:#fff; border-radius:16px; padding:12px 6px; font-size:14px; font-weight:700; color:var(--text); cursor:pointer; }
+  .profile-btn.selected { border-color:var(--mint); background:var(--mint-light); box-shadow:0 0 0 3px var(--accent-soft); }
+  .profile-dot { width:30px; height:30px; border-radius:50%; margin:0 auto 6px; display:flex; align-items:center; justify-content:center; color:#fff; }
+  .family-password { width:min(360px,100%); border:2px solid var(--border); border-radius:14px; padding:13px 16px; font-size:16px; text-align:center; outline:none; }
+  .family-password:focus { border-color:var(--mint); box-shadow:0 0 0 3px var(--accent-soft); }
+  .login-error { min-height:20px; color:#e53935 !important; font-weight:700; text-align:center; }
+  .login-help { max-width:380px; line-height:1.6; text-align:center; }
 
   /* ── 表示名設定画面 ── */
   #setup-screen {
@@ -496,8 +503,12 @@
 <div id="login-screen">
   <div class="logo">📅</div>
   <h1>家族カレンダー</h1>
-  <p>Googleアカウントでログインしてください</p>
-  <div id="g_signin_btn"></div>
+  <p class="login-help">自分を選んで、家族の合言葉を入れてね。<br>この端末では次からそのまま開きます。</p>
+  <div class="profile-grid" id="profile-grid"></div>
+  <input class="family-password" id="family-password" type="password" autocomplete="current-password" placeholder="家族の合言葉">
+  <button class="btn btn-primary" style="padding:12px 34px;font-size:16px" onclick="familyLogin()">このカレンダーをひらく</button>
+  <p class="login-error" id="login-error"></p>
+  <p class="login-help" id="setup-help" style="display:none">最初の1回だけ、Cloudflareで設定した<br>FAMILY_SETUP_CODEを合言葉に使います。</p>
 </div>
 
 <div id="setup-screen">
@@ -531,8 +542,9 @@
     <div class="menu-name" id="menu-name"></div>
     <div class="menu-divider"></div>
     <div class="menu-item" onclick="openNameEdit()">表示名を変更</div>
+    <div class="menu-item" id="google-settings-menu" onclick="openGoogleSettings()">Google予定の読み込み設定</div>
     <div class="menu-divider"></div>
-    <div class="menu-item" onclick="signOut()" style="color:#e53935">ログアウト</div>
+    <div class="menu-item" onclick="signOut()" style="color:#e53935">この端末からログアウト</div>
   </div>
 
   <div id="legend">
@@ -819,57 +831,88 @@
   </div>
 </div>
 
+<div class="overlay" id="google-settings-overlay" onclick="closeGoogleSettings(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>Google予定の読み込み</h2>
+    <p style="font-size:13px;line-height:1.7;color:var(--text-sub);margin-bottom:12px">Googleカレンダーの設定にある「iCal形式の非公開URL」を貼り付けます。Googleログインは不要です。複数ある場合は1行に1つ貼り付けてください。</p>
+    <div class="frow"><label>非公開iCal URL</label><textarea id="google-ics-urls" style="min-height:110px" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></textarea></div>
+    <p id="google-settings-status" style="font-size:13px;color:var(--text-sub)"></p>
+    <p style="font-size:12px;color:#e08a00;margin-top:8px">空欄のまま保存すると、登録済みのGoogle予定を解除します。</p>
+    <div class="modal-btns"><button class="btn btn-ghost" onclick="closeGoogleSettings()">キャンセル</button><button class="btn btn-primary" onclick="saveGoogleSettings()">保存する</button></div>
+  </div>
+</div>
+
 <script>
 const API = 'https://calendar-worker.sslowdayss.workers.dev';
-const GOOGLE_CLIENT_ID = '17945262543-lgunjio0plc22takcpv29flmvdlo492v.apps.googleusercontent.com';
 const PALETTE = ['#e53935','#d81b60','#8e24aa','#5e35b1','#3949ab','#1e88e5','#00acc1','#00897b','#43a047','#f4511e','#fb8c00','#f6bf26'];
 
-let idToken = null, myProfile = null, calendars = [], events = [], gEvents = [];
+let familyToken = localStorage.getItem('family_calendar_token') || null;
+let selectedProfile = localStorage.getItem('family_calendar_profile') || 'mama';
+let myProfile = null, calendars = [], events = [], gEvents = [];
 let hiddenCals = new Set(JSON.parse(localStorage.getItem('hiddenCals') || '[]'));
 let currentDate = new Date(), viewMode = 'month', selectedCalColor = PALETTE[0];
 let detailEvent = null, selectedDate = null;
 
 async function api(path, method = 'GET', body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json', 'X-Google-Token': idToken } };
-  if (body) opts.body = JSON.stringify(body);
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (familyToken) opts.headers.Authorization = 'Bearer ' + familyToken;
+  if (body !== null) opts.body = JSON.stringify(body);
   const res = await fetch(API + path, opts);
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
   return res.json();
 }
 
-window.onload = () => {
+window.onload = async () => {
+  document.getElementById('app').style.display = 'none';
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/kanriapp/service-worker.js')
-      .then(reg => console.log('SW registered:', reg.scope))
-      .catch(err => console.warn('SW registration failed:', err));
+    navigator.serviceWorker.register('/kanriapp/service-worker.js').catch(err => console.warn('SW registration failed:', err));
   }
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleSignIn, auto_select: true });
-  google.accounts.id.renderButton(document.getElementById('g_signin_btn'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ja' });
-  const saved = sessionStorage.getItem('id_token');
-  if (saved) { idToken = saved; initApp().catch(() => { sessionStorage.removeItem('id_token'); google.accounts.id.prompt(); }); }
-  else google.accounts.id.prompt();
+  try {
+    const status = await fetch(API + '/family/status').then(r => r.json());
+    renderFamilyProfiles(status.profiles || []);
+    document.getElementById('setup-help').style.display = status.configured ? 'none' : '';
+    if (familyToken) {
+      try { myProfile = await api('/family/me'); showApp(); return; }
+      catch { localStorage.removeItem('family_calendar_token'); familyToken = null; }
+    }
+  } catch (e) { document.getElementById('login-error').textContent = 'カレンダーに接続できません'; }
+  document.getElementById('login-screen').style.display = 'flex';
 };
 
-async function onGoogleSignIn(response) { idToken = response.credential; sessionStorage.setItem('id_token', idToken); await initApp(); }
-async function initApp() { try { myProfile = await api('/me', 'GET'); showApp(); } catch(e) { showSetup(); } }
-function signOut() { google.accounts.id.disableAutoSelect(); sessionStorage.removeItem('id_token'); idToken = null; myProfile = null; document.getElementById('app').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; document.getElementById('user-menu').classList.remove('open'); }
-
-function showSetup() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('setup-screen').style.display = 'flex';
-  const cp = document.getElementById('setup-colors');
-  cp.innerHTML = PALETTE.map((c, i) => `<div class="color-swatch${i===0?' selected':''}" style="background:${c}" onclick="selectSetupColor(this,'${c}')"></div>`).join('');
+function renderFamilyProfiles(profiles) {
+  const grid = document.getElementById('profile-grid');
+  grid.innerHTML = profiles.map(p => `<button type="button" class="profile-btn${p.key===selectedProfile?' selected':''}" data-profile="${p.key}" onclick="selectFamilyProfile('${p.key}')"><span class="profile-dot" style="background:${p.color}">${p.name.charAt(0)}</span>${p.name}</button>`).join('');
 }
-function selectSetupColor(el, color) { document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected')); el.classList.add('selected'); selectedCalColor = color; }
-async function finishSetup() { const name = document.getElementById('setup-name').value.trim(); if (!name) { alert('名前を入力してください'); return; } myProfile = await api('/me', 'POST', { display_name: name, avatar_color: selectedCalColor }); showApp(); }
-
+function selectFamilyProfile(key) {
+  selectedProfile = key;
+  document.querySelectorAll('.profile-btn').forEach(b => b.classList.toggle('selected', b.dataset.profile === key));
+}
+async function familyLogin() {
+  const password = document.getElementById('family-password').value;
+  const error = document.getElementById('login-error');
+  if (!password) { error.textContent = '合言葉を入れてね'; return; }
+  error.textContent = 'ひらいています…';
+  try {
+    const res = await fetch(API + '/family/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ profile:selectedProfile, password }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'ログインできません');
+    familyToken = data.token; myProfile = data.user;
+    localStorage.setItem('family_calendar_token', familyToken);
+    localStorage.setItem('family_calendar_profile', selectedProfile);
+    document.getElementById('family-password').value = ''; error.textContent = ''; showApp();
+  } catch (e) { error.textContent = e.message; }
+}
+function signOut() {
+  localStorage.removeItem('family_calendar_token');
+  familyToken = null; myProfile = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('user-menu').classList.remove('open');
+}
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  const savedToken = sessionStorage.getItem('gapi_token');
-  const savedExpire = sessionStorage.getItem('gapi_token_expire');
-  if (savedToken && savedExpire && Date.now() < parseInt(savedExpire)) gapiAccessToken = savedToken;
   updateAvatar(); loadAll(); resyncNotificationsOnce();
 }
 async function resyncNotificationsOnce() {
@@ -883,50 +926,53 @@ async function resyncNotificationsOnce() {
     console.warn('通知の初回同期に失敗しました', e);
   }
 }
-function updateAvatar() { if (!myProfile) return; const btn = document.getElementById('avatar-btn'); btn.style.background = myProfile.avatar_color; btn.textContent = myProfile.display_name.charAt(0); document.getElementById('menu-name').textContent = myProfile.display_name; }
+function updateAvatar() { if (!myProfile) return; const btn = document.getElementById('avatar-btn'); btn.style.background = myProfile.avatar_color; btn.textContent = myProfile.display_name.charAt(0); document.getElementById('menu-name').textContent = myProfile.display_name; const gs = document.getElementById('google-settings-menu'); if (gs) gs.style.display = myProfile.role === 'admin' ? '' : 'none'; }
 async function loadAll() { calendars = await api('/calendars'); renderLegend(); await loadEvents(); }
 
-let gapiReady = false, gapiAccessToken = null;
-function loadGapi() {
-  return new Promise(resolve => {
-    if (gapiReady) { resolve(); return; }
-    const s = document.createElement('script'); s.src = 'https://apis.google.com/js/api.js';
-    s.onload = () => { gapi.load('client', async () => { await gapi.client.init({}); gapiReady = true; resolve(); }); };
-    document.head.appendChild(s);
-  });
-}
 async function fetchGoogleEvents() {
-  if (!gapiAccessToken) return;
   try {
-    await loadGapi(); gapi.client.setToken({ access_token: gapiAccessToken }); await gapi.client.load('calendar', 'v3');
     const y = currentDate.getFullYear(), m = currentDate.getMonth();
-    const timeMin = new Date(y, m-1, 1).toISOString(), timeMax = new Date(y, m+2, 0).toISOString();
-    const [personalRes, holidayRes] = await Promise.all([
-      gapi.client.calendar.events.list({ calendarId: 'primary', timeMin, timeMax, singleEvents: true, orderBy: 'startTime', maxResults: 500 }),
-      gapi.client.calendar.events.list({ calendarId: 'ja.japanese#holiday@group.v.calendar.google.com', timeMin, timeMax, singleEvents: true, orderBy: 'startTime', maxResults: 100 }).catch(() => ({ result: { items: [] } }))
-    ]);
-    const personalEvents = (personalRes.result.items || []).map(e => ({ id: 'g_' + e.id, title: e.summary || '（タイトルなし）', description: e.description || '', start_datetime: e.start.dateTime || e.start.date, end_datetime: e.end.dateTime || e.end.date, all_day: !e.start.dateTime, calendar_id: '__google__', color: '#1a73e8', is_google: true }));
-    const holidayEvents = (holidayRes.result.items || []).map(e => ({ id: 'gh_' + e.id, title: e.summary || '祝日', description: '', start_datetime: e.start.date, end_datetime: e.end.date, all_day: true, calendar_id: '__holiday__', color: '#e53935', is_google: true, is_holiday: true }));
-    gEvents = [...personalEvents, ...holidayEvents]; render();
-  } catch(e) { console.warn('Google Calendar fetch error', e); }
+    const from = dateStr(new Date(y, m-1, 1)), to = dateStr(new Date(y, m+2, 0));
+    gEvents = await api(`/google-events?from=${from}&to=${to}`);
+  } catch(e) { gEvents = []; console.warn('Google Calendar fetch error', e); }
+  render();
 }
-function requestGoogleCalendarAccess() {
-  const saved = sessionStorage.getItem('gapi_token'), expire = sessionStorage.getItem('gapi_token_expire');
-  if (saved && expire && Date.now() < parseInt(expire)) { gapiAccessToken = saved; hiddenCals.delete('__google__'); localStorage.setItem('hiddenCals', JSON.stringify([...hiddenCals])); fetchGoogleEvents(); renderLegend(); return; }
-  const client = google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/calendar.readonly', callback: (resp) => { if (resp.access_token) { gapiAccessToken = resp.access_token; const expire = Date.now() + (resp.expires_in - 60) * 1000; sessionStorage.setItem('gapi_token', resp.access_token); sessionStorage.setItem('gapi_token_expire', expire.toString()); hiddenCals.delete('__google__'); localStorage.setItem('hiddenCals', JSON.stringify([...hiddenCals])); fetchGoogleEvents(); renderLegend(); } } });
-  client.requestAccessToken();
+async function openGoogleSettings() {
+  document.getElementById('user-menu').classList.remove('open');
+  document.getElementById('google-ics-urls').value = '';
+  document.getElementById('google-settings-overlay').classList.add('open');
+  try {
+    const status = await api('/integrations/google-ics');
+    document.getElementById('google-settings-status').textContent = status.configured
+      ? `Googleカレンダーを${status.count}個読み込み中です。変更するときだけ新しいURLを貼ってください。`
+      : 'まだGoogleカレンダーは登録されていません。';
+  } catch(e) { document.getElementById('google-settings-status').textContent = e.message; }
+}
+function closeGoogleSettings(e) {
+  if (e && e.target !== document.getElementById('google-settings-overlay')) return;
+  document.getElementById('google-settings-overlay').classList.remove('open');
+}
+async function saveGoogleSettings() {
+  const urls = document.getElementById('google-ics-urls').value.split(String.fromCharCode(10)).map(v => v.trim()).filter(Boolean);
+  const status = document.getElementById('google-settings-status');
+  status.textContent = '保存しています…';
+  try {
+    const result = await api('/integrations/google-ics', 'POST', { urls });
+    status.textContent = result.configured ? `Googleカレンダーを${result.count}個登録しました。` : 'Googleカレンダーの登録を解除しました。';
+    await fetchGoogleEvents(); setTimeout(() => closeGoogleSettings(), 700);
+  } catch(e) { status.textContent = e.message; }
 }
 
 function renderLegend() {
   const leg = document.getElementById('legend'); leg.querySelectorAll('.legend-item').forEach(el => el.remove()); const addBtn = leg.querySelector('.legend-add');
-  if (gapiAccessToken) { const hItem = makeLegendItem('__holiday__', '祝日', '#e53935', true); leg.insertBefore(hItem, addBtn); }
-  const gItem = makeLegendItem('__google__', 'Googleカレンダー', '#1a73e8', true); leg.insertBefore(gItem, addBtn);
+  const hItem = makeLegendItem('__holiday__', '祝日', '#e53935', true); leg.insertBefore(hItem, addBtn);
+  const gItem = makeLegendItem('__google__', 'Google予定', '#1a73e8', true); leg.insertBefore(gItem, addBtn);
   calendars.forEach(cal => leg.insertBefore(makeLegendItem(cal.id, cal.name, cal.color, false), addBtn));
 }
 function makeLegendItem(id, name, color, isGoogle) {
   const el = document.createElement('div'); el.className = 'legend-item' + (hiddenCals.has(id) ? ' hidden' : ''); el.style.borderColor = color;
   el.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${name}</span>`;
-  if (isGoogle) { el.onclick = () => { if (!gapiAccessToken) { requestGoogleCalendarAccess(); return; } toggleLegend(id, el); }; }
+  if (isGoogle) { el.onclick = () => toggleLegend(id, el); }
   else { el.onclick = () => toggleLegend(id, el); el.oncontextmenu = (e) => { e.preventDefault(); if (confirm(`「${name}」を削除しますか？予定もすべて削除されます`)) api(`/calendars/${id}`, 'DELETE').then(() => loadAll()).catch(e => alert('削除失敗: ' + e.message)); }; }
   return el;
 }
@@ -936,7 +982,7 @@ async function loadEvents() {
   const y = currentDate.getFullYear(), m = currentDate.getMonth();
   const from = dateStr(new Date(y, m-1, 1)), to = dateStr(new Date(y, m+2, 0));
   events = await api(`/events?from=${from}&to=${to}`);
-  if (gapiAccessToken) await fetchGoogleEvents(); else render();
+  await fetchGoogleEvents();
 }
 
 function allEvents() { const orig = events.filter(e => !hiddenCals.has(e.calendar_id)); const g = hiddenCals.has('__google__') ? [] : gEvents; return [...orig, ...g]; }

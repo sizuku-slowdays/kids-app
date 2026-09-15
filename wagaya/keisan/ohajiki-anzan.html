@@ -83,7 +83,7 @@
     @media(min-width:600px){.board{min-height:245px}.beads{grid-template-columns:repeat(5,52px);grid-auto-rows:52px}.bead{width:52px;height:52px}.group{min-width:285px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <!-- 正式版 v5：青の10から引く学習手順 -->
+  <!-- 正式版 v6：青の10から引く学習手順 -->
 </head>
 <body>
   <main class="app">
@@ -186,11 +186,21 @@
     function chooseCan(){showRule(true,`<b>ブブー！</b><br>${one()}こしかないから、${q.b}こは ひけないよ`);el.board.classList.add('wiggle');setTimeout(()=>el.board.classList.remove('wiggle'),350)}
     function chooseCannot(){openCorrect(`そう！ ${one()} − ${q.b} は できない`,()=>{stage='split';render()})}
     function removeBlue(i){if(stage!=='subtract'||removed.has(i))return;removed.add(i);render();if(removed.size===q.b)openCorrect(`青を${q.b}こ、ぴったり消せた！`,()=>{stage='count';render()})}
-    function openCorrect(message,action){modalAction=action;el.modalText.textContent=message;el.modal.classList.add('show');speak('せいかい')}
+    function openCorrect(message,action){modalAction=action;el.modalText.textContent=message;el.modal.classList.add('show');playCorrectChime()}
     function renderCountChoices(){const a=answer(),set=new Set([a]);while(set.size<3)set.add(Math.max(0,a+rand(-3,3)));el.count.innerHTML='';[...set].sort(()=>Math.random()-.5).forEach(n=>{const b=document.createElement('button');b.className='count-btn';b.textContent=n;b.onclick=()=>chooseCount(n,b);el.count.appendChild(b)})}
     function chooseCount(n,button){if(n!==answer()){button.animate([{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:300});el.text.textContent='おしい！ 青とピンクをもう一度数えてね';return}score++;stage='done';render();openCorrect(`${10-q.b} ＋ ${one()} ＝ ${answer()}！`,()=>{el.modal.classList.remove('show');render();celebrate()})}
     function restart(){stage='intro';removed.clear();render()}
     function celebrate(){for(let i=0;i<16;i++){const s=document.createElement('span');s.className='burst';s.textContent=['★','●','◆','♥'][i%4];s.style.left=(45+Math.random()*10)+'vw';s.style.top=(45+Math.random()*8)+'vh';s.style.color=['#43b8eb','#ff72aa','#ffd967','#8fd8c7'][i%4];s.style.setProperty('--x',(Math.random()*260-130)+'px');s.style.setProperty('--y',(Math.random()*-220-20)+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),950)}}
+    function playCorrectChime(){
+      const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;
+      const ctx=new AudioCtx();const now=ctx.currentTime;
+      [[659.25,0,.16],[987.77,.18,.42]].forEach(([freq,start,end])=>{
+        const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=freq;
+        gain.gain.setValueAtTime(.0001,now+start);gain.gain.exponentialRampToValueAtTime(.28,now+start+.025);gain.gain.exponentialRampToValueAtTime(.0001,now+end);
+        osc.connect(gain);gain.connect(ctx.destination);osc.start(now+start);osc.stop(now+end);
+      });
+      setTimeout(()=>ctx.close(),650);
+    }
     function speak(text){if(!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text||`${q.a}ひく${q.b}は、いくつ？`);u.lang='ja-JP';u.rate=.78;u.pitch=1.08;speechSynthesis.speak(u)}
     el.next.onclick=next;el.prev.onclick=restart;el.canBtn=$('canBtn');el.cannotBtn=$('cannotBtn');el.canBtn.onclick=chooseCan;el.cannotBtn.onclick=chooseCannot;el.modalNext.onclick=()=>{const fn=modalAction;modalAction=null;fn?.()};$('soundBtn').onclick=()=>speak();
     newQuestion(true);render();
@@ -198,3 +208,4 @@
   </script>
 </body>
 </html>
+

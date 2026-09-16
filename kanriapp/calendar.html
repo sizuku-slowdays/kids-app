@@ -56,13 +56,6 @@
   #login-screen .logo { font-size: 56px; filter: drop-shadow(0 4px 12px rgba(78,203,168,0.3)); }
   #login-screen h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
   #login-screen p { color: var(--text-sub); font-size: 14px; }
-  #profile-screen {
-    display: none; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100vh; gap: 18px; padding: 32px;
-    background: linear-gradient(160deg, #F0F7F5 0%, #F6F7F9 100%);
-  }
-  #profile-screen .logo { font-size: 52px; filter: drop-shadow(0 4px 12px rgba(78,203,168,0.25)); }
-  #profile-screen h2 { font-size: 23px; font-weight: 700; }
   .profile-grid { width:min(420px,100%); display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   .profile-btn { border:2px solid var(--border); background:#fff; border-radius:16px; padding:12px 6px; font-size:14px; font-weight:700; color:var(--text); cursor:pointer; }
   .profile-btn.selected { border-color:var(--mint); background:var(--mint-light); box-shadow:0 0 0 3px var(--accent-soft); }
@@ -510,21 +503,12 @@
 <div id="login-screen">
   <div class="logo">📅</div>
   <h1>家族カレンダー</h1>
-  <p class="login-help">最初に、家族の合言葉を入れてね。<br>名前は合言葉が合ったあとに表示します。</p>
+  <p class="login-help">自分を選んで、家族の合言葉を入れてね。<br>この端末では次からそのまま開きます。</p>
+  <div class="profile-grid" id="profile-grid"></div>
   <input class="family-password" id="family-password" type="password" autocomplete="current-password" placeholder="家族の合言葉">
-  <button class="btn btn-primary" style="padding:12px 38px;font-size:16px" onclick="unlockFamily()">つぎへ</button>
+  <button class="btn btn-primary" style="padding:12px 34px;font-size:16px" onclick="familyLogin()">このカレンダーをひらく</button>
   <p class="login-error" id="login-error"></p>
   <p class="login-help" id="setup-help" style="display:none">最初の1回だけ、Cloudflareで設定した<br>FAMILY_SETUP_CODEを合言葉に使います。</p>
-</div>
-
-<div id="profile-screen" style="display:none">
-  <div class="logo">👤</div>
-  <h2>あなたの名前を選んでね</h2>
-  <p class="login-help">この端末では、次から自動でログインします。</p>
-  <div class="profile-grid" id="profile-grid"></div>
-  <button class="btn btn-primary" style="padding:12px 34px;font-size:16px" onclick="familyLogin()">この名前でひらく</button>
-  <button class="btn btn-ghost" style="margin-top:10px" onclick="backToPassword()">合言葉入力へ戻る</button>
-  <p class="login-error" id="profile-error"></p>
 </div>
 
 <div id="setup-screen">
@@ -557,8 +541,7 @@
   <div id="user-menu">
     <div class="menu-name" id="menu-name"></div>
     <div class="menu-divider"></div>
-    <div class="menu-item" onclick="openNameEdit()">自分の名前を変更</div>
-    <div class="menu-item" id="family-members-menu" onclick="openFamilyMembers()">家族の追加・名前変更</div>
+    <div class="menu-item" onclick="openNameEdit()">表示名を変更</div>
     <div class="menu-item" id="google-settings-menu" onclick="openGoogleSettings()">Google予定の読み込み設定</div>
     <div class="menu-divider"></div>
     <div class="menu-item" onclick="signOut()" style="color:#e53935">この端末からログアウト</div>
@@ -848,21 +831,6 @@
   </div>
 </div>
 
-<div class="overlay" id="family-members-overlay" onclick="closeFamilyMembers(event)">
-  <div class="modal" onclick="event.stopPropagation()">
-    <h2>家族の追加・名前変更</h2>
-    <p style="font-size:13px;line-height:1.7;color:var(--text-sub);margin-bottom:12px">ここに登録した本名は、合言葉が合った家族だけに表示されます。</p>
-    <div id="family-members-list" style="display:grid;gap:8px;margin-bottom:18px"></div>
-    <div style="border-top:1px solid var(--border-light);padding-top:14px">
-      <div class="frow"><label>新しく追加する家族の名前</label><input type="text" id="new-family-name" maxlength="30" placeholder="本名を入力"></div>
-      <div class="frow"><label>色</label><input type="color" id="new-family-color" value="#5b8dee" style="height:44px"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="addFamilyMember()">＋ 家族を追加する</button>
-    </div>
-    <p id="family-members-status" style="font-size:13px;color:var(--text-sub);margin-top:10px"></p>
-    <div class="modal-btns"><button class="btn btn-ghost" onclick="closeFamilyMembers()">閉じる</button></div>
-  </div>
-</div>
-
 <div class="overlay" id="google-settings-overlay" onclick="closeGoogleSettings(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h2>Google予定の読み込み</h2>
@@ -879,8 +847,7 @@ const API = 'https://calendar-worker.sslowdayss.workers.dev';
 const PALETTE = ['#e53935','#d81b60','#8e24aa','#5e35b1','#3949ab','#1e88e5','#00acc1','#00897b','#43a047','#f4511e','#fb8c00','#f6bf26'];
 
 let familyToken = localStorage.getItem('family_calendar_token') || null;
-let selectedProfile = localStorage.getItem('family_calendar_profile') || '';
-let familyUnlockToken = null;
+let selectedProfile = localStorage.getItem('family_calendar_profile') || 'mama';
 let myProfile = null, calendars = [], events = [], gEvents = [];
 let hiddenCals = new Set(JSON.parse(localStorage.getItem('hiddenCals') || '[]'));
 let currentDate = new Date(), viewMode = 'month', selectedCalColor = PALETTE[0];
@@ -900,72 +867,36 @@ window.onload = async () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/kanriapp/service-worker.js').catch(err => console.warn('SW registration failed:', err));
   }
-  if (familyToken) {
-    try { myProfile = await api('/family/me'); showApp(); return; }
-    catch { localStorage.removeItem('family_calendar_token'); familyToken = null; }
-  }
   try {
     const status = await fetch(API + '/family/status').then(r => r.json());
+    renderFamilyProfiles(status.profiles || []);
     document.getElementById('setup-help').style.display = status.configured ? 'none' : '';
+    if (familyToken) {
+      try { myProfile = await api('/family/me'); showApp(); return; }
+      catch { localStorage.removeItem('family_calendar_token'); familyToken = null; }
+    }
   } catch (e) { document.getElementById('login-error').textContent = 'カレンダーに接続できません'; }
   document.getElementById('login-screen').style.display = 'flex';
 };
 
 function renderFamilyProfiles(profiles) {
   const grid = document.getElementById('profile-grid');
-  if (!profiles.length) {
-    grid.innerHTML = '<p class="login-help">家族がまだ登録されていません。</p>';
-    return;
-  }
-  if (!profiles.some(p => p.key === selectedProfile)) selectedProfile = profiles[0].key;
-  grid.innerHTML = profiles.map(p => `<button type="button" class="profile-btn${p.key===selectedProfile?' selected':''}" data-profile="${p.key}" onclick="selectFamilyProfile('${p.key}')"><span class="profile-dot" style="background:${p.color}">${escapeHtml(p.name).charAt(0)}</span>${escapeHtml(p.name)}</button>`).join('');
+  grid.innerHTML = profiles.map(p => `<button type="button" class="profile-btn${p.key===selectedProfile?' selected':''}" data-profile="${p.key}" onclick="selectFamilyProfile('${p.key}')"><span class="profile-dot" style="background:${p.color}">${p.name.charAt(0)}</span>${p.name}</button>`).join('');
 }
 function selectFamilyProfile(key) {
   selectedProfile = key;
   document.querySelectorAll('.profile-btn').forEach(b => b.classList.toggle('selected', b.dataset.profile === key));
 }
-async function unlockFamily() {
+async function familyLogin() {
   const password = document.getElementById('family-password').value;
   const error = document.getElementById('login-error');
   if (!password) { error.textContent = '合言葉を入れてね'; return; }
-  error.textContent = '確認しています…';
-  try {
-    const unlockRes = await fetch(API + '/family/unlock', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ password })
-    });
-    const unlockData = await unlockRes.json();
-    if (!unlockRes.ok) throw new Error(unlockData.error || '合言葉が違います');
-    familyUnlockToken = unlockData.unlock_token;
-    const profilesRes = await fetch(API + '/family/profiles', {
-      headers:{ Authorization:'Bearer ' + familyUnlockToken }
-    });
-    const profiles = await profilesRes.json();
-    if (!profilesRes.ok) throw new Error(profiles.error || '家族の名前を読み込めません');
-    renderFamilyProfiles(profiles);
-    error.textContent = '';
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('profile-screen').style.display = 'flex';
-  } catch (e) { error.textContent = e.message; }
-}
-function backToPassword() {
-  familyUnlockToken = null;
-  document.getElementById('profile-screen').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-}
-async function familyLogin() {
-  const error = document.getElementById('profile-error');
-  if (!familyUnlockToken) { backToPassword(); return; }
-  if (!selectedProfile) { error.textContent = '自分の名前を選んでね'; return; }
   error.textContent = 'ひらいています…';
   try {
-    const res = await fetch(API + '/family/login', {
-      method:'POST',
-      headers:{'Content-Type':'application/json', Authorization:'Bearer ' + familyUnlockToken},
-      body:JSON.stringify({ profile:selectedProfile })
-    });
+    const res = await fetch(API + '/family/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ profile:selectedProfile, password }) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'ログインできません');
-    familyToken = data.token; familyUnlockToken = null; myProfile = data.user;
+    familyToken = data.token; myProfile = data.user;
     localStorage.setItem('family_calendar_token', familyToken);
     localStorage.setItem('family_calendar_profile', selectedProfile);
     document.getElementById('family-password').value = ''; error.textContent = ''; showApp();
@@ -975,7 +906,6 @@ function signOut() {
   localStorage.removeItem('family_calendar_token');
   familyToken = null; myProfile = null;
   document.getElementById('app').style.display = 'none';
-  document.getElementById('profile-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('user-menu').classList.remove('open');
 }
@@ -996,7 +926,7 @@ async function resyncNotificationsOnce() {
     console.warn('通知の初回同期に失敗しました', e);
   }
 }
-function updateAvatar() { if (!myProfile) return; const btn = document.getElementById('avatar-btn'); btn.style.background = myProfile.avatar_color; btn.textContent = myProfile.display_name.charAt(0); document.getElementById('menu-name').textContent = myProfile.display_name; const isAdmin = myProfile.role === 'admin'; const gs = document.getElementById('google-settings-menu'); if (gs) gs.style.display = isAdmin ? '' : 'none'; const fm = document.getElementById('family-members-menu'); if (fm) fm.style.display = isAdmin ? '' : 'none'; }
+function updateAvatar() { if (!myProfile) return; const btn = document.getElementById('avatar-btn'); btn.style.background = myProfile.avatar_color; btn.textContent = myProfile.display_name.charAt(0); document.getElementById('menu-name').textContent = myProfile.display_name; const gs = document.getElementById('google-settings-menu'); if (gs) gs.style.display = myProfile.role === 'admin' ? '' : 'none'; }
 async function loadAll() { calendars = await api('/calendars'); renderLegend(); await loadEvents(); }
 
 async function fetchGoogleEvents() {
@@ -1007,68 +937,6 @@ async function fetchGoogleEvents() {
   } catch(e) { gEvents = []; console.warn('Google Calendar fetch error', e); }
   render();
 }
-async function openFamilyMembers() {
-  document.getElementById('user-menu').classList.remove('open');
-  document.getElementById('family-members-overlay').classList.add('open');
-  await loadFamilyMembers();
-}
-function closeFamilyMembers(e) {
-  if (e && e.target !== document.getElementById('family-members-overlay')) return;
-  document.getElementById('family-members-overlay').classList.remove('open');
-}
-async function loadFamilyMembers() {
-  const list = document.getElementById('family-members-list');
-  const status = document.getElementById('family-members-status');
-  status.textContent = '読み込んでいます…';
-  try {
-    const members = await api('/family/members');
-    list.innerHTML = members.map(m => `<div style="display:grid;grid-template-columns:42px 1fr auto;gap:8px;align-items:center;padding:8px;border:1px solid var(--border-light);border-radius:12px">
-      <input type="color" id="member-color-${m.member_id}" value="${m.avatar_color}" style="width:40px;height:40px;border:0;padding:0">
-      <input type="text" id="member-name-${m.member_id}" value="${escapeHtml(m.display_name)}" maxlength="30" aria-label="家族の名前">
-      <span style="display:flex;gap:5px">
-        <button class="btn btn-primary" style="padding:7px 9px" onclick="saveFamilyMember('${m.member_id}')">保存</button>
-        ${m.profile_key === myProfile?.profile_key || m.member_id === myProfile?.profile_key || m.role === 'admin' ? '' : `<button class="btn btn-ghost" style="padding:7px 9px;color:#e45b5b" onclick="deleteFamilyMember('${m.member_id}')">削除</button>`}
-      </span>
-    </div>`).join('');
-    status.textContent = '';
-  } catch(e) { status.textContent = e.message; }
-}
-async function addFamilyMember() {
-  const name = document.getElementById('new-family-name').value.trim();
-  const color = document.getElementById('new-family-color').value;
-  const status = document.getElementById('family-members-status');
-  if (!name) { status.textContent = '追加する家族の本名を入力してください'; return; }
-  status.textContent = '追加しています…';
-  try {
-    await api('/family/members', 'POST', { display_name:name, avatar_color:color });
-    document.getElementById('new-family-name').value = '';
-    await loadFamilyMembers();
-  } catch(e) { status.textContent = e.message; }
-}
-async function saveFamilyMember(id) {
-  const name = document.getElementById('member-name-' + id).value.trim();
-  const color = document.getElementById('member-color-' + id).value;
-  const status = document.getElementById('family-members-status');
-  if (!name) { status.textContent = '名前を入力してください'; return; }
-  try {
-    const updated = await api('/family/members/' + encodeURIComponent(id), 'PUT', { display_name:name, avatar_color:color });
-    if (id === myProfile.profile_key) {
-      myProfile.display_name = updated.display_name;
-      myProfile.avatar_color = updated.avatar_color;
-      updateAvatar();
-    }
-    status.textContent = '保存しました';
-  } catch(e) { status.textContent = e.message; }
-}
-async function deleteFamilyMember(id) {
-  if (!confirm('この家族をログイン一覧から削除しますか？\n予定データは消えません。')) return;
-  const status = document.getElementById('family-members-status');
-  try {
-    await api('/family/members/' + encodeURIComponent(id), 'DELETE');
-    await loadFamilyMembers();
-  } catch(e) { status.textContent = e.message; }
-}
-
 async function openGoogleSettings() {
   document.getElementById('user-menu').classList.remove('open');
   document.getElementById('google-ics-urls').value = '';

@@ -56,6 +56,13 @@
   #login-screen .logo { font-size: 56px; filter: drop-shadow(0 4px 12px rgba(78,203,168,0.3)); }
   #login-screen h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
   #login-screen p { color: var(--text-sub); font-size: 14px; }
+  #profile-screen {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 18px; padding: 32px;
+    background: linear-gradient(160deg, #F0F7F5 0%, #F6F7F9 100%);
+  }
+  #profile-screen .logo { font-size: 52px; filter: drop-shadow(0 4px 12px rgba(78,203,168,0.25)); }
+  #profile-screen h2 { font-size: 23px; font-weight: 700; }
   .profile-grid { width:min(420px,100%); display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   .profile-btn { border:2px solid var(--border); background:#fff; border-radius:16px; padding:12px 6px; font-size:14px; font-weight:700; color:var(--text); cursor:pointer; }
   .profile-btn.selected { border-color:var(--mint); background:var(--mint-light); box-shadow:0 0 0 3px var(--accent-soft); }

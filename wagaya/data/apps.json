@@ -158,6 +158,17 @@
       "category": "study",
       "featured": false,
       "order": 10
+    },
+    {
+      "id": "chiisai-tsu",
+      "name": "ちいさい「っ」みつけ",
+      "description": "小さい「っ」を入れる場所を練習",
+      "url": "https://cetus.fun/kids-app/chiisai-tsu.html",
+      "icon": "✏️",
+      "color": "orange",
+      "category": "study",
+      "featured": false,
+      "order": 11
     }
   ],
   "notes": "家族カレンダーをホーム・一覧に表示。おうちアルバムはピアノとスターデューバレーの参考画像・動画用。"

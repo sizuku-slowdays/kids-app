@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ff7a59">
+  <title>ちいさい「っ」みつけ</title>
+  <meta name="description" content="文章の中で小さい「っ」を入れる場所を楽しく練習する、子ども向けことばアプリ">
+  <style>
+    :root{--ink:#362b48;--orange:#ff7657;--yellow:#ffd35a;--mint:#65d5b2;--sky:#78c8f6;--paper:#fffdf8;--shadow:0 12px 30px #663d7040}
+    *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{font-family:"Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 15% 8%,#fff5a7 0 9%,transparent 10%),radial-gradient(circle at 90% 18%,#a8eddd 0 11%,transparent 12%),linear-gradient(160deg,#ffe8df,#e7f8ff 60%,#eee7ff);display:grid;place-items:center;padding:18px 14px calc(18px + env(safe-area-inset-bottom))}
+    button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}.app{width:min(100%,560px);min-height:min(720px,calc(100vh - 36px));background:#ffffffd9;border:3px solid #fff;border-radius:30px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(10px)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:10px}.title{font-size:clamp(1.2rem,5vw,1.65rem);font-weight:900;letter-spacing:.04em}.title b{display:inline-grid;place-items:center;width:1.65em;height:1.65em;background:var(--orange);color:#fff;border-radius:50%;transform:rotate(-7deg)}
+    .reset{border:0;background:#fff;border-radius:50%;width:46px;height:46px;box-shadow:0 4px 12px #59446522;font-size:1.1rem}.top-actions{display:flex;gap:8px}.progress{height:13px;border-radius:20px;background:#eee8f2;margin:16px 2px 8px;overflow:hidden}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--yellow));border-radius:inherit;transition:width .35s}.stats{display:flex;justify-content:space-between;font-weight:800;font-size:.95rem;padding:0 4px}.stars{letter-spacing:.08em;color:#f6ad19}
+    main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px 0}.prompt{font-size:1.15rem;font-weight:900;margin:0 0 12px}.hint{font-size:.9rem;font-weight:700;color:#796c88;margin:0 0 20px}.sentence{width:100%;background:var(--paper);border:3px solid #f3e9d9;border-radius:24px;padding:24px 12px;font-size:clamp(1.45rem,7vw,2.1rem);font-weight:900;line-height:1.7;box-shadow:inset 0 -4px 0 #f7efe3}.word{display:inline-flex;align-items:baseline;color:#e65348;white-space:nowrap;position:relative}.letter{display:inline-block;min-width:.78em;color:#e65348}.tile-home{height:82px;display:grid;place-items:center;margin:8px 0 2px}.tsu-tile{width:68px;height:68px;border:0;border-radius:21px;background:linear-gradient(145deg,#ff8b69,#ff654e);color:#fff;font-size:2.35rem;font-weight:900;box-shadow:0 7px 0 #c84938,0 10px 20px #85473940;touch-action:none;user-select:none;cursor:grab;position:relative;z-index:20}.tsu-tile:active{cursor:grabbing}.tsu-tile.in-word{display:inline-grid;place-items:end center;width:.68em;min-width:.68em;height:1.2em;padding:0;border-radius:.2em;background:#cbb9da;color:#fff;font-size:.72em;line-height:1;box-shadow:none;vertical-align:baseline}.tsu-tile.in-word.correct{background:var(--mint);color:#fff;animation:pop .35s}.tsu-tile.in-word.wrong{background:#ad83c6;color:#fff;animation:shake .35s}.tsu-tile.dragging{position:fixed;width:68px;height:68px;margin:0;transform:scale(1.08) rotate(-5deg);border-radius:21px;background:linear-gradient(145deg,#ff8b69,#ff654e);color:#fff;font-size:2.35rem;box-shadow:0 11px 22px #543e594d;pointer-events:none}.tsu-tile.bounce{animation:shake .35s}.drop-caret,.answer-hint{width:7px;border-radius:8px;background:var(--yellow);box-shadow:0 0 0 4px #fff4af88;pointer-events:none}.drop-caret{position:fixed;z-index:15;display:none}.answer-hint{display:inline-block;align-self:stretch;min-height:1.2em;margin:0 2px;animation:pulse 1s infinite alternate}@keyframes pulse{to{box-shadow:0 0 0 8px #fff4af44}}
+    .message{min-height:52px;margin:12px 0 4px;font-size:1.25rem;font-weight:900}.message.good{color:#159b72}.message.nope{color:#765b88}.next{border:0;border-radius:20px;padding:16px 34px;background:linear-gradient(135deg,var(--orange),#ff9b57);color:#fff;font-size:1.15rem;font-weight:900;box-shadow:0 6px 0 #cf4f38;visibility:hidden}.next.show{visibility:visible}.next:active{transform:translateY(4px);box-shadow:0 2px 0 #cf4f38}
+    .finish{display:none}.finish.show{display:flex;flex-direction:column;align-items:center}.finish .big{font-size:4rem}.finish h2{font-size:2rem;margin:8px}.finish p{font-size:1.15rem;font-weight:800}.playagain{border:0;border-radius:20px;padding:16px 26px;background:var(--mint);font-weight:900;font-size:1.1rem;box-shadow:0 6px 0 #35a888}
+    .legend{font-size:.82rem;text-align:center;color:#82758e;font-weight:700;margin:8px 0 0}@keyframes pop{50%{transform:scale(1.5)}}@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+    @media(max-height:650px){.app{min-height:calc(100vh - 20px);padding:12px}.progress{margin:10px 2px 5px}.sentence{padding:15px 10px}.hint{margin-bottom:12px}.message{margin:10px 0 0}}
+  </style>
+</head>
+<body>
+<section class="app" aria-label="ちいさいっ練習アプリ">
+  <header><div class="title">ちいさい <b>っ</b> みつけ</div><div class="top-actions"><button class="reset" id="reset" aria-label="最初から">↻</button></div></header>
+  <div class="progress"><div class="bar" id="bar"></div></div><div class="stats"><span id="count">1 / 10</span><span class="stars" id="stars">☆ ☆ ☆</span></div>
+  <main id="game">
+    <p class="prompt" id="prompt">どこに「っ」を いれる？</p><p class="hint">「っ」を ゆびで はこんで いれてね</p>
+    <div class="sentence" id="sentence"></div>
+    <div class="tile-home" id="tileHome"><button class="tsu-tile" id="tsuTile" aria-label="小さいつを動かす">っ</button></div>
+    <div class="message" id="message" aria-live="polite"></div>
+    <button class="next" id="next">つぎの もんだい ▶</button>
+  </main>
+  <main class="finish" id="finish"><div class="big">🏆</div><h2>できたね！</h2><p id="result"></p><button class="playagain" id="again">もう いっかい</button></main>
+  <p class="legend">1かい 10もん　まちがえても だいじょうぶ！</p>
+</section>
+<div class="drop-caret" id="dropCaret"></div>
+<script>
+const questions=[
+ {w:'きって',pre:'てがみに ',post:'を はる。'}, {w:'がっこう',pre:'あさ、',post:'へ いく。'},
+ {w:'きっぷ',pre:'えきで ',post:'を かう。'}, {w:'ざっし',pre:'おもしろい ',post:'を よむ。'},
+ {w:'こっぷ',pre:'あおい ',post:'で みずを のむ。'}, {w:'らっぱ',pre:'おおきな ',post:'を ふく。'},
+ {w:'まって',pre:'ちょっと ',post:'ください。'}, {w:'だっこ',pre:'あかちゃんを ',post:'する。'},
+ {w:'けっこん',pre:'おうじさまと ',post:'する。'}, {w:'きって',pre:'はさみで かみを ',post:'ね。'},
+ {w:'さっか',pre:'ゆめは ',post:'に なること。'}, {w:'にっき',pre:'まいにち ',post:'を かく。'},
+ {w:'はっぱ',pre:'みどりの ',post:'を ひろった。'}, {w:'しっぽ',pre:'ねこの ',post:'は ながい。'},
+ {w:'せっけん',pre:'てを ',post:'で あらう。'}, {w:'ベッド',pre:'ふかふかの ',post:'で ねる。'},
+ {w:'バッグ',pre:'あかい ',post:'を もっていく。'}, {w:'ポケット',pre:'ハンカチを ',post:'に いれる。'},
+ {w:'サッカー',pre:'こうえんで ',post:'を する。'}, {w:'クッキー',pre:'おやつに ',post:'を たべる。'},
+ {w:'いっしょ',pre:'おねえちゃんと ',post:'に あそぶ。'}, {w:'ゆっくり',pre:'かいだんを ',post:'おりる。'},
+ {w:'まっくら',pre:'へやが ',post:'に なった。'}, {w:'びっくり',pre:'おおきな おとに ',post:'した。'},
+ {w:'いっぱい',pre:'おみずを ',post:'のんだ。'}, {w:'やった',pre:'「',post:'！」と よろこんだ。'},
+ {w:'ずっと',pre:'きみに ',post:'あいたかった。'}, {w:'もっと',pre:'おはなしを ',post:'ききたい。'},
+ {w:'そっと',pre:'あかちゃんを ',post:'ねかせた。'}, {w:'やっぱり',pre:'デザートは ',post:'プリン！'}
+];
+let round=[],index=0,correct=0,misses=0,locked=false;
+const $=id=>document.getElementById(id);
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function splitQuestion(q){const pos=q.w.search(/[っッ]/);const small=q.w[pos];return {base:q.w.slice(0,pos)+q.w.slice(pos+1),answer:pos,small}}
+function render(){locked=false;const q=round[index],x=splitQuestion(q);$('count').textContent=`${index+1} / 10`;$('bar').style.width=`${index*10}%`;$('message').textContent='';$('message').className='message';$('next').className='next';
+  const word=document.createElement('span');word.className='word';[...x.base].forEach((c,i)=>{const s=document.createElement('span');s.className='letter';s.textContent=c;word.appendChild(s)});
+  $('sentence').replaceChildren(document.createTextNode(q.pre),word,document.createTextNode(q.post));
+  $('tsuTile').textContent=x.small;$('tsuTile').setAttribute('aria-label',`小さい${x.small}を動かす`);$('prompt').textContent=`どこに「${x.small}」を いれる？`;current={q,x,word};
+}
+let current=null,drag=null;
+function getLetters(){return [...current.word.querySelectorAll('.letter')]}
+function nearestSlot(clientX,clientY){const letters=getLetters(),wr=current.word.getBoundingClientRect();if(clientY<wr.top-60||clientY>wr.bottom+60||clientX<wr.left-45||clientX>wr.right+45)return null;let best=null;for(let i=0;i<=letters.length;i++){let x,top,height;if(i===0){const r=letters[0].getBoundingClientRect();x=r.left-6;top=r.top;height=r.height}else if(i===letters.length){const r=letters.at(-1).getBoundingClientRect();x=r.right+6;top=r.top;height=r.height}else{const a=letters[i-1].getBoundingClientRect(),b=letters[i].getBoundingClientRect();x=(a.right+b.left)/2;top=Math.min(a.top,b.top);height=Math.max(a.bottom,b.bottom)-top}const y=top+height/2,d=(clientX-x)**2+(clientY-y)**2;if(!best||d<best.d)best={i,x,y,top,height,d}}return best}
+function moveTile(e){if(!drag)return;e.preventDefault();const tile=$('tsuTile');tile.style.left=`${e.clientX-drag.dx}px`;tile.style.top=`${e.clientY-drag.dy}px`;drag.slot=nearestSlot(e.clientX,e.clientY);const caret=$('dropCaret');if(drag.slot){caret.style.display='block';caret.style.left=`${drag.slot.x-3}px`;caret.style.top=`${drag.slot.top-5}px`;caret.style.height=`${drag.slot.height+10}px`}else caret.style.display='none'}
+function putTileAt(slot){const letters=getLetters(),tile=$('tsuTile');if(slot.i===letters.length)current.word.append(tile);else letters[slot.i].before(tile)}
+function showAnswerHint(){current.word.querySelector('.answer-hint')?.remove();const h=document.createElement('span');h.className='answer-hint';h.setAttribute('aria-label','ここかな？');const letters=getLetters();if(current.x.answer===letters.length)current.word.append(h);else letters[current.x.answer].before(h)}
+function endDrag(e){if(!drag)return;const slot=drag.slot,tile=$('tsuTile');tile.releasePointerCapture?.(drag.id);tile.classList.remove('dragging');tile.removeAttribute('style');$('dropCaret').style.display='none';drag=null;if(!slot){$('tileHome').append(tile);tile.className='tsu-tile';$('message').textContent='ことばの ちかくまで はこんでね';$('message').className='message nope';return}current.word.querySelector('.answer-hint')?.remove();putTileAt(slot);tile.className='tsu-tile in-word';if(slot.i===current.x.answer){locked=true;correct++;tile.classList.add('correct');$('message').textContent=`せいかい！ 「${current.x.small}」が はいったね ✨`;$('message').className='message good';$('next').classList.add('show');$('bar').style.width=`${(index+1)*10}%`;updateStars()}else{misses++;tile.classList.add('wrong');$('message').textContent='おしい！ きいろの ばしょに うごかしてみよう';$('message').className='message nope';showAnswerHint();updateStars()}}
+const tile=$('tsuTile');tile.addEventListener('pointerdown',e=>{if(locked)return;e.preventDefault();const r=tile.getBoundingClientRect();drag={id:e.pointerId,dx:e.clientX-r.left,dy:e.clientY-r.top,slot:null};tile.setPointerCapture?.(e.pointerId);tile.classList.add('dragging');tile.style.left=`${r.left}px`;tile.style.top=`${r.top}px`});tile.addEventListener('pointermove',moveTile);tile.addEventListener('pointerup',endDrag);tile.addEventListener('pointercancel',endDrag);
+function updateStars(){const s=misses<=1?3:misses<=4?2:1;$('stars').textContent='★ '.repeat(s)+'☆ '.repeat(3-s)}
+function resetTile(){const tile=$('tsuTile');$('tileHome').append(tile);tile.className='tsu-tile';tile.removeAttribute('style')}
+function start(){round=shuffle(questions).slice(0,10);index=0;correct=0;misses=0;$('game').style.display='flex';$('finish').classList.remove('show');resetTile();updateStars();render()}
+$('next').onclick=()=>{index++;resetTile();if(index<10)render();else finish()};
+function finish(){$('game').style.display='none';$('finish').classList.add('show');$('bar').style.width='100%';const s=misses<=1?3:misses<=4?2:1;$('result').textContent=`${'⭐'.repeat(s)}　10もん ぜんぶ おわったよ！`}
+$('reset').onclick=start;$('again').onclick=start;start();
+</script>
+</body></html>

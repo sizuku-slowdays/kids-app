@@ -911,6 +911,12 @@ window.onload = async () => {
   document.getElementById('login-screen').style.display = 'flex';
 };
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
+}
+
 function renderFamilyProfiles(profiles) {
   const grid = document.getElementById('profile-grid');
   if (!profiles.length) {
@@ -918,7 +924,7 @@ function renderFamilyProfiles(profiles) {
     return;
   }
   if (!profiles.some(p => p.key === selectedProfile)) selectedProfile = profiles[0].key;
-  grid.innerHTML = profiles.map(p => `<button type="button" class="profile-btn${p.key===selectedProfile?' selected':''}" data-profile="${p.key}" onclick="selectFamilyProfile('${p.key}')"><span class="profile-dot" style="background:${p.color}">${escapeHtml(p.name).charAt(0)}</span>${escapeHtml(p.name)}</button>`).join('');
+  grid.innerHTML = profiles.map(p => `<button type="button" class="profile-btn${p.key===selectedProfile?' selected':''}" data-profile="${p.key}" onclick="selectFamilyProfile('${p.key}')"><span class="profile-dot" style="background:${p.color}">${escapeHtml(Array.from(p.name || '')[0] || '')}</span>${escapeHtml(p.name)}</button>`).join('');
 }
 function selectFamilyProfile(key) {
   selectedProfile = key;

@@ -71,6 +71,12 @@
   .family-password:focus { border-color:var(--mint); box-shadow:0 0 0 3px var(--accent-soft); }
   .login-error { min-height:20px; color:#e53935 !important; font-weight:700; text-align:center; }
   .login-help { max-width:380px; line-height:1.6; text-align:center; }
+  .profile-add-card { width:min(420px,100%); margin-top:4px; padding:16px; background:#fff; border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
+  .profile-add-card h3 { font-size:15px; margin-bottom:5px; }
+  .profile-add-card p { font-size:12px; color:var(--text-sub); margin-bottom:10px; }
+  .profile-add-row { display:grid; grid-template-columns:1fr 48px; gap:8px; }
+  .profile-add-row input[type="text"] { min-width:0; border:2px solid var(--border); border-radius:12px; padding:11px 12px; font-size:16px; }
+  .profile-add-row input[type="color"] { width:48px; height:46px; border:1px solid var(--border); border-radius:12px; padding:3px; background:#fff; }
 
   /* ── 表示名設定画面 ── */
   #setup-screen {
@@ -523,14 +529,24 @@
   <p class="login-help">この端末では、次から自動でログインします。</p>
   <div class="profile-grid" id="profile-grid"></div>
   <button class="btn btn-primary" style="padding:12px 34px;font-size:16px" onclick="familyLogin()">この名前でひらく</button>
-  <button class="btn btn-ghost" style="margin-top:10px" onclick="backToPassword()">合言葉入力へ戻る</button>
+  <div class="profile-add-card">
+    <h3>名前がまだないとき</h3>
+    <p>ここで名前を追加して、そのまま選べます。個人用のパスワードはありません。</p>
+    <div class="profile-add-row">
+      <input type="text" id="profile-new-family-name" maxlength="30" placeholder="名前を入力">
+      <input type="color" id="profile-new-family-color" value="#5b8dee" aria-label="色">
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:9px" onclick="addFamilyMemberBeforeLogin()">＋ 名前を追加する</button>
+    <p id="profile-add-status" style="min-height:18px;font-size:12px;color:var(--text-sub);margin-top:7px"></p>
+  </div>
+  <button class="btn btn-ghost" style="margin-top:4px" onclick="backToPassword()">合言葉入力へ戻る</button>
   <p class="login-error" id="profile-error"></p>
 </div>
 
 <div id="setup-screen">
   <div class="logo">👤</div>
   <h2>はじめまして！</h2>
-  <p>カレンダーに表示される名前を設定してください<br>本名でなくてもOKです</p>
+  <p>カレンダーに表示される名前を設定してください<br>好きな名前でOKです</p>
   <input class="setup-input" id="setup-name" type="text" placeholder="ニックネーム（例: ママ、パパ）" maxlength="20">
   <p style="font-size:13px;color:var(--text-sub)">アバターの色</p>
   <div class="color-picker-row" id="setup-colors"></div>
@@ -851,10 +867,10 @@
 <div class="overlay" id="family-members-overlay" onclick="closeFamilyMembers(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h2>家族の追加・名前変更</h2>
-    <p style="font-size:13px;line-height:1.7;color:var(--text-sub);margin-bottom:12px">ここに登録した本名は、合言葉が合った家族だけに表示されます。</p>
+    <p style="font-size:13px;line-height:1.7;color:var(--text-sub);margin-bottom:12px">ここに登録した名前は、合言葉が合った家族だけに表示されます。</p>
     <div id="family-members-list" style="display:grid;gap:8px;margin-bottom:18px"></div>
     <div style="border-top:1px solid var(--border-light);padding-top:14px">
-      <div class="frow"><label>新しく追加する家族の名前</label><input type="text" id="new-family-name" maxlength="30" placeholder="本名を入力"></div>
+      <div class="frow"><label>新しく追加する家族の名前</label><input type="text" id="new-family-name" maxlength="30" placeholder="名前を入力"></div>
       <div class="frow"><label>色</label><input type="color" id="new-family-color" value="#5b8dee" style="height:44px"></div>
       <button class="btn btn-primary" style="width:100%" onclick="addFamilyMember()">＋ 家族を追加する</button>
     </div>
@@ -929,6 +945,32 @@ function renderFamilyProfiles(profiles) {
 function selectFamilyProfile(key) {
   selectedProfile = key;
   document.querySelectorAll('.profile-btn').forEach(b => b.classList.toggle('selected', b.dataset.profile === key));
+}
+async function addFamilyMemberBeforeLogin() {
+  const name = document.getElementById('profile-new-family-name').value.trim();
+  const color = document.getElementById('profile-new-family-color').value;
+  const status = document.getElementById('profile-add-status');
+  if (!familyUnlockToken) { backToPassword(); return; }
+  if (!name) { status.textContent = '追加する名前を入力してね'; return; }
+  status.textContent = '追加しています…';
+  try {
+    const addRes = await fetch(API + '/family/members', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer ' + familyUnlockToken},
+      body:JSON.stringify({ display_name:name, avatar_color:color })
+    });
+    const added = await addRes.json();
+    if (!addRes.ok) throw new Error(added.error || '追加できませんでした');
+    const profilesRes = await fetch(API + '/family/profiles', {
+      headers:{ Authorization:'Bearer ' + familyUnlockToken }
+    });
+    const profiles = await profilesRes.json();
+    if (!profilesRes.ok) throw new Error(profiles.error || '名前一覧を読み込めません');
+    selectedProfile = added.member_id;
+    renderFamilyProfiles(profiles);
+    document.getElementById('profile-new-family-name').value = '';
+    status.textContent = '追加しました。この名前を選んでいます。';
+  } catch (e) { status.textContent = e.message; }
 }
 async function unlockFamily() {
   const password = document.getElementById('family-password').value;
@@ -1043,7 +1085,7 @@ async function addFamilyMember() {
   const name = document.getElementById('new-family-name').value.trim();
   const color = document.getElementById('new-family-color').value;
   const status = document.getElementById('family-members-status');
-  if (!name) { status.textContent = '追加する家族の本名を入力してください'; return; }
+  if (!name) { status.textContent = '追加する家族の名前を入力してください'; return; }
   status.textContent = '追加しています…';
   try {
     await api('/family/members', 'POST', { display_name:name, avatar_color:color });

@@ -58,3 +58,5 @@ dialog{border:0;padding:0}dialog::backdrop{background:rgba(14,28,24,.58);backdro
 .root-card.custom-album{background:linear-gradient(145deg,#fff,#eef8ff)}
 .generic-intro{background:linear-gradient(135deg,#eef8ff,#fff7eb)}
 .compact{padding:9px 12px}
+
+.easy-back{position:fixed;z-index:24;left:max(14px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:5px;min-height:50px;padding:7px 15px 7px 12px;border:1px solid var(--line);border-radius:18px;color:var(--ink);background:rgba(255,255,255,.94);box-shadow:0 8px 25px rgba(48,105,92,.18);backdrop-filter:blur(12px);font-size:28px;font-weight:800}.easy-back span{font-size:14px}.easy-back:active{transform:scale(.96)}

@@ -30,7 +30,7 @@ window.addEventListener('popstate',()=>{const prev=S.stack.pop();if(prev){show(p
 async function init(){bind();await loadLocal();await ensureSeeds();renderAll();if(API&&key())await syncCloud(true);show('homeView',false);updateStorage();}
 function bind(){
  document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;actions[b.dataset.action]?.(b);});
- $('backButton').addEventListener('click',goBack);$('settingsButton').addEventListener('click',()=>{ $('accessKeyInput').value=key();updateStorage();$('settingsDialog').showModal();});
+ $('backButton').addEventListener('click',goBack);$('easyBackButton')?.addEventListener('click',goBack);$('settingsButton').addEventListener('click',()=>{ $('accessKeyInput').value=key();updateStorage();$('settingsDialog').showModal();});
  document.querySelectorAll('[data-close-dialog]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
  document.querySelectorAll('[data-piano-filter]').forEach(b=>b.onclick=()=>{S.pianoFilter=b.dataset.pianoFilter;document.querySelectorAll('[data-piano-filter]').forEach(x=>x.classList.toggle('active',x===b));renderPiano();});
  $('albumForm').addEventListener('submit',saveAlbum);$('albumMediaForm').addEventListener('submit',saveAlbumMedia);$('farmForm').addEventListener('submit',saveFarm);$('strategyForm').addEventListener('submit',saveStrategy);$('memoryForm').addEventListener('submit',saveMemory);$('pianoForm').addEventListener('submit',savePiano);$('guideForm').addEventListener('submit',saveGuide);$('guideEditForm').addEventListener('submit',saveGuideTitle);$('settingsForm').addEventListener('submit',saveSettings);

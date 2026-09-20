@@ -4,7 +4,7 @@
   "short_name": "わが家",
   "description": "家族の毎日を支えるホーム",
   "lang": "ja",
-  "start_url": "/wagaya/mama.html",
+  "start_url": "/wagaya/",
   "scope": "/wagaya/",
   "display": "standalone",
   "orientation": "portrait-primary",

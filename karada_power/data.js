@@ -5563,3 +5563,84 @@ window.SCHOOL_RECIPES=[
     "note": "学校給食で食べたことがあるメニュー。作り方は献立表の食材をもとにした家庭向け再現。"
   }
 ];
+
+
+// v15.6 OCTOBER SCHOOL LUNCH DATA
+// 福岡市学校給食献立表 2026年10月（ユーザー提供画像）から、図鑑不足食材と「学」レシピを追加。
+// 献立表は主な食材まで。分量・正式な調理手順は学校公式レシピではないため、method は家庭向けの簡易再現。
+const OCTOBER_FOODS_V15_6=[
+  {id:"veg_renkon",category:"野菜",name:"れんこん",reading:"れんこん",emoji:"🪷",head_power:0,sparkle_power:1,muscle_power:0,bone_power:0,immunity_power:1,main_nutrients:"食物繊維,ビタミンC,カリウム",nutrient_list:["食物繊維","ビタミンC","カリウム"],kids_text:"シャキシャキ食感！食物繊維（しょくもつせんい）もとれるよ。",recipe_tags:"れんこん,煮物,炒め物",category_ui:"🍽️ 野菜"},
+  {id:"veg_kiriboshi_daikon",category:"野菜",name:"切干しだいこん",reading:"きりぼしだいこん",emoji:"🥕",head_power:0,sparkle_power:1,muscle_power:0,bone_power:1,immunity_power:1,main_nutrients:"食物繊維,カルシウム,鉄",nutrient_list:["食物繊維","カルシウム","鉄"],kids_text:"だいこんを干した食べもの。食物繊維（しょくもつせんい）やミネラルもとれるよ。",recipe_tags:"切干しだいこん,和え物,煮物",category_ui:"🍽️ 野菜"},
+  {id:"veg_eringi",category:"きのこ",name:"エリンギ",reading:"えりんぎ",emoji:"🍄",head_power:0,sparkle_power:1,muscle_power:0,bone_power:0,immunity_power:1,main_nutrients:"食物繊維,ビタミンB群",nutrient_list:["食物繊維","ビタミンB群"],kids_text:"コリコリしたきのこ。食物繊維（しょくもつせんい）もとれるよ。",recipe_tags:"エリンギ,きのこ,ソテー",category_ui:"🍽️ きのこ"},
+  {id:"veg_kikurage",category:"きのこ",name:"きくらげ",reading:"きくらげ",emoji:"🍄",head_power:0,sparkle_power:0,muscle_power:0,bone_power:1,immunity_power:1,main_nutrients:"食物繊維,ビタミンD",nutrient_list:["食物繊維","ビタミンD"],kids_text:"コリコリ食感のきのこだよ。",recipe_tags:"きくらげ,八宝菜,中華",category_ui:"🍽️ きのこ"},
+  {id:"veg_chingensai",category:"野菜",name:"チンゲンサイ",reading:"ちんげんさい",emoji:"🥬",head_power:0,sparkle_power:1,muscle_power:0,bone_power:1,immunity_power:1,main_nutrients:"βカロテン,ビタミンC,カルシウム",nutrient_list:["βカロテン","ビタミンC","カルシウム"],kids_text:"緑の葉っぱと白い茎、どちらも食べられる野菜だよ。",recipe_tags:"チンゲンサイ,炒め物,スープ",category_ui:"🍽️ 野菜"},
+  {id:"fruit_nashi",category:"果物",name:"なし",reading:"なし",emoji:"🍐",head_power:0,sparkle_power:1,muscle_power:0,bone_power:0,immunity_power:0,main_nutrients:"水分,カリウム",nutrient_list:["水分","カリウム"],kids_text:"みずみずしい秋のくだものだよ。",recipe_tags:"なし,果物",category_ui:"🍽️ 果物"},
+  {id:"fruit_kuri",category:"いも・豆",name:"くり",reading:"くり",emoji:"🌰",head_power:0,sparkle_power:1,muscle_power:0,bone_power:0,immunity_power:1,main_nutrients:"炭水化物,食物繊維,ビタミンC",nutrient_list:["炭水化物","食物繊維","ビタミンC"],kids_text:"秋においしい木の実。エネルギーのもとにもなるよ。",recipe_tags:"くり,栗,秋",category_ui:"🍽️ いも・豆"},
+  {id:"grain_murasakiimo_bread",category:"主食",name:"むらさきいもパン",reading:"むらさきいもぱん",emoji:"🍞",head_power:0,sparkle_power:1,muscle_power:1,bone_power:0,immunity_power:0,main_nutrients:"炭水化物,たんぱく質",nutrient_list:["炭水化物","たんぱく質"],kids_text:"むらさきいもを使ったパン。体を動かすエネルギーのもと！",recipe_tags:"パン,むらさきいも",category_ui:"🍽️ 主食"},
+  {id:"grain_ringo_bread",category:"主食",name:"りんごパン",reading:"りんごぱん",emoji:"🍎",head_power:0,sparkle_power:0,muscle_power:1,bone_power:0,immunity_power:0,main_nutrients:"炭水化物,たんぱく質",nutrient_list:["炭水化物","たんぱく質"],kids_text:"りんご入りのパン。体を動かすエネルギーのもと！",recipe_tags:"パン,りんご",category_ui:"🍽️ 主食"},
+  {id:"grain_cheese_twist",category:"主食",name:"チーズツイスト",reading:"ちーずついすと",emoji:"🥖",head_power:0,sparkle_power:0,muscle_power:1,bone_power:1,immunity_power:0,main_nutrients:"炭水化物,たんぱく質,カルシウム",nutrient_list:["炭水化物","たんぱく質","カルシウム"],kids_text:"チーズを使ったパンだよ。",recipe_tags:"パン,チーズ",category_ui:"🍽️ 主食"},
+  {id:"bean_shiroingen",category:"いも・豆",name:"白いんげん豆",reading:"しろいんげんまめ",emoji:"🫘",head_power:1,sparkle_power:1,muscle_power:2,bone_power:1,immunity_power:1,main_nutrients:"たんぱく質,食物繊維,鉄,カリウム",nutrient_list:["たんぱく質","食物繊維","鉄","カリウム"],kids_text:"スープにも使える豆。たんぱく質や食物繊維（しょくもつせんい）がとれるよ。",recipe_tags:"白いんげん豆,豆,スープ",category_ui:"🍽️ いも・豆"},
+  {id:"seaweed_kombu_tsukudani",category:"海藻",name:"昆布のつくだ煮",reading:"こんぶのつくだに",emoji:"🌿",head_power:0,sparkle_power:0,muscle_power:0,bone_power:1,immunity_power:0,main_nutrients:"ミネラル,食物繊維",nutrient_list:["ミネラル","食物繊維"],kids_text:"昆布を甘辛く煮たごはんのおとも。商品によって塩分などが違うよ。",recipe_tags:"昆布,つくだ煮,ごはん",category_ui:"🍽️ 海藻"}
+];
+{
+ const ids=new Set(FOODS.map(f=>f.id)), names=new Set(FOODS.map(f=>f.name));
+ OCTOBER_FOODS_V15_6.forEach(f=>{if(!ids.has(f.id)&&!names.has(f.name))FOODS.push(f);});
+}
+
+const OCTOBER_SCHOOL_RECIPES_V15_6=[
+ {title:"豆腐の中華煮",ingredients:["豆腐","豚肉","にんじん","青ねぎ","たけのこ","きくらげ","キャベツ"],method:"具材を炒めて、中華風に煮る"},
+ {title:"甘酢炒め",ingredients:["豚肉","玉ねぎ","にんじん","ピーマン"],method:"具材を炒め、甘酢味に仕上げる"},
+ {title:"手作りルウのチキンカレー",ingredients:["鶏肉","じゃがいも","玉ねぎ","にんじん","りんご","ほうれん草"],method:"具材を炒めて煮込み、カレー味に仕上げる"},
+ {title:"野菜のドレッシングソテー",ingredients:["キャベツ","コーン","にんじん"],method:"野菜を炒め、ドレッシング風味に仕上げる"},
+ {title:"チリコンカーン",ingredients:["豚肉","大豆","玉ねぎ","トマト"],method:"具材を炒めてトマト味で煮込む"},
+ {title:"じゃがいものミルクスープ",ingredients:["じゃがいも","玉ねぎ","鶏肉","牛乳"],method:"具材を煮て、牛乳を加えて仕上げる"},
+ {title:"いわし米粉フライ",ingredients:["いわし","米粉"],method:"米粉の衣をつけて揚げる"},
+ {title:"野菜のごま炒め",ingredients:["キャベツ","もやし","にんじん","ごま"],method:"野菜をごまと一緒に炒める"},
+ {title:"和風スパゲティ",ingredients:["スパゲッティ","ベーコン","玉ねぎ","しめじ","エリンギ","キャベツ","コーン"],method:"具材とスパゲッティを炒め、和風に仕上げる"},
+ {title:"ツナとキャベツのソテー",ingredients:["ツナ","キャベツ","コーン"],method:"具材を炒める"},
+ {title:"さばのみそ煮",ingredients:["さば","みそ","しょうが"],method:"さばをみそ味で煮る"},
+ {title:"うま煮",ingredients:["豚肉","がんもどき","玉ねぎ","にんじん","こんにゃく","えだまめ","干ししいたけ"],method:"具材をだしで煮含める"},
+ {title:"ショウロンポウ",ingredients:["豚肉","小麦粉"],method:"家庭では市販品を蒸す方法でもOK"},
+ {title:"八宝菜",ingredients:["豚肉","うずら卵","いか","えび","にんじん","玉ねぎ","たけのこ","きくらげ","干ししいたけ"],method:"具材を炒めて、とろみをつける"},
+ {title:"福岡野菜のコロッケ",ingredients:["じゃがいも","白いんげん豆","玉ねぎ"],method:"具をまとめ、衣をつけて揚げる"},
+ {title:"白いんげん豆の豆乳スープ",ingredients:["白いんげん豆","豆乳","玉ねぎ"],method:"具材を煮て豆乳を加える"},
+ {title:"まだいの煮つけ",ingredients:["まだい","しょうが"],method:"魚をしょうがと一緒に煮る"},
+ {title:"さつま汁",ingredients:["豚肉","さつまいも","にんじん","だいこん","青ねぎ","みそ"],method:"具材を煮て、みそで仕上げる"},
+ {title:"ポークシチュー",ingredients:["豚肉","じゃがいも","玉ねぎ","にんじん"],method:"具材を炒めて煮込む"},
+ {title:"チンゲンサイのソテー",ingredients:["チンゲンサイ","キャベツ","コーン"],method:"野菜を炒める"},
+ {title:"クッパ",ingredients:["牛肉","卵","わかめ","にんじん","にら","干ししいたけ","ごはん"],method:"具だくさんのスープをごはんと合わせる"},
+ {title:"レバーとだいずのから揚げ",ingredients:["レバー","大豆"],method:"下味をつけ、衣をつけて揚げる"},
+ {title:"大学いも",ingredients:["さつまいも","ごま"],method:"さつまいもを揚げ焼きし、甘いたれをからめる"},
+ {title:"中華風コーンスープ",ingredients:["コーン","卵","玉ねぎ"],method:"具材を煮て、卵を流し入れる"},
+ {title:"博多和牛のすき焼き",ingredients:["牛肉","焼き豆腐","玉ねぎ","はくさい","えのき","しらたき","深ねぎ"],method:"具材を甘辛い味で煮る"},
+ {title:"切干しだいこんのあえもの",ingredients:["切干しだいこん","きゅうり","にんじん"],method:"戻した切干しだいこんと野菜を和える"},
+ {title:"ミートボールのトマト煮",ingredients:["ミートボール","トマト","玉ねぎ","キャベツ","にんじん"],method:"具材をトマト味で煮込む"},
+ {title:"エリンギのソテー",ingredients:["エリンギ","キャベツ"],method:"具材を炒める"},
+ {title:"高野豆腐の八目煮",ingredients:["高野豆腐","鶏肉","うずら卵","にんじん","玉ねぎ","干ししいたけ","キャベツ"],method:"具材をだしで煮含める"},
+ {title:"和風あえ",ingredients:["キャベツ","きゅうり","にんじん"],method:"野菜を和風の味つけで和える"},
+ {title:"皿うどん",ingredients:["皿うどん麺","鶏肉","かまぼこ","油揚げ","豚肉","にんじん","玉ねぎ","ほうれん草","キャベツ"],method:"具材を炒めてあんを作り、麺にかける"},
+ {title:"野菜の塩こうじ炒め",ingredients:["豚肉","キャベツ","玉ねぎ"],method:"野菜と肉を炒め、塩こうじ風味に仕上げる"},
+ {title:"ツナサンド",ingredients:["食パン","ツナ","マヨネーズ","マカロニ"],method:"ツナの具をパンにはさむ"},
+ {title:"ミネストラスープ（マカロニ）",ingredients:["マカロニ","トマト","にんじん","玉ねぎ","キャベツ","ほうれん草"],method:"野菜とマカロニをトマト味で煮る"},
+ {title:"さんまの塩焼き",ingredients:["さんま","塩"],method:"塩をして焼く"},
+ {title:"だいずの五目煮",ingredients:["大豆","にんじん","れんこん","昆布"],method:"具材を煮る"},
+ {title:"野菜の味付けのりあえ",ingredients:["野菜","味付けのり"],method:"ゆでた野菜を味付けのりと和える"},
+ {title:"さけそぼろ丼",ingredients:["鮭","卵","豆腐","油揚げ","わかめ","ごはん"],method:"鮭そぼろなどをごはんにのせる"},
+ {title:"小松菜のみそ汁",ingredients:["小松菜","玉ねぎ","みそ"],method:"具材を煮て、みそで仕上げる"},
+ {title:"ヤンニョムチキン",ingredients:["鶏肉"],method:"鶏肉を焼くか揚げ、甘辛いたれをからめる"},
+ {title:"はるさめスープ",ingredients:["はるさめ","玉ねぎ","きくらげ","干ししいたけ"],method:"具材をスープで煮る"}
+].map((r,i)=>({
+ id:"school_oct_"+String(i+1).padStart(3,"0"),school:true,months:["2026-10"],...r,
+ source:"福岡市学校給食献立表 2026年10月",
+ note:"学校給食で食べたことがあるメニュー。作り方は献立表の食材をもとにした家庭向け再現。"
+}));
+{
+ const byTitle=new Map(SCHOOL_RECIPES.map(r=>[r.title,r]));
+ OCTOBER_SCHOOL_RECIPES_V15_6.forEach(r=>{
+   const old=byTitle.get(r.title);
+   if(old){
+     old.months=Array.from(new Set([...(old.months||[]),"2026-10"]));
+     old.ingredients=Array.from(new Set([...(old.ingredients||[]),...(r.ingredients||[])]));
+   }else SCHOOL_RECIPES.push(r);
+ });
+}

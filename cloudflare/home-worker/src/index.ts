@@ -209,7 +209,7 @@ export async function canRead(
       .first(),
   );
 }
-async function route(request: Request, env: HomeEnv) {
+async function route(request: Request, env: HomeEnv, mark: (stage: string) => void = () => {}) {
   const url = new URL(request.url),
     path = url.pathname,
     method = request.method;
@@ -222,7 +222,9 @@ async function route(request: Request, env: HomeEnv) {
       "このHOMEから操作してください",
     );
   if (path === "/api/bootstrap" && method === "POST") {
+    mark("bootstrap_throttle");
     await throttle(env, request, "bootstrap");
+    mark("bootstrap_validate");
     const data = await body(request);
     requireValue(
       env.BOOTSTRAP_SECRET &&
@@ -246,9 +248,11 @@ async function route(request: Request, env: HomeEnv) {
       400,
       "パスワードは10〜128文字です",
     );
+    mark("bootstrap_password");
     const salt = randomToken(),
       hash = passwordHash(data.password, salt),
       groupId = crypto.randomUUID();
+    mark("bootstrap_database");
     await env.DB.batch([
       env.DB.prepare(
         "INSERT INTO users(id,login_name,display_name,password_salt,password_hash,password_iterations,platform_role,created_at) VALUES ('bootstrap-admin',?,?,?,?,?,'operator',?)",
@@ -263,6 +267,7 @@ async function route(request: Request, env: HomeEnv) {
         "INSERT INTO group_apps SELECT ?,id FROM apps WHERE enabled=1",
       ).bind(groupId),
     ]);
+    mark("bootstrap_session");
     return json({ ok: true }, 201, {
       "Set-Cookie": await issueSession(
         env,
@@ -609,8 +614,9 @@ async function route(request: Request, env: HomeEnv) {
 }
 export default {
   async fetch(request: Request, env: HomeEnv): Promise<Response> {
+    let stage = "request";
     try {
-      return await route(request, env);
+      return await route(request, env, (value) => { stage = value; });
     } catch (error) {
       if (error instanceof Failure)
         return json({ error: error.message }, error.status);
@@ -618,6 +624,16 @@ export default {
       console.error(
         JSON.stringify({
           event: "home_request_failed",
+          stage,
+          reason: error instanceof Error
+            ? /no such table/i.test(error.message) ? "database_missing_table"
+            : /no such column/i.test(error.message) ? "database_missing_column"
+            : /D1_|SQLITE/i.test(error.message) ? "database_error"
+            : /iteration/i.test(error.message) ? "crypto_iteration_error"
+            : /not implemented|not supported|unsupported/i.test(error.message) ? "unsupported_operation"
+            : /undefined|null/i.test(error.message) ? "missing_value"
+            : "unexpected_error"
+            : "unexpected_error",
           path: new URL(request.url).pathname,
         }),
       );

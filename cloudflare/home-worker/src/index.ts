@@ -589,6 +589,8 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     "/style.css",
     "/manifest.webmanifest",
     "/icon.svg",
+    "/home-icon-192.png",
+    "/home-icon-512.png",
   ];
   if (!publicPaths.includes(path)) {
     if (!s)

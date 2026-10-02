@@ -1,3 +1,4 @@
+import { passbookRoute } from "./passbook";
 import { muscleRoute } from "./muscle-bank";
 import {
   digest,
@@ -387,6 +388,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if (path === "/api/passbook" || path.startsWith("/api/passbook/")) {
+      requireValue(await appAllowed(env, user.id, "passbook"), 403, "このアプリは利用できません");
+      return passbookRoute(request, env, user.id, body);
+    }
     if (path === "/api/muscle-bank" || path.startsWith("/api/muscle-bank/")) {
       requireValue(await appAllowed(env, user.id, "muscle-bank"), 403, "このアプリは利用できません");
       return muscleRoute(request, env, user.id);
@@ -586,6 +591,18 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   if (path.startsWith("/api/") || path.startsWith("/media/"))
     throw new Failure(404, "見つかりません");
+  if (path === "/apps/passbook" || path.startsWith("/apps/passbook/")) {
+    if (!s) return new Response(null, {status:303,headers:{...headers,Location:"/login"}});
+    requireValue(await appAllowed(env,s.user_id,"passbook"),403,"このアプリは利用できません");
+    requireValue(["GET","HEAD"].includes(method),405,"この操作はできません");
+    const file=path.replace(/^\/apps\/passbook\/?/,"")||"index.html";
+    requireValue(["index.html","app.js","style.css"].includes(file),404,"見つかりません");
+    const assetUrl=new URL(url);assetUrl.pathname="/apps/passbook/"+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);
+    for(const [key,value] of Object.entries(headers))protectedHeaders.set(key,value);
+    return new Response(method==="HEAD"?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
   // Muscle app assets remain behind the same personal session and grant as its data API.
   if (path === "/apps/muscle-bank" || path.startsWith("/apps/muscle-bank/")) {
     if (!s) return new Response(null, {status:303, headers:{...headers, "X-Muscle-Bank-Version":"20261002-home-v1", Location:"/login"}});
@@ -683,3 +700,4 @@ export default {
     ]);
   },
 } satisfies ExportedHandler<HomeEnv>;
+

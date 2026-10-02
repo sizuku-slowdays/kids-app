@@ -1,6 +1,6 @@
 {
-  "name": "HOME",
-  "short_name": "HOME",
+  "name": "わが家アプリ",
+  "short_name": "わが家",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

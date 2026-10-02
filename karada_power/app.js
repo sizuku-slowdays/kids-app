@@ -1,4 +1,4 @@
-const FOODS=window.FOODS||[], NUTRIENTS=window.NUTRIENTS||{}, SCHOOL_RECIPES=window.SCHOOL_RECIPES||[];
+const FOODS=window.FOODS||[], NUTRIENTS=window.NUTRIENTS||{}, SCHOOL_RECIPES=window.SCHOOL_RECIPES||[], SCHOOL_LUNCH_DAILY=window.SCHOOL_LUNCH_DAILY||[];
 
 // v15.5: 旧おやつ/商品データを現在の食材カード形式へ統一。
 // これが無いと「おやつ」はデータに存在してもカテゴリ表示されない。
@@ -46,10 +46,10 @@ const MEALS={
 };
 
 const recordKey=(child=activeChild,date=selectedDate)=>`kp_record_v12_${child}_${date}`;
-function emptyRecord(){return {version:12,breakfast:[],lunch:[],dinner:[],snack:[],other:[],updatedAt:null}}
+function emptyRecord(){return {version:12,breakfast:[],lunch:[],dinner:[],snack:[],other:[],schoolLunchItems:[],updatedAt:null}}
 function normalizeRecord(r){
   const x={...emptyRecord(),...(r||{})};
-  Object.keys(MEALS).forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});
+  Object.keys(MEALS).forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});if(!Array.isArray(x.schoolLunchItems))x.schoolLunchItems=[];
   return x;
 }
 function getRecord(child=activeChild,date=selectedDate){
@@ -246,9 +246,36 @@ function changeDate(delta){
 function setActiveMeal(meal){
   activeMeal=meal;localStorage.setItem('kp_active_meal',meal);renderToday();renderFoods();
 }
+const SCHOOL_FOOD_ALIASES={
+ "麦ご飯":"白ごはん","福岡小麦の背割りコッペパン":"ロールパン","減量むらさきいもパン":"むらさきいもパン",
+ "ワンローフ型食パン":"食パン","結び米粉パン":"米粉パン","りんごパン":"りんごパン","黒糖パン":"黒糖パン",
+ "きざみのり":"焼きのり","姪浜の味付けのり":"味付けのり","スライスチーズ":"スライスチーズ",
+ "ヨーグルト":"ヨーグルト","なし":"なし","牛乳":"牛乳","鶏肉":"鶏肉","豚肉":"豚肉（こま切れ・うす切り）",
+ "牛肉":"牛肉（こま切れ・うす切り）","だいず":"大豆","豆腐":"木綿豆腐","ツナ":"ツナ缶","ツナ水煮":"ツナ缶",
+ "ほうれんそう":"ほうれん草","たまねぎ":"玉ねぎ","こまつな":"小松菜","さけ":"鮭","まだい":"たい"
+};
+function schoolFindFood(name){
+ const q=SCHOOL_FOOD_ALIASES[name]||name;
+ return FOODS.find(f=>f.name===q)||FOODS.find(f=>(f.recipe_tags||'').split(',').includes(q))||FOODS.find(f=>f.name.includes(q)||q.includes(f.name));
+}
+function schoolLunchVirtualFood(title){
+ const direct=schoolFindFood(title);
+ if(direct)return {...direct,id:'school:'+title,name:title,reading:title,schoolLunch:true};
+ const recipe=SCHOOL_RECIPES.find(r=>r.title===title);
+ if(!recipe)return {id:'school:'+title,name:title,reading:title,emoji:'🏫',head_power:0,sparkle_power:0,muscle_power:0,bone_power:0,immunity_power:0,schoolLunch:true};
+ const fs=recipe.ingredients.map(schoolFindFood).filter(Boolean);
+ const v={id:'school:'+title,name:title,reading:title,emoji:'🏫',schoolLunch:true,schoolIngredients:recipe.ingredients};
+ powers.forEach(p=>{
+   const sum=fs.reduce((n,f)=>n+(Number(f[p.key])||0),0);
+   v[p.key]=Math.min(3,Math.ceil(sum/3));
+ });
+ return v;
+}
 function recordFoods(r){
   const all=[];Object.keys(MEALS).forEach(k=>(r[k]||[]).forEach(id=>all.push(id)));
-  return all.map(id=>FOODS.find(f=>String(f.id)===String(id))).filter(Boolean);
+  const foods=all.map(id=>FOODS.find(f=>String(f.id)===String(id))).filter(Boolean);
+  (r.schoolLunchItems||[]).forEach(title=>foods.push(schoolLunchVirtualFood(title)));
+  return foods;
 }
 function removeMealFood(meal,id){
   const r=getRecord();r[meal]=(r[meal]||[]).filter(x=>String(x)!==String(id));saveRecord(r);
@@ -272,8 +299,8 @@ function renderHistory(){
   if(!dates.length){box.innerHTML='<div class="history-empty">まだ記録はないよ。今日から残していこう！</div>';return}
   box.innerHTML=dates.slice(0,31).map(d=>{
     const r=getRecord(activeChild,d);
-    const mealCount=['breakfast','lunch','dinner','snack'].filter(k=>(r[k]||[]).length).length;
-    const foodCount=Object.keys(MEALS).reduce((n,k)=>n+(r[k]||[]).length,0);
+    const mealCount=['breakfast','lunch','dinner','snack'].filter(k=>(r[k]||[]).length).length+((r.schoolLunchItems||[]).length?1:0);
+    const foodCount=Object.keys(MEALS).reduce((n,k)=>n+(r[k]||[]).length,0)+(r.schoolLunchItems||[]).length;
     return `<button class="history-row ${d===selectedDate?'active':''}" data-history="${d}"><span><b>${formatDateLabel(d)}</b><small>${mealCount}つの食事を記録</small></span><strong>${foodCount}こ 🍽️</strong></button>`;
   }).join('');
   box.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>{
@@ -281,6 +308,38 @@ function renderHistory(){
     renderToday();renderFoods();window.scrollTo({top:0,behavior:'smooth'});
   });
 }
+function todaySchoolLunch(date=localDateString()){return SCHOOL_LUNCH_DAILY.find(x=>x.date===date)}
+function toggleSchoolLunchItem(title){
+  const date=localDateString(),r=getRecord(activeChild,date),set=new Set(r.schoolLunchItems||[]);
+  if(set.has(title))set.delete(title);else set.add(title);
+  r.schoolLunchItems=[...set];saveRecord(r,activeChild,date);
+  renderHomeTodayPower();renderToday();
+}
+function schoolLunchPowerBadges(title){
+  const f=schoolLunchVirtualFood(title);
+  return powers.filter(p=>(f[p.key]||0)>0).map(p=>`<span>${p.icon}${'★'.repeat(f[p.key])}</span>`).join('');
+}
+function renderSchoolLunchToday(){
+  const box=document.getElementById('home-school-lunch');if(!box)return;
+  const date=localDateString(),menu=todaySchoolLunch(date);
+  if(!menu){box.innerHTML='';box.classList.add('hidden');return}
+  box.classList.remove('hidden');
+  const r=getRecord(activeChild,date),done=new Set(r.schoolLunchItems||[]);
+  const items=[...menu.items,...(menu.milk?['牛乳']:[])];
+  box.innerHTML=`
+   <div class="school-lunch-head"><div><span>🏫 今日の給食</span><b>${Number(date.slice(5,7))}月${Number(date.slice(8,10))}日</b></div><small>食べたものだけ押してね</small></div>
+   <div class="school-lunch-items">${items.map(title=>{
+      const checked=done.has(title), warn=title.includes('アーモンド');
+      return `<button class="school-lunch-item ${checked?'eaten':''} ${warn?'ingredient-alert':''}" data-school-eat="${title.replace(/"/g,'&quot;')}">
+        <span class="school-lunch-check">${checked?'✓':'＋'}</span>
+        <span class="school-lunch-name">${title}${warn?'<small>⚠️ アーモンド入り</small>':''}</span>
+        <span class="school-lunch-stars">${schoolLunchPowerBadges(title)||'材料を記録'}</span>
+      </button>`;
+   }).join('')}</div>
+   <div class="school-lunch-note">料理は登録済みレシピの材料からパワーをまとめて反映。牛乳は別で登録するよ。</div>`;
+  box.querySelectorAll('[data-school-eat]').forEach(b=>b.onclick=()=>toggleSchoolLunchItem(b.dataset.schoolEat));
+}
+
 function renderHomeTodayPower(){
   const box=document.getElementById('home-today-power'); if(!box)return;
   const date=localDateString(),r=getRecord(activeChild,date),list=recordFoods(r),scores={};
@@ -303,6 +362,7 @@ function renderHomeTodayPower(){
     <div class="home-power-message">${hasFood?'今日食べたものから、パワーが集まってきたよ！':'まだ食べものが入ってないよ。今日のパワーはここからスタート！'}</div>`;
   box.querySelector('[data-home-record]').onclick=()=>{selectedDate=date;localStorage.setItem('kp_selected_date',date);showView('today');renderToday();};
   box.querySelectorAll('[data-home-power]').forEach(b=>b.onclick=()=>{category='すべて';query='';showView('foods');renderFoods(b.dataset.homePower);});
+  renderSchoolLunchToday();
 }
 
 function renderToday(){
@@ -320,12 +380,13 @@ function renderToday(){
     ?ml.map(f=>`<span class="meal-food-tag">${f.emoji} ${f.reading}<button data-remove-meal="${activeMeal}" data-remove-id="${f.id}" aria-label="削除">×</button></span>`).join('')
     :`<div class="meal-empty">${meal.icon} ${meal.label}は、まだ何も入ってないよ。</div>`;
   document.querySelectorAll('[data-remove-meal]').forEach(b=>b.onclick=()=>removeMealFood(b.dataset.removeMeal,b.dataset.removeId));
+  if(activeMeal==='lunch'&&(r.schoolLunchItems||[]).length){document.getElementById('meal-foods').insertAdjacentHTML('beforeend',`<div class="school-recorded-mini"><b>🏫 給食で登録</b>${r.schoolLunchItems.map(x=>`<span>${x}</span>`).join('')}</div>`);}
 
   powers.forEach(p=>s[p.key]=list.reduce((n,f)=>n+(Number(f[p.key])||0),0));
   document.getElementById('today-bars').innerHTML=powers.map(p=>`<div class="bar-row"><div class="bar-label">${p.icon} ${p.label}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,s[p.key]/target*100)}%"></div></div><div class="bar-val">${status(s[p.key])}</div></div>`).join('');
 
   document.getElementById('today-foods').innerHTML=list.length
-    ?Object.entries(MEALS).filter(([k])=>(r[k]||[]).length).map(([k,m])=>`<div class="day-meal-group"><b>${m.icon} ${m.label}</b><div>${(r[k]||[]).map(id=>{const f=FOODS.find(x=>String(x.id)===String(id));return f?`<button class="today-tag" data-id="${f.id}">${f.emoji} ${f.reading}</button>`:''}).join('')}</div></div>`).join('')
+    ?Object.entries(MEALS).filter(([k])=>(r[k]||[]).length).map(([k,m])=>`<div class="day-meal-group"><b>${m.icon} ${m.label}</b><div>${(r[k]||[]).map(id=>{const f=FOODS.find(x=>String(x.id)===String(id));return f?`<button class="today-tag" data-id="${f.id}">${f.emoji} ${f.reading}</button>`:''}).join('')}</div></div>`).join('')+((r.schoolLunchItems||[]).length?`<div class="day-meal-group"><b>🏫 給食</b><div>${r.schoolLunchItems.map(x=>`<span class="today-tag school-only">${x}</span>`).join('')}</div></div>`:'')
     :'<span style="color:#8b7e76">まだないよ。図鑑から選んでね。</span>';
   document.querySelectorAll('.today-tag').forEach(b=>b.onclick=()=>openFood(b.dataset.id));
 

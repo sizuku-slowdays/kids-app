@@ -189,3 +189,17 @@ button,.food-card,.power-card{touch-action:manipulation}
  .home-today-power{padding:14px 10px}.home-power-head{align-items:flex-start}.home-power-record{padding:8px 10px;font-size:.76rem}
  .home-power-five{gap:4px}.home-power-item{padding:8px 2px;border-radius:13px}.home-power-icon{font-size:1.4rem}.home-power-item b{font-size:.67rem}.home-power-stars{font-size:.64rem;letter-spacing:0}
 }
+
+/* v15.12 今日の給食 */
+.home-school-lunch{margin:18px 0 22px;padding:18px;border-radius:22px;background:#fff;box-shadow:0 8px 28px rgba(80,65,55,.08);border:1px solid #f0e8e1}
+.school-lunch-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.school-lunch-head>div{display:flex;flex-direction:column;gap:2px}.school-lunch-head span{font-weight:800;color:#7a665a}.school-lunch-head b{font-size:1.25rem}.school-lunch-head small{color:#8b7e76}
+.school-lunch-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.school-lunch-item{display:grid;grid-template-columns:34px 1fr;grid-template-areas:"check name" "check stars";align-items:center;text-align:left;gap:2px 8px;padding:12px;border:1px solid #eadfd7;border-radius:16px;background:#fff;cursor:pointer}
+.school-lunch-item.eaten{background:#fff7dd;border-color:#f0c968}.school-lunch-check{grid-area:check;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#f3eee9;font-weight:900}
+.school-lunch-item.eaten .school-lunch-check{background:#ffd85d}.school-lunch-name{grid-area:name;font-weight:800}.school-lunch-name small{display:block;color:#b34d4d;margin-top:2px}
+.school-lunch-stars{grid-area:stars;display:flex;flex-wrap:wrap;gap:5px;font-size:.78rem;color:#7b6b61}.school-lunch-stars span{background:#f7f3ef;border-radius:999px;padding:2px 6px}
+.school-lunch-note{margin-top:10px;font-size:.78rem;color:#8b7e76}.ingredient-alert{border-color:#e4a2a2}
+.school-recorded-mini{width:100%;margin-top:10px;padding:10px;border-radius:12px;background:#fff8e8}.school-recorded-mini b{display:block;margin-bottom:5px}.school-recorded-mini span{display:inline-block;margin:3px;padding:4px 7px;border-radius:999px;background:#fff}
+.today-tag.school-only{cursor:default}
+@media(max-width:640px){.school-lunch-items{grid-template-columns:1fr}.school-lunch-head{align-items:flex-start;flex-direction:column}.home-school-lunch{padding:14px}}

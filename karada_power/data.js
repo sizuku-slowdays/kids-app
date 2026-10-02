@@ -5592,6 +5592,23 @@ const HOUSEHOLD_SNACKS_V15_10=[
  HOUSEHOLD_SNACKS_V15_10.forEach(f=>{if(!ids.has(f.id)&&!names.has(f.name))FOODS.push(f);});
 }
 
+// v15.11 SCHOOL RECIPE INGREDIENT EXPANSION
+// 学校レシピで実際に登場しているのに、図鑑で単独検索しにくかった素材を追加。
+// 星は1回に食べる量を意識して保守的に設定し、未確認成分を過大評価しない。
+const SCHOOL_INGREDIENT_EXPANSION_V15_11=[
+ {id:"meat_chicken_general",category:"肉",name:"鶏肉",reading:"とりにく",emoji:"🍗",head_power:1,sparkle_power:1,muscle_power:3,bone_power:0,immunity_power:1,main_nutrients:"たんぱく質,ビタミンB6",nutrient_list:["たんぱく質","ビタミンB6"],kids_text:"給食にもよく登場するお肉。体をつくるたんぱく質がとれるよ！",recipe_tags:"鶏肉,給食,煮物,炒め物,カレー",category_ui:"🍽️ 肉",score_note:"部位で栄養量が変わるため、鶏肉全般として保守的に評価。"},
+ {id:"meat_chicken_mince",category:"肉",name:"鶏ひき肉",reading:"とりひきにく",emoji:"🍗",head_power:1,sparkle_power:1,muscle_power:3,bone_power:0,immunity_power:1,main_nutrients:"たんぱく質,ビタミンB6",nutrient_list:["たんぱく質","ビタミンB6"],kids_text:"そぼろや煮ものに使いやすい鶏肉だよ！",recipe_tags:"鶏肉,ひき肉,そぼろ,給食",category_ui:"🍽️ 肉"},
+ {id:"grain_wheat_flour",category:"主食",name:"小麦粉",reading:"こむぎこ",emoji:"🌾",head_power:0,sparkle_power:0,muscle_power:1,bone_power:0,immunity_power:0,main_nutrients:"炭水化物,たんぱく質",nutrient_list:["炭水化物","たんぱく質"],kids_text:"パンやルウ、衣など、いろんな料理の材料になるよ。",recipe_tags:"小麦粉,パン,ルウ,衣,給食",category_ui:"🍽️ 主食",allergen_note:"小麦"},
+ {id:"veg_goya",category:"野菜",name:"ゴーヤ",reading:"ごーや",emoji:"🥒",head_power:0,sparkle_power:1,muscle_power:0,bone_power:0,immunity_power:2,main_nutrients:"ビタミンC,葉酸,食物繊維",nutrient_list:["ビタミンC","葉酸","食物繊維"],kids_text:"にがみが特徴の夏野菜。ビタミンCもとれるよ！",recipe_tags:"ゴーヤ,夏野菜,チャンプルー,給食",category_ui:"🍽️ 野菜"},
+ {id:"veg_togan",category:"野菜",name:"とうがん",reading:"とうがん",emoji:"🥒",head_power:0,sparkle_power:1,muscle_power:0,bone_power:0,immunity_power:1,main_nutrients:"ビタミンC,カリウム",nutrient_list:["ビタミンC","カリウム"],kids_text:"名前に冬とあるけど夏が旬。汁ものにも使われる野菜だよ。",recipe_tags:"とうがん,冬瓜,汁物,給食",category_ui:"🍽️ 野菜"},
+ {id:"processed_kimchi",category:"野菜",name:"キムチ",reading:"きむち",emoji:"🥬",head_power:0,sparkle_power:1,muscle_power:0,bone_power:0,immunity_power:1,main_nutrients:"野菜,食物繊維",nutrient_list:["食物繊維"],kids_text:"野菜を漬けた食べもの。商品によって材料や塩分が違うよ。",recipe_tags:"キムチ,漬物,豚キムチ,給食",category_ui:"🍽️ 野菜",score_note:"商品差が大きいため保守的に評価。"},
+ {id:"other_cocoa",category:"おやつ",name:"ココア",reading:"ここあ",emoji:"☕",head_power:0,sparkle_power:1,muscle_power:0,bone_power:0,immunity_power:0,main_nutrients:"鉄,食物繊維",nutrient_list:["鉄","食物繊維"],kids_text:"ココアの粉には鉄や食物繊維（しょくもつせんい）も入っているよ。飲みものは作り方で変わるよ。",recipe_tags:"ココア,飲み物,給食",category_ui:"🍪 おやつ",score_note:"純ココアを基準にした特徴。調整ココアや飲用時は商品・作り方で変わる。"}
+];
+{
+ const ids=new Set(FOODS.map(f=>f.id)), names=new Set(FOODS.map(f=>f.name));
+ SCHOOL_INGREDIENT_EXPANSION_V15_11.forEach(f=>{if(!ids.has(f.id)&&!names.has(f.name))FOODS.push(f);});
+}
+
 // v15.6 OCTOBER SCHOOL LUNCH DATA
 // 福岡市学校給食献立表 2026年10月（ユーザー提供画像）から、図鑑不足食材と「学」レシピを追加。
 // 献立表は主な食材まで。分量・正式な調理手順は学校公式レシピではないため、method は家庭向けの簡易再現。

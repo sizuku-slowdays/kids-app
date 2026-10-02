@@ -203,3 +203,17 @@ button,.food-card,.power-card{touch-action:manipulation}
 .school-recorded-mini{width:100%;margin-top:10px;padding:10px;border-radius:12px;background:#fff8e8}.school-recorded-mini b{display:block;margin-bottom:5px}.school-recorded-mini span{display:inline-block;margin:3px;padding:4px 7px;border-radius:999px;background:#fff}
 .today-tag.school-only{cursor:default}
 @media(max-width:640px){.school-lunch-items{grid-template-columns:1fr}.school-lunch-head{align-items:flex-start;flex-direction:column}.home-school-lunch{padding:14px}}
+
+/* v15.15 school lunch three-color groups */
+.school-three-wrap{margin-top:12px;padding:12px;border-radius:16px;background:#faf8f5}
+.school-three-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+.school-three-title b{font-size:.92rem}.school-three-title small{font-size:.72rem;color:#8b7e76}
+.school-three-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.school-three-card{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"dot label mark" "desc desc desc";gap:2px 5px;align-items:center;padding:9px;border-radius:13px;border:1px solid transparent;background:#fff}
+.school-three-card.red{background:#fff3f1;border-color:#f1d0ca}.school-three-card.yellow{background:#fff9df;border-color:#eee0a6}.school-three-card.green{background:#f1faef;border-color:#cfe6c9}
+.school-three-dot{grid-area:dot}.school-three-card b{grid-area:label;font-size:.78rem}.school-three-card strong{grid-area:mark;font-size:1rem}.school-three-card small{grid-area:desc;color:#786d66;font-size:.68rem;line-height:1.35}
+.school-three-card.missing-group{opacity:.55}.school-three-empty{margin-top:10px;padding:10px 12px;border-radius:14px;background:#faf8f5;color:#8b7e76;font-size:.78rem}
+.school-color-guide{margin-top:18px;padding:18px;border-radius:20px;background:#fff;box-shadow:0 8px 28px rgba(80,65,55,.08);border:1px solid #f0e8e1}
+.school-color-guide>div:first-child{display:flex;flex-direction:column;gap:4px}.school-color-guide>div:first-child span,.school-color-guide p{color:#7d7068;font-size:.86rem}
+.school-color-guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.school-color-guide-grid span{padding:10px;border-radius:14px;background:#faf8f5;font-size:.82rem}.school-color-guide-grid span b{display:block;margin-bottom:2px}
+@media(max-width:640px){.school-three-grid,.school-color-guide-grid{grid-template-columns:1fr}.school-three-title{align-items:flex-start;flex-direction:column}}

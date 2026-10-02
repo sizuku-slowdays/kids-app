@@ -19,6 +19,5 @@
   ],
   "r2_buckets": [{ "binding": "PRIVATE_FILES", "bucket_name": "home-private" }],
   "observability": { "enabled": true, "head_sampling_rate": 1 },
-  "limits": { "cpu_ms": 1000 },
   "triggers": { "crons": ["15 18 * * *"] },
 }

@@ -294,7 +294,7 @@ function renderHistory(){
   const box=document.getElementById('history-list');if(!box)return;
   const dates=recordedDates().filter(d=>{
     const r=getRecord(activeChild,d);
-    return Object.keys(MEALS).some(k=>(r[k]||[]).length);
+    return Object.keys(MEALS).some(k=>(r[k]||[]).length)||(r.schoolLunchItems||[]).length;
   });
   if(!dates.length){box.innerHTML='<div class="history-empty">まだ記録はないよ。今日から残していこう！</div>';return}
   box.innerHTML=dates.slice(0,31).map(d=>{
@@ -319,6 +319,57 @@ function schoolLunchPowerBadges(title){
   const f=schoolLunchVirtualFood(title);
   return powers.filter(p=>(f[p.key]||0)>0).map(p=>`<span>${p.icon}${'★'.repeat(f[p.key])}</span>`).join('');
 }
+
+const SCHOOL_THREE_GROUPS=[
+ {key:'red',icon:'🔴',label:'からだをつくる'},
+ {key:'yellow',icon:'🟡',label:'エネルギーになる'},
+ {key:'green',icon:'🟢',label:'調子をととのえる'}
+];
+function schoolThreeColorKey(food,name=''){
+  const cat=String(food?.category||''),t=String(name||food?.name||'');
+  if(['肉','魚','さかな','卵','たまご','乳製品','豆・大豆','海藻','海藻・その他'].includes(cat))return 'red';
+  if(['主食','ごはん・パン・めん','いも','油・調味料'].includes(cat))return 'yellow';
+  if(['野菜','果物','きのこ'].includes(cat))return 'green';
+  if(cat==='いも・豆')return /豆|大豆|いんげん|あずき/.test(t)?'red':'yellow';
+  if(/牛乳|チーズ|ヨーグルト|肉|鶏|豚|牛|レバー|魚|さば|いわし|あじ|鮭|さけ|たい|かつお|しらす|えび|いか|たこ|卵|たまご|豆腐|大豆|納豆|わかめ|こんぶ|昆布|ひじき|のり/.test(t))return 'red';
+  if(/ご飯|ごはん|パン|うどん|めん|麺|スパゲ|マカロニ|ビーフン|米粉|小麦|じゃが|さつまいも|砂糖|ジャム|クリーム|油|ごま|アーモンド|ゼリー|もち/.test(t))return 'yellow';
+  if(/野菜|キャベツ|こまつな|小松菜|ほうれん|にんじん|たまねぎ|玉ねぎ|ねぎ|トマト|きゅうり|なす|ごぼう|だいこん|大根|かぼちゃ|ピーマン|パプリカ|アスパラ|とうもろこし|ゴーヤ|とうがん|きのこ|しめじ|エリンギ|果物|フルーツ|みかん|りんご|なし|パイン|甘夏|レモン|もも|ピーチ/.test(t))return 'green';
+  return null;
+}
+function schoolThreeColorForTitle(title){
+  const out={red:new Set(),yellow:new Set(),green:new Set()};
+  const add=name=>{
+    const f=schoolFindFood(name),key=schoolThreeColorKey(f,name);
+    if(key)out[key].add((f&&f.reading)||name);
+  };
+  const recipe=SCHOOL_RECIPES.find(r=>r.title===title),direct=schoolFindFood(title);
+  if(recipe)recipe.ingredients.forEach(add);
+  else if(direct)add(title);
+  else add(title);
+  return out;
+}
+function schoolLunchThreeColorSummary(titles=[]){
+  const all={red:new Set(),yellow:new Set(),green:new Set()};
+  titles.forEach(title=>{
+    const one=schoolThreeColorForTitle(title);
+    Object.keys(all).forEach(k=>one[k].forEach(x=>all[k].add(x)));
+  });
+  return all;
+}
+function schoolLunchThreeColorHtml(titles=[]){
+  if(!titles.length)return `<div class="school-three-empty">給食を選ぶと、学校で見る「赤・黄・緑」もここに出るよ。</div>`;
+  const all=schoolLunchThreeColorSummary(titles);
+  return `<div class="school-three-wrap">
+    <div class="school-three-title"><b>🍽️ 食べた給食の3つのグループ</b><small>★とは別の見かただよ</small></div>
+    <div class="school-three-grid">${SCHOOL_THREE_GROUPS.map(g=>{
+      const names=[...all[g.key]],ok=names.length>0;
+      return `<div class="school-three-card ${g.key} ${ok?'has-group':'missing-group'}">
+        <span class="school-three-dot">${g.icon}</span><b>${g.label}</b><strong>${ok?'○':'―'}</strong>
+        ${ok?`<small>${names.slice(0,4).join('・')}${names.length>4?' など':''}</small>`:'<small>まだ見つかってないよ</small>'}
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+}
 function renderSchoolLunchForRecord(){
   const box=document.getElementById('record-school-lunch');if(!box)return;
   const menu=todaySchoolLunch(selectedDate);
@@ -337,6 +388,7 @@ function renderSchoolLunchForRecord(){
        <span class="school-lunch-stars">${schoolLunchPowerBadges(title)||'材料を記録'}</span>
       </button>`;
    }).join('')}</div>
+   ${schoolLunchThreeColorHtml([...done])}
    <div class="school-lunch-note">過ぎた日でも、その日付の給食として登録・修正できるよ。牛乳は別登録。</div>`;
   box.querySelectorAll('[data-record-school-eat]').forEach(b=>b.onclick=()=>toggleSchoolLunchItem(b.dataset.recordSchoolEat,selectedDate));
 }
@@ -358,6 +410,7 @@ function renderSchoolLunchToday(){
         <span class="school-lunch-stars">${schoolLunchPowerBadges(title)||'材料を記録'}</span>
       </button>`;
    }).join('')}</div>
+   ${schoolLunchThreeColorHtml([...done])}
    <div class="school-lunch-note">料理は登録済みレシピの材料からパワーをまとめて反映。牛乳は別で登録するよ。</div>`;
   box.querySelectorAll('[data-school-eat]').forEach(b=>b.onclick=()=>toggleSchoolLunchItem(b.dataset.schoolEat));
 }
@@ -411,7 +464,7 @@ function renderToday(){
   document.getElementById('today-foods').innerHTML=list.length
     ?Object.entries(MEALS).filter(([k])=>(r[k]||[]).length).map(([k,m])=>`<div class="day-meal-group"><b>${m.icon} ${m.label}</b><div>${(r[k]||[]).map(id=>{const f=FOODS.find(x=>String(x.id)===String(id));return f?`<button class="today-tag" data-id="${f.id}">${f.emoji} ${f.reading}</button>`:''}).join('')}</div></div>`).join('')+((r.schoolLunchItems||[]).length?`<div class="day-meal-group"><b>🏫 給食</b><div>${r.schoolLunchItems.map(x=>`<span class="today-tag school-only">${x}</span>`).join('')}</div></div>`:'')
     :'<span style="color:#8b7e76">まだないよ。図鑑から選んでね。</span>';
-  document.querySelectorAll('.today-tag').forEach(b=>b.onclick=()=>openFood(b.dataset.id));
+  document.querySelectorAll('button.today-tag[data-id]').forEach(b=>b.onclick=()=>openFood(b.dataset.id));
 
   if(!list.length){
     document.getElementById('today-hint').textContent='今日は、どんなパワーが集まるかな？';

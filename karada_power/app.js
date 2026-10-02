@@ -281,8 +281,33 @@ function renderHistory(){
     renderToday();renderFoods();window.scrollTo({top:0,behavior:'smooth'});
   });
 }
+function renderHomeTodayPower(){
+  const box=document.getElementById('home-today-power'); if(!box)return;
+  const date=localDateString(),r=getRecord(activeChild,date),list=recordFoods(r),scores={};
+  powers.forEach(p=>scores[p.key]=list.reduce((n,f)=>n+(Number(f[p.key])||0),0));
+  const hasFood=list.length>0;
+  box.innerHTML=`
+    <div class="home-power-head">
+      <div><span class="home-power-kicker">🌈 今日のからだパワー</span><b>${activeChild}の今日</b></div>
+      <button class="home-power-record" data-home-record>食べたものを入れる ＋</button>
+    </div>
+    <div class="home-power-five">
+      ${powers.map(p=>{
+        const n=scores[p.key],level=Math.min(3,Math.ceil(n/3));
+        return `<button class="home-power-item ${n?'has-power':''}" data-home-power="${p.key}">
+          <span class="home-power-icon">${p.icon}</span><b>${p.label}</b>
+          <span class="home-power-stars">${'★'.repeat(level)}${'☆'.repeat(3-level)}</span>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="home-power-message">${hasFood?'今日食べたものから、パワーが集まってきたよ！':'まだ食べものが入ってないよ。今日のパワーはここからスタート！'}</div>`;
+  box.querySelector('[data-home-record]').onclick=()=>{selectedDate=date;localStorage.setItem('kp_selected_date',date);showView('today');renderToday();};
+  box.querySelectorAll('[data-home-power]').forEach(b=>b.onclick=()=>{category='すべて';query='';showView('foods');renderFoods(b.dataset.homePower);});
+}
+
 function renderToday(){
   renderChild();
+  renderHomeTodayPower();
   const r=getRecord(),list=recordFoods(r),s={};
   document.getElementById('date-label').textContent=formatDateLabel(selectedDate)+(selectedDate===localDateString()?'　今日':'');
   document.getElementById('date-next').disabled=selectedDate>=localDateString();

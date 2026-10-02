@@ -592,7 +592,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (path.startsWith("/api/") || path.startsWith("/media/"))
     throw new Failure(404, "見つかりません");
   if (path === "/apps/passbook" || path.startsWith("/apps/passbook/")) {
-    if (!s) return new Response(null, {status:303,headers:{...headers,Location:"/login"}});
+    if (!s) return new Response(null, {status:303,headers:{...headers,"X-Passbook-Version":"20261003-v1",Location:"/login"}});
     requireValue(await appAllowed(env,s.user_id,"passbook"),403,"このアプリは利用できません");
     requireValue(["GET","HEAD"].includes(method),405,"この操作はできません");
     const file=path.replace(/^\/apps\/passbook\/?/,"")||"index.html";
@@ -600,6 +600,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     const assetUrl=new URL(url);assetUrl.pathname="/apps/passbook/"+file;
     const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
     const protectedHeaders=new Headers(response.headers);
+    protectedHeaders.set("X-Passbook-Version","20261003-v1");
     for(const [key,value] of Object.entries(headers))protectedHeaders.set(key,value);
     return new Response(method==="HEAD"?null:response.body,{status:response.status,headers:protectedHeaders});
   }

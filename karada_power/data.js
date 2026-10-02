@@ -5565,6 +5565,33 @@ window.SCHOOL_RECIPES=[
 ];
 
 
+// v15.10 HOUSEHOLD SNACK PRODUCTS
+// 商品の実際の小袋単位で記録する。星は確認できた原材料・内容量をもとに保守的に設定。
+const HOUSEHOLD_SNACKS_V15_10=[
+  {
+    id:"snack_oshima_gomanashi_minifish",category:"おやつ",name:"大島食品 ゴマなしミニフィッシュ",reading:"おおしましょくひん ごまなしみにふぃっしゅ",emoji:"🐟",
+    head_power:0,sparkle_power:0,muscle_power:1,bone_power:1,immunity_power:0,
+    main_nutrients:"たんぱく質,カルシウム",nutrient_list:["たんぱく質","カルシウム"],
+    kids_text:"1袋5g。小魚をまるごと食べるおやつだよ！",recipe_tags:"おやつ,小魚,ミニフィッシュ",
+    category_ui:"🍪 おやつ",comparison_serving_g:5,serving_label:"1袋（5g）",
+    product_source:"大島食品工業",allergen_note:"メーカー表示：アレルギー物質なし",
+    score_note:"1袋5gとして保守的に評価。DHA・EPA量など未確認の項目は星を付けていません。"
+  },
+  {
+    id:"snack_oshima_mame_ni_yorokobu",category:"おやつ",name:"大島食品 まめによろこぶ",reading:"おおしましょくひん まめによろこぶ",emoji:"🫘",
+    head_power:0,sparkle_power:0,muscle_power:1,bone_power:0,immunity_power:0,
+    main_nutrients:"たんぱく質,食物繊維",nutrient_list:["たんぱく質","食物繊維"],
+    kids_text:"1袋6g。いり大豆とパリパリ昆布のおやつだよ！",recipe_tags:"おやつ,大豆,昆布",
+    category_ui:"🍪 おやつ",comparison_serving_g:6,serving_label:"1袋（6g）",
+    product_source:"大島食品工業",allergen_note:"メーカー表示：小麦・大豆",
+    score_note:"1袋6gとして保守的に評価。商品全体の詳細栄養量が未確認の項目は星を付けていません。"
+  }
+];
+{
+ const ids=new Set(FOODS.map(f=>f.id)), names=new Set(FOODS.map(f=>f.name));
+ HOUSEHOLD_SNACKS_V15_10.forEach(f=>{if(!ids.has(f.id)&&!names.has(f.name))FOODS.push(f);});
+}
+
 // v15.6 OCTOBER SCHOOL LUNCH DATA
 // 福岡市学校給食献立表 2026年10月（ユーザー提供画像）から、図鑑不足食材と「学」レシピを追加。
 // 献立表は主な食材まで。分量・正式な調理手順は学校公式レシピではないため、method は家庭向けの簡易再現。

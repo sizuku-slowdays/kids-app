@@ -13,6 +13,7 @@
     {
       "binding": "DB",
       "database_name": "home-db",
+      "database_id": "fed5c0be-51b5-486f-935f-58678481f2a9",
       "migrations_dir": "migrations",
     },
   ],

@@ -1,3 +1,4 @@
+import { muscleRoute } from "./muscle-bank";
 import {
   digest,
   randomToken,
@@ -171,9 +172,9 @@ async function issueSession(env: HomeEnv, userId: string, device: string) {
 async function appAllowed(env: HomeEnv, userId: string, appId: string) {
   return Boolean(
     await env.DB.prepare(
-      "SELECT 1 FROM apps a JOIN group_apps ga ON ga.app_id=a.id JOIN memberships m ON m.group_id=ga.group_id WHERE m.user_id=? AND a.id=? AND a.enabled=1 LIMIT 1",
+      "SELECT 1 FROM apps a WHERE a.id=? AND a.enabled=1 AND ((a.access_mode='personal' AND EXISTS(SELECT 1 FROM personal_app_access pa WHERE pa.app_id=a.id AND pa.user_id=?)) OR (a.access_mode='group' AND EXISTS(SELECT 1 FROM group_apps ga JOIN memberships m ON m.group_id=ga.group_id WHERE ga.app_id=a.id AND m.user_id=?))) LIMIT 1",
     )
-      .bind(userId, appId)
+      .bind(appId, userId, userId)
       .first(),
   );
 }
@@ -264,8 +265,9 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         "INSERT INTO memberships VALUES (?,'bootstrap-admin','owner')",
       ).bind(groupId),
       env.DB.prepare(
-        "INSERT INTO group_apps SELECT ?,id FROM apps WHERE enabled=1",
+        "INSERT INTO group_apps SELECT ?,id FROM apps WHERE enabled=1 AND access_mode='group'",
       ).bind(groupId),
+      env.DB.prepare("INSERT OR IGNORE INTO personal_app_access(user_id,app_id) SELECT 'bootstrap-admin',id FROM apps WHERE id='muscle-bank' AND access_mode='personal'"),
     ]);
     mark("bootstrap_session");
     return json({ ok: true }, 201, {
@@ -385,6 +387,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if (path === "/api/muscle-bank" || path.startsWith("/api/muscle-bank/")) {
+      requireValue(await appAllowed(env, user.id, "muscle-bank"), 403, "このアプリは利用できません");
+      return muscleRoute(request, env, user.id);
+    }
     if (path === "/api/me" && method === "GET") {
       await env.DB.prepare("UPDATE sessions SET last_seen_at=? WHERE id=?")
         .bind(now, s.id)
@@ -414,9 +420,9 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     }
     if (path === "/api/home" && method === "GET") {
       const result = await env.DB.prepare(
-        "SELECT DISTINCT a.id,a.name,a.icon,a.path,a.status,COALESCE(ua.visible,1) visible,COALESCE(ua.position,a.position) position FROM apps a JOIN group_apps ga ON ga.app_id=a.id JOIN memberships m ON m.group_id=ga.group_id LEFT JOIN user_apps ua ON ua.app_id=a.id AND ua.user_id=? WHERE m.user_id=? AND a.enabled=1 ORDER BY position,a.id",
+        "SELECT a.id,a.name,a.icon,a.path,a.status,COALESCE(ua.visible,1) visible,COALESCE(ua.position,a.position) position FROM apps a LEFT JOIN user_apps ua ON ua.app_id=a.id AND ua.user_id=? WHERE a.enabled=1 AND ((a.access_mode='personal' AND EXISTS(SELECT 1 FROM personal_app_access pa WHERE pa.app_id=a.id AND pa.user_id=?)) OR (a.access_mode='group' AND EXISTS(SELECT 1 FROM group_apps ga JOIN memberships m ON m.group_id=ga.group_id WHERE ga.app_id=a.id AND m.user_id=?))) ORDER BY position,a.id",
       )
-        .bind(user.id, user.id)
+        .bind(user.id, user.id, user.id)
         .all();
       return json(result.results);
     }
@@ -580,6 +586,22 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   if (path.startsWith("/api/") || path.startsWith("/media/"))
     throw new Failure(404, "見つかりません");
+  // Muscle app assets remain behind the same personal session and grant as its data API.
+  if (path === "/apps/muscle-bank" || path.startsWith("/apps/muscle-bank/")) {
+    if (!s) return new Response(null, {status:303, headers:{...headers, Location:"/login"}});
+    requireValue(await appAllowed(env, s.user_id, "muscle-bank"), 403, "このアプリは利用できません");
+    requireValue(["GET", "HEAD"].includes(method), 405, "この操作はできません");
+    if (path === "/apps/muscle-bank") return new Response(null, {status:303,headers:{...headers,Location:"/apps/muscle-bank/"}});
+    const allowed = new Set(["index.html","app.js","style.css","model.js","storage.js","config.js","icon.svg","manifest.webmanifest"]);
+    const file = path.replace(/^\/apps\/muscle-bank\/?/, "") || "index.html";
+    requireValue(allowed.has(file), 404, "見つかりません");
+    const assetUrl = new URL(url); assetUrl.pathname = "/apps/muscle-bank/" + file;
+    const response = await env.ASSETS.fetch(new Request(assetUrl, {method}));
+    const protectedHeaders = new Headers(response.headers);
+    for (const [key,value] of Object.entries(headers)) protectedHeaders.set(key,value);
+    protectedHeaders.set("Content-Security-Policy", headers["Content-Security-Policy"].replace("img-src 'self'", "img-src 'self' data: blob:"));
+    return new Response(method === "HEAD" ? null : response.body, {status:response.status,headers:protectedHeaders});
+  }
   // Only this explicit asset allowlist is public. Protected app paths do not fall through to static files.
   const publicPaths = [
     "/login",

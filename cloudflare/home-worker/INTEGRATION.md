@@ -61,3 +61,13 @@ CookieはHttpOnly/Secure/host-only。ブラウザのJSにはセッショント�
 画像の実データはまだ新R2へ移行していません。公開環境の画像権限・無料プランでの認証CPUの継続的な安定性は、実機試験だけで完了としません。
 
 初期登録完了後はCloudflareのBOOTSTRAP_SECRETを削除可能。秘密の値を会話・GitHubへ送る必要はありません。
+
+## 筋肉貯金（2026-10-02 接続）
+
+`/apps/muscle-bank/` と `/api/muscle-bank/state` を同一HOMEセッションで保護。migration 0003は本人限定アプリ権限と専用テーブルを追加するだけで、既存レコードや残高は変更しない。ママの登録済み初期アカウント `bootstrap-admin` にだけ `personal_app_access` を付与。家庭所属、operatorの役割、表示名、HOME表示設定だけではアクセスできない。
+
+新Worker/D1/R2の作成は不要。home-dbの `muscle_bank_states` を専用に使用し、home-private内の `muscle-bank/owners/{本人ID}/` に写真を保存。既存資産のキーは変更しない。画像は認証済みAPIでだけ読み出す。不要画像の自動削除はしない。
+
+データはアカウント保存・別端末から取得可能。日付・ポイント・基金設定・画像処理は端末保存版と同じ。CookieはHOMEオリジン限定。画面・API・静的ファイル直アクセスは未ログイン/別ユーザーを拒否。HOME版のサービスワーカー登録は行わず、ログアウト後にオフラインキャッシュで表示しない。
+
+旧 https://cetus.fun/muscle-bank/ は独立の端末保存版のまま。旧端末データに新HOMEから直接アクセスはできない。旧版の設定でバックアップ→HOME版の設定で復元すると、ママ本人の新クラウド記録として移行する。旧版にHOMEのCookieを渡さず、旧APIや旧URLから新データを取得できない。

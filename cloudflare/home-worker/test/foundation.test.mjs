@@ -1,3 +1,4 @@
+import { initialState } from "../public/apps/muscle-bank/model.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -33,6 +34,8 @@ test("invitation, personal sessions, home settings and private file boundaries",
     );
     for (const statement of triggers.split("\nEND;").filter((s) => s.trim()))
       await db.prepare(statement + "\nEND;").run();
+    const muscleMigration = await readFile(new URL("../migrations/0003_muscle_bank.sql", import.meta.url), "utf8");
+    for (const statement of muscleMigration.replace(/^--.*$/gm, "").split(";").filter(s => s.trim())) await db.prepare(statement).run();
     const bucket = await mf.getR2Bucket("PRIVATE_FILES");
     async function call(
       path,
@@ -42,11 +45,13 @@ test("invitation, personal sessions, home settings and private file boundaries",
         cookie,
         origin = "https://home.test",
         ip = "192.0.2.1",
+        extraHeaders = {},
       } = {},
     ) {
       const res = await mf.dispatchFetch("https://home.test" + path, {
         method,
         headers: {
+          ...extraHeaders,
           Origin: origin,
           "CF-Connecting-IP": ip,
           ...(body ? { "Content-Type": "application/json" } : {}),
@@ -161,6 +166,47 @@ test("invitation, personal sessions, home settings and private file boundaries",
     const children = await call("/api/children", { cookie: admin.cookie });
     assert.ok(children.data[0].user_id);
     const homes = await call("/api/home", { cookie: registered.cookie });
+    const musclePath="/apps/muscle-bank/";
+    assert.equal((await call(musclePath)).status,303);
+    assert.equal((await call(musclePath+"app.js")).status,303);
+    assert.equal((await call("/api/muscle-bank/state")).status,401);
+    assert.equal((await call(musclePath,{cookie:registered.cookie})).status,403);
+    assert.equal((await call("/api/muscle-bank/state",{cookie:registered.cookie})).status,403);
+    assert.ok(!homes.data.some(app=>app.id==='muscle-bank'));
+    assert.equal((await call("/api/home",{cookie:admin.cookie})).data.find(app=>app.id==='muscle-bank').path,musclePath);
+    const shell=await call(musclePath,{cookie:admin.cookie});
+    assert.equal(shell.status,200);
+    assert.equal(shell.headers.get("Cache-Control"),"private, no-store");
+    assert.match(shell.headers.get("Content-Security-Policy"),/img-src 'self' data:/);
+    assert.equal((await call(musclePath+"unlisted.txt",{cookie:admin.cookie})).status,404);
+    assert.equal((await call("/api/muscle-bank/state",{cookie:admin.cookie})).data.state,null);
+    const muscleState=initialState();
+    muscleState.records.push({id:"test-record",exerciseId:"test-exercise",name:"腹ねじねじ",dose:"30秒",points:2,day:"2026-10-02",createdAt:"2026-10-02T00:00:00Z"});
+    const photo="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jL1kAAAAASUVORK5CYII=";
+    muscleState.changes.push({id:"photo",day:"2026-10-02",memo:"前より楽",waist:"",weight:"",image:photo});
+    const putMuscle=(data,revision,cookie=admin.cookie,origin="https://home.test")=>call("/api/muscle-bank/state",{method:"PUT",body:data,cookie,origin,extraHeaders:{"If-Match":String(revision)}});
+    assert.equal((await putMuscle(muscleState,0,admin.cookie,"https://evil.test")).status,403);
+    assert.equal((await putMuscle(muscleState,0,registered.cookie)).status,403);
+    assert.equal((await putMuscle(muscleState,0)).status,200);
+    const saved=await call("/api/muscle-bank/state",{cookie:admin.cookie});
+    assert.equal(saved.data.revision,1);
+    assert.equal(saved.data.state.records[0].points,2);
+    assert.equal(saved.data.state.changes[0].image,photo);
+    assert.equal((await putMuscle(muscleState,0)).status,409);
+    assert.equal((await putMuscle({...muscleState,fund:{...muscleState.fund,balance:-1}},1)).status,400);
+    const stored=await db.prepare("SELECT state_json FROM muscle_bank_states WHERE owner_id='bootstrap-admin'").first();
+    assert.ok(!stored.state_json.includes('data:image/'));
+    const objects=await bucket.list({prefix:"muscle-bank/owners/bootstrap-admin/"});
+    assert.equal(objects.objects.length,1);
+    assert.equal((await call("/media/"+objects.objects[0].key,{cookie:registered.cookie})).status,404);
+    await call("/api/home/muscle-bank",{method:"PUT",cookie:admin.cookie,body:{visible:false}});
+    assert.equal((await call("/api/home",{cookie:admin.cookie})).data.find(app=>app.id==='muscle-bank').visible,0);
+    assert.equal((await call("/api/muscle-bank/state",{cookie:admin.cookie})).status,200);
+    assert.equal((await call("/api/home/muscle-bank",{method:"PUT",cookie:registered.cookie,body:{visible:true}})).status,403);
+    await db.prepare("DELETE FROM personal_app_access WHERE user_id='bootstrap-admin' AND app_id='muscle-bank'").run();
+    assert.equal((await call(musclePath,{cookie:admin.cookie})).status,403);
+    assert.equal((await call("/api/muscle-bank/state",{cookie:admin.cookie})).status,403);
+    await db.prepare("INSERT INTO personal_app_access VALUES ('bootstrap-admin','muscle-bank')").run();
     assert.equal(homes.data.length, 6);
     assert.ok(homes.data.every((a) => a.status === "planned"));
     assert.equal(
@@ -207,6 +253,16 @@ test("invitation, personal sessions, home settings and private file boundaries",
       },
     });
     assert.equal(userB.status, 201);
+    const otherId=(await call("/api/me",{cookie:userB.cookie})).data.user.id;
+    await db.prepare("UPDATE users SET platform_role='operator' WHERE id=?").bind(otherId).run();
+    await db.prepare("INSERT INTO group_apps VALUES ('group-b','muscle-bank')").run();
+    assert.equal((await call("/api/muscle-bank/state?owner_id=bootstrap-admin",{cookie:userB.cookie,extraHeaders:{"X-User-ID":"bootstrap-admin"}})).status,403);
+    assert.ok(!(await call("/api/home",{cookie:userB.cookie})).data.some(app=>app.id==='muscle-bank'));
+    await db.prepare("INSERT INTO personal_app_access VALUES (?,'muscle-bank')").bind(otherId).run();
+    assert.equal((await call("/api/muscle-bank/state?owner_id=bootstrap-admin",{cookie:userB.cookie})).data.state,null);
+    await db.prepare("DELETE FROM personal_app_access WHERE user_id=?").bind(otherId).run();
+    await db.prepare("UPDATE users SET platform_role='user' WHERE id=?").bind(otherId).run();
+
     await db
       .prepare(
         "INSERT INTO resources VALUES ('album-a','album',NULL,?,'album','非公開アルバム')",

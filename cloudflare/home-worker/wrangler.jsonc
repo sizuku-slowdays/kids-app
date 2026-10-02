@@ -16,6 +16,11 @@
       "database_id": "fed5c0be-51b5-486f-935f-58678481f2a9",
       "migrations_dir": "migrations",
     },
+    {
+      "binding": "LEGACY_DB",
+      "database_name": "mama-bank-db",
+      "database_id": "17c4957a-fb76-44f9-a909-3f343049aeb3",
+    },
   ],
   "r2_buckets": [{ "binding": "PRIVATE_FILES", "bucket_name": "home-private" }],
   "observability": { "enabled": true, "head_sampling_rate": 1 },

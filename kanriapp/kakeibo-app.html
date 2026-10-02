@@ -451,7 +451,10 @@
             <option value="交通・ガソリン">交通・ガソリン</option>
             <option value="外食">外食</option>
             <option value="仕事立替">仕事立替</option>
-            <option value="固定費">固定費</option>
+            <option value="通信・サブスク">通信・サブスク</option>
+            <option value="車・ローン">車・ローン</option>
+            <option value="生活費">生活費</option>
+            <option value="固定費">固定費（以前の記録）</option>
             <option value="特別費">特別費</option>
           </select>
         </div>
@@ -477,6 +480,7 @@
     <button class="fab" id="goInput">＋ 支出を入力する</button>
   </div>
 
+  <script src="kakeibo-fixed.js?v=20261002"></script>
   <script>
     const STORAGE_KEY  = "kakeibo-app-stable-v3";
     const PLAN_KEY     = "kakeibo-plan-v1";
@@ -495,7 +499,7 @@
       funds:[],
       fundTransactions:[]
     };
-    const PAYMENTS     = ["楽天PINK","楽天VISA","現金","auじぶん銀行"];
+    const PAYMENTS     = ["楽天PINK","楽天VISA","現金","auじぶん銀行","ゆうちょ","福岡中央銀行","口座振替"];
 
     let entries      = [];
     let plan         = structuredClone(DEFAULT_PLAN);
@@ -626,6 +630,8 @@
     function normalizeEntry(e){
       return {
         id:          e.id || makeId(),
+        fixedRuleId: e.fixedRuleId || "",
+        fixedMonth:  e.fixedMonth || "",
         date:        e.date || "",
         type:        e.type === "income" ? "income" : "expense",
         amount:      Number(e.amount || 0),
@@ -645,6 +651,7 @@
     function normalizePlan(raw){
       const p = raw && typeof raw === "object" ? raw : {};
       return {
+        ...p,
         version:1,
         pinkGoal:Math.max(0,Number(p.pinkGoal ?? DEFAULT_PLAN.pinkGoal)),
         categoryBudgets:p.categoryBudgets && typeof p.categoryBudgets === "object"
@@ -754,7 +761,7 @@
       backupLocal("クラウド合流前");
       entries=merged;
       saveDeletedIds(deletedIds);
-      if(cloud.plan)plan=normalizePlan(cloud.plan);
+      if(cloud.plan)plan=normalizePlan(KakeiboFixed.plan(cloud.plan,plan));
       saveLocal();
       const payload={app:APP_KEY,version:APP_VERSION,entries:merged,deletedIds,plan:normalizePlan(plan),savedAt:new Date().toISOString()};
       await postCloudData(s,payload);
@@ -789,7 +796,7 @@
         backupLocal("クラウド読込・合流前");
         entries=mergeEntries(cloudData.entries,entries,deletedIds);
         saveDeletedIds(deletedIds);
-        if(cloudData.plan) plan = normalizePlan(cloudData.plan);
+        if(cloudData.plan) plan = normalizePlan(KakeiboFixed.plan(cloudData.plan,plan));
         saveLocal();
         await postCloudData(s,{app:APP_KEY,version:APP_VERSION,entries:entries.map(normalizeEntry),deletedIds,plan:normalizePlan(plan),savedAt:new Date().toISOString()});
         render();

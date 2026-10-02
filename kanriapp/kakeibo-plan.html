@@ -79,6 +79,7 @@
   <div class="toast" id="toast">保存しました</div>
   <div class="save-area"><button type="button" class="save" id="saveBtn">設定を保存する</button></div>
 
+  <script src="kakeibo-fixed.js?v=20261002"></script>
   <script>
     const STORAGE_KEY="kakeibo-app-stable-v3";
     const PLAN_KEY="kakeibo-plan-v1";
@@ -86,7 +87,7 @@
     const APP_KEY="kakeibo-app";
     const APP_VERSION=4;
     const DEFAULT_API="https://api.cetus.fun/api/app-data";
-    const CATEGORIES=["おやつ","食費","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","固定費","特別費"];
+    const CATEGORIES=["おやつ","食費","日用品","医療費","子ども","学校","習い事","ゲーム・娯楽","美容","犬","交通・ガソリン","外食","通信・サブスク","車・ローン","生活費","特別費"];
     let plan;
     const $=id=>document.getElementById(id);
     const yen=v=>Number(v||0).toLocaleString("ja-JP")+"円";
@@ -95,7 +96,7 @@
 
     function normalizePlan(raw){
       const p=raw&&typeof raw==="object"?raw:{};
-      return {version:1,pinkGoal:Math.max(0,Number(p.pinkGoal??50000)),
+      return {...p,version:1,pinkGoal:Math.max(0,Number(p.pinkGoal??50000)),
         categoryBudgets:p.categoryBudgets&&typeof p.categoryBudgets==="object"?p.categoryBudgets:{"おやつ":4000},
         funds:Array.isArray(p.funds)?p.funds:[],fundTransactions:Array.isArray(p.fundTransactions)?p.fundTransactions:[]};
     }
@@ -145,7 +146,7 @@
       const type=btn.dataset.action;
       if(type==="withdraw"&&amount>fundBalance(card.dataset.id)){if(!confirm("現在残高を超えますが、このまま記録しますか？"))return}
       plan.fundTransactions.push({id:makeId(),fundId:card.dataset.id,type,amount,date:today(),createdAt:new Date().toISOString()});
-      saveLocal();renderFunds();saveCloud();
+      saveLocal();renderFunds();saveCloud().catch(e=>alert("クラウド保存できませんでした："+e.message));
     }
     function removeFund(id){
       const f=plan.funds.find(x=>x.id===id);
@@ -176,12 +177,25 @@
     }
     async function saveCloud(){
       const s=cloudSettings();if(!s.password||!s.autoCloudSave)return;
-      let entries=[];try{entries=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch(e){}
-      try{await fetch(s.apiUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Password":s.password},
-        body:JSON.stringify({key:APP_KEY,app:APP_KEY,data:{app:APP_KEY,version:APP_VERSION,entries,plan,savedAt:new Date().toISOString()}})})}catch(e){}
+      const url=new URL(s.apiUrl);url.searchParams.set("key",APP_KEY);
+      const read=await fetch(url,{headers:{"X-App-Password":s.password},cache:"no-store"});
+      if(!read.ok)throw new Error("最新の家計簿を確認できませんでした");
+      const json=await read.json(),cloud=json.data||json;
+      if(!Array.isArray(cloud.entries))throw new Error("家計簿データを確認できませんでした");
+      plan={...plan,fixedExpenses:KakeiboFixed.merge(cloud.plan?.fixedExpenses,plan.fixedExpenses)};
+      let localEntries=[],localDeleted=[];
+      try{localEntries=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');localDeleted=JSON.parse(localStorage.getItem('kakeibo-deleted-ids-v1')||'[]')}catch(e){}
+      const deletedIds=KakeiboFixed.deleted(cloud.deletedIds,localDeleted);
+      const entries=KakeiboFixed.entries(cloud.entries,localEntries,deletedIds);
+      const write=await fetch(s.apiUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Password":s.password},
+        body:JSON.stringify({key:APP_KEY,app:APP_KEY,data:{...cloud,version:APP_VERSION,entries,deletedIds,plan,savedAt:new Date().toISOString()}})});
+      if(!write.ok)throw new Error("保存できませんでした");
+      saveLocal();
     }
+
     async function save(){
-      collect();saveLocal();await saveCloud();
+      collect();saveLocal();
+      try{await saveCloud()}catch(e){alert("端末には保存しました。クラウド保存はできませんでした："+e.message);return;}
       $("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",1800);
     }
     function init(){

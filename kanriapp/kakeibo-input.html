@@ -154,6 +154,24 @@
       .payment-buttons{grid-template-columns:1fr 1fr}
       .pay-btn{padding:12px 8px;font-size:.9rem}
     }
+
+    [hidden]{display:none!important}
+    .fixed-toggle{width:100%;border:0;background:#fff0c6;color:#654000;border-radius:12px;padding:12px;font-size:1rem;font-weight:800;text-align:left;cursor:pointer}
+    .fixed-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+    .fixed-top input,.fixed-form input,.fixed-form select{max-width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:#fffdf8}
+    .fixed-top input{flex:1}
+    .fixed-item{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:#fffdf8}
+    .fixed-title{font-weight:800;overflow-wrap:anywhere}
+    .fixed-meta,.fixed-status{font-size:.82rem;color:#777;overflow-wrap:anywhere}
+    .fixed-status{color:#246d45;font-weight:700}
+    .fixed-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .fixed-register{border:0;border-radius:999px;padding:11px 16px;background:#ffb84d;font:inherit;font-weight:800;cursor:pointer}
+    .fixed-small{border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:#fff;font:inherit;font-size:.85rem;cursor:pointer}
+    .fixed-actions button:disabled{opacity:.5;cursor:default}
+    .fixed-form{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;display:grid;gap:12px}
+    .fixed-form label{display:grid;gap:4px;font-size:.88rem;font-weight:700}
+    .fixed-form h2{font-size:1rem;margin:0}
+    #fixedMessage{font-size:.85rem;overflow-wrap:anywhere}
   </style>
 </head>
 <body>
@@ -163,6 +181,30 @@
   </header>
 
   <main class="app">
+
+
+    <section class="card" id="fixedCard">
+      <button type="button" class="fixed-toggle" id="fixedToggle" aria-expanded="false" aria-controls="fixedPanel">🔁 固定費　一覧を開く ▾</button>
+      <div id="fixedPanel" hidden>
+        <p class="settle-hint">金額・支払い元・カテゴリを一度保存すれば、次から1タップで支出登録できます。</p>
+        <div class="fixed-top"><label for="fixedDate">登録日</label><input type="date" id="fixedDate"></div>
+        <div id="fixedList"></div>
+        <p id="fixedMessage" role="status"></p>
+        <button type="button" class="fixed-small" id="fixedAdd">＋ 固定費を追加</button>
+        <button type="button" class="fixed-small" id="fixedFromForm">いまの入力を固定費に保存</button>
+        <form class="fixed-form" id="fixedForm" hidden>
+          <h2 id="fixedFormTitle">固定費を追加</h2>
+          <input type="hidden" id="fixedEditId">
+          <label>名前<input id="fixedName" placeholder="例：Apple定期" required maxlength="100"></label>
+          <label>毎月の金額（円）<input type="number" id="fixedAmount" min="1" step="1" inputmode="numeric" required></label>
+          <label>支払い元<select id="fixedPayment"><option>楽天VISA</option><option>楽天PINK</option><option>現金</option><option>auじぶん銀行</option><option>ゆうちょ</option><option>福岡中央銀行</option><option>口座振替</option></select></label>
+          <label>カテゴリ<select id="fixedCategory"></select></label>
+          <label>日付の使い方<select id="fixedDateMode"><option value="today">登録日を使う（初期値は今日）</option><option value="monthly">毎月の指定日を使う</option></select></label>
+          <label id="fixedDayLabel" hidden>毎月何日？<input type="number" id="fixedDay" min="1" max="31" step="1" value="1"><span class="settle-hint">31日などがない月は、その月の末日になります。</span></label>
+          <div class="fixed-actions"><button type="submit" class="fixed-register" id="fixedSave">固定費を保存</button><button type="button" class="fixed-small" id="fixedCancel">閉じる</button></div>
+        </form>
+      </div>
+    </section>
 
     <!-- 金額（一番目立つ） -->
     <div class="card amount-section">
@@ -262,6 +304,7 @@
     </div>
   </div>
 
+  <script src="kakeibo-fixed.js?v=20261002"></script>
   <script>
     const STORAGE_KEY  = "kakeibo-app-stable-v3";
     const SETTINGS_KEY = "kakeibo-cloud-settings-v1";
@@ -274,7 +317,9 @@
 
     let selectedPayment = "";
     let entryType = "expense"; // "expense" or "income"
-    const CATEGORIES = ["その他","食費","おやつ","日用品","医療費","祖母・医療費","祖母・利用分","子ども","学校","習い事","ゲーム・娯楽","宝くじ","美容","犬","交通・ガソリン","外食","仕事立替","固定費","特別費"];
+    const CATEGORIES = ["その他","食費","おやつ","日用品","医療費","祖母・医療費","祖母・利用分","子ども","学校","習い事","ゲーム・娯楽","宝くじ","美容","犬","交通・ガソリン","外食","仕事立替","通信・サブスク","車・ローン","生活費","特別費"];
+
+    let saving = false;
 
     /* ── ユーティリティ ── */
     function $(id){return document.getElementById(id)}
@@ -367,7 +412,7 @@
     async function fetchCloudData(s){
       const url=new URL(s.apiUrl);
       url.searchParams.set("key",APP_KEY);
-      const res=await fetch(url.toString(),{method:"GET",headers:{"X-App-Password":s.password}});
+      const res=await fetch(url.toString(),{method:"GET",headers:{"X-App-Password":s.password},cache:"no-store"});
       const text=await res.text();
       let json={};try{json=text?JSON.parse(text):{};}catch(e){}
       if(!res.ok)throw new Error((json&&(json.error||json.message))||"HTTP "+res.status);
@@ -390,7 +435,8 @@
         saveEntries(merged);
         let plan=null;
         try{ plan=JSON.parse(localStorage.getItem(PLAN_KEY)||"null"); }catch(e){}
-        const payload = { app:APP_KEY, version:APP_VERSION, entries:merged, deletedIds, plan:plan||cloud.plan||null, savedAt:new Date().toISOString() };
+        localStorage.setItem(PLAN_KEY,JSON.stringify(KakeiboFixed.plan(cloud.plan,plan)));
+        const payload = { app:APP_KEY, version:APP_VERSION, entries:merged, deletedIds, plan:KakeiboFixed.plan(cloud.plan,plan), savedAt:new Date().toISOString() };
         const res=await fetch(s.apiUrl, {
           method:"POST",
           headers:{"Content-Type":"application/json","X-App-Password":s.password},
@@ -413,6 +459,7 @@
       $("amountLabel").textContent  = isIncome ? "いくら入ってきましたか？" : "いくら使いましたか？";
       $("paymentLabel").textContent = isIncome ? "💰 入金先（必ず選択）" : "💳 支払い元（必ず選択）";
       document.querySelector("header h1").textContent = isIncome ? "💰 収入を入力" : "💸 支出を入力";
+      $("fixedCard").hidden=isIncome;
       // 収入はクレジット引落ではないので当月固定
       syncSettle();
     }
@@ -507,6 +554,7 @@
 
     /* ── 登録処理 ── */
     async function doSave(){
+      if(saving)return false;
       const amount = Number($("amount").value);
       const date   = $("date").value;
 
@@ -549,6 +597,8 @@
       }else{
         entries.push({...baseEntry,id:makeId()});
       }
+      setSaving(true);
+      try{
       saveEntries(entries);
 
       // クラウド自動保存
@@ -556,12 +606,139 @@
 
       const baseMsg=entryType === "income" ? "💰 収入を登録しました！" : "✅ 支出を登録しました！";
       showToast(syncResult.reason==="error" ? baseMsg+"（端末保存のみ）" : baseMsg);
+      renderFixed();
       return true;
+      }finally{setSaving(false);}
+    }
+
+    function fixedPlan(){
+      try{return JSON.parse(localStorage.getItem(PLAN_KEY)||'{}')||{}}catch(e){return {}}
+    }
+    function fixedRules(){return KakeiboFixed.merge([],fixedPlan().fixedExpenses).filter(r=>!r.deletedAt)}
+    function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')}
+    function setSaving(value){
+      saving=value;
+      ['saveBtn','continueBtn','fixedSave','fixedAdd','fixedFromForm'].forEach(id=>$(id).disabled=value);
+      document.querySelectorAll('#fixedList button').forEach(b=>b.disabled=value||b.dataset.registered==='true');
+    }
+    async function refreshFixed(){
+      const settings=getCloudSettings();
+      if(!settings.password||!settings.autoCloudSave)return;
+      const cloud=await fetchCloudData(settings),plan=KakeiboFixed.plan(cloud.plan,fixedPlan());
+      const deleted=mergeDeletedIds(loadDeletedIds(),cloud.deletedIds);
+      saveDeletedIds(deleted);
+      saveEntries(mergeEntries(cloud.entries,loadEntries(),deleted));
+      localStorage.setItem(PLAN_KEY,JSON.stringify(plan));
+    }
+    function matchingFixed(rule,base){
+      const month=base.slice(0,7);
+      return loadEntries().find(e=>e.type==='expense' && (
+        (e.fixedRuleId===rule.id && (e.fixedMonth||e.date.slice(0,7))===month) ||
+        (!e.fixedRuleId && String(e.date||'').slice(0,7)===month && e.memo===rule.name && Number(e.amount)===Number(rule.amount) && e.payment===rule.payment)
+      ));
+    }
+    function renderFixed(){
+      const base=$('fixedDate').value||todayString(),rules=fixedRules();
+      $('fixedList').innerHTML=rules.length?rules.map(rule=>{
+        const date=KakeiboFixed.date(rule,base),entry=matchingFixed(rule,base);
+        return `<div class="fixed-item" data-rule="${esc(rule.id)}"><div class="fixed-title">${esc(rule.name)}　${Number(rule.amount).toLocaleString('ja-JP')}円</div>
+          <div class="fixed-meta">${esc(rule.payment)} · ${esc(rule.category)} · ${rule.dateMode==='monthly'?'毎月'+Number(rule.day)+'日':'登録日を使う'}</div>
+          <div class="fixed-meta">登録日 ${esc(date)} ／ 引落・反映 ${KakeiboFixed.entry(rule,base,'').settleMonth}</div>
+          ${entry?`<div class="fixed-status">✓ ${esc(base.slice(0,7))} 登録済み（${esc(entry.date)}）</div>`:''}
+          <div class="fixed-actions"><button type="button" class="fixed-register" data-action="register" data-registered="${!!entry}" ${entry||saving?'disabled':''}>${entry?'登録済み':esc(date.slice(5).replace('-','/'))+'で登録'}</button>
+          <button type="button" class="fixed-small" data-action="edit" ${saving?'disabled':''}>編集</button><button type="button" class="fixed-small" data-action="remove" ${saving?'disabled':''}>一覧から削除</button></div></div>`;
+      }).join(''):'<p class="settle-hint">まだ固定費はありません。下の「固定費を追加」から登録してください。</p>';
+    }
+    function openFixedForm(rule){
+      $('fixedForm').reset();$('fixedEditId').value=rule?.id||'';
+      $('fixedFormTitle').textContent=rule?.id?'固定費を編集':'固定費を追加';
+      $('fixedName').value=rule?.name||'';$('fixedAmount').value=rule?.amount||'';
+      if(rule?.payment && ![...$('fixedPayment').options].some(o=>o.value===rule.payment))$('fixedPayment').add(new Option(rule.payment,rule.payment));
+      $('fixedPayment').value=rule?.payment||'楽天VISA';
+      const cats=rule?.category && !CATEGORIES.includes(rule.category)?[...CATEGORIES,rule.category]:CATEGORIES;
+      $('fixedCategory').innerHTML=cats.map(c=>`<option>${esc(c)}</option>`).join('');
+      $('fixedCategory').value=rule?.category||'その他';
+      $('fixedDateMode').value=rule?.dateMode||'today';$('fixedDay').value=rule?.day||1;
+      $('fixedDayLabel').hidden=$('fixedDateMode').value!=='monthly';
+      $('fixedForm').hidden=false;$('fixedName').focus();
+    }
+    async function changeFixed(rule){
+      if(saving)return;
+      setSaving(true);
+      try{
+        await refreshFixed();
+        const plan=fixedPlan();
+        plan.fixedExpenses=KakeiboFixed.merge(plan.fixedExpenses,[rule]);
+        localStorage.setItem(PLAN_KEY,JSON.stringify(plan));
+        const result=await saveToCloud(loadEntries());
+        $('fixedMessage').textContent=result.synced?'固定費一覧を保存しました。':result.reason==='error'?'端末に保存しました。同期できなかったため、この端末で使えます。':'端末に保存しました。';
+        $('fixedForm').hidden=true;renderFixed();
+      }catch(e){$('fixedMessage').textContent='最新の一覧を確認できなかったため、変更していません：'+e.message;}
+      finally{setSaving(false)}
+    }
+    async function registerFixed(id){
+      if(saving)return;
+      const base=$('fixedDate').value;
+      if(!base||!/^\d{4}-\d{2}-\d{2}$/.test(base)){alert('登録日を確認してください。');return;}
+      setSaving(true);
+      try{
+        await refreshFixed();
+        const rule=fixedRules().find(r=>r.id===id);
+        if(!rule){renderFixed();return;}
+        if(matchingFixed(rule,base)){$('fixedMessage').textContent='この月はすでに登録済みです。';renderFixed();return;}
+        const entry=KakeiboFixed.entry(rule,base,new Date().toISOString()),entries=loadEntries();
+        backupLocal(entries,'固定費の登録前');
+        // Use a stable retry ID after deletion so cloud tombstones stay intact.
+        const removed=loadDeletedIds().filter(d=>String(typeof d==='string'?d:d.id).startsWith(entry.id));
+        if(removed.length)entry.id+='-retry-'+Math.max(...removed.map(d=>Date.parse(d.deletedAt||0)||1));
+        entries.push(entry);saveEntries(entries);
+        const result=await saveToCloud(entries);
+        if(result.entries && !result.entries.some(e=>e.id===entry.id)){
+          $('fixedMessage').textContent='この記録は別の端末で削除されています。一覧を更新しました。';
+        }else{
+          $('fixedMessage').textContent=rule.name+'を'+entry.date+'で登録しました。'+(result.synced?'':result.reason==='error'?'端末保存のみです。同期できる状態で今月の状況を開くと再同期します。':'端末に保存しました。');
+          showToast('✅ '+rule.name+'を登録しました');
+        }
+        renderFixed();
+      }catch(e){$('fixedMessage').textContent='最新の家計簿を確認できなかったため、登録していません：'+e.message;}
+      finally{setSaving(false)}
+    }
+    function initFixed(){
+      $('fixedDate').value=todayString();renderFixed();
+      $('fixedToggle').onclick=async()=>{
+        const open=$('fixedPanel').hidden;$('fixedPanel').hidden=!open;
+        $('fixedToggle').setAttribute('aria-expanded',String(open));
+        $('fixedToggle').textContent=open?'🔁 固定費　一覧を閉じる ▴':'🔁 固定費　一覧を開く ▾';
+        if(open&&!saving){setSaving(true);try{await refreshFixed();renderFixed();$('fixedMessage').textContent='';}catch(e){$('fixedMessage').textContent='一覧の同期ができませんでした。再度開いてお試しください。';}finally{setSaving(false)}}
+      };
+      $('fixedDate').onchange=renderFixed;
+      $('fixedAdd').onclick=()=>openFixedForm();
+      $('fixedFromForm').onclick=()=>{
+        if(entryType!=='expense'||$('splitEnabled').checked){alert('内訳を分けない支出を固定費として保存できます。');return;}
+        openFixedForm({name:$('memo').value.trim(),amount:Number($('amount').value)||'',payment:selectedPayment,category:$('category').value});
+      };
+      $('fixedCancel').onclick=()=>{$('fixedForm').hidden=true};
+      $('fixedDateMode').onchange=()=>{$('fixedDayLabel').hidden=$('fixedDateMode').value!=='monthly'};
+      $('fixedForm').onsubmit=event=>{
+        event.preventDefault();
+        const amount=Number($('fixedAmount').value),name=$('fixedName').value.trim(),day=Number($('fixedDay').value);
+        if(!name||!Number.isSafeInteger(amount)||amount<=0){alert('名前と1円以上の金額を入力してください。');return;}
+        if($('fixedDateMode').value==='monthly' && (!Number.isInteger(day)||day<1||day>31)){alert('指定日は1〜31で入力してください。');return;}
+        changeFixed({id:$('fixedEditId').value||makeId(),name,amount,payment:$('fixedPayment').value,category:$('fixedCategory').value,dateMode:$('fixedDateMode').value,day,updatedAt:new Date().toISOString()});
+      };
+      $('fixedList').onclick=event=>{
+        const btn=event.target.closest('button');if(!btn||saving)return;
+        const rule=fixedRules().find(r=>r.id===btn.closest('[data-rule]').dataset.rule);if(!rule)return;
+        if(btn.dataset.action==='register')registerFixed(rule.id);
+        if(btn.dataset.action==='edit')openFixedForm(rule);
+        if(btn.dataset.action==='remove'&&confirm('「'+rule.name+'」を固定費一覧から削除しますか？\n登録済みの支出は残ります。'))changeFixed({...rule,deletedAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+      };
     }
 
     /* ── 初期化 ── */
     function init(){
       $("date").value = todayString();
+      initFixed();
       buildCategoryButtons();
       resetSplits();
       syncSettle();

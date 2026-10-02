@@ -1,0 +1,1 @@
+{"id":"muscle-bank","name":"筋肉貯金","icon":"💪","path":"/muscle-bank/","visibility":"owner-only","permission":"muscle-bank:owner","accounting":{"unit":"muscle","consumeOnReward":false,"separateFromMoney":true},"status":"pending-home-auth","notes":"実際の本人IDに紐づく権限をHOME側で設定し、API側でも検証する。既存HOMEには自動追加しない。"}

@@ -84,6 +84,10 @@ workers.devとhome.cetus.funのCookieは共有されません。ドメインを�
 
 Freeプランでのパスワード導出CPU時間については実環境で確認が必要です。この設定はCPU上限1,000msを指定していますが、Cloudflareアカウント側プランの上限が優先されます。パスワード導出の強度を下げて回避しないでください。
 
+## GitHub接続からの公開
+
+作業ブランチ `feat/home-auth-foundation`、Root directory `cloudflare/home-worker` を指定します。Build commandは空欄、Deploy commandは `npx wrangler d1 migrations apply home-db --remote && npx wrangler deploy`。Preview buildsは無効にし、別ブランチから本番D1へのマイグレーションが実行されないようにします。
+
 ## 公開前・公開後の確認
 
 - 未認証のHOME直アクセスはログインへ、APIとメディア取得は401

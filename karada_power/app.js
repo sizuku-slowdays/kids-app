@@ -309,8 +309,8 @@ function renderHistory(){
   });
 }
 function todaySchoolLunch(date=localDateString()){return SCHOOL_LUNCH_DAILY.find(x=>x.date===date)}
-function toggleSchoolLunchItem(title){
-  const date=localDateString(),r=getRecord(activeChild,date),set=new Set(r.schoolLunchItems||[]);
+function toggleSchoolLunchItem(title,date=localDateString()){
+  const r=getRecord(activeChild,date),set=new Set(r.schoolLunchItems||[]);
   if(set.has(title))set.delete(title);else set.add(title);
   r.schoolLunchItems=[...set];saveRecord(r,activeChild,date);
   renderHomeTodayPower();renderToday();
@@ -319,6 +319,28 @@ function schoolLunchPowerBadges(title){
   const f=schoolLunchVirtualFood(title);
   return powers.filter(p=>(f[p.key]||0)>0).map(p=>`<span>${p.icon}${'★'.repeat(f[p.key])}</span>`).join('');
 }
+function renderSchoolLunchForRecord(){
+  const box=document.getElementById('record-school-lunch');if(!box)return;
+  const menu=todaySchoolLunch(selectedDate);
+  if(!menu){box.innerHTML='';box.classList.add('hidden');return}
+  box.classList.remove('hidden');
+  const r=getRecord(activeChild,selectedDate),done=new Set(r.schoolLunchItems||[]);
+  const items=[...menu.items,...(menu.milk?['牛乳']:[])];
+  const isToday=selectedDate===localDateString();
+  box.innerHTML=`
+   <div class="school-lunch-head"><div><span>🏫 ${isToday?'今日の給食':'この日の給食'}</span><b>${Number(selectedDate.slice(5,7))}月${Number(selectedDate.slice(8,10))}日</b></div><small>食べたものだけ押してね</small></div>
+   <div class="school-lunch-items">${items.map(title=>{
+      const checked=done.has(title),warn=title.includes('アーモンド');
+      return `<button class="school-lunch-item ${checked?'eaten':''} ${warn?'ingredient-alert':''}" data-record-school-eat="${title.replace(/"/g,'&quot;')}">
+       <span class="school-lunch-check">${checked?'✓':'＋'}</span>
+       <span class="school-lunch-name">${title}${warn?'<small>⚠️ アーモンド入り</small>':''}</span>
+       <span class="school-lunch-stars">${schoolLunchPowerBadges(title)||'材料を記録'}</span>
+      </button>`;
+   }).join('')}</div>
+   <div class="school-lunch-note">過ぎた日でも、その日付の給食として登録・修正できるよ。牛乳は別登録。</div>`;
+  box.querySelectorAll('[data-record-school-eat]').forEach(b=>b.onclick=()=>toggleSchoolLunchItem(b.dataset.recordSchoolEat,selectedDate));
+}
+
 function renderSchoolLunchToday(){
   const box=document.getElementById('home-school-lunch');if(!box)return;
   const date=localDateString(),menu=todaySchoolLunch(date);
@@ -368,6 +390,7 @@ function renderHomeTodayPower(){
 function renderToday(){
   renderChild();
   renderHomeTodayPower();
+  renderSchoolLunchForRecord();
   const r=getRecord(),list=recordFoods(r),s={};
   document.getElementById('date-label').textContent=formatDateLabel(selectedDate)+(selectedDate===localDateString()?'　今日':'');
   document.getElementById('date-next').disabled=selectedDate>=localDateString();

@@ -1,6 +1,7 @@
-import { pbkdf2Sync, timingSafeEqual } from "node:crypto";
+import { pbkdf2Sync, scryptSync, timingSafeEqual } from "node:crypto";
 
-export const ITERATIONS = 600000;
+// -1 identifies the versioned scrypt format; positive values are legacy PBKDF2.
+export const ITERATIONS = -1;
 export function randomToken() {
   return Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
     b.toString(16).padStart(2, "0"),
@@ -20,6 +21,13 @@ export function passwordHash(
   salt: string,
   iterations = ITERATIONS,
 ) {
+  if (iterations === ITERATIONS) {
+    // OWASP's 16 MiB scrypt profile. Keep the native allocation below 32 MiB.
+    const hash = scryptSync(password, salt, 32, {
+      N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024,
+    }).toString("hex");
+    return "scrypt-v1$16384$8$5$" + hash;
+  }
   return pbkdf2Sync(password, salt, iterations, 32, "sha256").toString("hex");
 }
 export function equal(a: string, b: string) {

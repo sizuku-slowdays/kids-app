@@ -1,6 +1,6 @@
 import { snapshot, importLegacy } from "./passbook-import";
 import { activatePassbook } from "./passbook-cutover";
-type Context = { DB: D1Database; LEGACY_DB?: D1Database; PRIVATE_FILES: R2Bucket };
+type Context = { DB: D1Database; LEGACY_DB?: D1Database; PRIVATE_FILES: R2Bucket; LEGACY_BANK_SERVICE?: Fetcher; LEGACY_CHORE_SERVICE?: Fetcher };
 type Group = {id:string; name:string; role:string};
 const reply=(value:unknown,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
 function check(ok:unknown,message:string,status=400):asserts ok {if(!ok)throw Object.assign(new Error(message),{status});}

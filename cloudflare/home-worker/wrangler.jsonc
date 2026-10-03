@@ -23,6 +23,10 @@
     },
   ],
   "r2_buckets": [{ "binding": "PRIVATE_FILES", "bucket_name": "home-private" }],
+  "services": [
+    { "binding": "LEGACY_BANK_SERVICE", "service": "mama-bank-api" },
+    { "binding": "LEGACY_CHORE_SERVICE", "service": "otetsudai-api" },
+  ],
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "triggers": { "crons": ["15 18 * * *"] },
 }

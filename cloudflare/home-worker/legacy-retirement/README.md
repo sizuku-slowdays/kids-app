@@ -50,3 +50,9 @@ activation とHOMEアプリ表示の更新はD1の一つのbatchで行う。
 旧銀行APIのみ410、家計簿/学校の従来の認証ゲート維持、旧ポイント読み書き410、
 未停止/差分あり/バックアップ改変では本番停止、照合成功時のみ利用開始、再実行は一回だけ。
 この2本のWorkerはGitビルドで自動デプロイしない。Dashboardから配置する。
+
+## Worker同士の確認経路
+
+HOMEのwrangler設定にLEGACY_BANK_SERVICE→mama-bank-api、LEGACY_CHORE_SERVICE→otetsudai-apiを定義。
+停止確認はService bindingのfetchで行う。公開URL経由のWorker間呼出制限で設定済みなのに未設定と表示しない。
+外部からの旧API停止は別途確認する。Workerの設定値を追加し直す必要はない。

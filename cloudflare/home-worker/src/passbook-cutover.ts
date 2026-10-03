@@ -1,19 +1,19 @@
 import { snapshot, reconcile } from './passbook-import';
-type EnvLike={DB:D1Database;LEGACY_DB?:D1Database;PRIVATE_FILES:R2Bucket};
+type EnvLike={DB:D1Database;LEGACY_DB?:D1Database;PRIVATE_FILES:R2Bucket;LEGACY_BANK_SERVICE?:Fetcher;LEGACY_CHORE_SERVICE?:Fetcher};
 const HOME='https://home-worker.sslowdayss.workers.dev';
 function requireReady(value:unknown,message:string):asserts value {if(!value)throw Object.assign(new Error(message),{status:409});}
-async function get(url:string){try{return await fetch(url,{redirect:'manual',headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(6000)})}catch{throw Object.assign(new Error('旧アプリの停止状態を確認できません。Workerの反映を確認してください'),{status:409})}}
+async function get(service:Fetcher|undefined,url:string){requireReady(service,'HOME側のWorker接続が未設定です。HOMEのデプロイを確認してください');try{return await service.fetch(url,{redirect:'manual',headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(6000)})}catch{throw Object.assign(new Error('旧アプリの停止状態を確認できません。HOME側のWorker接続を確認してください'),{status:409})}}
 export async function activatePassbook(env:EnvLike,household:string,userId:string){
  const existing=await env.DB.prepare('SELECT 1 FROM passbook_activation WHERE household_id=?').bind(household).first();
  if(existing)return {active:true,already_active:true};
  const record=await env.DB.prepare('SELECT snapshot_hash,backup_key,summary_json FROM passbook_imports WHERE household_id=?').bind(household).first<{snapshot_hash:string;backup_key:string;summary_json:string}>();
  requireReady(record,'先にバックアップと取込を完了してください');
  const [bank,chore,publicBank,publicChores]=await Promise.all([
-  get('https://api.cetus.fun/api/home-passbook-status'),get('https://otetsudai-api.sslowdayss.workers.dev/api/home-passbook-status'),
-  get('https://api.cetus.fun/api/app-data-public?key=mama-bank-view'),get('https://otetsudai-api.sslowdayss.workers.dev/api/members')
+  get(env.LEGACY_BANK_SERVICE,'https://api.cetus.fun/api/home-passbook-status'),get(env.LEGACY_CHORE_SERVICE,'https://otetsudai-api.sslowdayss.workers.dev/api/home-passbook-status'),
+  get(env.LEGACY_BANK_SERVICE,'https://api.cetus.fun/api/app-data-public?key=mama-bank-view'),get(env.LEGACY_CHORE_SERVICE,'https://otetsudai-api.sslowdayss.workers.dev/api/members')
  ]);
- async function marker(response:Response,service:string){let value:any;try{value=await response.json()}catch{return false}return response.ok&&value.version===1&&value.service===service&&value.retired===true&&value.home===HOME}
- requireReady(await marker(bank,'bank')&&await marker(chore,'chores'),'旧Workerの切替設定が未完了です。2本ともHOME_PASSBOOK_MIGRATEDを1にしてください');
+ async function marker(response:Response,service:string){const label=service==='bank'?'旧銀行':'旧ポイント';let value:any;try{value=await response.json()}catch{requireReady(false,label+'Workerの応答を確認できません。HOME側の接続を確認してください（HTTP '+response.status+'）')}requireReady(response.ok&&value.version===1&&value.service===service&&value.home===HOME,label+'Workerの応答形式が一致しません。HOME側の接続を確認してください');requireReady(value.retired===true,label+'Workerの切替設定が未完了です。HOME_PASSBOOK_MIGRATEDを1にしてください')}
+ await marker(bank,'bank');await marker(chore,'chores');
  async function closed(response:Response){let value:any;try{value=await response.json()}catch{return false}return response.status===410&&value.migrated===true}
  requireReady(await closed(publicBank)&&await closed(publicChores),'旧公開APIがまだ利用できるため、切替を止めています');
  const backupFile=await env.PRIVATE_FILES.get(record.backup_key);requireReady(backupFile,'非公開バックアップが見つからないため切替できません');

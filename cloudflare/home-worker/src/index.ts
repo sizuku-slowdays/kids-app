@@ -521,6 +521,23 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         .all();
       return json(result.results);
     }
+    if (path === "/api/children/accounts" && method === "GET") {
+      const result = await env.DB.prepare("SELECT u.id,u.login_name,u.display_name,m.group_id household_id FROM users u JOIN memberships m ON m.user_id=u.id WHERE u.active=1 AND m.role='member' AND EXISTS(SELECT 1 FROM memberships a WHERE a.group_id=m.group_id AND a.user_id=? AND a.role IN ('owner','admin')) AND NOT EXISTS(SELECT 1 FROM children c WHERE c.user_id=u.id) ORDER BY u.login_name").bind(user.id).all();
+      return json(result.results);
+    }
+    if (path.startsWith("/api/children/") && path.endsWith("/account") && method === "PUT") {
+      const childId = path.slice("/api/children/".length, -"/account".length);
+      const data = await body(request), target = name(data.user_id);
+      const child = await env.DB.prepare("SELECT c.household_id,c.user_id FROM children c JOIN memberships m ON m.group_id=c.household_id WHERE c.id=? AND m.user_id=? AND m.role IN ('owner','admin')").bind(childId,user.id).first<{household_id:string;user_id:string|null}>();
+      requireValue(child,403,"この子どもの連携は変更できません");
+      requireValue(!child.user_id,409,"すでにアカウントが連携されています");
+      const results = await env.DB.batch([
+        env.DB.prepare("UPDATE children SET user_id=? WHERE id=? AND user_id IS NULL AND EXISTS(SELECT 1 FROM users u JOIN memberships m ON m.user_id=u.id WHERE u.id=? AND u.active=1 AND m.group_id=children.household_id AND m.role='member') AND NOT EXISTS(SELECT 1 FROM children c WHERE c.user_id=?)").bind(target,childId,target,target),
+        env.DB.prepare("UPDATE invitations SET revoked_at=? WHERE child_id=? AND consumed_by IS NULL AND revoked_at IS NULL AND EXISTS(SELECT 1 FROM children WHERE id=? AND user_id=?)").bind(now,childId,childId,target),
+      ]);
+      requireValue(results[0].meta.changes>0,409,"同じ家庭の未連携アカウントを選んでください");
+      return json({ok:true});
+    }
     if (path === "/api/children" && method === "POST") {
       const data = await body(request),
         groupId = name(data.household_id),

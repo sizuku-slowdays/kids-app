@@ -271,7 +271,7 @@ function showError(e) {
 }
 async function children() {
   try {
-    const list = await api("/api/children");
+    const [list, accounts] = await Promise.all([api("/api/children"), api("/api/children/accounts")]);
     root.replaceChildren(
       el("h1", "家庭の子ども"),
       button("設定へ", settings, "quiet"),
@@ -332,6 +332,34 @@ async function children() {
             "quiet",
           ),
         );
+      if (!child.user_id) {
+        const candidates = accounts.filter(a => a.household_id === child.household_id);
+        if (candidates.length) {
+          const picker = el("select");
+          picker.setAttribute("aria-label", child.display_name + "の登録済みアカウント");
+          const placeholder = el("option", "登録済みアカウントを選ぶ");
+          placeholder.value = "";
+          picker.append(placeholder);
+          for (const a of candidates) {
+            const option = el("option", a.display_name + "（ID: " + a.login_name + "）");
+            option.value = a.id;
+            picker.append(option);
+          }
+          const link = button("このアカウントと連携", async () => {
+            const account = candidates.find(a => a.id === picker.value);
+            if (!account) return;
+            if (!confirm(child.display_name + " と「" + account.display_name + "（ID: " + account.login_name + "）」を連携します。本人のアカウントで間違いありませんか？")) return;
+            link.disabled = true;
+            try {
+              await api("/api/children/" + encodeURIComponent(child.id) + "/account", "PUT", {user_id: account.id});
+              await children();
+            } catch (e) { showError(e); link.disabled = false; }
+          }, "quiet");
+          link.disabled = true;
+          picker.onchange = () => { link.disabled = !picker.value; };
+          row.append(picker, link);
+        }
+      }
       root.append(row);
     }
   } catch (e) {

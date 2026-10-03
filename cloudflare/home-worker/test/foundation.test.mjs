@@ -165,6 +165,26 @@ test("invitation, personal sessions, home settings and private file boundaries",
     );
     const children = await call("/api/children", { cookie: admin.cookie });
     assert.ok(children.data[0].user_id);
+    // A generic invitation may have created an account without linking a child profile.
+    await db.prepare("INSERT INTO users(id,login_name,display_name,password_salt,password_hash,password_iterations,created_at) SELECT 'existing-child','existing_child','登録済みの子',password_salt,password_hash,password_iterations,created_at FROM users WHERE login_name='child_a'").run();
+    await db.prepare("INSERT INTO memberships VALUES (?,'existing-child','member')").bind(groupA).run();
+    const unlinked = await call('/api/children',{method:'POST',cookie:admin.cookie,body:{household_id:groupA,display_name:'既存プロフィール'}});
+    const staleInvite = await invite(groupA,unlinked.data.id);
+    const linkPath = '/api/children/'+unlinked.data.id+'/account';
+    assert.equal((await call('/api/children/accounts')).status,401);
+    assert.equal((await call('/api/children/accounts',{cookie:registered.cookie})).data.length,0);
+    assert.equal((await call('/api/children/accounts',{cookie:admin.cookie})).data[0].login_name,'existing_child');
+    assert.equal((await call(linkPath,{method:'PUT',cookie:registered.cookie,body:{user_id:'existing-child'}})).status,403);
+    assert.equal((await call(linkPath,{method:'PUT',cookie:admin.cookie,origin:'https://evil.test',body:{user_id:'existing-child'}})).status,403);
+    assert.equal((await call(linkPath,{method:'PUT',cookie:admin.cookie,body:{user_id:profile.data.user.id}})).status,409);
+    assert.equal((await call(linkPath,{method:'PUT',cookie:admin.cookie,body:{user_id:children.data[0].user_id}})).status,409);
+    assert.equal((await call(linkPath,{method:'PUT',cookie:admin.cookie,body:{user_id:'existing-child'}})).status,200);
+    assert.equal((await db.prepare('SELECT user_id FROM children WHERE id=?').bind(unlinked.data.id).first()).user_id,'existing-child');
+    assert.equal((await call('/api/children/accounts',{cookie:admin.cookie})).data.length,0);
+    assert.equal((await call(linkPath,{method:'PUT',cookie:admin.cookie,body:{user_id:'existing-child'}})).status,409);
+    assert.equal((await db.prepare('SELECT revoked_at FROM invitations WHERE token_hash IS NOT NULL AND child_id=?').bind(unlinked.data.id).first()).revoked_at>0,true);
+    assert.equal(staleInvite.status,201);
+    assert.equal((await call('/api/me',{cookie:registered.cookie})).status,200);
     const homes = await call("/api/home", { cookie: registered.cookie });
     const musclePath="/apps/muscle-bank/";
     assert.equal((await call(musclePath)).status,303);

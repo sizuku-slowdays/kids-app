@@ -1,4 +1,5 @@
-type Context = { DB: D1Database; LEGACY_DB?: D1Database };
+import { snapshot, importLegacy } from "./passbook-import";
+type Context = { DB: D1Database; LEGACY_DB?: D1Database; PRIVATE_FILES: R2Bucket };
 type Group = {id:string; name:string; role:string};
 const reply=(value:unknown,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
 function check(ok:unknown,message:string,status=400):asserts ok {if(!ok)throw Object.assign(new Error(message),{status});}
@@ -14,9 +15,23 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
   const admin=['owner','admin'].includes(group.role);
   const active=Boolean(await env.DB.prepare('SELECT 1 FROM passbook_activation WHERE household_id=?').bind(household).first());
   const own=await env.DB.prepare('SELECT id FROM children WHERE household_id=? AND user_id=?').bind(household,userId).first<{id:string}>();
+  const imported=await env.DB.prepare('SELECT summary_json,snapshot_hash,backup_key FROM passbook_imports WHERE household_id=?').bind(household).first<{summary_json:string;snapshot_hash:string;backup_key:string}>();
   const settings=await env.DB.prepare('SELECT sibling_points_visible FROM passbook_settings WHERE household_id=?').bind(household).first<{sibling_points_visible:number}>();
-  const accounts=async()=> (await env.DB.prepare(`SELECT a.id,a.child_id,a.unit_id,c.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_entries e WHERE e.account_id=a.id),0) balance,COALESCE((SELECT SUM(r.cost) FROM passbook_requests r WHERE r.account_id=a.id AND r.status='pending'),0) pending FROM passbook_accounts a JOIN children c ON c.id=a.child_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR c.user_id=? OR (?=1 AND u.kind='points')) ORDER BY c.display_name,u.kind,u.code`).bind(household,admin?1:0,userId,settings?.sibling_points_visible||0).all()).results;
-  if(path===''&&method==='GET')return reply({household:group,admin,active,own_child_id:own?.id,accounts:active?await accounts():[],children:admin?(await env.DB.prepare('SELECT id,display_name FROM children WHERE household_id=?').bind(household).all()).results:[],sibling_points_visible:Boolean(settings?.sibling_points_visible)});
+  const accounts=async()=> (await env.DB.prepare(`SELECT a.id,a.child_id,a.unit_id,c.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_entries e WHERE e.account_id=a.id),0) balance,COALESCE((SELECT SUM(r.cost) FROM passbook_requests r WHERE r.account_id=a.id AND r.status='pending'),0) pending FROM passbook_accounts a JOIN children c ON c.id=a.child_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR c.user_id=? OR (?=1 AND u.kind='points')) UNION ALL SELECT a.id,'user:'||a.owner_user_id child_id,a.unit_id,usr.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_adult_entries e WHERE e.account_id=a.id),0) balance,0 pending FROM passbook_adult_accounts a JOIN users usr ON usr.id=a.owner_user_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR a.owner_user_id=?) ORDER BY display_name,kind,code`).bind(household,admin?1:0,userId,settings?.sibling_points_visible||0,household,admin?1:0,userId).all()).results;
+  if(path===''&&method==='GET')return reply({household:group,admin,active,imported:admin&&Boolean(imported),own_child_id:own?.id,accounts:active||(admin&&imported)?await accounts():[],children:admin?(await env.DB.prepare('SELECT id,display_name FROM children WHERE household_id=?').bind(household).all()).results.concat(imported?[{id:'user:'+userId,display_name:'自分のポイント'}]:[]):[],sibling_points_visible:Boolean(settings?.sibling_points_visible)});
+  if(path==='/migration' && ['GET','POST'].includes(method)){
+   check(admin && Boolean(await env.DB.prepare("SELECT 1 FROM users WHERE id=? AND platform_role='operator'").bind(userId).first()),'移行操作は運営管理者だけが行えます',403);
+   if(method==='GET'){
+    const source=await snapshot(env);
+    const children=(await env.DB.prepare('SELECT id,display_name,user_id FROM children WHERE household_id=?').bind(household).all()).results;
+    return reply({children,self:{id:'user:'+userId,display_name:'自分（このアカウント）'},bank_accounts:Object.entries(source.bank.balances).map(([id,balance])=>({id,balance})),members:source.raw.members,imported:Boolean(imported),summary:imported?JSON.parse(imported.summary_json):null,changed:imported?source.hash!==imported.snapshot_hash:false});
+   }
+   const data=await readBody(request);
+   check(data.mapping && typeof data.mapping==='object','対応先を選んでください');
+   const mapping=data.mapping as {bank:Record<string,string>;points:Record<string,string>};
+   check(mapping.bank && mapping.points && Object.values(mapping.bank).every(v=>typeof v==='string') && Object.values(mapping.points).every(v=>typeof v==='string'),'対応先を選んでください');
+   return reply(await importLegacy(env,household!,userId,mapping));
+  }
   if(path==='/legacy-preview'&&method==='GET'){
    check(admin && Boolean(await env.DB.prepare("SELECT 1 FROM users WHERE id=? AND platform_role='operator'").bind(userId).first()),'移行確認は運営管理者だけが行えます',403);
    if(!env.LEGACY_DB)return reply({configured:false,message:'mama-bank-db の接続が必要です'});
@@ -27,11 +42,13 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    const logs=await env.LEGACY_DB.prepare('SELECT COUNT(*) count,SUM(CASE WHEN bank_synced=0 AND money>0 THEN 1 ELSE 0 END) unsynced FROM chore_logs').first();
    return reply({configured:true,bank_updated_at:bank.updated_at,balances:parsed.balances,history_count:Array.isArray(parsed.history)?parsed.history.length:null,members,logs});
   }
-  check(active,'残高・履歴の移行確認が終わるまで利用できません',409);
+  check(active||(admin&&imported&&method==='GET'),'残高・履歴の移行確認が終わるまで利用できません',409);
   if(path==='/history'&&method==='GET'){
    const account=url.searchParams.get('account');check((await accounts()).some(a=>a.id===account),'この履歴は見られません',403);
    const before=url.searchParams.get('before');
-   const result=await env.DB.prepare('SELECT id,delta,memo,occurred_at,created_at FROM passbook_entries WHERE account_id=? AND (? IS NULL OR rowid<(SELECT rowid FROM passbook_entries WHERE id=? AND account_id=?)) ORDER BY rowid DESC LIMIT 50').bind(account,before,before,account).all();return reply(result.results);
+   const adult=Boolean(await env.DB.prepare('SELECT 1 FROM passbook_adult_accounts WHERE id=? AND household_id=?').bind(account,household).first());
+   const ledger=adult?'passbook_adult_entries':'passbook_entries';
+   const result=await env.DB.prepare(`SELECT id,delta,memo,occurred_at,created_at FROM ${ledger} WHERE account_id=? AND (? IS NULL OR (occurred_at,rowid)<(SELECT occurred_at,rowid FROM ${ledger} WHERE id=? AND account_id=?)) ORDER BY occurred_at DESC,rowid DESC LIMIT 50`).bind(account,before,before,account).all();return reply(result.results);
   }
   if(path==='/rewards'&&method==='GET')return reply((await env.DB.prepare("SELECT r.*,u.name unit_name FROM passbook_rewards r JOIN passbook_units u ON u.id=r.unit_id WHERE r.household_id=? AND (?=1 OR r.enabled=1)").bind(household,admin?1:0).all()).results);
   if(path==='/requests'&&method==='GET')return reply((await env.DB.prepare('SELECT r.*,c.display_name FROM passbook_requests r JOIN passbook_accounts a ON a.id=r.account_id JOIN children c ON c.id=a.child_id WHERE r.household_id=? AND (?=1 OR c.user_id=?) ORDER BY r.requested_at DESC LIMIT 100').bind(household,admin?1:0,userId).all()).results);
@@ -49,8 +66,10 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
   if(path==='/entries'&&method==='POST'){
    const account=str(data.account_id),delta=integer(data.delta),event=str(data.event_id);check(delta!==0,'0は登録できません');check((await accounts()).some(a=>a.id===account),'通帳が見つかりません',404);
    // Pending exchanges reserve points; withdrawals cannot consume those points.
-   const r=await env.DB.prepare(`INSERT INTO passbook_entries(id,account_id,household_id,delta,memo,occurred_at,created_at,created_by,source_app,source_event) SELECT ?,?,?,?, ?,?,?,?,'manual',? WHERE ?>=0 OR ?<=(COALESCE((SELECT SUM(delta) FROM passbook_entries WHERE account_id=?),0)-COALESCE((SELECT SUM(cost) FROM passbook_requests WHERE account_id=? AND status='pending'),0)) ON CONFLICT(account_id,source_app,source_event) DO NOTHING`).bind(crypto.randomUUID(),account,household,delta,str(data.memo),new Date().toISOString(),now,userId,event,delta,-delta,account,account).run();
-   if(!r.meta.changes){check(await env.DB.prepare("SELECT 1 FROM passbook_entries WHERE account_id=? AND source_app='manual' AND source_event=?").bind(account,event).first(),'残高が足りません',409);}return reply({ok:true});
+   const adult=Boolean(await env.DB.prepare('SELECT 1 FROM passbook_adult_accounts WHERE id=? AND household_id=?').bind(account,household).first());
+   const ledger=adult?'passbook_adult_entries':'passbook_entries';
+   const r=await env.DB.prepare(`INSERT INTO ${ledger}(id,account_id,household_id,delta,memo,occurred_at,created_at,created_by,source_app,source_event) SELECT ?,?,?,?, ?,?,?,?,'manual',? WHERE ?>=0 OR ?<=(COALESCE((SELECT SUM(delta) FROM ${ledger} WHERE account_id=?),0)-COALESCE((SELECT SUM(cost) FROM passbook_requests WHERE account_id=? AND status='pending'),0)) ON CONFLICT(account_id,source_app,source_event) DO NOTHING`).bind(crypto.randomUUID(),account,household,delta,str(data.memo),new Date().toISOString(),now,userId,event,delta,-delta,account,account).run();
+   if(!r.meta.changes){check(await env.DB.prepare(`SELECT 1 FROM ${ledger} WHERE account_id=? AND source_app='manual' AND source_event=?`).bind(account,event).first(),'残高が足りません',409);}return reply({ok:true});
   }
   if(path==='/rewards'&&method==='POST'){
    const unit=str(data.unit_id);check(await env.DB.prepare("SELECT 1 FROM passbook_units WHERE id=? AND household_id=? AND kind='points' AND active=1").bind(unit,household).first(),'ポイント種別を確認してください');const cost=integer(data.cost);check(cost>0,'必要ポイントは1以上です');const stock=data.stock===null?null:integer(data.stock);check(stock===null||stock>=0,'個数を確認してください');const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO passbook_rewards(id,household_id,unit_id,name,cost,stock) VALUES (?,?,?,?,?,?)').bind(id,household,unit,str(data.name),cost,stock).run();return reply({id},201);
@@ -59,5 +78,8 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    check(['approved','rejected'].includes(String(data.status)),'操作を確認してください');const id=path.slice('/requests/'.length);const result=await env.DB.prepare("UPDATE passbook_requests SET status=?,resolved_by=?,resolved_at=? WHERE id=? AND household_id=? AND status='pending'").bind(data.status,userId,now,id,household).run();check(result.meta.changes>0,'この申請は処理済みか見つかりません',409);return reply({ok:true});
   }
   return reply({error:'見つかりません'},404);
- } catch(e){const err=e as Error &{status?:number};const known=/insufficient points|invalid reward|reward unavailable|UNIQUE constraint/.test(err.message);return reply({error:err.status?err.message:known?'ポイント不足・在庫切れ・申請済みのいずれかです':'つうちょうに接続できませんでした'},err.status||(known?409:500));}
+ } catch(e){const err=e as Error &{status?:number};if(pathErrorSafe(err))return reply({error:err.message},409);const known=/insufficient points|invalid reward|reward unavailable|UNIQUE constraint/.test(err.message);return reply({error:err.status?err.message:known?'ポイント不足・在庫切れ・申請済みのいずれかです':'つうちょうに接続できませんでした'},err.status||(known?409:500));}
 }
+
+
+function pathErrorSafe(e:Error){return /旧データ|銀行|対応先|ポイント|口座|バックアップ|取込|個別確認|登録済みアカウント|通帳へ上書き|記録が多い|旧DB|家族一覧|子どものアカウント/.test(e.message) && !/D1_|SQLITE/.test(e.message)}

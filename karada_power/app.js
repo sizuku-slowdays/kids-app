@@ -20,12 +20,42 @@ FOODS.forEach(f=>{
   if(!f.reading) f.reading=f.name||"";
 });
 const powers=[
-{key:'head_power',label:'あたま',icon:'🧠',cls:'p-head',desc:'考（かんが）える・覚（おぼ）える。頭（あたま）や神経（しんけい）を応援（おうえん）！'},
-{key:'sparkle_power',label:'キラキラ',icon:'✨',cls:'p-sparkle',desc:'肌（はだ）・髪（かみ）・爪（つめ）をつくるのを応援（おうえん）！'},
-{key:'muscle_power',label:'マッチョ',icon:'💪',cls:'p-muscle',desc:'筋肉（きんにく）や体（からだ）をつくる材料（ざいりょう）を集（あつ）めよう！'},
-{key:'bone_power',label:'ほね',icon:'🦴',cls:'p-bone',desc:'骨（ほね）と歯（は）をつくるのを応援（おうえん）！'},
-{key:'immunity_power',label:'めんえき',icon:'🛡️',cls:'p-immunity',desc:'体（からだ）を守（まも）る仕組（しく）みを応援（おうえん）！'}];
+{key:'head_power',label:'あたま',icon:'🧠',shape:'brain',cls:'p-head',desc:'考（かんが）える・覚（おぼ）える。頭（あたま）や神経（しんけい）を応援（おうえん）！'},
+{key:'sparkle_power',label:'キラキラ',icon:'✨',shape:'star',cls:'p-sparkle',desc:'肌（はだ）・髪（かみ）・爪（つめ）をつくるのを応援（おうえん）！'},
+{key:'muscle_power',label:'マッチョ',icon:'💪',shape:'arm',cls:'p-muscle',desc:'筋肉（きんにく）や体（からだ）をつくる材料（ざいりょう）を集（あつ）めよう！'},
+{key:'bone_power',label:'ほね',icon:'🦴',shape:'bone',cls:'p-bone',desc:'骨（ほね）と歯（は）をつくるのを応援（おうえん）！'},
+{key:'immunity_power',label:'めんえき',icon:'🛡️',shape:'shield',cls:'p-immunity',desc:'体（からだ）を守（まも）る仕組（しく）みを応援（おうえん）！'}];
 const target=8;
+const POWER_SHAPE_PATHS={
+  brain:'M50 12C42 4 31 7 28 17C18 16 12 25 17 35C8 43 11 56 22 61C20 72 30 82 41 78C45 89 56 89 60 78C71 82 81 72 78 61C89 56 92 43 83 35C88 25 82 16 72 17C69 7 58 4 50 12Z',
+  star:'M50 6L61 36L93 37L67 56L76 88L50 69L24 88L33 56L7 37L39 36Z',
+  arm:'M17 76C18 61 24 48 35 39L32 26C30 19 34 13 40 13C46 13 49 17 50 23L52 34C58 30 64 27 70 29L76 18C79 12 86 11 90 16C93 20 92 25 89 30L82 42C90 50 91 60 87 69C82 81 70 88 54 88H32C23 88 16 83 17 76Z',
+  bone:'M18 38C10 36 6 29 9 22C12 15 21 13 27 17C31 9 41 8 47 14C52 19 52 27 47 32L61 48C66 43 74 43 80 47C86 51 88 59 84 65C92 69 94 78 89 84C84 90 75 91 69 87C64 94 54 94 48 88C43 83 43 75 48 70L34 54C29 59 21 59 15 54C9 50 9 42 18 38Z',
+  shield:'M50 7L86 20V47C86 68 72 83 50 93C28 83 14 68 14 47V20Z'
+};
+const POWER_SHAPE_DETAILS={
+  brain:'M50 15V78M34 23C42 28 42 37 35 42M66 23C58 28 58 37 65 42M29 52C38 52 42 59 39 68M71 52C62 52 58 59 61 68',
+  arm:'M35 39C44 45 52 48 63 46M52 34C56 41 63 45 72 44',
+  bone:'M35 51L61 78',
+  shield:'M50 17V82'
+};
+let powerGaugeSerial=0;
+function powerShapeGauge(power,value,context='power'){
+  const score=Math.max(0,Number(value)||0),ratio=Math.min(1,score/target);
+  const clipId=`power-shape-${context}-${power.shape}-${powerGaugeSerial++}`;
+  const path=POWER_SHAPE_PATHS[power.shape],detail=POWER_SHAPE_DETAILS[power.shape]||'';
+  return `<span class="power-shape-wrap" aria-hidden="true"><svg class="power-shape" data-shape="${power.shape}" data-fill-ratio="${ratio}" viewBox="0 0 100 100" style="--fill-ratio:0">
+    <defs><clipPath id="${clipId}"><path d="${path}"></path></clipPath></defs>
+    <path class="power-shape-base" d="${path}"></path>
+    <rect class="power-shape-fill" x="4" y="4" width="92" height="92" clip-path="url(#${clipId})"></rect>
+    <path class="power-shape-outline" d="${path}"></path>
+    ${detail?`<path class="power-shape-detail" d="${detail}"></path>`:''}
+  </svg></span>`;
+}
+function animatePowerShapes(root=document){
+  const shapes=[...root.querySelectorAll('.power-shape[data-fill-ratio]')];
+  requestAnimationFrame(()=>requestAnimationFrame(()=>shapes.forEach(svg=>svg.style.setProperty('--fill-ratio',svg.dataset.fillRatio))));
+}
 let activeChild=localStorage.getItem('kp_child')||'長女', category='すべて',query='';
 let batchMode=false;
 let batchSelected=new Set();
@@ -429,12 +459,13 @@ function renderHomeTodayPower(){
       ${powers.map(p=>{
         const n=scores[p.key],level=Math.min(3,Math.ceil(n/3));
         return `<button class="home-power-item ${n?'has-power':''}" data-home-power="${p.key}">
-          <span class="home-power-icon">${p.icon}</span><b>${p.label}</b>
+                    ${powerShapeGauge(p,n,'home')}<b>${p.label}</b>
           <span class="home-power-stars">${'★'.repeat(level)}${'☆'.repeat(3-level)}</span>
         </button>`;
       }).join('')}
     </div>
     <div class="home-power-message">${hasFood?'今日食べたものから、パワーが集まってきたよ！':'まだ食べものが入ってないよ。今日のパワーはここからスタート！'}</div>`;
+  animatePowerShapes(box);
   box.querySelector('[data-home-record]').onclick=()=>{selectedDate=date;localStorage.setItem('kp_selected_date',date);showView('today');renderToday();};
   box.querySelectorAll('[data-home-power]').forEach(b=>b.onclick=()=>{category='すべて';query='';showView('foods');renderFoods(b.dataset.homePower);});
   renderSchoolLunchToday();
@@ -459,7 +490,10 @@ function renderToday(){
   if(activeMeal==='lunch'&&(r.schoolLunchItems||[]).length){document.getElementById('meal-foods').insertAdjacentHTML('beforeend',`<div class="school-recorded-mini"><b>🏫 給食で登録</b>${r.schoolLunchItems.map(x=>`<span>${x}</span>`).join('')}</div>`);}
 
   powers.forEach(p=>s[p.key]=list.reduce((n,f)=>n+(Number(f[p.key])||0),0));
-  document.getElementById('today-bars').innerHTML=powers.map(p=>`<div class="bar-row"><div class="bar-label">${p.icon} ${p.label}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,s[p.key]/target*100)}%"></div></div><div class="bar-val">${status(s[p.key])}</div></div>`).join('');
+    document.getElementById('today-bars').innerHTML=`<div class="day-power-five">${powers.map(p=>`<div class="day-power-item ${s[p.key]?'has-power':''}">
+    ${powerShapeGauge(p,s[p.key],'day')}<b>${p.label}</b><span>${status(s[p.key])}</span>
+  </div>`).join('')}</div>`;
+  animatePowerShapes(document.getElementById('today-bars'));
 
   document.getElementById('today-foods').innerHTML=list.length
     ?Object.entries(MEALS).filter(([k])=>(r[k]||[]).length).map(([k,m])=>`<div class="day-meal-group"><b>${m.icon} ${m.label}</b><div>${(r[k]||[]).map(id=>{const f=FOODS.find(x=>String(x.id)===String(id));return f?`<button class="today-tag" data-id="${f.id}">${f.emoji} ${f.reading}</button>`:''}).join('')}</div></div>`).join('')+((r.schoolLunchItems||[]).length?`<div class="day-meal-group"><b>🏫 給食</b><div>${r.schoolLunchItems.map(x=>`<span class="today-tag school-only">${x}</span>`).join('')}</div></div>`:'')

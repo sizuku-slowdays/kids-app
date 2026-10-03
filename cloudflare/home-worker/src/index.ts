@@ -515,11 +515,21 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     }
     if (path === "/api/children" && method === "GET") {
       const result = await env.DB.prepare(
-        "SELECT c.id,c.household_id,c.display_name,c.user_id FROM children c JOIN memberships m ON m.group_id=c.household_id WHERE m.user_id=? AND m.role IN ('owner','admin')",
+        "SELECT c.id,c.household_id,c.display_name,c.user_id,u.login_name FROM children c LEFT JOIN users u ON u.id=c.user_id JOIN memberships m ON m.group_id=c.household_id WHERE m.user_id=? AND m.role IN ('owner','admin')",
       )
         .bind(user.id)
         .all();
       return json(result.results);
+    }
+    if (path === "/api/children/move-account" && method === "POST") {
+      const data = await body(request);
+      try {
+        await env.DB.prepare("INSERT INTO child_account_moves(id,source_child_id,target_child_id,user_id,actor_id,created_at) VALUES (?,?,?,?,?,?)").bind(crypto.randomUUID(),name(data.source_child_id),name(data.target_child_id),name(data.user_id),user.id,now).run();
+      } catch (e) {
+        if (String(e).includes('invalid child account move')) throw new Failure(409,"変更できません。同じ家庭の未登録プロフィールを選んでください。通帳の取込後や時間割の登録後は個別確認が必要です");
+        throw e;
+      }
+      return json({ok:true,login_required:true});
     }
     if (path === "/api/children/accounts" && method === "GET") {
       const result = await env.DB.prepare("SELECT u.id,u.login_name,u.display_name,m.group_id household_id FROM users u JOIN memberships m ON m.user_id=u.id WHERE u.active=1 AND m.role='member' AND EXISTS(SELECT 1 FROM memberships a WHERE a.group_id=m.group_id AND a.user_id=? AND a.role IN ('owner','admin')) AND NOT EXISTS(SELECT 1 FROM children c WHERE c.user_id=u.id) ORDER BY u.login_name").bind(user.id).all();
@@ -718,4 +728,3 @@ export default {
     ]);
   },
 } satisfies ExportedHandler<HomeEnv>;
-

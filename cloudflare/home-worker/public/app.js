@@ -310,7 +310,30 @@ async function children() {
     for (const child of list) {
       const row = el("div", null, "row");
       row.append(el("strong", child.display_name));
-      if (child.user_id) row.append(el("span", "アカウント登録済み", "muted"));
+      if (child.user_id) {
+        row.append(el("span", "アカウント登録済み（ID: " + child.login_name + "）", "muted"));
+        const targets = list.filter(c => c.household_id === child.household_id && !c.user_id);
+        if (targets.length) row.append(button("連携先を修正", () => {
+          root.replaceChildren(el("h1", "アカウントの連携先を修正"), button("戻る", children, "quiet"));
+          root.append(el("p", "ID「" + child.login_name + "」の現在の連携先：" + child.display_name), el("p", "ID・パスワードは変わりません。変更後、このアカウントはログインし直してください。", "muted"));
+          const picker = el("select");
+          picker.setAttribute("aria-label", "正しい子どものプロフィール");
+          const blank = el("option", "正しい子どもを選ぶ"); blank.value = ""; picker.append(blank);
+          for (const target of targets) { const o = el("option", target.display_name); o.value = target.id; picker.append(o); }
+          const save = button("選んだ子どもへ結び直す", async () => {
+            const target = targets.find(c => c.id === picker.value);
+            if (!target || !confirm("ID「" + child.login_name + "」を「" + child.display_name + "」から「" + target.display_name + "」へ結び直しますか？")) return;
+            save.disabled = true;
+            try {
+              await api("/api/children/move-account", "POST", {source_child_id:child.id,target_child_id:target.id,user_id:child.user_id});
+              await children();
+              root.append(el("p", "連携先を変更しました。対象の携帯では同じID・パスワードでログインし直してください。", "muted"));
+            } catch (e) { showError(e); save.disabled = false; }
+          });
+          save.disabled = true; picker.onchange = () => { save.disabled = !picker.value; };
+          root.append(picker, save);
+        }, "quiet"));
+      }
       else if (me.user.platform_role === "operator")
         row.append(
           button(

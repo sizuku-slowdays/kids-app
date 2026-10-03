@@ -1,4 +1,5 @@
 import { snapshot, importLegacy } from "./passbook-import";
+import { activatePassbook } from "./passbook-cutover";
 type Context = { DB: D1Database; LEGACY_DB?: D1Database; PRIVATE_FILES: R2Bucket };
 type Group = {id:string; name:string; role:string};
 const reply=(value:unknown,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
@@ -19,12 +20,17 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
   const settings=await env.DB.prepare('SELECT sibling_points_visible FROM passbook_settings WHERE household_id=?').bind(household).first<{sibling_points_visible:number}>();
   const accounts=async()=> (await env.DB.prepare(`SELECT a.id,a.child_id,a.unit_id,c.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_entries e WHERE e.account_id=a.id),0) balance,COALESCE((SELECT SUM(r.cost) FROM passbook_requests r WHERE r.account_id=a.id AND r.status='pending'),0) pending FROM passbook_accounts a JOIN children c ON c.id=a.child_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR c.user_id=? OR (?=1 AND u.kind='points')) UNION ALL SELECT a.id,'user:'||a.owner_user_id child_id,a.unit_id,usr.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_adult_entries e WHERE e.account_id=a.id),0) balance,0 pending FROM passbook_adult_accounts a JOIN users usr ON usr.id=a.owner_user_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR a.owner_user_id=?) ORDER BY display_name,kind,code`).bind(household,admin?1:0,userId,settings?.sibling_points_visible||0,household,admin?1:0,userId).all()).results;
   if(path===''&&method==='GET')return reply({household:group,admin,active,imported:admin&&Boolean(imported),own_child_id:own?.id,accounts:active||(admin&&imported)?await accounts():[],children:admin?(await env.DB.prepare('SELECT id,display_name FROM children WHERE household_id=?').bind(household).all()).results.concat(imported?[{id:'user:'+userId,display_name:'自分のポイント'}]:[]):[],sibling_points_visible:Boolean(settings?.sibling_points_visible)});
+  if(path==='/activation' && method==='POST'){
+   check(admin && Boolean(await env.DB.prepare("SELECT 1 FROM users WHERE id=? AND platform_role='operator'").bind(userId).first()),'切替は運営管理者だけが行えます',403);
+   check((await readBody(request)).confirmed===true,'残高と履歴の確認が必要です');
+   return reply(await activatePassbook(env,household!,userId));
+  }
   if(path==='/migration' && ['GET','POST'].includes(method)){
    check(admin && Boolean(await env.DB.prepare("SELECT 1 FROM users WHERE id=? AND platform_role='operator'").bind(userId).first()),'移行操作は運営管理者だけが行えます',403);
    if(method==='GET'){
     const source=await snapshot(env);
     const children=(await env.DB.prepare('SELECT id,display_name,user_id FROM children WHERE household_id=?').bind(household).all()).results;
-    return reply({children,self:{id:'user:'+userId,display_name:'自分（このアカウント）'},bank_accounts:Object.entries(source.bank.balances).map(([id,balance])=>({id,balance})),members:source.raw.members,imported:Boolean(imported),summary:imported?JSON.parse(imported.summary_json):null,changed:imported?source.hash!==imported.snapshot_hash:false});
+    return reply({children,self:{id:'user:'+userId,display_name:'自分（このアカウント）'},bank_accounts:Object.entries(source.bank.balances).map(([id,balance])=>({id,balance})),members:source.raw.members,active,imported:Boolean(imported),summary:imported?JSON.parse(imported.summary_json):null,changed:imported?source.hash!==imported.snapshot_hash:false});
    }
    const data=await readBody(request);
    check(data.mapping && typeof data.mapping==='object','対応先を選んでください');

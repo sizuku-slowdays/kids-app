@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile,readdir} from 'node:fs/promises';import {createHash} from 'node:crypto';import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 test('legacy backup, separate adult wallet, balances and import replay',async()=>{
- const mf=new Miniflare(convertV4MiniflareOptions({name:'home-worker',modules:true,scriptPath:new URL('../.wrangler/test-build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'import-home',LEGACY_DB:'import-legacy'},r2Buckets:['PRIVATE_FILES'],serviceBindings:{ASSETS:()=>new Response('shell')}}));
+ let retired=false;
+ const mf=new Miniflare(convertV4MiniflareOptions({name:'home-worker',modules:true,scriptPath:new URL('../.wrangler/test-build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'import-home',LEGACY_DB:'import-legacy'},r2Buckets:['PRIVATE_FILES'],serviceBindings:{ASSETS:()=>new Response('shell')},outboundService:(request)=>{const url=new URL(request.url);return url.pathname==='/api/home-passbook-status'?Response.json({version:1,retired,service:url.hostname==='api.cetus.fun'?'bank':'chores',home:'https://home-worker.sslowdayss.workers.dev'}):Response.json({migrated:retired},{status:retired?410:200})}}));
  try{
  const db=await mf.getD1Database('DB'),legacy=await mf.getD1Database('LEGACY_DB');
  for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort()){const sql=(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8')).replace(/^--.*$/gm,'');for(const stmt of sql.match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(stmt).run()}
@@ -23,5 +24,19 @@ test('legacy backup, separate adult wallet, balances and import replay',async()=
  const count=(await db.prepare('SELECT COUNT(*) n FROM passbook_entries').first()).n;const replay=await call('/migration','mom','POST',{mapping});assert.equal(replay.status,200);assert.equal(replay.data.already_imported,true);assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_entries').first()).n,count);
  assert.equal((await db.prepare('SELECT status FROM passbook_requests').first()).status,'pending');assert.equal((await db.prepare('SELECT stock FROM passbook_rewards').first()).stock,3);assert.equal((await legacy.prepare('SELECT COUNT(*) n FROM chore_logs').first()).n,3);
  await legacy.prepare("UPDATE app_data SET updated_at='changed'").run();assert.equal((await call('/migration')).data.changed,true);assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_activation').first()).n,0);
+ assert.equal((await call('/activation','a','POST',{confirmed:true})).status,403);
+ assert.equal((await call('/activation','mom','POST',{confirmed:true})).status,409);
+ retired=true;
+ assert.equal((await call('/activation','mom','POST',{confirmed:true})).status,409);
+ await legacy.prepare("UPDATE app_data SET updated_at='2026-10-03'").run();
+ await bucket.put(row.backup_key,JSON.stringify({...backup,snapshot:{modified:true}}));
+ assert.equal((await call('/activation','mom','POST',{confirmed:true})).status,409);
+ await bucket.put(row.backup_key,JSON.stringify(backup));
+ const started=await call('/activation','mom','POST',{confirmed:true});assert.equal(started.status,200,JSON.stringify(started));assert.equal(started.data.active,true);
+ assert.equal((await call('','a')).data.accounts.some(a=>a.code==='cash'),true);
+ assert.equal((await db.prepare("SELECT status FROM apps WHERE id='passbook'").first()).status,'ready');
+ assert.equal((await call('/activation','mom','POST',{confirmed:true})).data.already_active,true);
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_activation').first()).n,1);
+
  }finally{await mf.dispose()}
 });

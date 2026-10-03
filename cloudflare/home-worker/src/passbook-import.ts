@@ -75,4 +75,4 @@ export async function importLegacy(env:EnvLike,household:string,userId:string,ma
  const result=await reconcile(env,household,p.summary);if(!result.ok)throw Error('取込後の残高照合に失敗しました。本番利用は停止したままです');
  return {summary:p.summary,snapshot_hash:s.hash,backup_saved:true,reconciled:true,active:false};
 }
-async function reconcile(env:EnvLike,h:string,rows:any[]){for(const r of rows){const table=r.target.startsWith('user:')?'passbook_adult_entries':'passbook_entries';const actual=await env.DB.prepare(`SELECT COALESCE(SUM(delta),0) balance FROM ${table} WHERE account_id=? AND household_id=?`).bind(`${h}:${r.target}:${r.unit}`,h).first<{balance:number}>();if(actual?.balance!==r.balance)return {ok:false}}return {ok:true}}
+export async function reconcile(env:EnvLike,h:string,rows:any[]){for(const r of rows){const table=r.target.startsWith('user:')?'passbook_adult_entries':'passbook_entries';const actual=await env.DB.prepare(`SELECT COALESCE(SUM(delta),0) balance FROM ${table} WHERE account_id=? AND household_id=?`).bind(`${h}:${r.target}:${r.unit}`,h).first<{balance:number}>();if(actual?.balance!==r.balance)return {ok:false}}return {ok:true}}

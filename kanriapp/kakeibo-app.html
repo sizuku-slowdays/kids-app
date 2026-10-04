@@ -79,6 +79,11 @@
     .summary-label{color:var(--muted);font-size:.8rem}
     .summary-value{margin-top:4px;font-size:1.2rem;font-weight:800}
     .income-note{margin-top:10px;font-size:.82rem;color:var(--muted)}
+    .advance-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .advance-box{background:#f4f8ff;border:1px solid #cfe0f7;border-radius:14px;padding:12px}
+    .advance-box strong{display:block;font-size:1.18rem;margin-top:3px}
+    .advance-list{margin-top:10px;display:grid;gap:6px}
+    .advance-row{display:flex;justify-content:space-between;gap:10px;font-size:.84rem;padding-top:6px;border-top:1px solid #e7edf5}
 
     /* 支払い元別 */
     .payment-list{display:grid;gap:8px}
@@ -317,6 +322,15 @@
       <div class="income-note" id="incomeNote"></div>
     </div>
 
+    <div class="card" data-collapse-key="advances">
+      <h2>🤝 立替・回収</h2>
+      <div class="advance-summary">
+        <div class="advance-box"><span>未回収</span><strong id="advanceOutstanding">0円</strong></div>
+        <div class="advance-box"><span>今月の回収</span><strong id="recoveryMonth">0円</strong></div>
+      </div>
+      <div class="advance-list" id="advanceList"></div>
+    </div>
+
     <!-- 支払い元別 -->
     <div class="card" data-collapse-key="payments">
       <h2>💳 支払い元別 支出</h2>
@@ -405,9 +419,11 @@
         <!-- 収入/支出 -->
         <div class="edit-field">
           <label>種別</label>
-          <div class="edit-type-row">
+          <div class="edit-type-row" style="flex-wrap:wrap">
             <button type="button" class="edit-type-btn" id="editTypeExpense">💸 支出</button>
             <button type="button" class="edit-type-btn" id="editTypeIncome">💰 収入</button>
+            <button type="button" class="edit-type-btn" id="editTypeAdvance">🤝 立替</button>
+            <button type="button" class="edit-type-btn" id="editTypeRecovery">↩️ 回収</button>
           </div>
         </div>
         <!-- 日付 -->
@@ -424,6 +440,10 @@
         <div class="edit-field">
           <label>💳 支払い元</label>
           <div class="edit-pay-grid" id="editPayGrid"></div>
+        </div>
+        <div class="edit-field" id="editPartyField" hidden>
+          <label for="editCounterparty">👤 立替の相手</label>
+          <input id="editCounterparty" maxlength="80" placeholder="会社、祖母、○○さん">
         </div>
         <!-- メモ -->
         <div class="edit-field">
@@ -488,7 +508,7 @@
     const DELETED_KEY  = "kakeibo-deleted-ids-v1";
     const BACKUP_KEY   = "kakeibo-local-backups-v1";
     const APP_KEY      = "kakeibo-app";
-    const APP_VERSION  = 5;
+    const APP_VERSION  = 6;
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
     const COLLAPSE_KEY = "kakeibo-collapsed-sections-v1";
     const CATEGORY_DETAIL_KEY = "kakeibo-category-details-open-v1";
@@ -567,7 +587,7 @@
         if(saved && typeof saved === "object") return saved;
       }catch(e){}
       // 初回は「今月の合計」と「カテゴリ別」だけ開く
-      return {summary:false,payments:true,categories:false,pink:true,budgets:true,funds:true,recent:true};
+      return {summary:false,advances:false,payments:true,categories:false,pink:true,budgets:true,funds:true,recent:true};
     }
 
     function setupCollapsibleCards(){
@@ -633,12 +653,14 @@
         fixedRuleId: e.fixedRuleId || "",
         fixedMonth:  e.fixedMonth || "",
         date:        e.date || "",
-        type:        e.type === "income" ? "income" : "expense",
+        type:        ["expense","income","advance","recovery"].includes(e.type) ? e.type : "expense",
         amount:      Number(e.amount || 0),
         payment:     e.payment || "その他",
         category:    e.category || "その他",
         settleMonth: e.settleMonth || (e.date ? String(e.date).slice(0,7) : monthString(new Date())),
         memo:        e.memo || "",
+        counterparty:e.counterparty || "",
+        linkedAdvanceId:e.linkedAdvanceId || "",
         receiptId:   e.receiptId || "",
         receiptTotal:Number(e.receiptTotal || 0),
         splitIndex:  Number(e.splitIndex || 0),
@@ -827,6 +849,8 @@
 
       const monthEntries = entries.filter(e => entryMonth(e) === m);
       const expenses     = monthEntries.filter(e => e.type === "expense");
+      const advances     = monthEntries.filter(e => e.type === "advance");
+      const recoveries   = monthEntries.filter(e => e.type === "recovery");
       const incomeList   = monthEntries.filter(e => e.type === "income");
       const totalExp     = expenses.reduce((s,e) => s+Number(e.amount||0), 0);
       const totalInc     = incomeList.reduce((s,e) => s+Number(e.amount||0), 0);
@@ -838,12 +862,24 @@
       $("balanceTotal").style.color = balance >= 0 ? "var(--safe)" : "var(--danger)";
       $("incomeNote").textContent   = (viewMode()==="use" ? "利用日" : "引落・反映月") + "ベースで集計しています。";
 
-      renderPayments(expenses);
+      renderAdvances(m,recoveries);
+      renderPayments([...expenses,...advances]);
       renderCategories(expenses);
       renderPink(m);
       renderBudgets(m);
       renderFunds();
       renderRecent(monthEntries);
+    }
+
+    function renderAdvances(m,recoveries){
+      const allAdvances=entries.filter(e=>e.type==="advance");
+      const recoveredById=new Map();
+      entries.filter(e=>e.type==="recovery"&&e.linkedAdvanceId).forEach(e=>recoveredById.set(e.linkedAdvanceId,(recoveredById.get(e.linkedAdvanceId)||0)+Number(e.amount||0)));
+      const open=allAdvances.map(e=>({e,left:Math.max(0,Number(e.amount||0)-(recoveredById.get(e.id)||0))})).filter(x=>x.left>0);
+      $("advanceOutstanding").textContent=yen(open.reduce((s,x)=>s+x.left,0));
+      $("recoveryMonth").textContent=yen(recoveries.reduce((s,e)=>s+Number(e.amount||0),0));
+      const byParty=new Map();open.forEach(x=>{const p=x.e.counterparty||"相手未設定";byParty.set(p,(byParty.get(p)||0)+x.left)});
+      $("advanceList").innerHTML=byParty.size?[...byParty.entries()].sort((a,b)=>b[1]-a[1]).map(([p,v])=>"<div class=\"advance-row\"><span>"+htmlEsc(p)+"</span><strong>"+yen(v)+"</strong></div>").join(""):"<div class=\"empty\">未回収の立替はありません</div>";
     }
 
     function renderPayments(expenses){
@@ -976,14 +1012,15 @@
       }
 
       $("drawerList").innerHTML = list.map(e => {
-        const isIncome = e.type === "income";
+        const isIncome = e.type === "income" || e.type === "recovery";
+        const typeLabel = {income:"収入",expense:"支出",advance:"立替",recovery:"回収"}[e.type] || "支出";
         const settle   = e.settleMonth || String(e.date||"").slice(0,7);
         return `<div class="history-item">
           <div class="history-item-top">
             <span class="history-date">${htmlEsc(e.date||"")}</span>
             <div class="history-detail">
-              <div class="history-memo">${htmlEsc(e.memo || e.category || (isIncome?"収入":"支出"))}</div>
-              <div class="history-sub">引落：${htmlEsc(settle)}　${htmlEsc(e.category||"")}</div>
+              <div class="history-memo">${htmlEsc(e.memo || e.category || typeLabel)}</div>
+              <div class="history-sub">${htmlEsc(typeLabel)}　引落・反映：${htmlEsc(settle)}　${htmlEsc(e.counterparty||"")}</div>
             </div>
             <span class="history-amount${isIncome?" income":""}">${isIncome?"+":""}${yen(e.amount)}</span>
           </div>
@@ -1010,6 +1047,7 @@
       $("editDate").value         = e.date || "";
       $("editAmount").value       = e.amount || "";
       $("editMemo").value         = e.memo || "";
+      $("editCounterparty").value = e.counterparty || "";
       $("editSettleMonth").value  = e.settleMonth || String(e.date||"").slice(0,7);
       $("editCategory").value     = e.category || "その他";
 
@@ -1023,11 +1061,11 @@
     }
 
     function setEditType(type){
-      editingType = type;
-      $("editTypeExpense").className = "edit-type-btn" + (type==="expense" ? " sel-expense" : "");
-      $("editTypeIncome").className  = "edit-type-btn" + (type==="income"  ? " sel-income"  : "");
+      editingType=type;
+      const cls={expense:"sel-expense",income:"sel-income",advance:"sel-expense",recovery:"sel-income"};
+      [["Expense","expense"],["Income","income"],["Advance","advance"],["Recovery","recovery"]].forEach(([suffix,key])=>{$("editType"+suffix).className="edit-type-btn"+(key===type?" "+cls[key]:"")});
+      $("editPartyField").hidden=!(type==="advance"||type==="recovery");
     }
-
     function renderEditPayGrid(current){
       $("editPayGrid").innerHTML = PAYMENTS.map(p => {
         const isPink = normalizePaymentName(p) === normalizePaymentName("楽天PINK");
@@ -1078,6 +1116,7 @@
         amount,
         payment,
         memo:        $("editMemo").value.trim(),
+        counterparty:(editingType==="advance"||editingType==="recovery") ? $("editCounterparty").value.trim() : "",
         category:    $("editCategory").value || "その他",
         settleMonth: $("editSettleMonth").value || date.slice(0,7),
         updatedAt:   new Date().toISOString()
@@ -1128,7 +1167,7 @@
     }
 
     function renderPink(m){
-      const expenses = entries.filter(e => e.type === "expense" && String(e.date||"").slice(0,7) === m);
+      const expenses = entries.filter(e => (e.type === "expense" || e.type === "advance") && String(e.date||"").slice(0,7) === m);
       const total = expenses
         .filter(e => normalizePaymentName(e.payment) === normalizePaymentName("楽天PINK"))
         .reduce((s,e) => s+Number(e.amount||0), 0);
@@ -1198,18 +1237,19 @@
       }
       area.innerHTML = list.map(e => {
         const isPink   = normalizePaymentName(e.payment) === normalizePaymentName("楽天PINK");
-        const typeLabel = e.type === "income" ? "収入" : "支出";
-        const amtColor  = e.type === "income" ? "var(--safe)" : "var(--text)";
+        const typeLabel = {income:"収入",expense:"支出",advance:"立替",recovery:"回収"}[e.type] || "支出";
+        const amtColor  = (e.type === "income" || e.type === "recovery") ? "var(--safe)" : "var(--text)";
         return `<div class="recent-item">
           <span class="recent-date">${htmlEsc(e.date||"")}</span>
           <div class="recent-detail">
             <div class="recent-memo">${htmlEsc(e.memo || e.category || typeLabel)}</div>
             <div class="recent-payment">
               <span class="tag${isPink?" pink-tag":""}">${htmlEsc(e.payment)}</span>
+              ${e.counterparty ? `<span class="tag" style="margin-left:4px">👤 ${htmlEsc(e.counterparty)}</span>` : ""}
               ${e.memo && e.category ? `<span class="tag" style="margin-left:4px">${htmlEsc(e.category)}</span>` : ""}
             </div>
           </div>
-          <span class="recent-amount" style="color:${amtColor}">${e.type==="income"?"+":""}${yen(e.amount)}</span>
+          <span class="recent-amount" style="color:${amtColor}">${(e.type==="income"||e.type==="recovery")?"+":""}${yen(e.amount)}</span>
         </div>`;
       }).join("");
     }
@@ -1241,6 +1281,8 @@
       $("editOverlay").addEventListener("click", e => { if(e.target===$("editOverlay")) closeEditModal(); });
       $("editTypeExpense").addEventListener("click", () => setEditType("expense"));
       $("editTypeIncome").addEventListener("click",  () => setEditType("income"));
+      $("editTypeAdvance").addEventListener("click", () => setEditType("advance"));
+      $("editTypeRecovery").addEventListener("click",() => setEditType("recovery"));
       $("editSaveBtn").addEventListener("click", saveEdit);
       $("editDeleteBtn").addEventListener("click", deleteEntry);
 

@@ -295,6 +295,27 @@ function settings() {
     button("端末を確認する", sessions, "quiet"),
   );
   root.append(
+    el("h2", "アプリの更新"),
+    button("🔄 最新版に更新", async (event) => {
+      const update = event.currentTarget;
+      update.disabled = true;
+      update.textContent = "更新しています…";
+      try {
+        for (const path of ["/app.js", "/style.css"]) {
+          const response = await fetch(path, {cache: "reload", credentials: "same-origin"});
+          if (!response.ok) throw new Error("更新できませんでした。もう一度お試しください。");
+          await response.text();
+        }
+        location.replace("/?updated=" + Date.now());
+      } catch (e) {
+        showError(e);
+        update.disabled = false;
+        update.textContent = "🔄 最新版に更新";
+      }
+    }, "quiet"),
+    el("p", "最新の画面を読み直します。記録やログインはそのままです。", "muted"),
+  );
+  root.append(
     el("h2", "この端末"),
     button(
       "ログアウト",

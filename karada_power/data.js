@@ -1316,7 +1316,7 @@ window.FOODS=[
     "main_nutrients": "食物繊維,各種微量成分",
     "kids_text": "煮ると甘くなって食べやすい野菜！",
     "recipe_tags": "野菜,玉ねぎ",
-    "reading": "玉ねぎ",
+    "reading": "たまねぎ",
     "category_ui": "🍽️ 野菜",
     "nutrient_list": [
       "食物繊維",

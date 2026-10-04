@@ -9,9 +9,10 @@ function items(v:unknown){
  return v.map(i=>{check(i&&typeof i==='object','食品を確認してください');check(typeof i.qty==='number'&&Number.isFinite(i.qty)&&i.qty>0&&i.qty<=100,'量を確認してください');
  const values:Record<string,number>={};check(i.values&&typeof i.values==='object','栄養量を確認してください');
  for(const key of keys){const n=i.values[key];check(typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100000,'栄養量を確認してください');values[key]=n;}
- const result:{id:string;name:string;portion:string;qty:number;values:Record<string,number>;unavailable?:string[];extras?:Record<string,number>}={id:text(i.id),name:text(i.name),portion:text(i.portion),qty:i.qty,values};
+ const result:{id:string;name:string;portion:string;qty:number;values:Record<string,number>;unavailable?:string[];extras?:Record<string,number>;estimated?:boolean}={id:text(i.id),name:text(i.name),portion:text(i.portion),qty:i.qty,values};
  if(i.unavailable!==undefined){check(Array.isArray(i.unavailable)&&i.unavailable.length<=keys.length&&i.unavailable.every((key:unknown)=>typeof key==='string'&&keys.includes(key)),'未掲載項目を確認してください');result.unavailable=[...new Set(i.unavailable as string[])];}
  if(i.extras!==undefined){check(i.extras&&typeof i.extras==='object'&&!Array.isArray(i.extras),'栄養情報を確認してください');const extras:Record<string,number>={};for(const key of ['fat','carbs']){const n=i.extras[key];if(n!==undefined){check(typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100000,'栄養情報を確認してください');extras[key]=n;}}result.extras=extras;}
+ if(i.estimated!==undefined){check(typeof i.estimated==='boolean','参考値表示を確認してください');result.estimated=i.estimated;}
  return result;});
 }
 export async function kidneyRoute(request:Request,env:Context,userId:string,readBody:(r:Request)=>Promise<Record<string,unknown>>){

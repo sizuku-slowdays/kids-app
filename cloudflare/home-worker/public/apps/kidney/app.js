@@ -114,7 +114,8 @@ function renderFoods() {
     const fat=food.extras?.fat!=null?`　脂 ${format(food.extras.fat)}g　${format(food.values.energy)}kcal`:'';
     const source=food.source||`本 p.${food.page}`;
     const missing=food.unavailable?.length?'<small>カリウム・リンは公式掲載なし</small>':'';
-    button.innerHTML=`<strong>${food.name}</strong><span>${food.portion}</span><span class="food-nutrients">塩 ${format(food.values.salt)}g　た ${format(food.values.protein)}g　${potassium}${fat}</span>${boiled}${missing}<em>${source}</em><i class="plus">＋</i>`;
+    const estimate=food.estimated?'<small class="estimate-note">⚠ 栄養値は安全側の参考推定</small>':'';
+    button.innerHTML=`<strong>${food.name}</strong><span>${food.portion}</span><span class="food-nutrients">塩 ${format(food.values.salt)}g　た ${format(food.values.protein)}g　${potassium}${fat}</span>${boiled}${estimate}${missing}<em>${source}</em><i class="plus">＋</i>`;
     button.addEventListener('click',() => changeQty(food.id,1)); host.appendChild(button);
   });
 }
@@ -132,7 +133,8 @@ function renderPlan() {
   state.plan.forEach((qty,id) => {
     const food=foodById(id), row=document.createElement('div'); row.className='plan-item';
     const missing=food.unavailable?.length?'　K・リンは公式掲載なし':'';
-    row.innerHTML=`<div><strong>${food.name}</strong><span>${food.portion} × ${qty}　塩 ${format(food.values.salt*qty)}g${missing}</span></div><div class="quantity"><button type="button" aria-label="${food.name}を減らす">−</button><b>${qty}</b><button type="button" aria-label="${food.name}を増やす">＋</button></div>`;
+    const estimate=food.estimated?'　⚠参考推定':'';
+    row.innerHTML=`<div><strong>${food.name}</strong><span>${food.portion} × ${qty}　塩 ${format(food.values.salt*qty)}g${estimate}${missing}</span></div><div class="quantity"><button type="button" aria-label="${food.name}を減らす">−</button><b>${qty}</b><button type="button" aria-label="${food.name}を増やす">＋</button></div>`;
     const buttons=row.querySelectorAll('button'); buttons[0].addEventListener('click',()=>changeQty(id,-1)); buttons[1].addEventListener('click',()=>changeQty(id,1)); host.appendChild(row);
   });
 }
@@ -144,7 +146,7 @@ async function commitMeal(late=false) {
  if(busy||!shared)return;
  if(!state.plan.size){showToast('先に食品を選んでください');return;}
  busy=true;readGeneration++;renderPlan();
- if(!pendingMeal)pendingMeal={id:crypto.randomUUID(),day:selectedDay,meal:document.querySelector('#mealSlot').value,items:[...state.plan].map(([id,qty])=>{const f=foodById(id);return {id,qty,name:f.name,portion:f.portion,values:f.values,unavailable:f.unavailable||[],extras:f.extras||{}};})};
+ if(!pendingMeal)pendingMeal={id:crypto.randomUUID(),day:selectedDay,meal:document.querySelector('#mealSlot').value,items:[...state.plan].map(([id,qty])=>{const f=foodById(id);return {id,qty,name:f.name,portion:f.portion,values:f.values,unavailable:f.unavailable||[],extras:f.extras||{},estimated:f.estimated===true};})};
  try{await api('/meals?'+scope(),'POST',pendingMeal);state.plan.clear();pendingMeal=null;showToast(late?'あとから記録しました':'家族の記録に追加しました');}
  catch(e){showToast(e.message+'。もう一度押して保存できます');}
  finally{busy=false;loading=false;await refresh();renderPlan();}
@@ -159,7 +161,7 @@ function renderHistory(){
    const row=document.createElement('div');row.className='shared-record';
    const heading=document.createElement('p');heading.textContent=record.actor+' が登録 · '+new Date(record.created_at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});row.append(heading);
    record.items.forEach((item,index)=>{
-    const line=document.createElement('div');line.className='shared-item';const label=document.createElement('span');label.textContent=item.name+' '+item.portion+' × '+item.qty+(item.unavailable?.length?'（K・リン 公式掲載なし）':'');line.append(label);
+    const line=document.createElement('div');line.className='shared-item';const label=document.createElement('span');label.textContent=item.name+' '+item.portion+' × '+item.qty+(item.estimated?'（参考推定）':'')+(item.unavailable?.length?'（K・リン 公式掲載なし）':'');line.append(label);
     if(record.editable){for(const delta of [-1,1]){const b=document.createElement('button');b.textContent=delta<0?'−':'＋';b.type='button';b.setAttribute('aria-label',item.name+(delta<0?'を減らす':'を増やす'));b.disabled=busy;b.onclick=()=>editRecord(record,index,delta);line.append(b);}}
     row.append(line);
    });

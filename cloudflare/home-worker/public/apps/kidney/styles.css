@@ -73,6 +73,7 @@ h2 { margin-bottom: 0; font-size: 1.3rem; }
 .food-button span { margin-top: 4px; color: var(--muted); font-size: .85rem; }
 .food-button .food-nutrients { margin-top: 7px; color: var(--ink); font-size: .8rem; font-weight: 850; }
 .food-button small { display: block; margin-top: 4px; color: #417764; font-weight: 800; }
+.food-button .estimate-note { color: #9a431c; }
 .food-button em { position: absolute; right: 12px; bottom: 12px; color: var(--muted); font-size: .72rem; font-style: normal; }
 .food-button .plus { position: absolute; right: 12px; top: 12px; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #e0f2ec; color: var(--brand-dark); font-size: 1.45rem; font-weight: 900; }
 .food-button:active { background: #edf8f4; transform: scale(.98); }

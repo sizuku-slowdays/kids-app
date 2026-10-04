@@ -496,7 +496,7 @@
 
   <!-- 入力ボタン（固定） -->
   <div class="fab-area">
-    <button class="fab" id="goPlan" style="background:#fff3d1">🎯 予算</button>
+    <button class="fab" id="goMenu" style="background:#fff3d1">☰ メニュー</button>
     <button class="fab" id="goInput">＋ 支出を入力する</button>
   </div>
 
@@ -1292,7 +1292,7 @@
       document.querySelectorAll("input[name='viewMode']").forEach(r => r.addEventListener("change", render));
 
       $("goInput").addEventListener("click", () => { location.href = "kakeibo-input.html"; });
-      $("goPlan").addEventListener("click", () => { location.href = "kakeibo-plan.html"; });
+      $("goMenu").addEventListener("click", () => { location.href = "kakeibo-index.html"; });
 
       // パスワード設定済みなら、起動時はクラウドを自動で最新化する
       if(_s.password) await loadFromCloud({silent:true});

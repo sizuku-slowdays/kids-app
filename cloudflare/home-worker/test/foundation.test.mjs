@@ -319,7 +319,8 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await call('/api/home/preset',{method:'PUT',cookie:registered.cookie,body:{preset:'grandpa'}})).status,200);
     assert.deepEqual((await call('/api/home',{cookie:registered.cookie})).data.filter(a=>a.visible).map(a=>a.id).sort(),['calendar','kidney']);
     assert.ok((await call('/api/home',{cookie:admin.cookie})).data.filter(a=>a.visible).length>2);
-    assert.equal((await call('/apps/calendar',{cookie:registered.cookie})).headers.get('Location'),'https://cetus.fun/kanriapp/calendar.html');
+    assert.equal((await call('/apps/calendar',{cookie:registered.cookie})).status,200);
+    assert.equal((await call('/apps/calendar',{cookie:registered.cookie})).headers.get('Location'),null);
     const otherId=(await call("/api/me",{cookie:userB.cookie})).data.user.id;
     await db.prepare("UPDATE users SET platform_role='operator' WHERE id=?").bind(otherId).run();
     await db.prepare("INSERT INTO group_apps VALUES ('group-b','muscle-bank')").run();

@@ -29,6 +29,7 @@
   ],
   "r2_buckets": [{ "binding": "PRIVATE_FILES", "bucket_name": "home-private" }],
   "services": [
+    { "binding": "CALENDAR_SERVICE", "service": "calendar-worker" },
     { "binding": "LEGACY_BANK_SERVICE", "service": "mama-bank-api" },
     { "binding": "LEGACY_CHORE_SERVICE", "service": "otetsudai-api" },
   ],

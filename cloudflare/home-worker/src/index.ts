@@ -1,4 +1,5 @@
 import { mountedHome } from "./home-mount";
+import { calendarIdentity, calendarProxy } from "./calendar";
 import { advanceChores } from "./passbook-chores";
 import { kidneyRoute } from "./kidney";
 import { passbookRoute } from "./passbook";
@@ -425,6 +426,14 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if (path === "/api/calendar/identity" && method === "GET") {
+      requireValue(await appAllowed(env,user.id,"calendar"),403,"このアプリは利用できません");
+      return calendarIdentity(env,user,request);
+    }
+    if (path === "/api/calendar" || path.startsWith("/api/calendar/")) {
+      requireValue(await appAllowed(env,user.id,"calendar"),403,"このアプリは利用できません");
+      return calendarProxy(env,request,user.id);
+    }
     if (path === "/api/passbook" || path.startsWith("/api/passbook/")) {
       requireValue(await appAllowed(env, user.id, "passbook"), 403, "このアプリは利用できません");
       return passbookRoute(request, env, user.id, body);
@@ -667,7 +676,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (path === "/apps/calendar" || path === "/apps/calendar/") {
     if(!s)return new Response(null,{status:303,headers:{...headers,Location:"/login"}});
     requireValue(await appAllowed(env,s.user_id,"calendar"),403,"このアプリは利用できません");
-    return new Response(null,{status:303,headers:{...headers,Location:"https://cetus.fun/kanriapp/calendar.html"}});
+    requireValue(["GET","HEAD"].includes(method),405,"この操作はできません");
+    const assetUrl=new URL(request.url); assetUrl.pathname="/calendar.html";
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    return new Response(method==="HEAD"?null:response.body,{status:response.status,headers:{...headers,"Content-Type":"text/html; charset=utf-8","Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"}});
   }
   if (path === "/apps/kidney" || path.startsWith("/apps/kidney/")) {
     if (!s) return new Response(null,{status:303,headers:{...headers,"X-Kidney-Version":"20261004-family-v1",Location:"/login"}});

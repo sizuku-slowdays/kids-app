@@ -96,7 +96,7 @@ function filteredFoods() {
   return foods.filter(f => (state.category==='すべて'||f.category===state.category) && (!q||`${f.name} ${f.portion} ${f.category}`.toLowerCase().includes(q)));
 }
 function renderFoods() {
-  const host=document.querySelector('#foodGrid'); host.innerHTML='';
+  const host=document.querySelector('#foodGrid'); host.innerHTML=''; host.scrollTop=0;
   const visible=filteredFoods();
   document.querySelector('#foodResultCount').textContent=`本で確認済み ${visible.length}件（全${foods.length}件）`;
   if (!visible.length) { host.innerHTML='<p class="no-result">見つかりませんでした。別の名前でも試してみてください。</p>'; return; }

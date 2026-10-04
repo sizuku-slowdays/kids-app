@@ -64,7 +64,8 @@ h2 { margin-bottom: 0; font-size: 1.3rem; }
 .category-chip { min-width: max-content; min-height: 45px; padding: 0 15px; border: 1px solid #cfe2dc; border-radius: 999px; background: white; color: var(--brand-dark); font-weight: 850; }
 .category-chip.active { border-color: var(--brand); background: var(--brand); color: white; }
 .result-count { margin: 0 0 10px; color: var(--muted); font-size: .82rem; font-weight: 750; }
-.food-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.food-grid { display: grid; grid-template-columns: 1fr; grid-auto-rows: max-content; align-content: start; gap: 10px; max-height: 300px; max-height: clamp(220px, 35dvh, 320px); overflow-y: auto; padding: 2px 4px 10px 2px; scrollbar-gutter: stable; border-bottom: 2px solid var(--line); }
+.food-scroll-hint { margin: 0 0 8px; color: var(--muted); font-size: .8rem; }
 .food-button { position: relative; min-height: 104px; padding: 12px 84px 12px 12px; border: 2px solid #d8e8e3; border-radius: 17px; background: white; color: var(--ink); text-align: left; cursor: pointer; }
 .food-button strong, .food-button span { display: block; }
 .food-button strong { padding-right: 22px; font-size: 1rem; }

@@ -25,8 +25,7 @@ function applyShared(data){
  shared=data;state.committed=data.records;state.totals=emptyTotals();
  for(const record of state.committed)for(const item of record.items)for(const n of nutrients)state.totals[n.key]+=item.values[n.key]*item.qty;
  for(const n of nutrients){n.max=data.settings?.[n.key]?.max||n.max;n.visible=data.settings?.[n.key]?.visible!==false;}
- document.querySelector('.icon-button').hidden=!data.admin;
- document.querySelector('#syncNote').textContent=data.settings?'家族で共有中 · '+data.household.name:'家族で共有中 · 目標量は仮の表示です（家族が設定できます）';
+ document.querySelector('#syncNote').textContent=data.settings?'家族で共有中 · '+data.household.name:'家族で共有中 · 目標値はまだ未設定です';
  document.querySelector('#today-title').textContent=selectedDay===todayKey()?'今日のゲージ':selectedDay+'のゲージ';
  renderPlan();updateGauges();renderHistory();
 }
@@ -82,7 +81,7 @@ function updateGauges() {
   document.querySelector('#gaugeDetails').textContent=`${main.label}：現在 ${format(state.totals[main.key])}${main.unit} ＋ 今回 ${format(totals[main.key])}${main.unit}${missing.any?'（公式値なしの食品あり）':''}`;
   const status=document.querySelector('#statusText'); status.className='status-pill';
   if(missing.any){status.textContent='公式値なしを含むため判定なし';status.classList.add('unknown');return;}
-  if(!shared?.settings){status.textContent='目標量は家族が設定';return;}
+  if(!shared?.settings){status.textContent='目標値 未設定';status.classList.add('watch');return;}
   if (ratio>1) { status.textContent='上限超過：今日は多め'; status.classList.add('over'); }
   else if (ratio>=.9) { status.textContent='⚠️ 上限に近い'; status.classList.add('near'); }
   else if (ratio>=.72) { status.textContent='▲ そろそろ注意'; status.classList.add('watch'); }
@@ -100,7 +99,9 @@ function renderCategories() {
 }
 function filteredFoods() {
   const q=state.query.trim().toLowerCase();
-  return foods.filter(f => (state.category==='すべて'||f.category===state.category) && (!q||`${f.name} ${f.portion} ${f.category}`.toLowerCase().includes(q)));
+  const visible=foods.filter(f => (state.category==='すべて'||f.category===state.category) && (!q||`${f.name} ${f.portion} ${f.category}`.toLowerCase().includes(q)));
+  if(state.category==='外食')visible.sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite)));
+  return visible;
 }
 function renderFoods() {
   const host=document.querySelector('#foodGrid'); host.innerHTML=''; host.scrollTop=0;
@@ -115,7 +116,8 @@ function renderFoods() {
     const source=food.source||`本 p.${food.page}`;
     const missing=food.unavailable?.length?'<small>カリウム・リンは公式掲載なし</small>':'';
     const estimate=food.estimated?'<small class="estimate-note">⚠ 栄養値は安全側の参考推定</small>':'';
-    button.innerHTML=`<strong>${food.name}</strong><span>${food.portion}</span><span class="food-nutrients">塩 ${format(food.values.salt)}g　た ${format(food.values.protein)}g　${potassium}${fat}</span>${boiled}${estimate}${missing}<em>${source}</em><i class="plus">＋</i>`;
+    const favorite=food.favorite?'<small class="favorite-note">★ よく食べる</small>':'';
+    button.innerHTML=`<strong>${food.name}</strong><span>${food.portion}</span><span class="food-nutrients">塩 ${format(food.values.salt)}g　た ${format(food.values.protein)}g　${potassium}${fat}</span>${favorite}${boiled}${estimate}${missing}<em>${source}</em><i class="plus">＋</i>`;
     button.addEventListener('click',() => changeQty(food.id,1)); host.appendChild(button);
   });
 }
@@ -195,6 +197,18 @@ function openSettings() {
   });
   document.querySelector('#settingsDialog').showModal();
 }
+function openQuickSettings() {
+  if(!shared){showToast('家族の設定を読み込み中です');return;}
+  if(!shared.admin){showToast('目標値の変更は家族の管理者からできます');return;}
+  openSettings();
+}
+function jumpToHistory() {
+  const history=document.querySelector('#historyPanel');
+  const gauge=document.querySelector('.gauge-panel');
+  const top=window.scrollY+history.getBoundingClientRect().top-gauge.offsetHeight-10;
+  window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+  window.setTimeout(()=>history.focus({preventScroll:true}),450);
+}
 async function saveSettings(event) {
  event.preventDefault();if(busy||!shared?.admin)return;
  const settings={};
@@ -209,7 +223,8 @@ document.querySelector('#foodSearch').addEventListener('input',e=>{ state.query=
 document.querySelector('#clearPlan').addEventListener('click',()=>{ if(busy)return;pendingMeal=null;state.plan.clear(); renderPlan(); updateGauges(); });
 document.querySelector('#commitMeal').addEventListener('click',()=>commitMeal(false));
 document.querySelector('#lateAdd').addEventListener('click',()=>commitMeal(true));
-document.querySelector('.icon-button').addEventListener('click',openSettings);
+document.querySelector('#openSettingsQuick').addEventListener('click',openQuickSettings);
+document.querySelector('#jumpHistory').addEventListener('click',jumpToHistory);
 document.querySelector('#saveSettings').addEventListener('click',saveSettings);
 
 document.querySelector('#recordDay').value=selectedDay;

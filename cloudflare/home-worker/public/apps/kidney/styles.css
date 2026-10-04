@@ -24,7 +24,9 @@ button:focus-visible { outline: 4px solid #f4b942; outline-offset: 3px; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 0; font-size: 1.65rem; line-height: 1.2; }
 h2 { margin-bottom: 0; font-size: 1.3rem; }
-.icon-button { width: 52px; height: 52px; border: 1px solid var(--line); border-radius: 17px; background: white; font-size: 1.35rem; box-shadow: 0 5px 14px rgba(29,83,71,.08); }
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 14px; }
+.quick-action { min-height: 58px; padding: 10px 8px; border: 2px solid #b8ddd2; border-radius: 17px; background: white; color: var(--brand-dark); font-size: 1.02rem; font-weight: 900; box-shadow: 0 6px 16px rgba(29,83,71,.08); cursor: pointer; }
+.quick-action:active { background: #edf8f4; transform: scale(.98); }
 
 .gauge-panel, .picker-panel, .plan-panel, .history-panel { background: var(--panel); border: 1px solid rgba(209,229,223,.9); border-radius: 24px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
 .gauge-panel { position: sticky; top: 0; z-index: 5; padding-bottom: 13px; }
@@ -74,6 +76,7 @@ h2 { margin-bottom: 0; font-size: 1.3rem; }
 .food-button .food-nutrients { margin-top: 7px; color: var(--ink); font-size: .8rem; font-weight: 850; }
 .food-button small { display: block; margin-top: 4px; color: #417764; font-weight: 800; }
 .food-button .estimate-note { color: #9a431c; }
+.food-button .favorite-note { color: #9a5a00; }
 .food-button em { position: absolute; right: 12px; bottom: 12px; color: var(--muted); font-size: .72rem; font-style: normal; }
 .food-button .plus { position: absolute; right: 12px; top: 12px; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #e0f2ec; color: var(--brand-dark); font-size: 1.45rem; font-weight: 900; }
 .food-button:active { background: #edf8f4; transform: scale(.98); }
@@ -94,6 +97,7 @@ h2 { margin-bottom: 0; font-size: 1.3rem; }
 .late-button { margin-top: 9px; border: 2px solid #cfe2dc; background: white; color: var(--brand-dark); }
 
 .history-list { display: grid; gap: 8px; }
+.history-panel:focus { outline: 4px solid #f4b942; outline-offset: 3px; }
 .history-row { display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; align-items: center; padding: 11px; border-radius: 15px; background: #f5f9f7; }
 .meal-icon { font-size: 1.45rem; text-align: center; }
 .history-row p { margin: 3px 0 0; color: var(--muted); font-size: .9rem; }

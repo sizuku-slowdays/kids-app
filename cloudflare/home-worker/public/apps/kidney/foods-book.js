@@ -84,7 +84,7 @@ window.BOOK_FOODS = [
   { id:'yoshinoya-gyudon-super', category:'外食', name:'吉野家 牛丼', portion:'超特盛', source:'吉野家公式（2026/10/1）', unavailable:['potassium','phosphorus'], extras:{fat:56.9,carbs:124.6}, values:{energy:1159,protein:40.8,potassium:0,phosphorus:0,salt:4.7} },
 
   { id:'sukiya-gyudon-mini', category:'外食', name:'すき家 牛丼', portion:'ミニ', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:16.0,carbs:65.7}, values:{energy:464,protein:14.8,potassium:0,phosphorus:0,salt:1.7} },
-  { id:'sukiya-gyudon-regular', category:'外食', name:'すき家 牛丼', portion:'並盛', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:23.4,carbs:99.8}, values:{energy:695,protein:21.7,potassium:0,phosphorus:0,salt:2.4} },
+  { id:'sukiya-gyudon-regular', category:'外食', name:'すき家 牛丼', portion:'並盛', source:'すき家公式（2026/9/29）', favorite:true, unavailable:['potassium','phosphorus'], extras:{fat:23.4,carbs:99.8}, values:{energy:695,protein:21.7,potassium:0,phosphorus:0,salt:2.4} },
   { id:'sukiya-gyudon-medium', category:'外食', name:'すき家 牛丼', portion:'中盛', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:33.4,carbs:86.5}, values:{energy:752,protein:26.6,potassium:0,phosphorus:0,salt:2.8} },
   { id:'sukiya-gyudon-large', category:'外食', name:'すき家 牛丼', portion:'大盛', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:30.7,carbs:130.1}, values:{energy:908,protein:28.4,potassium:0,phosphorus:0,salt:3.1} },
   { id:'sukiya-gyudon-extra', category:'外食', name:'すき家 牛丼', portion:'特盛', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:45.6,carbs:134.9}, values:{energy:1100,protein:37.8,potassium:0,phosphorus:0,salt:4.2} },

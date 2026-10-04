@@ -16,10 +16,13 @@
         <a class="home-link" href="/">⌂ HOMEへ</a>
         <h1>食べる前にチェック</h1>
       </div>
-      <button class="icon-button" type="button" aria-label="家族の目標量設定" hidden>⚙️</button>
     </header>
 
     <p id="syncNote" class="sync-note" role="status">家族の記録を読み込み中…</p>
+    <nav class="quick-actions" aria-label="すぐ使うメニュー">
+      <button id="openSettingsQuick" class="quick-action" type="button">⚙️ 目標値設定</button>
+      <button id="jumpHistory" class="quick-action" type="button">📋 食事の記録</button>
+    </nav>
     <select id="householdSelect" aria-label="家庭を選ぶ" hidden></select>
     <section class="gauge-panel" aria-labelledby="today-title">
       <div class="section-head">
@@ -74,7 +77,7 @@
       <button id="lateAdd" class="late-button" type="button">あとから登録</button>
     </section>
 
-    <section class="history-panel" aria-labelledby="history-title">
+    <section id="historyPanel" class="history-panel" aria-labelledby="history-title" tabindex="-1">
       <div class="section-head compact">
         <div>
           <p class="eyebrow">今日食べたもの</p>

@@ -640,7 +640,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     return new Response(null,{status:303,headers:{...headers,Location:"https://cetus.fun/kanriapp/calendar.html"}});
   }
   if (path === "/apps/kidney" || path.startsWith("/apps/kidney/")) {
-    if (!s) return new Response(null,{status:303,headers:{...headers,Location:"/login"}});
+    if (!s) return new Response(null,{status:303,headers:{...headers,"X-Kidney-Version":"20261004-family-v1",Location:"/login"}});
     requireValue(await appAllowed(env,s.user_id,"kidney"),403,"このアプリは利用できません");
     requireValue(["GET","HEAD"].includes(method),405,"この操作はできません");
     const file=path.replace(/^\/apps\/kidney\/?/,"")||"index.html";

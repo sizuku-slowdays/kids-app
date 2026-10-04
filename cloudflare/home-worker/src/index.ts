@@ -120,7 +120,10 @@ async function body(request: Request): Promise<Record<string, unknown>> {
 }
 async function throttle(env: HomeEnv, request: Request, scope: string) {
   // Public friend-facing hostname. Keep the Sites workspace name out of shared URLs.
-  if (url.hostname === "asobu.cetus.fun") {
+  if (
+    url.hostname === "asobu.cetus.fun" ||
+    request.headers.get("Host")?.toLowerCase() === "asobu.cetus.fun"
+  ) {
     const upstream = new URL(request.url);
     upstream.protocol = "https:";
     upstream.hostname = "asobu-yakusoku.hakusui-soumu.chatgpt.site";

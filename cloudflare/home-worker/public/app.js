@@ -191,7 +191,7 @@ async function home() {
   if (!visibleApps.length)
     root.append(el("p", "設定から、使うアプリを追加できます。", "muted"));
   const previousHome = el("a", null, "previous-home");
-  previousHome.href = "https://cetus.fun/wagaya/";
+  previousHome.href = "https://cetus.fun/wagaya/old-home.html";
   previousHome.append(
     el("span", "🏡", "icon"),
     el("strong", "以前のHOME"),

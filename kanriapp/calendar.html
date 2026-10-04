@@ -828,7 +828,14 @@
       <label>色</label>
       <div id="cal-color-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
     </div>
-    <div class="frow"><label class="cb-row"><input type="checkbox" id="cal-shared" checked> 全員で共有する（オフにすると自分だけ）</label></div>
+    <div class="frow">
+      <label>公開範囲</label>
+      <select id="cal-visibility">
+        <option value="shared">🌐 共通（家族みんなに見せる）</option>
+        <option value="private">🔒 個人（自分だけ見る）</option>
+      </select>
+      <div style="font-size:12px;color:var(--text-sub);margin-top:6px">共通にしても、予定を追加・編集・削除できるのは作った本人だけです。</div>
+    </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeCalModal()">キャンセル</button>
       <button class="btn btn-primary" onclick="saveCalendar()">追加</button>
@@ -1151,9 +1158,13 @@ function renderLegend() {
 }
 function makeLegendItem(id, name, color, isGoogle) {
   const el = document.createElement('div'); el.className = 'legend-item' + (hiddenCals.has(id) ? ' hidden' : ''); el.style.borderColor = color;
-  el.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${name}</span>`;
-  if (isGoogle) { el.onclick = () => toggleLegend(id, el); }
-  else { el.onclick = () => toggleLegend(id, el); el.oncontextmenu = (e) => { e.preventDefault(); if (confirm(`「${name}」を削除しますか？予定もすべて削除されます`)) api(`/calendars/${id}`, 'DELETE').then(() => loadAll()).catch(e => alert('削除失敗: ' + e.message)); }; }
+  const cal = isGoogle ? null : calendars.find(c => c.id === id);
+  const scope = cal ? (cal.is_shared ? ' 🌐' : ' 🔒') : '';
+  el.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${escapeHtml(name)}${scope}</span>`;
+  el.onclick = () => toggleLegend(id, el);
+  if (cal && cal.owner_google_id === myProfile?.google_id) {
+    el.oncontextmenu = (e) => { e.preventDefault(); if (confirm(`「${name}」を削除しますか？予定もすべて削除されます`)) api(`/calendars/${id}`, 'DELETE').then(() => loadAll()).catch(e => alert('削除失敗: ' + e.message)); };
+  }
   return el;
 }
 function toggleLegend(id, el) { if (hiddenCals.has(id)) { hiddenCals.delete(id); el.classList.remove('hidden'); } else { hiddenCals.add(id); el.classList.add('hidden'); } localStorage.setItem('hiddenCals', JSON.stringify([...hiddenCals])); render(); }
@@ -1262,7 +1273,10 @@ function openEvModal(ev, defaultDate) {
   document.getElementById('ev-del-btn').style.display = ev ? '' : 'none';
   document.getElementById('ev-id').value = ev?.id || '';
   const sel = document.getElementById('ev-cal');
-  sel.innerHTML = calendars.map(c => `<option value="${c.id}">${c.name}${c.is_shared ? '（共有）' : '（個人）'}</option>`).join('');
+  const writableCalendars = calendars.filter(c => c.owner_google_id === myProfile?.google_id);
+  const optionCalendars = ev ? calendars.filter(c => c.id === ev.calendar_id || c.owner_google_id === myProfile?.google_id) : writableCalendars;
+  sel.innerHTML = optionCalendars.map(c => `<option value="${c.id}" ${c.owner_google_id === myProfile?.google_id ? '' : 'disabled'}>${escapeHtml(c.name)}${c.is_shared ? '（共通）' : '（個人）'}${c.owner_google_id === myProfile?.google_id ? '' : '・見るだけ'}</option>`).join('');
+  if (!ev && !writableCalendars.length) { alert('自分のカレンダーを先に作成してください'); document.getElementById('ev-overlay').classList.remove('open'); return; }
   if (ev) {
     document.getElementById('ev-title').value = ev.title;
     document.getElementById('ev-desc').value = ev.description || '';
@@ -1366,7 +1380,10 @@ async function deleteEvent() {
 function openDetail(e) {
   detailEvent = e; document.getElementById('detail-overlay').classList.add('open');
   document.getElementById('detail-bar').style.background = getColor(e); document.getElementById('detail-title').textContent = e.title;
-  document.getElementById('detail-gbadge').style.display = e.is_google ? '' : 'none'; document.getElementById('detail-edit-btn').style.display = e.is_google ? 'none' : '';
+  document.getElementById('detail-gbadge').style.display = e.is_google ? '' : 'none';
+  const eventCal = e.is_google ? null : calendars.find(c => c.id === e.calendar_id);
+  const canEdit = !e.is_google && eventCal?.owner_google_id === myProfile?.google_id;
+  document.getElementById('detail-edit-btn').style.display = canEdit ? '' : 'none';
   const s = fmtDt(e.start_datetime, e.all_day), en = fmtDt(e.end_datetime, e.all_day);
   document.getElementById('detail-time').textContent = e.all_day ? (s === en ? s : s + ' 〜 ' + en) : s + ' 〜 ' + en;
   const calName = e.is_google ? 'Googleカレンダー' : (calendars.find(c => c.id === e.calendar_id)?.name || '');
@@ -1376,10 +1393,10 @@ function openDetail(e) {
 function closeDetail(e) { if (e && e.target !== document.getElementById('detail-overlay')) return; document.getElementById('detail-overlay').classList.remove('open'); }
 function editFromDetail() { document.getElementById('detail-overlay').classList.remove('open'); openEvModal(detailEvent, null); }
 
-function openCalModal() { document.getElementById('cal-overlay').classList.add('open'); document.getElementById('cal-name').value = ''; document.getElementById('cal-shared').checked = true; selectedCalColor = PALETTE[calendars.length % PALETTE.length]; const cp = document.getElementById('cal-color-picker'); cp.innerHTML = PALETTE.map(c => `<div class="color-swatch${c===selectedCalColor?' selected':''}" style="background:${c}" onclick="selectCalColor(this,'${c}')"></div>`).join(''); }
+function openCalModal() { document.getElementById('cal-overlay').classList.add('open'); document.getElementById('cal-name').value = ''; document.getElementById('cal-visibility').value = 'shared'; selectedCalColor = PALETTE[calendars.length % PALETTE.length]; const cp = document.getElementById('cal-color-picker'); cp.innerHTML = PALETTE.map(c => `<div class="color-swatch${c===selectedCalColor?' selected':''}" style="background:${c}" onclick="selectCalColor(this,'${c}')"></div>`).join(''); }
 function closeCalModal(e) { if (e && e.target !== document.getElementById('cal-overlay')) return; document.getElementById('cal-overlay').classList.remove('open'); }
 function selectCalColor(el, c) { document.querySelectorAll('#cal-color-picker .color-swatch').forEach(s => s.classList.remove('selected')); el.classList.add('selected'); selectedCalColor = c; }
-async function saveCalendar() { const name = document.getElementById('cal-name').value.trim(); if (!name) { alert('名前を入力してください'); return; } try { await api('/calendars', 'POST', { name, color: selectedCalColor, is_shared: document.getElementById('cal-shared').checked }); document.getElementById('cal-overlay').classList.remove('open'); await loadAll(); } catch(e) { alert('追加失敗: ' + e.message); } }
+async function saveCalendar() { const name = document.getElementById('cal-name').value.trim(); if (!name) { alert('名前を入力してください'); return; } try { await api('/calendars', 'POST', { name, color: selectedCalColor, is_shared: document.getElementById('cal-visibility').value === 'shared' }); document.getElementById('cal-overlay').classList.remove('open'); await loadAll(); } catch(e) { alert('追加失敗: ' + e.message); } }
 
 function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('open'); }
 document.addEventListener('click', e => { const menu = document.getElementById('user-menu'), btn = document.getElementById('avatar-btn'); if (menu && !menu.contains(e.target) && e.target !== btn) menu.classList.remove('open'); });

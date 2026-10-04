@@ -277,6 +277,7 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal(userB.status, 201);
     const scope='?household='+groupA;
     const meal={id:'meal-a',day:'2026-10-04',meal:'朝',items:[{id:'rice',name:'ごはん',portion:'1杯',qty:1,values:{salt:0,protein:4,potassium:30,phosphorus:40,energy:230}}]};
+    const officialMeal={...meal,id:'meal-b',meal:'昼',items:[{id:'sukiya-gyudon-regular',name:'すき家 牛丼',portion:'並盛',qty:1,values:{salt:2.4,protein:21.7,potassium:0,phosphorus:0,energy:695},unavailable:['potassium','phosphorus'],extras:{fat:23.4,carbs:99.8}}]};
     assert.equal((await call('/api/kidney')).status,401);
     assert.equal((await call('/apps/kidney/app.js')).status,303);
     assert.equal((await call('/apps/kidney/',{cookie:registered.cookie})).status,200);
@@ -284,7 +285,7 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await call('/api/kidney/meals'+scope,{method:'POST',cookie:registered.cookie,origin:'https://evil.test',body:meal})).status,403);
     const posted=await Promise.all([
       call('/api/kidney/meals'+scope,{method:'POST',cookie:registered.cookie,body:meal}),
-      call('/api/kidney/meals'+scope,{method:'POST',cookie:admin.cookie,body:{...meal,id:'meal-b',meal:'昼'}})
+      call('/api/kidney/meals'+scope,{method:'POST',cookie:admin.cookie,body:officialMeal})
     ]);
     assert.ok(posted.every(r=>r.status===201));
     assert.equal((await call('/api/kidney/meals'+scope,{method:'POST',cookie:registered.cookie,body:meal})).status,200);
@@ -292,6 +293,8 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal(family.data.records.length,2);
     assert.equal(family.data.records.find(r=>r.id==='meal-b').editable,false);
     assert.equal(family.data.records.find(r=>r.id==='meal-a').items[0].values.energy,230);
+    assert.deepEqual(family.data.records.find(r=>r.id==='meal-b').items[0].unavailable,['potassium','phosphorus']);
+    assert.equal(family.data.records.find(r=>r.id==='meal-b').items[0].extras.fat,23.4);
     assert.equal((await call('/api/kidney/meals/meal-b'+scope,{method:'DELETE',cookie:registered.cookie,body:{revision:1}})).status,403);
     assert.equal((await call('/api/kidney/meals/meal-a'+scope,{method:'PUT',cookie:registered.cookie,body:{revision:1,items:[{...meal.items[0],qty:2}]}})).status,200);
     assert.equal((await call('/api/kidney/meals/meal-a'+scope,{method:'PUT',cookie:admin.cookie,body:{revision:1,items:meal.items}})).status,409);

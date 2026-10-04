@@ -73,5 +73,20 @@ window.BOOK_FOODS = [
   { id:'soup-corn', category:'汁物', name:'コーンスープ', portion:'1杯 160g', page:148, values:{energy:99,protein:2.7,potassium:141,phosphorus:67,salt:1.4} },
   { id:'soup-clam', category:'汁物', name:'クラムチャウダー', portion:'1杯', page:148, values:{energy:216,protein:10.8,potassium:355,phosphorus:200,salt:3.1} },
   { id:'soup-minestrone', category:'汁物', name:'ミネストローネ', portion:'1杯', page:148, values:{energy:124,protein:5.2,potassium:333,phosphorus:99,salt:2.3} },
-  { id:'soup-wakame', category:'汁物', name:'わかめスープ', portion:'1杯', page:148, values:{energy:55,protein:1.2,potassium:121,phosphorus:28,salt:1.8} }
+  { id:'soup-wakame', category:'汁物', name:'わかめスープ', portion:'1杯', page:148, values:{energy:55,protein:1.2,potassium:121,phosphorus:28,salt:1.8} },
+
+  // 各社公式の栄養成分表。公式掲載のないカリウム・リンは unavailable で明示する。
+  { id:'yoshinoya-gyudon-small', category:'外食', name:'吉野家 牛丼', portion:'小盛', source:'吉野家公式（2026/10/1）', unavailable:['potassium','phosphorus'], extras:{fat:19.6,carbs:60.9}, values:{energy:474,protein:15.4,potassium:0,phosphorus:0,salt:1.9} },
+  { id:'yoshinoya-gyudon-regular', category:'外食', name:'吉野家 牛丼', portion:'並盛', source:'吉野家公式（2026/10/1）', unavailable:['potassium','phosphorus'], extras:{fat:23.6,carbs:88.2}, values:{energy:633,protein:19.6,potassium:0,phosphorus:0,salt:2.5} },
+  { id:'yoshinoya-gyudon-head-large', category:'外食', name:'吉野家 牛丼', portion:'アタマの大盛', source:'吉野家公式（2026/10/1）', unavailable:['potassium','phosphorus'], extras:{fat:28.8,carbs:96.6}, values:{energy:725,protein:23.0,potassium:0,phosphorus:0,salt:2.8} },
+  { id:'yoshinoya-gyudon-large', category:'外食', name:'吉野家 牛丼', portion:'大盛', source:'吉野家公式（2026/10/1）', unavailable:['potassium','phosphorus'], extras:{fat:29.0,carbs:119.5}, values:{energy:823,protein:24.8,potassium:0,phosphorus:0,salt:3.1} },
+  { id:'yoshinoya-gyudon-extra', category:'外食', name:'吉野家 牛丼', portion:'特盛', source:'吉野家公式（2026/10/1）', unavailable:['potassium','phosphorus'], extras:{fat:44.2,carbs:122.3}, values:{energy:1006,protein:33.5,potassium:0,phosphorus:0,salt:4.0} },
+  { id:'yoshinoya-gyudon-super', category:'外食', name:'吉野家 牛丼', portion:'超特盛', source:'吉野家公式（2026/10/1）', unavailable:['potassium','phosphorus'], extras:{fat:56.9,carbs:124.6}, values:{energy:1159,protein:40.8,potassium:0,phosphorus:0,salt:4.7} },
+
+  { id:'sukiya-gyudon-mini', category:'外食', name:'すき家 牛丼', portion:'ミニ', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:16.0,carbs:65.7}, values:{energy:464,protein:14.8,potassium:0,phosphorus:0,salt:1.7} },
+  { id:'sukiya-gyudon-regular', category:'外食', name:'すき家 牛丼', portion:'並盛', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:23.4,carbs:99.8}, values:{energy:695,protein:21.7,potassium:0,phosphorus:0,salt:2.4} },
+  { id:'sukiya-gyudon-medium', category:'外食', name:'すき家 牛丼', portion:'中盛', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:33.4,carbs:86.5}, values:{energy:752,protein:26.6,potassium:0,phosphorus:0,salt:2.8} },
+  { id:'sukiya-gyudon-large', category:'外食', name:'すき家 牛丼', portion:'大盛', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:30.7,carbs:130.1}, values:{energy:908,protein:28.4,potassium:0,phosphorus:0,salt:3.1} },
+  { id:'sukiya-gyudon-extra', category:'外食', name:'すき家 牛丼', portion:'特盛', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:45.6,carbs:134.9}, values:{energy:1100,protein:37.8,potassium:0,phosphorus:0,salt:4.2} },
+  { id:'sukiya-gyudon-mega', category:'外食', name:'すき家 牛丼', portion:'メガ', source:'すき家公式（2026/9/29）', unavailable:['potassium','phosphorus'], extras:{fat:66.3,carbs:141.6}, values:{energy:1365,protein:50.8,potassium:0,phosphorus:0,salt:5.6} }
 ];

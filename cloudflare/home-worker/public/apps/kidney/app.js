@@ -7,7 +7,7 @@ const nutrients = [
 ];
 
 const foods = window.BOOK_FOODS || [];
-const categories = ['すべて', '主食', '肉', '魚', '野菜', '豆・卵', '果物', '汁物'];
+const categories = ['すべて', '外食', '主食', '肉', '魚', '野菜', '豆・卵', '果物', '汁物'];
 const emptyTotals = () => Object.fromEntries(nutrients.map(n => [n.key, 0]));
 const todayKey = () => {
   const d = new Date();
@@ -64,6 +64,11 @@ function planTotals() {
   state.plan.forEach((qty,id) => nutrients.forEach(n => result[n.key]+=foodById(id).values[n.key]*qty));
   return result;
 }
+function unavailableState(key) {
+  const current=state.committed.some(record => record.items.some(item => item.qty>0&&item.unavailable?.includes(key)));
+  const planned=[...state.plan].some(([id,qty]) => qty>0&&foodById(id).unavailable?.includes(key));
+  return {current,planned,any:current||planned};
+}
 function selectGauge(key) { state.selectedGauge=key; updateGauges(); }
 function updateGauges() {
   const totals=planTotals();
@@ -73,8 +78,10 @@ function updateGauges() {
   if (!nutrients.find(n=>n.key===state.selectedGauge)?.visible) state.selectedGauge=nutrients.find(n=>n.visible)?.key || 'salt';
   const main=nutrients.find(n => n.key===state.selectedGauge);
   const ratio=(state.totals[main.key]+totals[main.key])/main.max;
-  document.querySelector('#gaugeDetails').textContent=`${main.label}：現在 ${format(state.totals[main.key])}${main.unit} ＋ 今回 ${format(totals[main.key])}${main.unit}`;
+  const missing=unavailableState(main.key);
+  document.querySelector('#gaugeDetails').textContent=`${main.label}：現在 ${format(state.totals[main.key])}${main.unit} ＋ 今回 ${format(totals[main.key])}${main.unit}${missing.any?'（公式値なしの食品あり）':''}`;
   const status=document.querySelector('#statusText'); status.className='status-pill';
+  if(missing.any){status.textContent='公式値なしを含むため判定なし';status.classList.add('unknown');return;}
   if(!shared?.settings){status.textContent='目標量は家族が設定';return;}
   if (ratio>1) { status.textContent='上限超過：今日は多め'; status.classList.add('over'); }
   else if (ratio>=.9) { status.textContent='⚠️ 上限に近い'; status.classList.add('near'); }
@@ -98,12 +105,16 @@ function filteredFoods() {
 function renderFoods() {
   const host=document.querySelector('#foodGrid'); host.innerHTML=''; host.scrollTop=0;
   const visible=filteredFoods();
-  document.querySelector('#foodResultCount').textContent=`本で確認済み ${visible.length}件（全${foods.length}件）`;
+  document.querySelector('#foodResultCount').textContent=`${visible.length}件（全${foods.length}件）`;
   if (!visible.length) { host.innerHTML='<p class="no-result">見つかりませんでした。別の名前でも試してみてください。</p>'; return; }
   visible.forEach(food => {
     const button=document.createElement('button'); button.type='button'; button.className='food-button';
+    const potassium=food.unavailable?.includes('potassium')?'K 公式掲載なし':`K ${format(food.values.potassium)}mg`;
     const boiled=food.boiledPotassium ? `<small>ゆでるとK ${format(food.boiledPotassium)}mg</small>` : '';
-    button.innerHTML=`<strong>${food.name}</strong><span>${food.portion}</span><span class="food-nutrients">塩 ${format(food.values.salt)}g　た ${format(food.values.protein)}g　K ${format(food.values.potassium)}mg</span>${boiled}<em>本 p.${food.page}</em><i class="plus">＋</i>`;
+    const fat=food.extras?.fat!=null?`　脂 ${format(food.extras.fat)}g　${format(food.values.energy)}kcal`:'';
+    const source=food.source||`本 p.${food.page}`;
+    const missing=food.unavailable?.length?'<small>カリウム・リンは公式掲載なし</small>':'';
+    button.innerHTML=`<strong>${food.name}</strong><span>${food.portion}</span><span class="food-nutrients">塩 ${format(food.values.salt)}g　た ${format(food.values.protein)}g　${potassium}${fat}</span>${boiled}${missing}<em>${source}</em><i class="plus">＋</i>`;
     button.addEventListener('click',() => changeQty(food.id,1)); host.appendChild(button);
   });
 }
@@ -120,7 +131,8 @@ function renderPlan() {
   empty.hidden=count>0; host.innerHTML='';
   state.plan.forEach((qty,id) => {
     const food=foodById(id), row=document.createElement('div'); row.className='plan-item';
-    row.innerHTML=`<div><strong>${food.name}</strong><span>${food.portion} × ${qty}　塩 ${format(food.values.salt*qty)}g</span></div><div class="quantity"><button type="button" aria-label="${food.name}を減らす">−</button><b>${qty}</b><button type="button" aria-label="${food.name}を増やす">＋</button></div>`;
+    const missing=food.unavailable?.length?'　K・リンは公式掲載なし':'';
+    row.innerHTML=`<div><strong>${food.name}</strong><span>${food.portion} × ${qty}　塩 ${format(food.values.salt*qty)}g${missing}</span></div><div class="quantity"><button type="button" aria-label="${food.name}を減らす">−</button><b>${qty}</b><button type="button" aria-label="${food.name}を増やす">＋</button></div>`;
     const buttons=row.querySelectorAll('button'); buttons[0].addEventListener('click',()=>changeQty(id,-1)); buttons[1].addEventListener('click',()=>changeQty(id,1)); host.appendChild(row);
   });
 }
@@ -132,7 +144,7 @@ async function commitMeal(late=false) {
  if(busy||!shared)return;
  if(!state.plan.size){showToast('先に食品を選んでください');return;}
  busy=true;readGeneration++;renderPlan();
- if(!pendingMeal)pendingMeal={id:crypto.randomUUID(),day:selectedDay,meal:document.querySelector('#mealSlot').value,items:[...state.plan].map(([id,qty])=>{const f=foodById(id);return {id,qty,name:f.name,portion:f.portion,values:f.values};})};
+ if(!pendingMeal)pendingMeal={id:crypto.randomUUID(),day:selectedDay,meal:document.querySelector('#mealSlot').value,items:[...state.plan].map(([id,qty])=>{const f=foodById(id);return {id,qty,name:f.name,portion:f.portion,values:f.values,unavailable:f.unavailable||[],extras:f.extras||{}};})};
  try{await api('/meals?'+scope(),'POST',pendingMeal);state.plan.clear();pendingMeal=null;showToast(late?'あとから記録しました':'家族の記録に追加しました');}
  catch(e){showToast(e.message+'。もう一度押して保存できます');}
  finally{busy=false;loading=false;await refresh();renderPlan();}
@@ -147,7 +159,7 @@ function renderHistory(){
    const row=document.createElement('div');row.className='shared-record';
    const heading=document.createElement('p');heading.textContent=record.actor+' が登録 · '+new Date(record.created_at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});row.append(heading);
    record.items.forEach((item,index)=>{
-    const line=document.createElement('div');line.className='shared-item';const label=document.createElement('span');label.textContent=item.name+' '+item.portion+' × '+item.qty;line.append(label);
+    const line=document.createElement('div');line.className='shared-item';const label=document.createElement('span');label.textContent=item.name+' '+item.portion+' × '+item.qty+(item.unavailable?.length?'（K・リン 公式掲載なし）':'');line.append(label);
     if(record.editable){for(const delta of [-1,1]){const b=document.createElement('button');b.textContent=delta<0?'−':'＋';b.type='button';b.setAttribute('aria-label',item.name+(delta<0?'を減らす':'を増やす'));b.disabled=busy;b.onclick=()=>editRecord(record,index,delta);line.append(b);}}
     row.append(line);
    });

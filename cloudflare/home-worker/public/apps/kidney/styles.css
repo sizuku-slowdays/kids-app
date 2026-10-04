@@ -36,6 +36,7 @@ h2 { margin-bottom: 0; font-size: 1.3rem; }
 .status-pill.watch { color: #865800; background: #fff0c9; }
 .status-pill.near { color: #9a431c; background: #ffe3d4; }
 .status-pill.over { color: #9e2d36; background: #ffe0e4; }
+.status-pill.unknown { color: #5e536c; background: #eee9f5; }
 
 .gauges { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 7px; align-items: end; }
 .gauge-card { min-width: 0; }

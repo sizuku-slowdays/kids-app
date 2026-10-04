@@ -270,7 +270,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       env.DB.prepare(
         "INSERT INTO group_apps SELECT ?,id FROM apps WHERE enabled=1 AND access_mode='group'",
       ).bind(groupId),
-      env.DB.prepare("INSERT OR IGNORE INTO personal_app_access(user_id,app_id) SELECT 'bootstrap-admin',id FROM apps WHERE id='muscle-bank' AND access_mode='personal'"),
+      env.DB.prepare("INSERT OR IGNORE INTO personal_app_access(user_id,app_id) SELECT 'bootstrap-admin',id FROM apps WHERE id IN ('muscle-bank','play-agreement') AND access_mode='personal'"),
     ]);
     mark("bootstrap_session");
     return json({ ok: true }, 201, {
@@ -659,6 +659,21 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     const protectedHeaders=new Headers(response.headers);
     protectedHeaders.set("X-Passbook-Version","20261003-v1");
     for(const [key,value] of Object.entries(headers))protectedHeaders.set(key,value);
+    return new Response(method==="HEAD"?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
+  // The launcher is HOME-session protected. Its setup secret stays only in this browser.
+  if (path === "/apps/play-agreement" || path.startsWith("/apps/play-agreement/")) {
+    if (!s) return new Response(null, {status:303,headers:{...headers,Location:"/login"}});
+    requireValue(await appAllowed(env,s.user_id,"play-agreement"),403,"このアプリは利用できません");
+    requireValue(["GET","HEAD"].includes(method),405,"この操作はできません");
+    if (path === "/apps/play-agreement") return new Response(null,{status:303,headers:{...headers,Location:"/apps/play-agreement/"}});
+    const file=path.replace(/^\/apps\/play-agreement\/?/,"")||"index.html";
+    requireValue(["index.html","app.js","style.css"].includes(file),404,"見つかりません");
+    const assetUrl=new URL(url);assetUrl.pathname="/apps/play-agreement/"+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);
+    for(const [key,value] of Object.entries(headers))protectedHeaders.set(key,value);
+    protectedHeaders.set("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
     return new Response(method==="HEAD"?null:response.body,{status:response.status,headers:protectedHeaders});
   }
   // Muscle app assets remain behind the same personal session and grant as its data API.

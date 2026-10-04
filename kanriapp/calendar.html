@@ -509,9 +509,17 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
+
+  .calendar-home-nav { padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border-light); }
+  .calendar-home-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 16px; border-radius: 14px; background: var(--mint-light); color: #286b57; text-decoration: none; font-size: 14px; font-weight: 700; }
+  .calendar-home-link:hover { background: var(--mint-mid); }
+  .calendar-home-link:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
 </style>
 </head>
 <body>
+<nav class="calendar-home-nav" aria-label="HOMEへ戻る">
+  <a class="calendar-home-link" href="/wagaya/"><span aria-hidden="true">⌂</span>わが家へ戻る</a>
+</nav>
 
 <div id="login-screen">
   <div class="logo">📅</div>

@@ -5813,3 +5813,19 @@ const SCHOOL_LUNCH_DAILY_V15_12=[
  {date:"2026-10-30",items:["麦ご飯","さけそぼろ丼","こまつなのみそ汁"],milk:true}
 ];
 window.SCHOOL_LUNCH_DAILY=[...SCHOOL_LUNCH_DAILY_V15_14,...SCHOOL_LUNCH_DAILY_V15_12];
+
+
+// v15.17 FAMILY GYUDON QUICK FOODS
+// 家族でよく使う外食牛丼を、食べた記録から1タップ登録するためのブランド別メニュー。
+// セットの飲みもの・デザート等は選択内容が変わるため、星は牛丼本体を中心に保守的に評価。
+const FAMILY_GYUDON_V15_17=[
+ {id:"restaurant_sukiya_kids_gyudon",category:"外食",name:"すき家 お子様牛丼",reading:"すきや おこさまぎゅうどん",emoji:"🍚",head_power:1,sparkle_power:1,muscle_power:3,bone_power:0,immunity_power:1,main_nutrients:"炭水化物,たんぱく質,鉄,亜鉛",nutrient_list:["炭水化物","たんぱく質","鉄","亜鉛"],kids_text:"ごはんと牛肉で、エネルギーと体をつくる材料がとれるよ。",recipe_tags:"すき家,牛丼,お子様,外食",category_ui:"🍚 外食・牛丼",brand:"すき家",serving_label:"お子様牛丼",product_source:"すき家公式メニュー",score_note:"牛丼本体を中心に保守的に評価。すきすきセットのドリンク・りんご等は別。"},
+ {id:"restaurant_sukiya_gyudon_nami",category:"外食",name:"すき家 牛丼 並盛",reading:"すきや ぎゅうどん なみもり",emoji:"🍚",head_power:1,sparkle_power:1,muscle_power:3,bone_power:0,immunity_power:1,main_nutrients:"炭水化物,たんぱく質,鉄,亜鉛",nutrient_list:["炭水化物","たんぱく質","鉄","亜鉛"],kids_text:"ごはんと牛肉で、エネルギーと体をつくる材料がとれるよ。",recipe_tags:"すき家,牛丼,並盛,外食",category_ui:"🍚 外食・牛丼",brand:"すき家",serving_label:"並盛",product_source:"すき家公式メニュー"},
+ {id:"restaurant_yoshinoya_kids_mini_gyudon_set",category:"外食",name:"吉野家 ミニ牛丼セット",reading:"よしのや みにぎゅうどんせっと",emoji:"🍱",head_power:1,sparkle_power:1,muscle_power:3,bone_power:0,immunity_power:1,main_nutrients:"炭水化物,たんぱく質,鉄,亜鉛",nutrient_list:["炭水化物","たんぱく質","鉄","亜鉛"],kids_text:"ミニ牛丼とウインナーなどが入ったお子様セットだよ。",recipe_tags:"吉野家,牛丼,ミニ牛丼,お子様,外食",category_ui:"🍚 外食・牛丼",brand:"吉野家",serving_label:"ミニ牛丼セット",product_source:"吉野家公式メニュー",score_note:"ドリンク・ゼリー等は内容が変わるため、牛丼本体と固定のおかずを中心に保守的に評価。"},
+ {id:"restaurant_yoshinoya_gyudon_nami",category:"外食",name:"吉野家 牛丼 並盛",reading:"よしのや ぎゅうどん なみもり",emoji:"🍚",head_power:1,sparkle_power:1,muscle_power:3,bone_power:0,immunity_power:1,main_nutrients:"炭水化物,たんぱく質,鉄,亜鉛",nutrient_list:["炭水化物","たんぱく質","鉄","亜鉛"],kids_text:"ごはんと牛肉で、エネルギーと体をつくる材料がとれるよ。",recipe_tags:"吉野家,牛丼,並盛,外食",category_ui:"🍚 外食・牛丼",brand:"吉野家",serving_label:"並盛",product_source:"吉野家公式メニュー"},
+ {id:"restaurant_yoshinoya_nikudaku_gyudon_nami",category:"外食",name:"吉野家 肉だく牛丼 並盛",reading:"よしのや にくだくぎゅうどん なみもり",emoji:"🥩",head_power:1,sparkle_power:1,muscle_power:3,bone_power:0,immunity_power:1,main_nutrients:"炭水化物,たんぱく質,鉄,亜鉛",nutrient_list:["炭水化物","たんぱく質","鉄","亜鉛"],kids_text:"牛丼に牛肉をプラスしたメニュー。ごはんのエネルギーと牛肉のたんぱく質がとれるよ。",recipe_tags:"吉野家,牛丼,肉だく,並盛,外食",category_ui:"🍚 外食・牛丼",brand:"吉野家",serving_label:"並盛＋肉だく",product_source:"吉野家公式メニュー",score_note:"肉量は多いが、5大パワーの星は3を上限として表示。"}
+];
+{
+ const ids=new Set(FOODS.map(f=>f.id)),names=new Set(FOODS.map(f=>f.name));
+ FAMILY_GYUDON_V15_17.forEach(f=>{if(!ids.has(f.id)&&!names.has(f.name))FOODS.push(f);});
+}

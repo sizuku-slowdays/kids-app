@@ -205,6 +205,8 @@ test("invitation, personal sessions, home settings and private file boundaries",
     const muscleState=initialState();
     muscleState.records.push({id:"test-record",exerciseId:"test-exercise",name:"腹ねじねじ",dose:"30秒",points:2,day:"2026-10-02",createdAt:"2026-10-02T00:00:00Z"});
     const photo="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jL1kAAAAASUVORK5CYII=";
+    const exercise={id:'legacy-exercise',name:'股関節ほぐし',image:photo,description:'左右に動く',dose:'10回',points:2,part:'🦵 脚',tags:[],url:'',today:true,learned:false};
+    muscleState.exercises.push(exercise,{...exercise,id:'multi-exercise',image:'',images:[photo,photo]});
     muscleState.changes.push({id:"photo",day:"2026-10-02",memo:"前より楽",waist:"",weight:"",image:photo});
     const putMuscle=(data,revision,cookie=admin.cookie,origin="https://home.test")=>call("/api/muscle-bank/state",{method:"PUT",body:data,cookie,origin,extraHeaders:{"If-Match":String(revision)}});
     assert.equal((await putMuscle(muscleState,0,admin.cookie,"https://evil.test")).status,403);
@@ -214,6 +216,10 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal(saved.data.revision,1);
     assert.equal(saved.data.state.records[0].points,2);
     assert.equal(saved.data.state.changes[0].image,photo);
+    assert.equal(saved.data.state.exercises[0].image,photo);
+    assert.deepEqual(saved.data.state.exercises[1].images,[photo,photo]);
+    assert.equal((await putMuscle({...muscleState,exercises:[{...exercise,images:Array(11).fill(photo)}]},1)).status,400);
+    assert.equal((await putMuscle({...muscleState,exercises:[{...exercise,images:['https://external.test/image.png']}]},1)).status,400);
     assert.equal((await putMuscle(muscleState,0)).status,409);
     assert.equal((await putMuscle({...muscleState,fund:{...muscleState.fund,balance:-1}},1)).status,400);
     const stored=await db.prepare("SELECT state_json FROM muscle_bank_states WHERE owner_id='bootstrap-admin'").first();

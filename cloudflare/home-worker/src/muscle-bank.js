@@ -12,23 +12,31 @@ async function boundedBody(request){
  return new TextDecoder().decode(bytes);
 }
 function bytes64(bytes){let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(s)}
+function imageSlots(state){
+ const slots=[];
+ for(const collection of ['exercises','rewards','changes'])for(const item of state[collection]){
+  if(item.image)slots.push([item,'image']);
+  if(collection==='exercises'&&Array.isArray(item.images))item.images.forEach((_,i)=>slots.push([item.images,i]));
+ }
+ return slots;
+}
 async function splitImages(state,uid,bucket){
  const copy=structuredClone(state);
- for(const collection of ['exercises','rewards','changes'])for(const item of copy[collection])if(item.image){
-  const [head,data]=item.image.split(','),bytes=Uint8Array.from(atob(data),c=>c.charCodeAt(0));
+ for(const [parent,slot] of imageSlots(copy)){
+  const [head,data]=parent[slot].split(','),bytes=Uint8Array.from(atob(data),c=>c.charCodeAt(0));
   const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(n=>n.toString(16).padStart(2,'0')).join('');
   const key=`muscle-bank/owners/${uid}/${hash}`,mime=head.slice(5).split(';')[0];
-  // Content-addressed files are immutable. Reusing a photo does not upload it again.
   if(!await bucket.head(key))await bucket.put(key,bytes,{httpMetadata:{contentType:mime}});
-  item.image={key,mime};
+  parent[slot]={key,mime};
  }
  return copy;
 }
 async function hydrate(state,uid,bucket){
- for(const collection of ['exercises','rewards','changes'])for(const item of state[collection])if(item.image&&typeof item.image==='object'){
-  if(!item.image.key.startsWith(`muscle-bank/owners/${uid}/`))fail('画像の所有者が一致しません',500);
-  const object=await bucket.get(item.image.key);if(!object)fail('画像を読み込めませんでした',500);
-  item.image=`data:${item.image.mime};base64,${bytes64(new Uint8Array(await object.arrayBuffer()))}`;
+ for(const [parent,slot] of imageSlots(state)){
+  const ref=parent[slot];if(typeof ref!=='object')continue;
+  if(!ref.key.startsWith(`muscle-bank/owners/${uid}/`))fail('画像の所有者が一致しません',500);
+  const object=await bucket.get(ref.key);if(!object)fail('画像を読み込めませんでした',500);
+  parent[slot]=`data:${ref.mime};base64,${bytes64(new Uint8Array(await object.arrayBuffer()))}`;
  }
  return state;
 }

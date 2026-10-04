@@ -714,7 +714,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   // Muscle app assets remain behind the same personal session and grant as its data API.
   if (path === "/apps/muscle-bank" || path.startsWith("/apps/muscle-bank/")) {
-    if (!s) return new Response(null, {status:303, headers:{...headers, "X-Muscle-Bank-Version":"20261002-home-v1", Location:"/login"}});
+    if (!s) return new Response(null, {status:303, headers:{...headers, "X-Muscle-Bank-Version":"20261004-multi-photo", Location:"/login"}});
     requireValue(await appAllowed(env, s.user_id, "muscle-bank"), 403, "このアプリは利用できません");
     requireValue(["GET", "HEAD"].includes(method), 405, "この操作はできません");
     if (path === "/apps/muscle-bank") return new Response(null, {status:303,headers:{...headers,Location:"/apps/muscle-bank/"}});
@@ -724,7 +724,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     const assetUrl = new URL(url); assetUrl.pathname = "/apps/muscle-bank/" + file;
     const response = await env.ASSETS.fetch(new Request(assetUrl, {method}));
     const protectedHeaders = new Headers(response.headers);
-    protectedHeaders.set("X-Muscle-Bank-Version", "20261002-home-v1");
+    protectedHeaders.set("X-Muscle-Bank-Version", "20261004-multi-photo");
     for (const [key,value] of Object.entries(headers)) protectedHeaders.set(key,value);
     protectedHeaders.set("Content-Security-Policy", headers["Content-Security-Policy"].replace("img-src 'self'", "img-src 'self' data: blob:"));
     return new Response(method === "HEAD" ? null : response.body, {status:response.status,headers:protectedHeaders});

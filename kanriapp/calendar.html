@@ -526,12 +526,13 @@
 <div id="profile-screen" style="display:none">
   <div class="logo">👤</div>
   <h2>あなたの名前を選んでね</h2>
-  <p class="login-help">この端末では、次から自動でログインします。</p>
+  <p class="login-help">名前を選んで、本人だけのPINコードでひらきます。</p>
   <div class="profile-grid" id="profile-grid"></div>
+  <input class="family-password" id="profile-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="個人PIN（4〜8桁）" style="margin-top:12px">
   <button class="btn btn-primary" style="padding:12px 34px;font-size:16px" onclick="familyLogin()">この名前でひらく</button>
   <div class="profile-add-card">
     <h3>名前がまだないとき</h3>
-    <p>ここで名前を追加して、そのまま選べます。個人用のパスワードはありません。</p>
+    <p>ここで名前を追加できます。初めて開くときに、その人専用のPIN（4〜8桁）を設定します。</p>
     <div class="profile-add-row">
       <input type="text" id="profile-new-family-name" maxlength="30" placeholder="名前を入力">
       <input type="color" id="profile-new-family-color" value="#5b8dee" aria-label="色">
@@ -952,6 +953,8 @@ function renderFamilyProfiles(profiles) {
 function selectFamilyProfile(key) {
   selectedProfile = key;
   document.querySelectorAll('.profile-btn').forEach(b => b.classList.toggle('selected', b.dataset.profile === key));
+  const pin = document.getElementById('profile-pin');
+  if (pin) { pin.value = ''; pin.focus(); }
 }
 async function addFamilyMemberBeforeLogin() {
   const name = document.getElementById('profile-new-family-name').value.trim();
@@ -1011,12 +1014,14 @@ async function familyLogin() {
   const error = document.getElementById('profile-error');
   if (!familyUnlockToken) { backToPassword(); return; }
   if (!selectedProfile) { error.textContent = '自分の名前を選んでね'; return; }
+  const pin = document.getElementById('profile-pin')?.value.trim() || '';
+  if (!/^\d{4,8}$/.test(pin)) { error.textContent = '個人PINを4〜8桁の数字で入れてね'; return; }
   error.textContent = 'ひらいています…';
   try {
     const res = await fetch(API + '/family/login', {
       method:'POST',
       headers:{'Content-Type':'application/json', Authorization:'Bearer ' + familyUnlockToken},
-      body:JSON.stringify({ profile:selectedProfile })
+      body:JSON.stringify({ profile:selectedProfile, pin })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'ログインできません');

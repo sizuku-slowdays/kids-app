@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>資金繰り</title>
+<link rel="apple-touch-icon" href="img/kakeibo.png">
+<link rel="icon" type="image/png" href="img/kakeibo.png">
+<meta name="theme-color" content="#fff3c4">
+<style>
+:root{--bg:#fff8e7;--main:#ffb84d;--safe:#2e9f62;--danger:#d94b55;--text:#333;--muted:#777;--line:#eadfc9;--shadow:0 8px 20px rgba(130,90,30,.12)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#fff2bf 0%,var(--bg) 230px);color:var(--text);line-height:1.55;padding-bottom:38px}
+header{padding:16px;display:flex;align-items:center;gap:12px}
+header h1{font-size:1.35rem;margin:0}.back{border:1px solid #ebd19a;border-radius:999px;background:#fff3d1;color:#5b3a05;padding:8px 13px;font-weight:800;text-decoration:none;white-space:nowrap}
+main{width:min(680px,100%);margin:auto;padding:0 14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+h2{font-size:1.04rem;margin:0 0 10px}.hint{font-size:.8rem;color:var(--muted);margin:5px 0 10px}
+.hero{text-align:center;background:linear-gradient(135deg,#eefaf3,#fff);border:2px solid #bfe2ce}
+.hero .label{font-size:.86rem;color:#49725a;font-weight:800}.hero .value{font-size:2rem;font-weight:950;color:var(--safe);margin:3px 0}.hero .value.ng{color:var(--danger)}
+.calc{font-size:.78rem;color:var(--muted);line-height:1.6}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.mini{background:#fffaf0;border:1px solid var(--line);border-radius:13px;padding:10px}.mini span{display:block;font-size:.75rem;color:var(--muted)}.mini strong{font-size:1.02rem}
+.row{display:grid;grid-template-columns:1fr 118px auto;gap:7px;align-items:center;margin-bottom:8px}.row input,.row select,.form input,.form select{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:1rem;background:#fffdf8;color:var(--text)}
+button{border:none;border-radius:999px;padding:9px 13px;font-size:.86rem;font-weight:900;background:var(--main);color:#3e2600;cursor:pointer}.secondary{background:#fff3d1;border:1px solid #ebd19a}.danger{background:#fff1f2;border:1px solid #f4a7af;color:#a4161a}
+.total{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:#fff9ed;border:1px solid var(--line);font-weight:900;margin-top:8px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wide{grid-column:1/-1}.form label{font-size:.79rem;color:var(--muted);font-weight:800}.form label>span{display:block;margin-bottom:3px}
+.item{border:1px solid var(--line);border-radius:13px;padding:10px 11px;background:#fffdf8;margin-bottom:7px}.item-head{display:flex;justify-content:space-between;gap:8px;font-weight:900}.meta{font-size:.77rem;color:var(--muted);margin-top:2px}.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.actions button{padding:6px 10px;font-size:.77rem}
+.paid{opacity:.55}.paid .item-head{text-decoration:line-through}.excluded{background:#f5f5f5}
+.status{font-size:.78rem;color:var(--muted);padding:9px 11px;border-radius:11px;background:#f7f4ec;margin-bottom:10px}.status.ok{background:#f0fff7;color:#247344}.status.ng{background:#fff1f2;color:#a4161a}
+.reserve{display:flex;align-items:center;gap:8px}.reserve input{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:1rem}
+@media(max-width:430px){.row{grid-template-columns:1fr 105px}.row button{grid-column:1/-1}.form{grid-template-columns:1fr}.wide{grid-column:auto}.grid4{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><a class="back" href="kakeibo-index.html">← メニュー</a><h1>💵 資金繰り</h1></header>
+<main>
+<section class="card hero">
+<div class="label" id="monthLabel">今月の月末見込み</div>
+<div class="value" id="freeMoney">0円</div>
+<div class="calc" id="calcText"></div>
+<div class="grid4">
+<div class="mini"><span>現在の口座残高</span><strong id="balanceTotal">0円</strong></div>
+<div class="mini"><span>これからの入金</span><strong id="incomeTotal">0円</strong></div>
+<div class="mini"><span>これからの支払</span><strong id="outflowTotal">0円</strong></div>
+<div class="mini"><span>残しておく生活費</span><strong id="reserveView">0円</strong></div>
+</div>
+</section>
+
+<section class="card">
+<h2>🏦 今の口座残高</h2>
+<p class="hint">残高を更新した日を基準にします。ここは「今あるお金」。入金済みの予定は二重に足しません。</p>
+<div id="accounts"></div>
+<div class="total"><span>合計</span><span id="accountsTotal">0円</span></div>
+</section>
+
+<section class="card">
+<h2>🧺 今月残しておく生活費</h2>
+<p class="hint">食費・日用品など、まだ家計簿に出ていない今月分を先に避けます。</p>
+<div class="reserve"><input id="livingReserve" type="number" inputmode="numeric" min="0" step="1000"><span>円</span><button type="button" id="saveReserve">保存</button></div>
+</section>
+
+<section class="card">
+<h2>📥 これから入るお金</h2>
+<div id="incomeList"></div>
+<form id="incomeForm" class="form">
+<label><span>日付</span><input id="incomeDate" type="date" required></label>
+<label><span>金額</span><input id="incomeAmount" type="number" inputmode="numeric" min="1" required></label>
+<label class="wide"><span>名前</span><input id="incomeName" placeholder="例：児童手当、給与、養育費" required></label>
+<label><span>入金先</span><select id="incomeAccount"></select></label>
+<label><span>扱い</span><select id="incomeUsable"><option value="yes">今月使える</option><option value="no">今月は使わない</option></select></label>
+<button class="wide" type="submit">＋ 入金予定を追加</button>
+</form>
+</section>
+
+<section class="card">
+<h2>💳 今月だけの支払予定</h2>
+<p class="hint">楽天カード引落、かんぽ、年末特別費など。固定費以外の「今月これから落ちるもの」を入れます。</p>
+<div id="outflowList"></div>
+<form id="outflowForm" class="form">
+<label><span>日付</span><input id="outflowDate" type="date" required></label>
+<label><span>金額</span><input id="outflowAmount" type="number" inputmode="numeric" min="1" required></label>
+<label class="wide"><span>名前</span><input id="outflowName" placeholder="例：楽天カード、かんぽ、クリスマス" required></label>
+<label class="wide"><span>支払元</span><select id="outflowAccount"></select></label>
+<button class="wide" type="submit">＋ 支払予定を追加</button>
+</form>
+</section>
+
+<section class="card">
+<h2>🔁 固定費から自動表示</h2>
+<p class="hint">固定費マスタのうち、現金・口座系だけ資金繰りから差し引きます。楽天VISA/PINKはカード引落予定にまとめて入れるため、ここでは二重計上しません。</p>
+<div id="fixedList"></div>
+</section>
+
+<div id="status" class="status">読み込み中…</div>
+</main>
+<script src="kakeibo-fixed.js?v=20261004"></script>
+<script>
+const STORAGE_KEY="kakeibo-app-stable-v3",PLAN_KEY="kakeibo-plan-v1",SETTINGS_KEY="kakeibo-cloud-settings-v1",APP_KEY="kakeibo-app",APP_VERSION=6,DEFAULT_API="https://api.cetus.fun/api/app-data";
+const $=id=>document.getElementById(id),yen=v=>Number(v||0).toLocaleString("ja-JP")+"円";
+const makeId=()=>crypto.randomUUID?crypto.randomUUID():"id-"+Date.now()+"-"+Math.random().toString(36).slice(2);
+const pad=n=>String(n).padStart(2,"0");
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+const monthNow=()=>today().slice(0,7);
+const DEFAULT_ACCOUNTS=["楽天銀行","ゆうちょ","福岡銀行","auじぶん銀行","福岡中央銀行"];
+let plan={},entries=[],busy=false;
+
+function settings(){try{const s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}");return{apiUrl:s.apiUrl||DEFAULT_API,password:s.password||"",autoCloudSave:!!s.autoCloudSave}}catch(e){return{apiUrl:DEFAULT_API,password:"",autoCloudSave:false}}}
+function mergeById(a,b){const m=new Map();[...(a||[]),...(b||[])].forEach(x=>{if(!x?.id)return;const old=m.get(x.id),stamp=y=>String(y.updatedAt||y.createdAt||"");if(!old||stamp(x)>=stamp(old))m.set(x.id,x)});return [...m.values()]}
+function normalize(raw){const p=raw&&typeof raw==="object"?raw:{};return {...p,cashflowAccounts:Array.isArray(p.cashflowAccounts)?p.cashflowAccounts:DEFAULT_ACCOUNTS.map(name=>({id:name,name,balance:0,updatedAt:""})),cashflowIncomes:Array.isArray(p.cashflowIncomes)?p.cashflowIncomes:[],cashflowOutflows:Array.isArray(p.cashflowOutflows)?p.cashflowOutflows:[],cashflowFixedStatus:Array.isArray(p.cashflowFixedStatus)?p.cashflowFixedStatus:[],cashflowLivingReserve:Math.max(0,Number(p.cashflowLivingReserve||0)),fixedExpenses:Array.isArray(p.fixedExpenses)?p.fixedExpenses:[]}}
+function saveLocal(){localStorage.setItem(PLAN_KEY,JSON.stringify(plan))}
+function setStatus(msg,type=""){const e=$("status");e.textContent=msg;e.className="status"+(type?" "+type:"")}
+function activeFixed(){return (plan.fixedExpenses||[]).filter(r=>r&&!r.deletedAt)}
+function isCard(p){return /pink|visa/i.test(String(p||""))}
+function fixedStatusId(rule){return monthNow()+"-"+rule.id}
+function isFixedPaid(rule){return !!(plan.cashflowFixedStatus||[]).find(x=>x.id===fixedStatusId(rule)&&x.paid)}
+function dueDate(rule){const m=monthNow(),parts=m.split("-").map(Number),last=new Date(parts[0],parts[1],0).getDate(),day=Math.min(Math.max(1,Number(rule.day||1)),last);return m+"-"+pad(day)}
+function accountOptions(selected){return plan.cashflowAccounts.map(a=>'<option value="'+esc(a.name)+'"'+(a.name===selected?' selected':'')+'>'+esc(a.name)+'</option>').join("")}
+function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+
+function currentMonthItems(list){return (list||[]).filter(x=>!x.deletedAt&&String(x.date||"").slice(0,7)===monthNow())}
+function totals(){
+ const balances=plan.cashflowAccounts.reduce((s,a)=>s+Number(a.balance||0),0);
+ const incomes=currentMonthItems(plan.cashflowIncomes).filter(x=>!x.received&&x.usable!==false).reduce((s,x)=>s+Number(x.amount||0),0);
+ const manual=currentMonthItems(plan.cashflowOutflows).filter(x=>!x.paid).reduce((s,x)=>s+Number(x.amount||0),0);
+ const fixed=activeFixed().filter(r=>!isCard(r.payment)&&!isFixedPaid(r)).reduce((s,r)=>s+Number(r.amount||0),0);
+ const reserve=Number(plan.cashflowLivingReserve||0);
+ return {balances,incomes,outflows:manual+fixed,reserve,free:balances+incomes-manual-fixed-reserve};
+}
+function render(){
+ $("monthLabel").textContent=monthNow().replace("-","年")+"月の月末見込み";
+ $("livingReserve").value=plan.cashflowLivingReserve||"";
+ $("incomeAccount").innerHTML=accountOptions("");
+ $("outflowAccount").innerHTML=accountOptions("");
+ renderAccounts();renderIncomes();renderOutflows();renderFixed();
+ const t=totals();
+ $("balanceTotal").textContent=yen(t.balances);$("incomeTotal").textContent=yen(t.incomes);$("outflowTotal").textContent=yen(t.outflows);$("reserveView").textContent=yen(t.reserve);
+ $("freeMoney").textContent=yen(t.free);$("freeMoney").className="value"+(t.free<0?" ng":"");
+ $("calcText").textContent=yen(t.balances)+" ＋ "+yen(t.incomes)+" − "+yen(t.outflows)+" − "+yen(t.reserve)+" ＝ "+yen(t.free);
+}
+function renderAccounts(){
+ $("accounts").innerHTML=plan.cashflowAccounts.map(a=>'<div class="row" data-id="'+esc(a.id)+'"><span>'+esc(a.name)+'</span><input type="number" inputmode="numeric" step="1" value="'+Number(a.balance||0)+'" aria-label="'+esc(a.name)+'残高"><button type="button" class="secondary" data-act="save">更新</button></div>').join("");
+ $("accountsTotal").textContent=yen(plan.cashflowAccounts.reduce((s,a)=>s+Number(a.balance||0),0));
+}
+function renderIncomes(){
+ const list=currentMonthItems(plan.cashflowIncomes).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ $("incomeList").innerHTML=list.length?list.map(x=>'<div class="item'+(x.received?' paid':'')+'" data-id="'+x.id+'"><div class="item-head"><span>'+esc(x.name)+'</span><span>+'+yen(x.amount)+'</span></div><div class="meta">'+esc(x.date)+'・'+esc(x.account||"")+(x.usable===false?'・今月は使わない':'')+'</div><div class="actions"><button type="button" class="secondary" data-act="toggle">'+(x.received?'未入金に戻す':'入金済みにする')+'</button><button type="button" class="danger" data-act="delete">削除</button></div></div>').join(""):'<p class="hint">今月の入金予定はまだありません。</p>';
+}
+function renderOutflows(){
+ const list=currentMonthItems(plan.cashflowOutflows).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ $("outflowList").innerHTML=list.length?list.map(x=>'<div class="item'+(x.paid?' paid':'')+'" data-id="'+x.id+'"><div class="item-head"><span>'+esc(x.name)+'</span><span>'+yen(x.amount)+'</span></div><div class="meta">'+esc(x.date)+'・'+esc(x.account||"")+'</div><div class="actions"><button type="button" class="secondary" data-act="toggle">'+(x.paid?'未払いに戻す':'支払済みにする')+'</button><button type="button" class="danger" data-act="delete">削除</button></div></div>').join(""):'<p class="hint">今月だけの支払予定はまだありません。</p>';
+}
+function renderFixed(){
+ const rules=activeFixed().sort((a,b)=>Number(a.day||99)-Number(b.day||99));
+ $("fixedList").innerHTML=rules.length?rules.map(r=>{
+   const card=isCard(r.payment),paid=isFixedPaid(r);
+   return '<div class="item '+(card?'excluded ':'')+(paid?'paid':'')+'" data-id="'+r.id+'"><div class="item-head"><span>'+esc(r.name)+'</span><span>'+yen(r.amount)+'</span></div><div class="meta">'+esc(r.payment)+'・'+(r.dateMode==="monthly"?dueDate(r):"日付未固定")+(card?'・カード引落に含めるので合計から除外':'')+'</div>'+(card?'':'<div class="actions"><button type="button" class="secondary" data-act="toggle">'+(paid?'未払いに戻す':'支払済みにする')+'</button></div>')+'</div>'
+ }).join(""):'<p class="hint">固定費マスタがまだありません。</p>';
+}
+async function loadCloud(){
+ const s=settings();if(!s.password){setStatus("端末内データで表示しています。クラウドパスワード未設定です。");return}
+ const u=new URL(s.apiUrl);u.searchParams.set("key",APP_KEY);const res=await fetch(u,{headers:{"X-App-Password":s.password},cache:"no-store"});if(!res.ok)throw new Error("クラウド読込失敗");
+ const json=await res.json(),cloud=json.data||json,cp=normalize(cloud.plan),lp=plan;
+ plan=normalize({...cp,...lp,
+   fixedExpenses:KakeiboFixed.merge(cp.fixedExpenses,lp.fixedExpenses),
+   cashflowAccounts:mergeById(cp.cashflowAccounts,lp.cashflowAccounts),
+   cashflowIncomes:mergeById(cp.cashflowIncomes,lp.cashflowIncomes),
+   cashflowOutflows:mergeById(cp.cashflowOutflows,lp.cashflowOutflows),
+   cashflowFixedStatus:mergeById(cp.cashflowFixedStatus,lp.cashflowFixedStatus)
+ });
+ entries=Array.isArray(cloud.entries)?cloud.entries:[];
+ saveLocal();setStatus("クラウドの最新版と同期しました。","ok");
+}
+async function saveCloud(){
+ saveLocal();const s=settings();if(!s.password||!s.autoCloudSave){setStatus("端末に保存しました。クラウド自動保存はOFFです。");return}
+ const u=new URL(s.apiUrl);u.searchParams.set("key",APP_KEY);const read=await fetch(u,{headers:{"X-App-Password":s.password},cache:"no-store"});if(!read.ok)throw new Error("保存前のクラウド確認失敗");
+ const json=await read.json(),cloud=json.data||json,cp=normalize(cloud.plan);
+ const merged=normalize({...cp,...plan,
+   fixedExpenses:KakeiboFixed.merge(cp.fixedExpenses,plan.fixedExpenses),
+   cashflowAccounts:mergeById(cp.cashflowAccounts,plan.cashflowAccounts),
+   cashflowIncomes:mergeById(cp.cashflowIncomes,plan.cashflowIncomes),
+   cashflowOutflows:mergeById(cp.cashflowOutflows,plan.cashflowOutflows),
+   cashflowFixedStatus:mergeById(cp.cashflowFixedStatus,plan.cashflowFixedStatus)
+ });
+ const write=await fetch(s.apiUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Password":s.password},body:JSON.stringify({key:APP_KEY,app:APP_KEY,data:{...cloud,version:APP_VERSION,plan:merged,savedAt:new Date().toISOString()}})});if(!write.ok)throw new Error("クラウド保存失敗");plan=merged;saveLocal();setStatus("保存しました。","ok");
+}
+async function persist(){if(busy)return;busy=true;try{render();await saveCloud();render()}catch(e){setStatus("端末には保存しましたがクラウド同期できませんでした："+e.message,"ng")}finally{busy=false}}
+function addItem(kind,obj){const key=kind==="income"?"cashflowIncomes":"cashflowOutflows";plan[key].push({id:makeId(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),...obj});persist()}
+
+$("accounts").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const row=b.closest("[data-id]"),a=plan.cashflowAccounts.find(x=>x.id===row.dataset.id);if(!a)return;a.balance=Number(row.querySelector("input").value||0);a.updatedAt=new Date().toISOString();persist()});
+$("saveReserve").onclick=()=>{plan.cashflowLivingReserve=Math.max(0,Number($("livingReserve").value||0));persist()};
+$("incomeForm").onsubmit=e=>{e.preventDefault();addItem("income",{date:$("incomeDate").value,name:$("incomeName").value.trim(),amount:Number($("incomeAmount").value),account:$("incomeAccount").value,usable:$("incomeUsable").value==="yes",received:false});e.target.reset();$("incomeDate").value=today()};
+$("outflowForm").onsubmit=e=>{e.preventDefault();addItem("outflow",{date:$("outflowDate").value,name:$("outflowName").value.trim(),amount:Number($("outflowAmount").value),account:$("outflowAccount").value,paid:false});e.target.reset();$("outflowDate").value=today()};
+$("incomeList").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const x=plan.cashflowIncomes.find(y=>y.id===b.closest("[data-id]").dataset.id);if(!x)return;if(b.dataset.act==="toggle")x.received=!x.received;else if(b.dataset.act==="delete")x.deletedAt=new Date().toISOString();x.updatedAt=new Date().toISOString();persist()});
+$("outflowList").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const x=plan.cashflowOutflows.find(y=>y.id===b.closest("[data-id]").dataset.id);if(!x)return;if(b.dataset.act==="toggle")x.paid=!x.paid;else if(b.dataset.act==="delete")x.deletedAt=new Date().toISOString();x.updatedAt=new Date().toISOString();persist()});
+$("fixedList").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const ruleId=b.closest("[data-id]").dataset.id,id=monthNow()+"-"+ruleId;let x=plan.cashflowFixedStatus.find(y=>y.id===id);if(!x){x={id,month:monthNow(),ruleId,paid:true,updatedAt:new Date().toISOString()};plan.cashflowFixedStatus.push(x)}else{x.paid=!x.paid;x.updatedAt=new Date().toISOString()}persist()});
+
+(async()=>{plan=normalize(JSON.parse(localStorage.getItem(PLAN_KEY)||"null"));$("incomeDate").value=today();$("outflowDate").value=today();render();try{await loadCloud();render()}catch(e){setStatus("クラウド同期できませんでした。端末の内容を表示しています："+e.message,"ng")}})();
+</script>
+</body>
+</html>

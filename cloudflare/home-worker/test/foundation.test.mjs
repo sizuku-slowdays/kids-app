@@ -203,6 +203,7 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await call(musclePath+"unlisted.txt",{cookie:admin.cookie})).status,404);
     assert.equal((await call("/api/muscle-bank/state",{cookie:admin.cookie})).data.state,null);
     const muscleState=initialState();
+    muscleState.todayShuffle={day:'2026-10-04',round:2};
     muscleState.records.push({id:"test-record",exerciseId:"test-exercise",name:"腹ねじねじ",dose:"30秒",points:2,day:"2026-10-02",createdAt:"2026-10-02T00:00:00Z"});
     const photo="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jL1kAAAAASUVORK5CYII=";
     const exercise={id:'legacy-exercise',name:'股関節ほぐし',image:photo,description:'左右に動く',dose:'10回',points:2,part:'🦵 脚',tags:[],url:'',today:true,learned:false};
@@ -214,6 +215,7 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await putMuscle(muscleState,0)).status,200);
     const saved=await call("/api/muscle-bank/state",{cookie:admin.cookie});
     assert.equal(saved.data.revision,1);
+    assert.deepEqual(saved.data.state.todayShuffle,muscleState.todayShuffle);
     assert.equal(saved.data.state.records[0].points,2);
     assert.equal(saved.data.state.changes[0].image,photo);
     assert.equal(saved.data.state.exercises[0].image,photo);

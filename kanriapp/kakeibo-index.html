@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>家計簿メニュー</title>
+<link rel="apple-touch-icon" href="img/kakeibo.png">
+<link rel="icon" type="image/png" href="img/kakeibo.png">
+<meta name="theme-color" content="#fff3c4">
+<style>
+:root{--bg:#fff8e7;--card:#fff;--main:#ffb84d;--text:#333;--muted:#777;--line:#eadfc9;--shadow:0 8px 20px rgba(130,90,30,.12)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#fff2bf 0%,var(--bg) 240px);color:var(--text);padding-bottom:30px}
+header{padding:24px 16px 10px;text-align:center}
+h1{margin:0;font-size:1.55rem} header p{margin:5px 0 0;color:#6b4b1f;font-size:.88rem}
+main{width:min(650px,100%);margin:auto;padding:10px 14px}
+.primary{display:block;text-decoration:none;color:inherit;background:linear-gradient(135deg,#fff0c8,#fff9e9);border:2px solid #efc36e;border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.primary strong{font-size:1.16rem}.primary p{margin:5px 0 0;color:var(--muted);font-size:.84rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);min-height:126px}
+.icon{font-size:1.55rem}.title{font-weight:900;margin-top:6px}.desc{font-size:.8rem;color:var(--muted);margin-top:4px;line-height:1.45}
+.note{margin-top:14px;padding:12px 14px;border-radius:14px;background:#fffdf8;border:1px solid var(--line);font-size:.8rem;color:var(--muted)}
+@media(max-width:370px){.grid{grid-template-columns:1fr}.card{min-height:auto}}
+</style>
+</head>
+<body>
+<header><h1>💰 家計簿</h1><p>やりたいことから選ぶ</p></header>
+<main>
+<a class="primary" href="kakeibo-cashflow.html"><strong>💵 今月あといくら使える？</strong><p>口座残高・これからの入金・固定費・カード引落をまとめて資金繰りを見る</p></a>
+<div class="grid">
+<a class="card" href="kakeibo-input.html"><div class="icon">✍️</div><div class="title">入力する</div><div class="desc">支出・収入・立替・回収を登録</div></a>
+<a class="card" href="kakeibo-app.html"><div class="icon">📊</div><div class="title">今月の状況</div><div class="desc">支出集計、カード、カテゴリ、立替状況を見る</div></a>
+<a class="card" href="kakeibo-fixed-master.html"><div class="icon">⚙️</div><div class="title">固定費</div><div class="desc">毎月の固定費をまとめて登録・変更</div></a>
+<a class="card" href="kakeibo-plan.html"><div class="icon">🎯</div><div class="title">予算・積み立て</div><div class="desc">PINK上限、カテゴリ予算、目的別積み立て</div></a>
+</div>
+<div class="note">画面を1ページに詰め込まず、ここを入口にして必要な画面だけ開く方式。しばらく使ってみて、よければ統合・整理できます。</div>
+</main>
+</body>
+</html>

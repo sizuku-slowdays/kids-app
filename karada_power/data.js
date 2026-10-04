@@ -5829,3 +5829,12 @@ const FAMILY_GYUDON_V15_17=[
  const ids=new Set(FOODS.map(f=>f.id)),names=new Set(FOODS.map(f=>f.name));
  FAMILY_GYUDON_V15_17.forEach(f=>{if(!ids.has(f.id)&&!names.has(f.name))FOODS.push(f);});
 }
+
+
+// v15.21 frequent ice creams
+const FREQUENT_ICE_V15_21=[
+ {id:"snack_itachoco_ice",category:"おやつ",name:"森永製菓 板チョコアイス",reading:"もりながせいか いたちょこあいす",emoji:"🍫",head_power:0,sparkle_power:0,muscle_power:0,bone_power:0,immunity_power:0,main_nutrients:"脂質,炭水化物",nutrient_list:["脂質","炭水化物"],kids_text:"板チョコみたいな形のアイスだよ。",recipe_tags:"板チョコアイス,森永,アイス",category_ui:"🍪 おやつ",brand:"森永製菓",serving_label:"1個（70ml）",allergen_note:"乳成分・大豆。小麦・卵・落花生を含む製品と共通設備。"},
+ {id:"snack_bokujoshibori_milk",category:"おやつ",name:"牧場しぼり ミルク",reading:"ぼくじょうしぼり みるく ばにら",emoji:"🍨",head_power:0,sparkle_power:0,muscle_power:0,bone_power:0,immunity_power:0,main_nutrients:"脂質,炭水化物,たんぱく質",nutrient_list:["脂質","炭水化物","たんぱく質"],kids_text:"ミルク味のカップアイスだよ。",recipe_tags:"牧場しぼり,ミルク,バニラ,アイス",category_ui:"🍪 おやつ",brand:"江崎グリコ",serving_label:"1個（120ml）",allergen_note:"卵・乳成分"},
+ {id:"snack_milcook_multi",category:"おやつ",name:"マルチ ミルクック（1本）",reading:"まるち みるくっく いっぽん",emoji:"🍦",head_power:0,sparkle_power:0,muscle_power:0,bone_power:0,immunity_power:0,main_nutrients:"炭水化物,脂質",nutrient_list:["炭水化物","脂質"],kids_text:"箱入りのミルクックを1本食べたときに使うよ。",recipe_tags:"ミルクック,マルチ,箱入り,竹下製菓,アイス",category_ui:"🍪 おやつ",brand:"竹下製菓",serving_label:"箱入り1本"}
+];
+{const ids=new Set(FOODS.map(f=>f.id));FREQUENT_ICE_V15_21.forEach(f=>{if(!ids.has(f.id))FOODS.push(f);});}

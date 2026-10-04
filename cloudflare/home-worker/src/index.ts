@@ -1,3 +1,4 @@
+import { advanceChores } from "./passbook-chores";
 import { passbookRoute } from "./passbook";
 import { muscleRoute } from "./muscle-bank";
 import {
@@ -719,6 +720,8 @@ export default {
     }
   },
   async scheduled(_event: ScheduledController, env: HomeEnv) {
+    const households=(await env.DB.prepare("SELECT a.household_id,(SELECT m.user_id FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.group_id=a.household_id AND m.role IN ('owner','admin') AND u.active=1 ORDER BY CASE m.role WHEN 'owner' THEN 0 ELSE 1 END LIMIT 1) actor FROM passbook_activation a").all<{household_id:string;actor:string|null}>()).results;
+    for(const h of households)if(h.actor)await advanceChores(env,h.household_id,h.actor);
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch([
       env.DB.prepare("DELETE FROM auth_attempts WHERE expires_at<?").bind(now),

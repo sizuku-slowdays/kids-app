@@ -1,3 +1,4 @@
+import { choreRoute } from "./passbook-chores";
 import { snapshot, importLegacy } from "./passbook-import";
 import { activatePassbook } from "./passbook-cutover";
 type Context = { DB: D1Database; LEGACY_DB?: D1Database; PRIVATE_FILES: R2Bucket; LEGACY_BANK_SERVICE?: Fetcher; LEGACY_CHORE_SERVICE?: Fetcher };
@@ -49,6 +50,7 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    return reply({configured:true,bank_updated_at:bank.updated_at,balances:parsed.balances,history_count:Array.isArray(parsed.history)?parsed.history.length:null,members,logs});
   }
   check(active||(admin&&imported&&method==='GET'),'残高・履歴の移行確認が終わるまで利用できません',409);
+  if(path==='/chores'||path.startsWith('/chores/'))return reply(await choreRoute(request,env,household!,userId,admin,readBody));
   if(path==='/history'&&method==='GET'){
    const account=url.searchParams.get('account');check((await accounts()).some(a=>a.id===account),'この履歴は見られません',403);
    const before=url.searchParams.get('before');
@@ -84,7 +86,7 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    check(['approved','rejected'].includes(String(data.status)),'操作を確認してください');const id=path.slice('/requests/'.length);const result=await env.DB.prepare("UPDATE passbook_requests SET status=?,resolved_by=?,resolved_at=? WHERE id=? AND household_id=? AND status='pending'").bind(data.status,userId,now,id,household).run();check(result.meta.changes>0,'この申請は処理済みか見つかりません',409);return reply({ok:true});
   }
   return reply({error:'見つかりません'},404);
- } catch(e){const err=e as Error &{status?:number};if(pathErrorSafe(err))return reply({error:err.message},409);const known=/insufficient points|invalid reward|reward unavailable|UNIQUE constraint/.test(err.message);return reply({error:err.status?err.message:known?'ポイント不足・在庫切れ・申請済みのいずれかです':'つうちょうに接続できませんでした'},err.status||(known?409:500));}
+ } catch(e){const err=e as Error &{status?:number};if(/chore cash wallet missing/.test(err.message))return reply({error:'この人の現金通帳がありません。加算せずに止めました。お金なしのお手伝いとして設定してください'},409);if(/chore points wallet missing/.test(err.message))return reply({error:'この人のポイント通帳がありません。加算せずに止めました'},409);if(/chore changed|chore_days.chore_id|chore_days.household_id/.test(err.message))return reply({error:'登録済みか、当番が更新されています。開き直して履歴を確認してください'},409);if(pathErrorSafe(err))return reply({error:err.message},409);const known=/insufficient points|invalid reward|reward unavailable|UNIQUE constraint/.test(err.message);return reply({error:err.status?err.message:known?'ポイント不足・在庫切れ・申請済みのいずれかです':'つうちょうに接続できませんでした'},err.status||(known?409:500));}
 }
 
 

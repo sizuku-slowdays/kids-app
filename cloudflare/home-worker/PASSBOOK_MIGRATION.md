@@ -15,7 +15,7 @@
 - 旧データが取込時から変わった場合、画面で通知。本番へ自動切替しない。
 - 入出金/ポイント登録の理由は任意、よく使う理由をタップで入力。選択対象を維持。
 
-## 本番未完了
+## 本番切替の確認手順
 
 実際のログインセッションとHOME子どもIDの選択はユーザー画面で行う。
 `/apps/passbook/` の「バックアップと引き継ぎ」から、既存アカウントへ対応付ける。
@@ -32,7 +32,7 @@
    HOMEアプリpath/statusもこの時点で設定。
 6. 子ども・親、URL直アクセス、端末再起動で確認。
 
-まだ本番のactivation・HOME ready化は行っていない。旧アプリはそのまま動く。
+利用開始は上記の照合を通過した家庭にだけ記録する。利用開始後の残高・履歴は新つうちょうを正本とし、旧アプリの更新停止を維持する。
 
 ## 注意する旧データ
 
@@ -46,5 +46,17 @@
 
 `legacy-retirement/README.md` に配置手順。旧2本のWorkerへ停止ゲートを準備済み。
 `/api/passbook/activation` は運営管理者かつ家庭管理者のみ。旧公開APIの停止、非公開バックアップのハッシュ、旧DBの最終ハッシュ、台帳残高を照合して利用開始。
-旧当番/完了登録UIはまだ移行しておらず、切替後の現金・ポイント加算は新つうちょうの管理画面から行う。
+当番・完了登録は下記の追加実装で新つうちょうに統合。初回に当番設定だけを引き継ぐ。
 実際の旧Worker配置と本番開始はユーザーのCloudflare/HOME画面で行う。
+
+## Daily chores after passbook activation
+
+`0007_passbook_chores.sql` adds configuration, immutable daily completion/skip events, and a separate private configuration backup record. The administrator opens **今日のお手伝い → 今までのお手伝い・当番を引き継ぐ**. This reads the already-verified original financial backup's person mapping and copies only `chores` / `chore_state` from LEGACY_DB into HOME. Raw configuration is saved and read back from private R2 before a transactional insert. Replays return without replacing configuration; no old financial log is credited again and LEGACY_DB is never written.
+
+Completion remains administrator-only. Actual completer may differ from assigned person. Each chore can be completed once per Japan calendar day. Amounts and point unit come from current server configuration, never browser-supplied values. One trigger commits point entries, cash entries, daily completion and next assignee together. Missing either required wallet aborts all credits. Adult imported accounts currently have points only; money-bearing chores completed by an adult stop for explicit review rather than crediting a child's money. Corrections remain separate append-only manual adjustments.
+
+Rotation uses a JSON list of arbitrary HOME child/adult targets, without fixed daughter IDs or household size. Empty list means no assigned rotation. Point unit is configurable for future point kinds. Admin configuration uses optimistic revision checks, supports new chores and hiding existing chores, and never deletes completion history. UI supports selecting/order-adjusting names.
+
+A unique daily event advances the rotation once, including missed days. `0 15 * * *` (Japan midnight) is added alongside the existing cleanup cron; opening the panel also catches up missed days. A completed day advances immediately to tomorrow, so midnight does not advance it again. Skipped days produce no financial entries. Disabled chores pause their daily cursor. Catch-up is bounded to 400 days per panel open/run. No historical old completions or cash synchronization are replayed.
+
+Verification: Miniflare tests cover configuration import/private backup/mapping/replay without balance changes; parent-only/household/Origin checks; concurrent completion and retry; cash + points atomic credits; rollback when adult cash wallet is absent; configurable point kinds; missed-day catch-up without duplicate advances or financial entries; stale settings conflict. No production test transactions are created.

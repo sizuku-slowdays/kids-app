@@ -9,7 +9,7 @@ test('legacy backup, separate adult wallet, balances and import replay',async()=
  const now=Math.floor(Date.now()/1000),tokens={mom:'a'.repeat(64),a:'b'.repeat(64),b:'c'.repeat(64)};
  for(const id of ['mom','a','b']){await db.prepare("INSERT INTO users(id,login_name,display_name,password_salt,password_hash,password_iterations,platform_role,created_at) VALUES (?,?,?,'s','h',1,?,?)").bind(id,id,id,id==='mom'?'operator':'user',now).run();await db.prepare("INSERT INTO sessions(id,token_hash,user_id,device_name,created_at,last_seen_at,expires_at) VALUES (?,?,?,'test',?,?,?)").bind(id,createHash('sha256').update(tokens[id]).digest('hex'),id,now,now,now+10000).run()}
  await db.prepare("INSERT INTO groups VALUES ('h','household','household','mom',?)").bind(now).run();for(const id of ['mom','a','b'])await db.prepare("INSERT INTO memberships VALUES ('h',?,?)").bind(id,id==='mom'?'owner':'member').run();await db.prepare("INSERT INTO group_apps VALUES ('h','passbook')").run();for(const id of ['a','b'])await db.prepare("INSERT INTO children VALUES (?,'h',?,?)").bind(id,id,id).run();
- for(const sql of ['CREATE TABLE app_data(app TEXT,data_key TEXT,data_json TEXT,updated_at TEXT)','CREATE TABLE family_members(id TEXT,name TEXT,sort_order INTEGER)','CREATE TABLE chore_logs(id INTEGER,chore_name TEXT,completed_by TEXT,points INTEGER,money INTEGER,bank_synced INTEGER,created_at TEXT,completed_date TEXT)','CREATE TABLE rewards(id INTEGER,name TEXT,points INTEGER,stock INTEGER,enabled INTEGER)','CREATE TABLE reward_requests(id INTEGER,member_id TEXT,reward_id INTEGER,reward_name TEXT,points_cost INTEGER,status TEXT,requested_at TEXT,resolved_at TEXT)'])await legacy.prepare(sql).run();
+ for(const sql of ['CREATE TABLE chores(id TEXT,name TEXT,icon TEXT,points INTEGER,money INTEGER,enabled INTEGER,sort_order INTEGER)','CREATE TABLE chore_state(chore_id TEXT,next_assignee TEXT,rotation_order TEXT)','CREATE TABLE app_data(app TEXT,data_key TEXT,data_json TEXT,updated_at TEXT)','CREATE TABLE family_members(id TEXT,name TEXT,sort_order INTEGER)','CREATE TABLE chore_logs(id INTEGER,chore_name TEXT,completed_by TEXT,points INTEGER,money INTEGER,bank_synced INTEGER,created_at TEXT,completed_date TEXT)','CREATE TABLE rewards(id INTEGER,name TEXT,points INTEGER,stock INTEGER,enabled INTEGER)','CREATE TABLE reward_requests(id INTEGER,member_id TEXT,reward_id INTEGER,reward_name TEXT,points_cost INTEGER,status TEXT,requested_at TEXT,resolved_at TEXT)'])await legacy.prepare(sql).run();
  const bank={balances:{usagi:1375,kuma:625},history:Array.from({length:88},(_,i)=>({acc:i<44?'usagi':'kuma',type:i%2?'withdraw':'deposit',amount:10,memo:'original '+i,date:'2026/10/2 12:30'})),goals:{usagi:3000,kuma:5000},chores:[{name:'おふろあらい'}]};await legacy.prepare("INSERT INTO app_data VALUES ('mama-bank','main',?,'2026-10-03')").bind(JSON.stringify(bank)).run();
  for(const [id,name,points] of [['mama','ママ',2500],['ane','あね',830],['imouto','いもうと',890]]){await legacy.prepare('INSERT INTO family_members VALUES (?,?,1)').bind(id,name).run();await legacy.prepare("INSERT INTO chore_logs VALUES (?,?,?, ?,100,1,'2026-10-02 12:00:00','2026-10-02')").bind(points,name,id,points).run()}
  await legacy.prepare("INSERT INTO rewards VALUES (1,'おやつ',70,3,1)").run();await legacy.prepare("INSERT INTO reward_requests VALUES (1,'ane',1,'おやつ',70,'approved','2026-10-01','2026-10-02')").run();await legacy.prepare("INSERT INTO reward_requests VALUES (2,'imouto',1,'おやつ',70,'pending','2026-10-03',NULL)").run();
@@ -38,6 +38,18 @@ test('legacy backup, separate adult wallet, balances and import replay',async()=
  assert.equal((await db.prepare("SELECT status FROM apps WHERE id='passbook'").first()).status,'ready');
  assert.equal((await call('/activation','mom','POST',{confirmed:true})).data.already_active,true);
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_activation').first()).n,1);
+ await legacy.prepare("INSERT INTO chores VALUES ('bath','おふろ','🛁',20,50,1,1)").run();await legacy.prepare("INSERT INTO chore_state VALUES ('bath','ane','mama,ane,imouto')").run();
+ assert.equal((await call('/chores/import','a','POST',{})).status,403);
+ const entriesBefore=(await db.prepare('SELECT COUNT(*) n FROM passbook_entries').first()).n;
+ await bucket.put(row.backup_key,JSON.stringify({...backup,snapshot:{modified:true}}));assert.equal((await call('/chores/import','mom','POST',{})).status,409);assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_chores').first()).n,0);await bucket.put(row.backup_key,JSON.stringify(backup));
+ const choresImported=await call('/chores/import','mom','POST',{});assert.equal(choresImported.status,200,JSON.stringify(choresImported));assert.equal(choresImported.data.count,1);
+ const c=(await call('/chores')).data.chores[0];assert.deepEqual(JSON.parse(c.rotation_json),['user:mom','a','b']);assert.equal(c.next_target,'a');assert.equal(c.money,50);
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_entries').first()).n,entriesBefore);
+ assert.equal((await call('/chores/import','mom','POST',{})).data.already_imported,true);
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_chores').first()).n,1);
+ const choreBackup=await db.prepare('SELECT backup_key FROM passbook_chore_imports').first();assert.equal(JSON.parse(await(await bucket.get(choreBackup.backup_key)).text()).raw.chores[0].id,'bath');
+ assert.equal((await legacy.prepare('SELECT next_assignee FROM chore_state').first()).next_assignee,'ane');
+
 
  }finally{await mf.dispose()}
 });

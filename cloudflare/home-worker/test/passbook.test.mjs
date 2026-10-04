@@ -35,5 +35,39 @@ test('passbook ownership, migration gate, reservations and atomic approval',asyn
  assert.equal((await call('/requests/'+req.data.id,'child','PUT',{status:'approved'})).status,403);const approvals=await Promise.all([call('/requests/'+req.data.id,'mom','PUT',{status:'approved'}),call('/requests/'+req.data.id,'mom','PUT',{status:'approved'})]);assert.deepEqual(approvals.map(r=>r.status).sort(),[200,409]);
  assert.equal((await db.prepare("SELECT SUM(delta) n FROM passbook_entries WHERE account_id='c-chores'").first()).n,30);assert.equal((await db.prepare('SELECT stock FROM passbook_rewards WHERE id=?').bind(reward).first()).stock,0);
  assert.equal((await call('/requests','sibling','POST',{reward_id:reward})).status,409);assert.equal((await db.prepare("SELECT SUM(delta) n FROM passbook_entries WHERE account_id='s-chores'").first()).n,100);
+ // A daily completion atomically credits both currencies, then advances once.
+ const today=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+ const created=await call('/chores','mom','POST',{name:'おふろ',icon:'🛁',points:20,money:50,point_unit_id:'chores',rotation:['c','s'],next_target:'c'});assert.equal(created.status,200,JSON.stringify(created));const chore=created.data.id;
+ assert.equal((await call('/chores','stranger')).status,403);
+ assert.equal((await call('/chores/complete','child','POST',{chore_id:chore,target:'c',event_id:'child-forge'})).status,403);
+ assert.equal((await call('/chores/complete','mom','POST',{chore_id:chore,target:'c',event_id:'origin-denied'},'https://bad.test')).status,403);
+ assert.equal((await call('/chores/complete','mom','POST',{chore_id:chore,target:'stranger',event_id:'foreign-target'})).status,400);
+ const done={chore_id:chore,target:'c',event_id:'complete-once',revision:1};
+ const completions=await Promise.all([call('/chores/complete','mom','POST',done),call('/chores/complete','mom','POST',{...done,event_id:'another-tab'})]);assert.deepEqual(completions.map(v=>v.status).sort(),[200,409]);
+ assert.equal((await call('/chores/complete','mom','POST',done)).status,200);
+ assert.equal((await db.prepare("SELECT SUM(delta) n FROM passbook_entries WHERE account_id='c-cash'").first()).n,160);
+ assert.equal((await db.prepare("SELECT SUM(delta) n FROM passbook_entries WHERE account_id='c-chores'").first()).n,50);
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_chore_days WHERE chore_id=?').bind(chore).first()).n,1);
+ assert.equal((await db.prepare('SELECT next_target FROM passbook_chores WHERE id=?').bind(chore).first()).next_target,'s');
+ // Missed days advance on reopening, without any financial credit, and retries do not advance twice.
+ const missed=(await call('/chores','mom','POST',{name:'そうじ',points:10,money:0,point_unit_id:'good',rotation:['c','s'],next_target:'c'})).data.id;
+ const yesterday=new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10);
+ await db.prepare('UPDATE passbook_chores SET next_date=? WHERE id=?').bind(yesterday,missed).run();
+ const balanceBefore=(await db.prepare('SELECT COUNT(*) n FROM passbook_entries').first()).n;
+ await Promise.all([call('/chores','child'),call('/chores','mom')]);
+ assert.equal((await db.prepare('SELECT next_target FROM passbook_chores WHERE id=?').bind(missed).first()).next_target,'s');
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_entries').first()).n,balanceBefore);
+ assert.equal((await call('/chores/complete','mom','POST',{chore_id:missed,target:'s',event_id:'good-point-kind',revision:2})).status,200);
+ assert.equal((await db.prepare("SELECT SUM(delta) n FROM passbook_entries WHERE account_id='s-good'").first()).n,10);
+ // Missing cash wallet rolls back points, day and rotation as one transaction.
+ await db.prepare("INSERT INTO passbook_adult_accounts VALUES ('adult','h','mom','chores')").run();
+ const missing=(await call('/chores','mom','POST',{name:'買い物',points:40,money:100,point_unit_id:'chores',rotation:[],next_target:null})).data.id;
+ const blocked=await call('/chores/complete','mom','POST',{chore_id:missing,target:'user:mom',event_id:'no-cash-wallet',revision:1});assert.equal(blocked.status,409,JSON.stringify(blocked));
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_adult_entries').first()).n,0);assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_chore_days WHERE chore_id=?').bind(missing).first()).n,0);
+ const conf=(await call('/chores')).data.chores.find(c=>c.id===missing);
+ assert.equal((await call('/chores/'+missing,'mom','PUT',{...conf,point_unit_id:'chores',rotation:[],money:0,enabled:true})).status,200);
+ assert.equal((await call('/chores/'+missing,'mom','PUT',{...conf,point_unit_id:'chores',rotation:[],money:0,enabled:true})).status,409);
+ assert.equal((await call('/chores/complete','mom','POST',{chore_id:missing,target:'user:mom',event_id:'adult-points-only',revision:2})).status,200);
+ assert.equal((await db.prepare('SELECT SUM(delta) n FROM passbook_adult_entries').first()).n,40);
  } finally {await mf.dispose()}
 });

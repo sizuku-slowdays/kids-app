@@ -860,7 +860,7 @@
       $("expenseTotal").textContent = yen(totalExp);
       $("balanceTotal").textContent = yen(balance);
       $("balanceTotal").style.color = balance >= 0 ? "var(--safe)" : "var(--danger)";
-      $("incomeNote").textContent   = (viewMode()==="use" ? "利用日" : "引落・反映月") + "ベースで集計しています。";
+      $("incomeNote").textContent   = (viewMode()==="use" ? "利用日" : "引落・反映月") + "ベース。立替・回収は収入／支出の合計から除外しています。";
 
       renderAdvances(m,recoveries);
       renderPayments([...expenses,...advances]);
@@ -1001,8 +1001,8 @@
         })
         .sort((a,b) => String(b.date||"").localeCompare(String(a.date||"")));
 
-      const total = list.filter(e=>e.type==="expense").reduce((s,e)=>s+Number(e.amount||0),0);
-      const income= list.filter(e=>e.type==="income").reduce((s,e)=>s+Number(e.amount||0),0);
+      const total = list.filter(e=>e.type==="expense"||e.type==="advance").reduce((s,e)=>s+Number(e.amount||0),0);
+      const income= list.filter(e=>e.type==="income"||e.type==="recovery").reduce((s,e)=>s+Number(e.amount||0),0);
 
       $("drawerTotal").textContent =
         `${list.length}件　支出合計：${yen(total)}` + (income>0 ? `　収入：${yen(income)}` : "");
@@ -1117,6 +1117,7 @@
         payment,
         memo:        $("editMemo").value.trim(),
         counterparty:(editingType==="advance"||editingType==="recovery") ? $("editCounterparty").value.trim() : "",
+        linkedAdvanceId:editingType==="recovery" ? (entries[idx].linkedAdvanceId||"") : "",
         category:    $("editCategory").value || "その他",
         settleMonth: $("editSettleMonth").value || date.slice(0,7),
         updatedAt:   new Date().toISOString()

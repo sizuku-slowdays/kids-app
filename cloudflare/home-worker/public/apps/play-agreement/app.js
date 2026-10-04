@@ -1,5 +1,5 @@
 const storageKey = "play-agreement-admin-token";
-const adminBase = "https://asobu-yakusoku.hakusui-soumu.chatgpt.site/admin/";
+const adminBase = "https://asobu.cetus.fun/admin/";
 const valid = (value) => /^[a-f0-9]{64}$/.test(value || "");
 
 function openAdmin(token) {

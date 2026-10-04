@@ -119,6 +119,37 @@ async function body(request: Request): Promise<Record<string, unknown>> {
   return value;
 }
 async function throttle(env: HomeEnv, request: Request, scope: string) {
+  // Public friend-facing hostname. Keep the Sites workspace name out of shared URLs.
+  if (url.hostname === "asobu.cetus.fun") {
+    const upstream = new URL(request.url);
+    upstream.protocol = "https:";
+    upstream.hostname = "asobu-yakusoku.hakusui-soumu.chatgpt.site";
+    upstream.port = "";
+    const upstreamHeaders = new Headers(request.headers);
+    upstreamHeaders.delete("host");
+    upstreamHeaders.delete("cookie");
+    const response = await fetch(new Request(upstream, {
+      method,
+      headers: upstreamHeaders,
+      body: ["GET", "HEAD"].includes(method) ? null : request.body,
+      redirect: "manual",
+    }));
+    const responseHeaders = new Headers(response.headers);
+    const location = responseHeaders.get("Location");
+    if (location)
+      responseHeaders.set(
+        "Location",
+        location.replace(
+          "https://asobu-yakusoku.hakusui-soumu.chatgpt.site",
+          "https://asobu.cetus.fun",
+        ),
+      );
+    responseHeaders.set("X-Robots-Tag", "noindex, nofollow");
+    return new Response(method === "HEAD" ? null : response.body, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  }
   const now = Math.floor(Date.now() / 1000);
   const window = Math.floor(now / 900);
   const bucket = await digest(

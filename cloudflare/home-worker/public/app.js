@@ -198,9 +198,6 @@ async function home() {
     el("small", "›"),
   );
   root.append(previousHome);
-  const households = me.groups.filter((g) => g.kind === "household");
-  if (households.length)
-    root.append(el("p", households.map((g) => g.name).join("・"), "muted"));
 }
 function settings() {
   root.replaceChildren();

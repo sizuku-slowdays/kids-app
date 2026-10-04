@@ -1,3 +1,4 @@
+import { mountedHome } from "./home-mount";
 import { advanceChores } from "./passbook-chores";
 import { kidneyRoute } from "./kidney";
 import { passbookRoute } from "./passbook";
@@ -766,6 +767,8 @@ export default {
   async fetch(request: Request, env: HomeEnv): Promise<Response> {
     let stage = "request";
     try {
+      const mounted = await mountedHome(request, normalized => route(normalized, env, (value) => { stage = value; }));
+      if (mounted) return mounted;
       return await route(request, env, (value) => { stage = value; });
     } catch (error) {
       if (error instanceof Failure)

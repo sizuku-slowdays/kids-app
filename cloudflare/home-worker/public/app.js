@@ -174,6 +174,15 @@ async function home() {
   header.append(title, button("⚙️ 設定", settings, "quiet"));
   root.append(header);
   const visibleApps=apps.filter(a=>a.visible);
+  const isMamaHome=me.groups.some(g=>g.kind==="household"&&["owner","admin"].includes(g.role));
+  document.body.classList.toggle("mama-home",isMamaHome);
+  if(isMamaHome){
+    const quick=appSection("家計簿","すぐ入力・確認","money-quick-grid");
+    for(const app of [
+      {id:"kakeibo-index",name:"家計簿メニュー",icon:"💰",path:"https://cetus.fun/kanriapp/kakeibo-index.html",status:"ready"},
+      {id:"kakeibo-input",name:"すぐ入力",icon:"✍️",path:"https://cetus.fun/kanriapp/kakeibo-input.html",status:"ready"},
+    ]) quick.append(appCard(app));
+  }
   const simple=visibleApps.length===2&&visibleApps.every(a=>["calendar","kidney"].includes(a.id));
   if (visibleApps.length) {
     const featured = appSection('すぐ開く', simple ? '毎日使うアプリ' : 'よく使うアプリ', simple ? 'hero-grid grandpa-home' : 'hero-grid');

@@ -164,6 +164,15 @@ async function home() {
   root.append(grid);
   if (!grid.childElementCount)
     root.append(el("p", "設定から、使うアプリを追加できます。", "muted"));
+  const previousHome = el("a", null, "card");
+  previousHome.href = "https://cetus.fun/wagaya/";
+  previousHome.style.marginTop = "22px";
+  previousHome.append(
+    el("span", "🏡", "icon"),
+    el("strong", "以前のHOME"),
+    el("small", "これまでのわが家アプリをひらく"),
+  );
+  root.append(previousHome);
   const households = me.groups.filter((g) => g.kind === "household");
   if (households.length)
     root.append(el("p", households.map((g) => g.name).join("・"), "muted"));

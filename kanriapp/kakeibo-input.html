@@ -189,7 +189,8 @@
     <section class="card" id="fixedCard">
       <button type="button" class="fixed-toggle" id="fixedToggle" aria-expanded="false" aria-controls="fixedPanel">🔁 固定費　一覧を開く ▾</button>
       <div id="fixedPanel" hidden>
-        <p class="settle-hint">金額・支払い元・カテゴリを一度保存すれば、次から1タップで支出登録できます。</p>\n        <p style="margin:6px 0 12px"><a href="kakeibo-fixed-master.html" style="display:inline-block;text-decoration:none;border:1px solid #ebd19a;border-radius:999px;padding:8px 12px;background:#fff3d1;color:#5b3a05;font-weight:800;font-size:.85rem">⚙️ 固定費をまとめて編集</a></p>
+        <p class="settle-hint">金額・支払い元・カテゴリを一度保存すれば、次から1タップで支出登録できます。</p>
+        <p style="margin:6px 0 12px"><a href="kakeibo-fixed-master.html" style="display:inline-block;text-decoration:none;border:1px solid #ebd19a;border-radius:999px;padding:8px 12px;background:#fff3d1;color:#5b3a05;font-weight:800;font-size:.85rem">⚙️ 固定費をまとめて編集</a></p>
         <div class="fixed-top"><label for="fixedDate">登録日</label><input type="date" id="fixedDate"></div>
         <div id="fixedList"></div>
         <p id="fixedMessage" role="status"></p>
@@ -320,7 +321,7 @@
       <button type="button" class="save-btn" id="saveBtn">登録する</button>
       <div class="sub-buttons">
         <button type="button" class="continue-btn" id="continueBtn">続けて入力</button>
-        <a class="back-link" id="homeLink" href="kakeibo-app.html">今月の状況にもどる</a>
+        <a class="back-link" id="homeLink" href="kakeibo-index.html">家計簿メニューにもどる</a>
       </div>
     </div>
   </div>
@@ -821,7 +822,7 @@
       });
 
       // 戻るボタン
-      $("backBtn").addEventListener("click", () => { location.href = "kakeibo-app.html"; });
+      $("backBtn").addEventListener("click", () => { location.href = "kakeibo-index.html"; });
 
       // 戻るリンクはhrefで対応済み
     }

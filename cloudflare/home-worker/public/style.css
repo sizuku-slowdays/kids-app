@@ -194,3 +194,34 @@ input:focus-visible {
 .grandpa-home .card strong {font-size:28px;}
 .grandpa-home .icon {font-size:42px;}
 .grandpa-home .card small {font-size:18px;}
+
+/* Familiar family HOME layout; authentication and account visibility stay intact. */
+body { min-height:100vh; background:linear-gradient(180deg,#edf9f5,#f8fcfa 55%,#eaf6f2); }
+main { max-width:680px; padding:24px 18px calc(40px + env(safe-area-inset-bottom)); }
+header { margin-bottom:20px; }
+header .eyebrow { color:#315f57;font-size:14px;font-weight:800;letter-spacing:0; }
+header h1 { font-size:28px; }
+header .muted { margin:4px 0 0; }
+.quiet { background:#e0f1ea; }
+.home-section { padding:20px; margin-bottom:18px; border:1px solid #d7e8e2; border-radius:23px; background:rgba(255,255,255,.95); box-shadow:0 9px 28px rgba(45,110,88,.08); }
+.section-kicker { margin:0 0 3px; font-size:12px;font-weight:800;color:#187465; }
+.home-section h2 { margin:0 0 15px; font-size:21px; }
+.hero-grid,.home-app-list { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px; }
+.home-card { color:inherit;text-decoration:none;border:1px solid #dbe9e4;background:white;border-radius:19px; }
+.hero-card { min-height:133px;padding:16px;display:flex;flex-direction:column;position:relative;box-shadow:0 5px 16px rgba(45,90,73,.06); }
+.card-icon { font-size:30px; }
+.hero-card .card-icon { margin-bottom:9px; }
+.card-copy { min-width:0; }
+.card-copy strong { display:block;font-size:17px; }
+.card-copy small { display:block;font-size:12px;line-height:1.45;color:#687d75;margin-top:5px; }
+.card-arrow { color:#7ca79b;font-size:22px; }
+.hero-card .card-arrow { position:absolute;right:12px;top:50%; }
+.list-card { display:grid;grid-template-columns:38px 1fr 12px;gap:8px;align-items:center;min-height:80px;padding:11px; }
+.list-card .card-icon { display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#e8f7ef;font-size:23px; }
+.list-card strong { font-size:14px; }.list-card small { font-size:11px; }
+.previous-home { display:flex;gap:12px;align-items:center;min-height:60px;padding:12px 17px;border:1px solid #d4e7df;border-radius:17px;background:#ffffffbb;color:#315f57;text-decoration:none; }
+.previous-home .icon { font-size:25px; }.previous-home small { margin-left:auto;font-size:24px; }
+.grandpa-home { grid-template-columns:1fr;gap:15px; }
+.grandpa-home .hero-card { min-height:165px;padding:22px; }
+.grandpa-home .card-icon { font-size:42px; }.grandpa-home strong { font-size:27px; }.grandpa-home small { font-size:17px; }
+@media(max-width:420px){main{padding-inline:12px}.home-section{padding:15px}.home-app-list{grid-template-columns:1fr}.hero-card{padding:13px}.hero-card strong{font-size:16px}.grandpa-home strong{font-size:26px}}

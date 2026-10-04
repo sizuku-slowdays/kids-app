@@ -6,6 +6,40 @@ const el = (tag, text, cls) => {
   return n;
 };
 let me, apps;
+const existingApps = {
+  album: ['https://cetus.fun/wagaya/album/', '写真・動画やゲームの思い出'],
+  timetable: ['https://cetus.fun/wagaya/timetable.html', '4年生・2年生の時間割'],
+  notification: ['https://cetus.fun/kanriapp/notification-center.html', '家族のお知らせを確認'],
+  learning: ['https://cetus.fun/wagaya/keisan/', '計算・ことばの練習'],
+};
+const descriptions = {
+  calendar: '家族みんなの予定を共有',
+  kidney: '食べる前に今日の量を確認',
+  passbook: 'おこづかい・ポイント・残高',
+  'muscle-bank': '思い立ったらすぐ運動',
+  'play-agreement': '外遊びの約束を確認',
+};
+function appCard(app, featured = false) {
+  const target = app.status === 'ready' && app.path ? app.path : existingApps[app.id]?.[0];
+  const card = el(target ? 'a' : 'div', null, featured ? 'home-card hero-card' : 'home-card list-card');
+  if (target) {
+    const url = new URL(target, location.origin);
+    if (url.origin === location.origin && url.pathname.startsWith('/apps/')) card.href = url.pathname + url.search;
+    else if (url.origin === 'https://cetus.fun') card.href = url.href;
+  }
+  const copy = el('span', null, 'card-copy');
+  copy.append(el('strong', app.name), el('small', target ? (descriptions[app.id] || existingApps[app.id]?.[1] || 'ひらく') : '準備中'));
+  card.append(el('span', app.icon, 'card-icon'), copy, el('span', target ? '›' : '', 'card-arrow'));
+  return card;
+}
+function appSection(kicker, title, cls) {
+  const section = el('section', null, 'home-section');
+  section.append(el('p', kicker, 'section-kicker'), el('h2', title));
+  const grid = el('div', null, cls);
+  section.append(grid);
+  root.append(section);
+  return grid;
+}
 async function api(path, method = "GET", body) {
   const res = await fetch(path, {
     method,
@@ -133,44 +167,35 @@ async function home() {
   const header = el("header"),
     title = el("div");
   title.append(
-    el("div", "MY HOME", "eyebrow"),
-    el("h1", "HOME"),
+    el("div", new Intl.DateTimeFormat('ja-JP', {timeZone:'Asia/Tokyo',month:'long',day:'numeric',weekday:'short'}).format(new Date()), "eyebrow"),
+    el("h1", "わが家"),
     el("p", me.user.display_name + " さん", "muted"),
   );
-  header.append(title, button("設定", settings, "quiet"));
+  header.append(title, button("⚙️ 設定", settings, "quiet"));
   root.append(header);
   const visibleApps=apps.filter(a=>a.visible);
   const simple=visibleApps.length===2&&visibleApps.every(a=>["calendar","kidney"].includes(a.id));
-  const grid = el("section", null, simple?"grid grandpa-home":"grid");
-  for (const app of apps.filter((a) => a.visible)) {
-    const card = el(
-      app.status === "ready" && app.path ? "a" : "div",
-      null,
-      "card",
-    );
-    if (card.tagName === "A") {
-      const url = new URL(app.path, location.origin);
-      if (url.origin === location.origin && url.pathname.startsWith("/apps/"))
-        card.href = url.pathname + url.search;
-      else card.removeAttribute("href");
+  if (visibleApps.length) {
+    const featured = appSection('すぐ開く', simple ? '毎日使うアプリ' : 'よく使うアプリ', simple ? 'hero-grid grandpa-home' : 'hero-grid');
+    visibleApps.slice(0, simple ? 2 : 3).forEach(app => featured.append(appCard(app, true)));
+    if (!simple) {
+      const grid = appSection('一覧', 'アプリ', 'home-app-list');
+      visibleApps.forEach(app => grid.append(appCard(app)));
+      const links = appSection('いつもの', 'からだパワー・お薬タイマー', 'home-app-list');
+      for (const app of [
+        {id:'karada',name:'からだパワー',icon:'🌈',path:'https://cetus.fun/karada_power/',status:'ready'},
+        {id:'medicine',name:'いっぷんお薬タイマー',icon:'💊',path:'https://cetus.fun/kids-app/medicine-game.html',status:'ready'},
+      ]) links.append(appCard(app));
     }
-    card.append(
-      el("span", app.icon, "icon"),
-      el("strong", app.name),
-      el("small", app.status === "planned" ? "準備中" : app.id==="calendar"?"いつものカレンダーへ":"ひらく"),
-    );
-    grid.append(card);
   }
-  root.append(grid);
-  if (!grid.childElementCount)
+  if (!visibleApps.length)
     root.append(el("p", "設定から、使うアプリを追加できます。", "muted"));
-  const previousHome = el("a", null, "card");
+  const previousHome = el("a", null, "previous-home");
   previousHome.href = "https://cetus.fun/wagaya/";
-  previousHome.style.marginTop = "22px";
   previousHome.append(
     el("span", "🏡", "icon"),
     el("strong", "以前のHOME"),
-    el("small", "これまでのわが家アプリをひらく"),
+    el("small", "›"),
   );
   root.append(previousHome);
   const households = me.groups.filter((g) => g.kind === "household");

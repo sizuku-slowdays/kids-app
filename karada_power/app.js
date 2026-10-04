@@ -425,6 +425,16 @@ function renderSchoolLunchForRecord(){
 }
 
 
+const SNACK_QUICK_IDS=['snack_mow_v','snack_mow_s','snack_itachoco_ice','snack_bokujoshibori_milk','snack_milcook_multi','snack_jagarico','snack_jagarico_l'];
+function renderSnackQuick(){
+ const box=document.getElementById('snack-quick');if(!box)return;
+ if(activeMeal!=='snack'){box.innerHTML='';box.classList.add('hidden');return}
+ box.classList.remove('hidden');
+ const ids=mealIds('snack');
+ box.innerHTML=`<div class="gyudon-quick-head"><div><b>🍭 よく食べるおやつ</b><small>1個・1本・1カップずつ登録</small></div></div><div class="gyudon-quick-items">${SNACK_QUICK_IDS.map(id=>{const f=FOODS.find(x=>x.id===id);if(!f)return '';const checked=ids.some(x=>String(x)===String(id));return `<button class="gyudon-quick-btn ${checked?'checked':''}" data-snack-quick="${id}"><span>${checked?'✓':f.emoji}</span><b>${f.name}</b></button>`}).join('')}</div>`;
+ box.querySelectorAll('[data-snack-quick]').forEach(b=>b.onclick=e=>toggleTodayQuick(b.dataset.snackQuick,e));
+}
+
 const GYUDON_QUICK_IDS=[
  'restaurant_sukiya_kids_gyudon',
  'restaurant_sukiya_gyudon_nami',
@@ -497,6 +507,7 @@ function renderToday(){
   renderHomeTodayPower();
   renderSchoolLunchForRecord();
   renderGyudonQuick();
+  renderSnackQuick();
   const r=getRecord(),list=recordFoods(r),s={};
   document.getElementById('date-label').textContent=formatDateLabel(selectedDate)+(selectedDate===localDateString()?'　今日':'');
   document.getElementById('date-next').disabled=selectedDate>=localDateString();

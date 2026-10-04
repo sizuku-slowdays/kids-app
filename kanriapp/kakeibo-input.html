@@ -40,6 +40,9 @@
       cursor:pointer;background:transparent;color:var(--muted);transition:all .15s}
     .type-btn.active-expense{background:linear-gradient(135deg,#ffb84d,#ff8c00);color:#3e2600;box-shadow:0 3px 8px rgba(180,100,0,.2)}
     .type-btn.active-income{background:linear-gradient(135deg,#4ecb7f,#2e9f62);color:#fff;box-shadow:0 3px 8px rgba(30,120,60,.2)}
+    .type-btn.active-advance{background:linear-gradient(135deg,#7ec8ff,#4b8bd8);color:#fff;box-shadow:0 3px 8px rgba(50,100,170,.2)}
+    .type-btn.active-recovery{background:linear-gradient(135deg,#c9a7ff,#8d63d8);color:#fff;box-shadow:0 3px 8px rgba(100,70,160,.2)}
+    .party-card input,.party-card select{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:1rem;background:#fffdf8;color:var(--text)}
 
     /* 金額入力（一番目立つ） */
     .amount-section{text-align:center;padding:16px 18px 20px}
@@ -208,9 +211,11 @@
 
     <!-- 金額（一番目立つ） -->
     <div class="card amount-section">
-      <div class="type-switch">
+      <div class="type-switch" style="flex-wrap:wrap;max-width:390px">
         <button type="button" class="type-btn active-expense" id="typeExpense">💸 支出</button>
         <button type="button" class="type-btn" id="typeIncome">💰 収入</button>
+        <button type="button" class="type-btn" id="typeAdvance">🤝 立替</button>
+        <button type="button" class="type-btn" id="typeRecovery">↩️ 回収</button>
       </div>
       <div class="amount-label" id="amountLabel">いくら使いましたか？</div>
       <div class="amount-input-wrap">
@@ -248,7 +253,23 @@
           <span class="pay-icon">🏦</span>
           <span class="pay-name">auじぶん銀行</span>
         </button>
+        <button type="button" class="pay-btn" data-payment="ゆうちょ"><span class="pay-icon">🏣</span><span class="pay-name">ゆうちょ</span></button>
+        <button type="button" class="pay-btn" data-payment="福岡中央銀行"><span class="pay-icon">🏦</span><span class="pay-name">福岡中央銀行</span></button>
+        <button type="button" class="pay-btn" data-payment="福岡銀行"><span class="pay-icon">🏦</span><span class="pay-name">福岡銀行</span></button>
       </div>
+    </div>
+
+    <div class="card party-card" id="partyCard" hidden>
+      <div class="section-label">👤 立替の相手（必ず入力）</div>
+      <input id="counterparty" list="counterpartyList" maxlength="80" placeholder="例：会社、祖母、○○さん">
+      <datalist id="counterpartyList"></datalist>
+      <div class="settle-hint">一度使った相手は次から候補に出ます。</div>
+    </div>
+
+    <div class="card party-card" id="recoveryLinkCard" hidden>
+      <div class="section-label">🔗 どの立替を回収しましたか？</div>
+      <select id="linkedAdvanceId"></select>
+      <div class="settle-hint" id="recoveryHint">相手を入力すると、未回収の立替が候補に出ます。</div>
     </div>
 
     <!-- メモ -->
@@ -258,7 +279,7 @@
     </div>
 
     <!-- カテゴリ -->
-    <div class="card">
+    <div class="card" id="categoryCard">
       <div class="section-label">🗂 カテゴリ（タップして選択）</div>
       <div class="category-btns" id="categoryButtons"></div>
       <div class="category-selected">選択中：<strong id="selectedCategoryText">その他</strong></div>
@@ -312,11 +333,11 @@
     const DELETED_KEY  = "kakeibo-deleted-ids-v1";
     const BACKUP_KEY   = "kakeibo-local-backups-v1";
     const APP_KEY      = "kakeibo-app";
-    const APP_VERSION  = 5;
+    const APP_VERSION  = 6;
     const DEFAULT_API  = "https://api.cetus.fun/api/app-data";
 
     let selectedPayment = "";
-    let entryType = "expense"; // "expense" or "income"
+    let entryType = "expense"; // expense | income | advance | recovery
     const CATEGORIES = ["その他","食費","おやつ","日用品","医療費","祖母・医療費","祖母・利用分","子ども","学校","習い事","ゲーム・娯楽","宝くじ","美容","犬","交通・ガソリン","外食","仕事立替","通信・サブスク","車・ローン","生活費","特別費"];
 
     let saving = false;
@@ -338,8 +359,8 @@
 
     function suggestedSettle(){
       const date = $("date").value || todayString();
-      // 収入は常に当月、支出はクレジットなら翌月
-      const isCredit = entryType === "expense" && isCreditPayment(selectedPayment);
+      // 支出・立替のカード払いだけ翌月。収入・回収は受取月。
+      const isCredit = (entryType === "expense" || entryType === "advance") && isCreditPayment(selectedPayment);
       return addMonths(date, isCredit ? 1 : 0);
     }
 
@@ -451,19 +472,33 @@
     }
 
     /* ── 収入/支出 切り替え ── */
-    function selectType(type){
-      entryType = type;
-      const isIncome = type === "income";
-      $("typeExpense").className = "type-btn" + (!isIncome ? " active-expense" : "");
-      $("typeIncome").className  = "type-btn" + ( isIncome ? " active-income"  : "");
-      $("amountLabel").textContent  = isIncome ? "いくら入ってきましたか？" : "いくら使いましたか？";
-      $("paymentLabel").textContent = isIncome ? "💰 入金先（必ず選択）" : "💳 支払い元（必ず選択）";
-      document.querySelector("header h1").textContent = isIncome ? "💰 収入を入力" : "💸 支出を入力";
-      $("fixedCard").hidden=isIncome;
-      // 収入はクレジット引落ではないので当月固定
-      syncSettle();
+    function typeMeta(type){
+      return {expense:{label:"いくら使いましたか？",pay:"💳 支払い元（必ず選択）",title:"💸 支出を入力"},income:{label:"いくら入ってきましたか？",pay:"💰 入金先（必ず選択）",title:"💰 収入を入力"},advance:{label:"いくら立て替えましたか？",pay:"💳 立替の支払い元（必ず選択）",title:"🤝 立替を入力"},recovery:{label:"いくら返してもらいましたか？",pay:"💰 回収した入金先（必ず選択）",title:"↩️ 回収を入力"}}[type]||{};
     }
-
+    function refreshCounterparties(){
+      const names=[...new Set(loadEntries().map(e=>String(e.counterparty||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ja"));
+      $("counterpartyList").innerHTML=names.map(n=>"<option value=\""+n.replaceAll("\"","&quot;")+"\"></option>").join("");
+    }
+    function outstandingForAdvance(advance,all){
+      const recovered=all.filter(e=>e.type==="recovery"&&e.linkedAdvanceId===advance.id).reduce((s,e)=>s+Number(e.amount||0),0);
+      return Math.max(0,Number(advance.amount||0)-recovered);
+    }
+    function refreshRecoveryLinks(){
+      if(entryType!=="recovery")return;
+      const all=loadEntries(),party=$("counterparty").value.trim();
+      const candidates=all.filter(e=>e.type==="advance"&&(!party||e.counterparty===party)).map(e=>({e,left:outstandingForAdvance(e,all)})).filter(x=>x.left>0).sort((a,b)=>String(b.e.date||"").localeCompare(String(a.e.date||"")));
+      const prev=$("linkedAdvanceId").value;
+      $("linkedAdvanceId").innerHTML="<option value=\"\">選択なし（古い立替など）</option>"+candidates.map(x=>"<option value=\""+x.e.id+"\">"+x.e.date+"　"+(x.e.memo||"立替")+"　残 "+x.left.toLocaleString("ja-JP")+"円</option>").join("");
+      if(candidates.some(x=>x.e.id===prev))$("linkedAdvanceId").value=prev;
+      $("recoveryHint").textContent=candidates.length?"未回収の立替から選べます。部分回収もOKです。":"この相手の未回収立替は見つかりません。";
+    }
+    function selectType(type){
+      entryType=type;const meta=typeMeta(type);const buttons={expense:$("typeExpense"),income:$("typeIncome"),advance:$("typeAdvance"),recovery:$("typeRecovery")};
+      Object.entries(buttons).forEach(([key,btn])=>btn.className="type-btn"+(key===type?" active-"+key:""));
+      $("amountLabel").textContent=meta.label;$("paymentLabel").textContent=meta.pay;document.querySelector("header h1").textContent=meta.title;
+      const special=type==="advance"||type==="recovery";$("fixedCard").hidden=type!=="expense";$("partyCard").hidden=!special;$("recoveryLinkCard").hidden=type!=="recovery";$("categoryCard").hidden=special;$("splitCard").hidden=type!=="expense";
+      if(special)selectCategory("仕事立替");if(type==="recovery")refreshRecoveryLinks();syncSettle();
+    }
     /* ── 支払いボタン選択 ── */
     function selectPayment(name){
       selectedPayment = name;
@@ -541,7 +576,9 @@
       $("amount").value = "";
       $("date").value = todayString();
       $("memo").value = "";
-      selectCategory("その他");
+      $("counterparty").value = "";
+      $("linkedAdvanceId").innerHTML = "";
+      selectCategory(entryType==="advance"||entryType==="recovery" ? "仕事立替" : "その他");
       $("splitEnabled").checked=false;
       $("splitArea").classList.remove("open");
       resetSplits();
@@ -565,8 +602,11 @@
         alert("金額を入力してください。"); return;
       }
       if(!selectedPayment){
-        alert("支払い元を選択してください。"); return;
+        alert(entryType==="income"||entryType==="recovery" ? "入金先を選択してください。" : "支払い元を選択してください。"); return;
       }
+      const counterparty=$("counterparty").value.trim();
+      if((entryType==="advance"||entryType==="recovery")&&!counterparty){alert("立替の相手を入力してください。");return;}
+      if(entryType==="recovery"){const options=[...$("linkedAdvanceId").options].filter(o=>o.value);if(options.length&&!$("linkedAdvanceId").value){alert("どの立替の回収か選択してください。");return;}}
 
       const now = new Date().toISOString();
       const baseEntry = {
@@ -577,6 +617,8 @@
         category:    $("category").value || "その他",
         settleMonth: $("settleMonth").value || date.slice(0,7),
         memo:        $("memo").value.trim(),
+        counterparty:(entryType==="advance"||entryType==="recovery") ? counterparty : "",
+        linkedAdvanceId:entryType==="recovery" ? $("linkedAdvanceId").value : "",
         createdAt:   now,
         updatedAt:   now
       };
@@ -604,7 +646,7 @@
       // クラウド自動保存
       const syncResult=await saveToCloud(entries);
 
-      const baseMsg=entryType === "income" ? "💰 収入を登録しました！" : "✅ 支出を登録しました！";
+      const baseMsg={income:"💰 収入を登録しました！",advance:"🤝 立替を登録しました！",recovery:"↩️ 回収を登録しました！"}[entryType] || "✅ 支出を登録しました！";
       showToast(syncResult.reason==="error" ? baseMsg+"（端末保存のみ）" : baseMsg);
       renderFixed();
       return true;
@@ -738,6 +780,7 @@
     /* ── 初期化 ── */
     function init(){
       $("date").value = todayString();
+      refreshCounterparties();
       initFixed();
       buildCategoryButtons();
       resetSplits();
@@ -746,6 +789,10 @@
       // 収入/支出 切り替え
       $("typeExpense").addEventListener("click", () => selectType("expense"));
       $("typeIncome").addEventListener("click",  () => selectType("income"));
+      $("typeAdvance").addEventListener("click", () => selectType("advance"));
+      $("typeRecovery").addEventListener("click",() => selectType("recovery"));
+      $("counterparty").addEventListener("input",refreshRecoveryLinks);
+      $("linkedAdvanceId").addEventListener("change",()=>{const id=$("linkedAdvanceId").value;if(!id)return;const all=loadEntries(),adv=all.find(e=>e.id===id);if(!adv)return;const left=outstandingForAdvance(adv,all);if(left>0)$("amount").value=left;});
 
       // 支払いボタン
       document.querySelectorAll(".pay-btn").forEach(btn => {

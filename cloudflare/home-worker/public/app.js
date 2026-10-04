@@ -139,7 +139,9 @@ async function home() {
   );
   header.append(title, button("設定", settings, "quiet"));
   root.append(header);
-  const grid = el("section", null, "grid");
+  const visibleApps=apps.filter(a=>a.visible);
+  const simple=visibleApps.length===2&&visibleApps.every(a=>["calendar","kidney"].includes(a.id));
+  const grid = el("section", null, simple?"grid grandpa-home":"grid");
   for (const app of apps.filter((a) => a.visible)) {
     const card = el(
       app.status === "ready" && app.path ? "a" : "div",
@@ -155,7 +157,7 @@ async function home() {
     card.append(
       el("span", app.icon, "icon"),
       el("strong", app.name),
-      el("small", app.status === "planned" ? "準備中" : "ひらく"),
+      el("small", app.status === "planned" ? "準備中" : app.id==="calendar"?"いつものカレンダーへ":"ひらく"),
     );
     grid.append(card);
   }
@@ -172,6 +174,12 @@ function settings() {
   header.append(el("h1", "設定"), button("HOMEへ", home, "quiet"));
   root.append(header);
   root.append(el("h2", "HOMEに置くアプリ"));
+  if(apps.some(a=>a.id==="kidney")&&apps.some(a=>a.id==="calendar")){
+    root.append(button("おじいちゃん向け：2つだけにする",async()=>{
+      try{await api("/api/home/preset","PUT",{preset:"grandpa"});await home();}catch(e){showError(e);}
+    },"quiet"),el("p","このアカウントのHOMEだけ、カレンダーと食事チェックを表示します。あとから自由に戻せます。","muted"));
+  }
+
   for (const app of apps) {
     const row = el("div", null, "row"),
       label = el("label", app.name),

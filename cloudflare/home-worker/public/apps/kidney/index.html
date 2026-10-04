@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eef8f4">
+  <title>おじいちゃんの食事チェック</title>
+  <meta name="description" content="食べる前に、今日の摂取量をかんたん確認">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231a7b68'/%3E%3Cpath d='M32 12c-5 0-9 4-9 9 0 4 2 7 5 8v4h-9c-3 0-5 2-5 5v14h8V40h4v12h12V40h4v12h8V38c0-3-2-5-5-5h-9v-4c3-1 5-4 5-8 0-5-4-9-9-9z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <a class="home-link" href="/">⌂ HOMEへ</a>
+        <h1>食べる前にチェック</h1>
+      </div>
+      <button class="icon-button" type="button" aria-label="家族の目標量設定" hidden>⚙️</button>
+    </header>
+
+    <p id="syncNote" class="sync-note" role="status">家族の記録を読み込み中…</p>
+    <select id="householdSelect" aria-label="家庭を選ぶ" hidden></select>
+    <section class="gauge-panel" aria-labelledby="today-title">
+      <div class="section-head">
+        <div>
+          <h2 id="today-title">今日のゲージ</h2>
+          <p id="statusText" class="status-pill good">◎ まだ余裕</p>
+        </div>
+        <p class="demo-badge">家族共通</p>
+      </div>
+
+      <div id="gauges" class="gauges" aria-live="polite"></div>
+
+      <p id="gaugeDetails" class="gauge-details"></p>
+      <div class="gauge-key">
+        <span><i class="key-dot current"></i>いままで</span>
+        <span><i class="key-dot planned"></i>これから</span>
+      </div>
+    </section>
+
+    <section class="picker-panel" aria-labelledby="choose-title">
+      <div class="section-head compact">
+        <div>
+          <p class="eyebrow">食べる前チェック</p>
+          <h2 id="choose-title">食べるものを選ぶ</h2>
+        </div>
+        <button id="clearPlan" class="text-button" type="button">全部はずす</button>
+      </div>
+
+      <label class="search-box">
+        <span aria-hidden="true">🔎</span>
+        <input id="foodSearch" type="search" placeholder="食品名で探す（例：ハム）" autocomplete="off">
+      </label>
+      <div id="categoryChips" class="category-chips" aria-label="食品の種類"></div>
+      <p id="foodResultCount" class="result-count"></p>
+
+      <div id="foodGrid" class="food-grid"></div>
+    </section>
+
+    <section id="planPanel" class="plan-panel" aria-labelledby="plan-title">
+      <div class="section-head compact">
+        <div>
+          <p class="eyebrow">今回の予定</p>
+          <h2 id="plan-title">これを食べたら</h2>
+        </div>
+        <strong id="planCount" class="count-badge">0品</strong>
+      </div>
+      <div id="emptyPlan" class="empty-plan">上の食品を押すと、予定ゲージが上がります</div>
+      <div id="planList" class="plan-list"></div>
+      <label class="day-picker">いつの食事？ <select id="mealSlot"><option>朝</option><option>昼</option><option>夜</option><option>間食</option></select></label>
+      <button id="commitMeal" class="commit-button" type="button" disabled>🍴 この内容で食べる</button>
+      <button id="lateAdd" class="late-button" type="button">あとから登録</button>
+    </section>
+
+    <section class="history-panel" aria-labelledby="history-title">
+      <div class="section-head compact">
+        <div>
+          <p class="eyebrow">今日食べたもの</p>
+          <h2 id="history-title">食事の記録</h2>
+        </div>
+      </div>
+      <label class="day-picker">日付 <input id="recordDay" type="date"></label>
+      <div id="historyList" class="history-list">
+        <div class="history-row"><span class="meal-icon">☀️</span><div><strong>朝</strong><p>まだ登録はありません</p></div></div>
+        <div class="history-row"><span class="meal-icon">🌤️</span><div><strong>昼</strong><p>まだ登録はありません</p></div></div>
+        <div class="history-row"><span class="meal-icon">🌙</span><div><strong>夜</strong><p>まだ登録はありません</p></div></div>
+        <div class="history-row"><span class="meal-icon">🍵</span><div><strong>間食</strong><p>まだ登録はありません</p></div></div>
+      </div>
+    </section>
+
+    <p class="footnote">食品成分は『名医が教える 腎機能のための食品成分BOOK』の掲載量を目安として使用しています。商品・調理法・実際の量で変わります。1日の目標量は、医師・管理栄養士の指示に合わせてください。</p>
+  </main>
+
+  <template id="gaugeTemplate">
+    <article class="gauge-card">
+      <button class="gauge-button" type="button">
+        <div class="person-wrap" aria-hidden="true">
+          <svg class="person-gauge" viewBox="0 0 90 150">
+            <defs>
+              <clipPath class="person-clip"><path d="M45 3c-13 0-23 10-23 23 0 9 5 17 13 21v8H23C11 55 3 64 3 76v29h15v42h20v-38h14v38h20v-42h15V76c0-12-8-21-20-21H55v-8c8-4 13-12 13-21C68 13 58 3 45 3z"/></clipPath>
+            </defs>
+            <path class="person-bg" d="M45 3c-13 0-23 10-23 23 0 9 5 17 13 21v8H23C11 55 3 64 3 76v29h15v42h20v-38h14v38h20v-42h15V76c0-12-8-21-20-21H55v-8c8-4 13-12 13-21C68 13 58 3 45 3z"/>
+            <g class="fill-layer"></g>
+            <path class="person-outline" d="M45 3c-13 0-23 10-23 23 0 9 5 17 13 21v8H23C11 55 3 64 3 76v29h15v42h20v-38h14v38h20v-42h15V76c0-12-8-21-20-21H55v-8c8-4 13-12 13-21C68 13 58 3 45 3z"/>
+          </svg>
+        </div>
+        <strong class="gauge-name"></strong>
+        <span class="gauge-value"></span>
+      </button>
+    </article>
+  </template>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="settingsDialog" class="settings-dialog">
+    <form method="dialog">
+      <div class="section-head compact">
+        <div><p class="eyebrow">家族が設定</p><h2>1日の目標量</h2></div>
+        <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+      </div>
+      <p class="settings-note">医師・管理栄養士から言われた量に合わせてください。初期値は仮の表示です。</p>
+      <div id="settingsFields" class="settings-fields"></div>
+      <button id="saveSettings" class="commit-button" value="default">この設定を保存</button>
+    </form>
+  </dialog>
+  <script src="./foods-book.js"></script>
+  <script src="./shape-fill-gauge.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -36,6 +36,8 @@ test("invitation, personal sessions, home settings and private file boundaries",
       await db.prepare(statement + "\nEND;").run();
     const muscleMigration = await readFile(new URL("../migrations/0003_muscle_bank.sql", import.meta.url), "utf8");
     for (const statement of muscleMigration.replace(/^--.*$/gm, "").split(";").filter(s => s.trim())) await db.prepare(statement).run();
+    const kidneyMigration=await readFile(new URL('../migrations/0008_kidney.sql',import.meta.url),'utf8');
+    for(const statement of kidneyMigration.replace(/^--.*$/gm,'').split(';').filter(s=>s.trim()))await db.prepare(statement).run();
     const bucket = await mf.getR2Bucket("PRIVATE_FILES");
     async function call(
       path,
@@ -227,8 +229,8 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await call(musclePath,{cookie:admin.cookie})).status,403);
     assert.equal((await call("/api/muscle-bank/state",{cookie:admin.cookie})).status,403);
     await db.prepare("INSERT INTO personal_app_access VALUES ('bootstrap-admin','muscle-bank')").run();
-    assert.equal(homes.data.length, 6);
-    assert.ok(homes.data.every((a) => a.status === "planned"));
+    assert.equal(homes.data.length, 7);
+    assert.ok(homes.data.filter(a=>!["kidney","calendar"].includes(a.id)).every(a=>a.status==="planned"));
     assert.equal(
       (
         await call("/api/home/album", {
@@ -273,6 +275,39 @@ test("invitation, personal sessions, home settings and private file boundaries",
       },
     });
     assert.equal(userB.status, 201);
+    const scope='?household='+groupA;
+    const meal={id:'meal-a',day:'2026-10-04',meal:'朝',items:[{id:'rice',name:'ごはん',portion:'1杯',qty:1,values:{salt:0,protein:4,potassium:30,phosphorus:40,energy:230}}]};
+    assert.equal((await call('/api/kidney')).status,401);
+    assert.equal((await call('/apps/kidney/app.js')).status,303);
+    assert.equal((await call('/apps/kidney/',{cookie:registered.cookie})).status,200);
+    assert.equal((await call('/api/kidney'+scope+'&day=2026-10-04',{cookie:userB.cookie})).status,403);
+    assert.equal((await call('/api/kidney/meals'+scope,{method:'POST',cookie:registered.cookie,origin:'https://evil.test',body:meal})).status,403);
+    const posted=await Promise.all([
+      call('/api/kidney/meals'+scope,{method:'POST',cookie:registered.cookie,body:meal}),
+      call('/api/kidney/meals'+scope,{method:'POST',cookie:admin.cookie,body:{...meal,id:'meal-b',meal:'昼'}})
+    ]);
+    assert.ok(posted.every(r=>r.status===201));
+    assert.equal((await call('/api/kidney/meals'+scope,{method:'POST',cookie:registered.cookie,body:meal})).status,200);
+    const family=await call('/api/kidney'+scope+'&day=2026-10-04',{cookie:registered.cookie});
+    assert.equal(family.data.records.length,2);
+    assert.equal(family.data.records.find(r=>r.id==='meal-b').editable,false);
+    assert.equal(family.data.records.find(r=>r.id==='meal-a').items[0].values.energy,230);
+    assert.equal((await call('/api/kidney/meals/meal-b'+scope,{method:'DELETE',cookie:registered.cookie,body:{revision:1}})).status,403);
+    assert.equal((await call('/api/kidney/meals/meal-a'+scope,{method:'PUT',cookie:registered.cookie,body:{revision:1,items:[{...meal.items[0],qty:2}]}})).status,200);
+    assert.equal((await call('/api/kidney/meals/meal-a'+scope,{method:'PUT',cookie:admin.cookie,body:{revision:1,items:meal.items}})).status,409);
+    assert.equal((await call('/api/kidney/meals/meal-a'+scope,{method:'DELETE',cookie:admin.cookie,body:{revision:2}})).status,200);
+    assert.equal((await call('/api/kidney'+scope+'&day=2026-10-03',{cookie:registered.cookie})).data.records.length,0);
+    assert.equal((await call('/api/kidney'+scope+'&day=2026-10-04',{cookie:admin.cookie})).data.records.length,1);
+    const targets=Object.fromEntries(['salt','protein','potassium','phosphorus','energy'].map(k=>[k,{max:10,visible:true}]));
+    assert.equal((await call('/api/kidney/settings'+scope,{method:'PUT',cookie:registered.cookie,body:{settings:targets,revision:0}})).status,403);
+    assert.equal((await call('/api/kidney/settings'+scope,{method:'PUT',cookie:admin.cookie,body:{settings:targets,revision:0}})).status,200);
+    assert.equal((await call('/api/kidney/settings'+scope,{method:'PUT',cookie:admin.cookie,body:{settings:targets,revision:0}})).status,409);
+    assert.equal((await call('/api/kidney/settings'+scope,{method:'PUT',cookie:admin.cookie,body:{settings:targets,revision:1}})).status,200);
+    assert.equal((await call('/api/kidney'+scope+'&day=2026-10-04',{cookie:registered.cookie})).data.revision,2);
+    assert.equal((await call('/api/home/preset',{method:'PUT',cookie:registered.cookie,body:{preset:'grandpa'}})).status,200);
+    assert.deepEqual((await call('/api/home',{cookie:registered.cookie})).data.filter(a=>a.visible).map(a=>a.id).sort(),['calendar','kidney']);
+    assert.ok((await call('/api/home',{cookie:admin.cookie})).data.filter(a=>a.visible).length>2);
+    assert.equal((await call('/apps/calendar',{cookie:registered.cookie})).headers.get('Location'),'https://cetus.fun/kanriapp/calendar.html');
     const otherId=(await call("/api/me",{cookie:userB.cookie})).data.user.id;
     await db.prepare("UPDATE users SET platform_role='operator' WHERE id=?").bind(otherId).run();
     await db.prepare("INSERT INTO group_apps VALUES ('group-b','muscle-bank')").run();

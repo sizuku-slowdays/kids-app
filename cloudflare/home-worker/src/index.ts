@@ -1,4 +1,5 @@
 import { advanceChores } from "./passbook-chores";
+import { kidneyRoute } from "./kidney";
 import { passbookRoute } from "./passbook";
 import { muscleRoute } from "./muscle-bank";
 import {
@@ -393,6 +394,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       requireValue(await appAllowed(env, user.id, "passbook"), 403, "このアプリは利用できません");
       return passbookRoute(request, env, user.id, body);
     }
+    if (path === "/api/kidney" || path.startsWith("/api/kidney/")) {
+      requireValue(await appAllowed(env, user.id, "kidney"), 403, "このアプリは利用できません");
+      return kidneyRoute(request, env, user.id, body);
+    }
     if (path === "/api/muscle-bank" || path.startsWith("/api/muscle-bank/")) {
       requireValue(await appAllowed(env, user.id, "muscle-bank"), 403, "このアプリは利用できません");
       return muscleRoute(request, env, user.id);
@@ -431,6 +436,16 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         .bind(user.id, user.id, user.id)
         .all();
       return json(result.results);
+    }
+    if (path === "/api/home/preset" && method === "PUT") {
+      const data=await body(request);
+      requireValue(data.preset==="grandpa",400,"表示セットを確認してください");
+      requireValue(await appAllowed(env,user.id,"kidney") && await appAllowed(env,user.id,"calendar"),403,"この表示セットは利用できません");
+      const available=(await env.DB.prepare("SELECT id FROM apps WHERE enabled=1").all<{id:string}>()).results;
+      const allowed=[];
+      for(const app of available)if(await appAllowed(env,user.id,app.id))allowed.push(app.id);
+      await env.DB.batch(allowed.map(id=>env.DB.prepare("INSERT INTO user_apps(user_id,app_id,visible,position) VALUES(?,?,?,?) ON CONFLICT(user_id,app_id) DO UPDATE SET visible=excluded.visible,position=excluded.position").bind(user.id,id,["calendar","kidney"].includes(id)?1:0,id==="calendar"?0:id==="kidney"?1:10)));
+      return json({ok:true});
     }
     if (path.startsWith("/api/home/") && method === "PUT") {
       const appId = path.slice("/api/home/".length);
@@ -619,6 +634,25 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   if (path.startsWith("/api/") || path.startsWith("/media/"))
     throw new Failure(404, "見つかりません");
+  if (path === "/apps/calendar" || path === "/apps/calendar/") {
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:"/login"}});
+    requireValue(await appAllowed(env,s.user_id,"calendar"),403,"このアプリは利用できません");
+    return new Response(null,{status:303,headers:{...headers,Location:"https://cetus.fun/kanriapp/calendar.html"}});
+  }
+  if (path === "/apps/kidney" || path.startsWith("/apps/kidney/")) {
+    if (!s) return new Response(null,{status:303,headers:{...headers,Location:"/login"}});
+    requireValue(await appAllowed(env,s.user_id,"kidney"),403,"このアプリは利用できません");
+    requireValue(["GET","HEAD"].includes(method),405,"この操作はできません");
+    const file=path.replace(/^\/apps\/kidney\/?/,"")||"index.html";
+    requireValue(["index.html","app.js","styles.css","foods-book.js","shape-fill-gauge.js"].includes(file),404,"見つかりません");
+    const assetUrl=new URL(url);assetUrl.pathname="/apps/kidney/"+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);
+    for(const [key,value] of Object.entries(headers))protectedHeaders.set(key,value);
+    protectedHeaders.set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    protectedHeaders.set("X-Kidney-Version","20261004-family-v1");
+    return new Response(method==="HEAD"?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
   if (path === "/apps/passbook" || path.startsWith("/apps/passbook/")) {
     if (!s) return new Response(null, {status:303,headers:{...headers,"X-Passbook-Version":"20261003-v1",Location:"/login"}});
     requireValue(await appAllowed(env,s.user_id,"passbook"),403,"このアプリは利用できません");

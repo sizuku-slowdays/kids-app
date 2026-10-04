@@ -235,3 +235,10 @@ button,.food-card,.power-card{touch-action:manipulation}
 .school-color-guide>div:first-child{display:flex;flex-direction:column;gap:4px}.school-color-guide>div:first-child span,.school-color-guide p{color:#7d7068;font-size:.86rem}
 .school-color-guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.school-color-guide-grid span{padding:10px;border-radius:14px;background:#faf8f5;font-size:.82rem}.school-color-guide-grid span b{display:block;margin-bottom:2px}
 @media(max-width:640px){.school-three-grid,.school-color-guide-grid{grid-template-columns:1fr}.school-three-title{align-items:flex-start;flex-direction:column}}
+
+/* v15.17 family gyudon quick register */
+.gyudon-quick{margin:12px 0 18px;padding:14px;border:1px solid #eadfd7;border-radius:18px;background:#fffaf3}
+.gyudon-quick-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.gyudon-quick-head>div{display:flex;align-items:baseline;gap:9px}.gyudon-quick-head b{font-size:.95rem}.gyudon-quick-head small{color:#8b7e76}
+.gyudon-quick-items{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.gyudon-quick-items::-webkit-scrollbar{display:none}
+.gyudon-quick-btn{flex:0 0 auto;display:flex;align-items:center;gap:6px;max-width:220px;padding:9px 11px;border:1px solid #e5d7ca;border-radius:999px;background:#fff;text-align:left;cursor:pointer}.gyudon-quick-btn b{font-size:.78rem;white-space:nowrap}.gyudon-quick-btn.checked{background:#fff1bf;border-color:#e8c456}.gyudon-quick-btn.checked span{font-weight:900}
+@media(max-width:640px){.gyudon-quick{padding:12px}.gyudon-quick-head>div{align-items:flex-start;flex-direction:column;gap:2px}}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>固定費設定</title>
+<link rel="apple-touch-icon" href="img/kakeibo.png">
+<link rel="icon" type="image/png" href="img/kakeibo.png">
+<meta name="theme-color" content="#fff3c4">
+<style>
+:root{--bg:#fff8e7;--main:#ffb84d;--safe:#2e9f62;--danger:#e63946;--text:#333;--muted:#777;--line:#eadfc9;--shadow:0 8px 20px rgba(130,90,30,.12);--radius:18px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#fff2bf 0%,var(--bg) 220px);color:var(--text);line-height:1.6;padding-bottom:32px}
+header{padding:16px;display:flex;align-items:center;gap:12px}
+header h1{font-size:1.35rem;margin:0}
+.back{border:1px solid #ebd19a;border-radius:999px;background:#fff3d1;color:#5b3a05;padding:8px 14px;font-weight:800;text-decoration:none;white-space:nowrap}
+main{width:min(650px,100%);margin:auto;padding:0 14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;margin-bottom:14px}
+h2{font-size:1.05rem;margin:0 0 10px}
+.hint{font-size:.82rem;color:var(--muted);margin:5px 0 12px}
+.summary{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff9ed;border:1px solid var(--line);border-radius:13px;padding:12px 14px;font-weight:900;margin-bottom:12px}
+.summary strong{font-size:1.25rem}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form label{display:grid;gap:4px;font-size:.86rem;font-weight:800;color:#555}
+.form .wide{grid-column:1/-1}
+input,select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;font-size:1rem;background:#fffdf8;color:var(--text)}
+button{border:none;border-radius:999px;padding:11px 15px;font-size:.92rem;font-weight:900;background:var(--main);color:#3e2600;cursor:pointer}
+.secondary{background:#fff3d1;border:1px solid #ebd19a}
+.danger{background:#fff1f2;color:#a4161a;border:1px solid #f4a7af}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.item{border:1px solid var(--line);border-radius:14px;background:#fff9ed;padding:12px;margin-bottom:9px}
+.item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.item-name{font-weight:900;min-width:0}
+.item-amount{font-weight:900;white-space:nowrap}
+.meta{font-size:.8rem;color:var(--muted);margin-top:3px}
+.item-actions{display:flex;gap:7px;margin-top:9px}
+.item-actions button{padding:7px 12px;font-size:.8rem}
+.status{font-size:.84rem;padding:10px 12px;border-radius:12px;background:#f7f4ec;color:var(--muted);margin-bottom:12px}
+.status.ok{background:#f0fff7;color:#247344;border:1px solid #c6ead6}
+.status.ng{background:#fff1f2;color:#a4161a;border:1px solid #f4a7af}
+.empty{text-align:center;color:var(--muted);padding:18px}
+@media(max-width:430px){.form{grid-template-columns:1fr}.form .wide{grid-column:auto}.item-head{align-items:center}}
+</style>
+</head>
+<body>
+<header><a class="back" href="kakeibo-input.html">← 入力へ</a><h1>⚙️ 固定費設定</h1></header>
+<main>
+<section class="card">
+<h2>毎月の固定費マスタ</h2>
+<p class="hint">ここで登録した内容が、入力画面の「固定費」一覧にそのまま出ます。楽天VISA／PINKは支出登録時に翌月引落として扱われます。</p>
+<div class="summary"><span>登録中の固定費 合計</span><strong id="total">0円</strong></div>
+<div id="status" class="status">読み込み中…</div>
+<div id="list"></div>
+</section>
+
+<section class="card">
+<h2 id="formTitle">＋ 固定費を追加</h2>
+<form id="form" class="form">
+<input type="hidden" id="editId">
+<label class="wide">名前<input id="name" maxlength="100" placeholder="例：Apple定期" required></label>
+<label>毎月の金額（円）<input id="amount" type="number" inputmode="numeric" min="1" step="1" required></label>
+<label>支払い元<select id="payment">
+<option>楽天VISA</option><option>楽天PINK</option><option>現金</option><option>auじぶん銀行</option>
+<option>ゆうちょ</option><option>福岡中央銀行</option><option>福岡銀行</option><option>口座振替</option>
+</select></label>
+<label>カテゴリ<select id="category">
+<option>通信・サブスク</option><option>車・ローン</option><option>生活費</option><option>子ども</option>
+<option>学校</option><option>習い事</option><option>保険</option><option>交通・ガソリン</option><option>固定費</option><option>特別費</option>
+</select></label>
+<label>登録日<select id="dateMode"><option value="monthly">毎月の指定日</option><option value="today">登録するときの日付</option></select></label>
+<label id="dayWrap">毎月何日？<input id="day" type="number" inputmode="numeric" min="1" max="31" value="1"><span class="hint">31日がない月は月末。</span></label>
+<div class="wide actions"><button type="submit" id="saveBtn">保存する</button><button type="button" class="secondary" id="cancelBtn" hidden>編集をやめる</button></div>
+</form>
+</section>
+</main>
+<script src="kakeibo-fixed.js?v=20261004"></script>
+<script>
+const PLAN_KEY="kakeibo-plan-v1",SETTINGS_KEY="kakeibo-cloud-settings-v1",APP_KEY="kakeibo-app",APP_VERSION=4,DEFAULT_API="https://api.cetus.fun/api/app-data";
+const $=id=>document.getElementById(id);
+const yen=v=>Number(v||0).toLocaleString("ja-JP")+"円";
+const makeId=()=>crypto.randomUUID?crypto.randomUUID():"id-"+Date.now()+"-"+Math.random().toString(36).slice(2);
+let plan={fixedExpenses:[]},busy=false;
+function normalizePlan(raw){const p=raw&&typeof raw==="object"?raw:{};return {...p,fixedExpenses:Array.isArray(p.fixedExpenses)?p.fixedExpenses:[]}}
+function settings(){try{const s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}");return{apiUrl:s.apiUrl||DEFAULT_API,password:s.password||"",autoCloudSave:!!s.autoCloudSave}}catch(e){return{apiUrl:DEFAULT_API,password:"",autoCloudSave:false}}}
+function saveLocal(){localStorage.setItem(PLAN_KEY,JSON.stringify(plan))}
+function liveRules(){return (plan.fixedExpenses||[]).filter(r=>r&&!r.deletedAt)}
+function render(){
+ const rules=liveRules().sort((a,b)=>(Number(a.day||99)-Number(b.day||99))||String(a.name||"").localeCompare(String(b.name||""),"ja"));
+ $("total").textContent=yen(rules.reduce((s,r)=>s+Number(r.amount||0),0));
+ $("list").innerHTML=rules.length?rules.map(r=>'<div class="item" data-id="'+r.id+'"><div class="item-head"><div class="item-name">'+esc(r.name)+'</div><div class="item-amount">'+yen(r.amount)+'</div></div><div class="meta">'+esc(r.payment)+'・'+esc(r.category||"固定費")+'・'+(r.dateMode==="monthly"?"毎月"+Number(r.day||1)+"日":"登録日のまま")+'</div><div class="item-actions"><button type="button" class="secondary" data-act="edit">変更</button><button type="button" class="danger" data-act="delete">削除</button></div></div>').join(""):'<div class="empty">まだ固定費がありません。</div>';
+}
+function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+function setStatus(msg,type=""){const el=$("status");el.textContent=msg;el.className="status"+(type?" "+type:"")}
+function resetForm(){$("form").reset();$("editId").value="";$("day").value="1";$("dateMode").value="monthly";$("dayWrap").hidden=false;$("formTitle").textContent="＋ 固定費を追加";$("saveBtn").textContent="保存する";$("cancelBtn").hidden=true}
+function edit(r){$("editId").value=r.id;$("name").value=r.name||"";$("amount").value=r.amount||"";$("payment").value=r.payment||"楽天VISA";$("category").value=r.category||"固定費";$("dateMode").value=r.dateMode||"today";$("day").value=Number(r.day||1);$("dayWrap").hidden=$("dateMode").value!=="monthly";$("formTitle").textContent="✏️ 固定費を変更";$("saveBtn").textContent="変更を保存";$("cancelBtn").hidden=false;window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"})}
+async function loadCloud(){
+ const s=settings();if(!s.password){setStatus("この端末の保存内容を表示しています。クラウド設定のパスワードが未設定です。");return}
+ const u=new URL(s.apiUrl);u.searchParams.set("key",APP_KEY);
+ const res=await fetch(u,{headers:{"X-App-Password":s.password},cache:"no-store"});if(!res.ok)throw new Error("クラウドを読み込めませんでした");
+ const json=await res.json(),cloud=json.data||json;const local=plan;
+ plan={...(cloud.plan||local),...local,fixedExpenses:KakeiboFixed.merge(cloud.plan?.fixedExpenses,local.fixedExpenses)};
+ saveLocal();setStatus("クラウドの最新版と同期しました。","ok");
+}
+async function saveCloud(){
+ const s=settings();if(!s.password||!s.autoCloudSave){saveLocal();setStatus("端末に保存しました。クラウド自動保存がOFFです。");return}
+ const u=new URL(s.apiUrl);u.searchParams.set("key",APP_KEY);
+ const read=await fetch(u,{headers:{"X-App-Password":s.password},cache:"no-store"});if(!read.ok)throw new Error("保存前の最新版を確認できませんでした");
+ const json=await read.json(),cloud=json.data||json;
+ plan={...(cloud.plan||{}),...plan,fixedExpenses:KakeiboFixed.merge(cloud.plan?.fixedExpenses,plan.fixedExpenses)};
+ const write=await fetch(s.apiUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Password":s.password},body:JSON.stringify({key:APP_KEY,app:APP_KEY,data:{...cloud,version:APP_VERSION,plan,savedAt:new Date().toISOString()}})});
+ if(!write.ok)throw new Error("クラウド保存できませんでした");saveLocal();setStatus("保存しました。入力画面にも反映されます。","ok");
+}
+async function mutate(rule){
+ if(busy)return;busy=true;$("saveBtn").disabled=true;
+ try{
+  const idx=(plan.fixedExpenses||[]).findIndex(x=>x.id===rule.id);
+  if(idx>=0)plan.fixedExpenses[idx]=rule;else plan.fixedExpenses.push(rule);
+  saveLocal();render();await saveCloud();resetForm();
+ }catch(e){setStatus("端末には保存しましたが、クラウド同期できませんでした："+e.message,"ng")}
+ finally{busy=false;$("saveBtn").disabled=false}
+}
+$("form").addEventListener("submit",e=>{e.preventDefault();const name=$("name").value.trim(),amount=Number($("amount").value),day=Number($("day").value);if(!name||!Number.isSafeInteger(amount)||amount<=0){alert("名前と1円以上の金額を入力してください。");return}if($("dateMode").value==="monthly"&&(!Number.isInteger(day)||day<1||day>31)){alert("日付は1〜31で入力してください。");return}const old=(plan.fixedExpenses||[]).find(x=>x.id===$("editId").value);mutate({...(old||{}),id:$("editId").value||makeId(),name,amount,payment:$("payment").value,category:$("category").value,dateMode:$("dateMode").value,day,updatedAt:new Date().toISOString()})});
+$("cancelBtn").onclick=resetForm;$("dateMode").onchange=()=>{$("dayWrap").hidden=$("dateMode").value!=="monthly"};
+$("list").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const r=(plan.fixedExpenses||[]).find(x=>x.id===b.closest("[data-id]").dataset.id);if(!r)return;if(b.dataset.act==="edit")edit(r);if(b.dataset.act==="delete"&&confirm("「"+r.name+"」を固定費一覧から削除しますか？\n登録済みの支出は残ります。"))mutate({...r,deletedAt:new Date().toISOString(),updatedAt:new Date().toISOString()})});
+(async()=>{try{plan=normalizePlan(JSON.parse(localStorage.getItem(PLAN_KEY)||"null"));render();await loadCloud();render()}catch(e){setStatus("クラウド同期できませんでした。端末の内容を表示しています："+e.message,"ng");render()}})();
+</script>
+</body>
+</html>

@@ -83,3 +83,9 @@ CookieはHttpOnly/Secure/host-only。ブラウザのJSにはセッショント�
 HOME設定の「おじいちゃん向け：2つだけにする」は現在のアカウントにだけ適用。他の家族の表示設定・アクセス権を変更しない。カレンダーは既存 `https://cetus.fun/kanriapp/calendar.html` への認証済み入口のみ。カレンダーのHOME認証への移行は行わず、旧合言葉・プロフィールと予定データを維持する。新しい端末ではカレンダーの初回ログインが必要。
 
 人型ゲージは `public/apps/kidney/shape-fill-gauge.js` の `ShapeFillGauge` に分離。`key/label/color/max/shapePath/templateSelector/onSelect` を設定し、`update(現在量,予定量,選択中)` で描画する。shapePathは90×150の座標系で差し替え可能。確定層と予定層が下から0.72秒で満ち、予定だけ斜線になる。こども版の既存公開コードは今回変更しない。
+
+## 大人の家族の招待（2026-10-04 修正）
+
+HOME設定の上部に「大人の家族を招待」。householdのowner/adminはplatform_roleがuserでも、自分の家庭へ招待を発行できる。sharingグループの発行は従来どおりoperatorかつ当該グループowner/adminに限定。一般メンバー・別家庭の管理者は発行できない。取消は発行本人かつ現在も当該グループの管理者のみ。子ども用招待も家庭管理者が発行可能。
+
+大人の招待はchild_idを指定しない既存の招待経路。登録時のroleはmember、platform_roleはuser。children行を追加・連携しない。既存の姉妹アカウント・家庭表示設定・栄養目標は変更しない。コードは1人1回・7日間・取消可能。

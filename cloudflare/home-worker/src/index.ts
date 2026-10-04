@@ -468,18 +468,13 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       return json({ ok: true });
     }
     if (path === "/api/invitations" && method === "POST") {
-      requireValue(
-        user.platform_role === "operator",
-        403,
-        "招待は運営者が発行します",
-      );
       const data = await body(request),
         groupId = name(data.group_id);
       requireValue(
         await env.DB.prepare(
-          "SELECT 1 FROM memberships WHERE user_id=? AND group_id=? AND role IN ('owner','admin')",
+          "SELECT 1 FROM memberships m JOIN groups g ON g.id=m.group_id WHERE m.user_id=? AND m.group_id=? AND m.role IN ('owner','admin') AND (g.kind='household' OR ?='operator')",
         )
-          .bind(user.id, groupId)
+          .bind(user.id, groupId, user.platform_role)
           .first(),
         403,
         "このグループに招待できません",
@@ -513,7 +508,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       return json({ id, invitation: token, expires_at: now + 7 * 86400 }, 201);
     }
     if (path.startsWith("/api/invitations/") && method === "DELETE") {
-      requireValue(user.platform_role === "operator", 403, "操作できません");
+      requireValue(await env.DB.prepare("SELECT 1 FROM invitations i JOIN memberships m ON m.group_id=i.group_id JOIN groups g ON g.id=i.group_id WHERE i.id=? AND i.issued_by=? AND m.user_id=? AND m.role IN ('owner','admin') AND (g.kind='household' OR ?='operator')").bind(path.slice("/api/invitations/".length),user.id,user.id,user.platform_role).first(),403,"この招待は取り消せません");
       await env.DB.prepare(
         "UPDATE invitations SET revoked_at=? WHERE id=? AND issued_by=?",
       )

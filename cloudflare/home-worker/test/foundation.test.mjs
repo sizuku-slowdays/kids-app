@@ -431,6 +431,26 @@ test("invitation, personal sessions, home settings and private file boundaries",
       });
       assert.equal(attempt.status, i < 12 ? 401 : 429);
     }
+    // Household owners can invite adults without the platform operator role.
+    await db.prepare("UPDATE users SET platform_role='user' WHERE id='bootstrap-admin'").run();
+    const childrenBefore=(await call('/api/children',{cookie:admin.cookie})).data.length;
+    const adultInvite=await invite(groupA);assert.equal(adultInvite.status,201);
+    assert.equal((await db.prepare('SELECT child_id FROM invitations WHERE id=?').bind(adultInvite.data.id).first()).child_id,null);
+    const adult=await call('/api/register',{method:'POST',body:{invitation:adultInvite.data.invitation,login_name:'grandpa_test',display_name:'祖父（試験）',password:'adult-test-password-123'}});
+    assert.equal(adult.status,201);
+    const adultProfile=(await call('/api/me',{cookie:adult.cookie})).data;
+    assert.equal(adultProfile.groups.find(g=>g.id===groupA).role,'member');
+    assert.equal(adultProfile.user.platform_role,'user');
+    assert.equal((await call('/api/children',{cookie:admin.cookie})).data.length,childrenBefore);
+    assert.equal((await db.prepare('SELECT 1 FROM children WHERE user_id=?').bind(adultProfile.user.id).first()),null);
+    assert.equal((await call('/api/kidney?household='+groupA+'&day=2026-10-04',{cookie:adult.cookie})).status,200);
+    assert.equal((await call('/api/invitations',{method:'POST',cookie:adult.cookie,body:{group_id:groupA}})).status,403);
+    assert.equal((await call('/api/invitations',{method:'POST',cookie:userB.cookie,body:{group_id:groupA}})).status,403);
+    const cancelAdult=await invite(groupA);assert.equal(cancelAdult.status,201);
+    assert.equal((await call('/api/invitations/'+cancelAdult.data.id,{method:'DELETE',cookie:adult.cookie})).status,403);
+    assert.equal((await call('/api/invitations/'+cancelAdult.data.id,{method:'DELETE',cookie:admin.cookie})).status,200);
+    assert.equal((await db.prepare('SELECT revoked_at FROM invitations WHERE id=?').bind(cancelAdult.data.id).first()).revoked_at>0,true);
+    await db.prepare("UPDATE users SET platform_role='operator' WHERE id='bootstrap-admin'").run();
     await call("/api/logout", {
       method: "POST",
       cookie: second.cookie,

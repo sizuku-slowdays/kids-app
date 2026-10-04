@@ -173,6 +173,53 @@ function settings() {
   const header = el("header");
   header.append(el("h1", "設定"), button("HOMEへ", home, "quiet"));
   root.append(header);
+  const inviteGroups=me.groups.filter(g=>["owner","admin"].includes(g.role)&&(g.kind==="household"||me.user.platform_role==="operator"));
+  if (inviteGroups.length) {
+    root.append(el("h2", "大人の家族を招待"),el("p","おじいちゃん・おばあちゃんはこちら。子どもの登録は不要です。","muted"));
+    const select = el("select");
+    for (const group of inviteGroups) {
+      const option = el("option", group.name);
+      option.value = group.id;
+      select.append(option);
+    }
+    select.setAttribute("aria-label","招待する家庭・グループ");
+    select.hidden=inviteGroups.length===1;
+    root.append(select);
+    const invitationBox=el("div");root.append(invitationBox);
+    root.append(
+      button("大人用の招待コードを作る", async () => {
+        try {
+          const result = await api("/api/invitations", "POST", {
+            group_id: select.value,
+          });
+          const box = el("div", null, "panel");
+          box.append(
+            el("p", "招待を受けた人が、登録ページでこのコード・ログインID・パスワードを入力します。1人・1回限り、7日間有効です。", "muted"),
+            Object.assign(el("a","招待の登録ページを開く"),{href:"/register",target:"_blank",rel:"noopener"}),
+            el("p", result.invitation, "token"),
+            button(
+              "コピー",
+              async () => {
+                await navigator.clipboard.writeText(result.invitation);
+              },
+              "quiet",
+            ),
+            button(
+              "この招待を取り消す",
+              async () => {
+                await api("/api/invitations/" + result.id, "DELETE");
+                box.remove();
+              },
+              "danger",
+            ),
+          );
+          invitationBox.replaceChildren(box);
+        } catch (e) {
+          showError(e);
+        }
+      }),
+    );
+  }
   root.append(el("h2", "HOMEに置くアプリ"));
   if(apps.some(a=>a.id==="kidney")&&apps.some(a=>a.id==="calendar")){
     root.append(button("おじいちゃん向け：2つだけにする",async()=>{
@@ -216,50 +263,6 @@ function settings() {
     el("h2", "ログインしている端末"),
     button("端末を確認する", sessions, "quiet"),
   );
-  if (me.user.platform_role === "operator") {
-    root.append(el("h2", "家族を招待する"));
-    const select = el("select");
-    for (const group of me.groups.filter((g) =>
-      ["owner", "admin"].includes(g.role),
-    )) {
-      const option = el("option", group.name);
-      option.value = group.id;
-      select.append(option);
-    }
-    root.append(select);
-    root.append(
-      button("1人分の招待コードを作る", async () => {
-        try {
-          const result = await api("/api/invitations", "POST", {
-            group_id: select.value,
-          });
-          const box = el("div", null, "panel");
-          box.append(
-            el("p", "このコードは1人・1回限り、7日間有効です。", "muted"),
-            el("p", result.invitation, "token"),
-            button(
-              "コピー",
-              async () => {
-                await navigator.clipboard.writeText(result.invitation);
-              },
-              "quiet",
-            ),
-            button(
-              "この招待を取り消す",
-              async () => {
-                await api("/api/invitations/" + result.id, "DELETE");
-                box.remove();
-              },
-              "danger",
-            ),
-          );
-          root.append(box);
-        } catch (e) {
-          showError(e);
-        }
-      }),
-    );
-  }
   root.append(
     el("h2", "この端末"),
     button(
@@ -342,7 +345,7 @@ async function children() {
           root.append(picker, save);
         }, "quiet"));
       }
-      else if (me.user.platform_role === "operator")
+      else if (me.groups.some(g=>g.id===child.household_id&&["owner","admin"].includes(g.role)))
         row.append(
           button(
             "招待コード",

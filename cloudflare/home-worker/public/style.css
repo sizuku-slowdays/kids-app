@@ -225,3 +225,37 @@ header .muted { margin:4px 0 0; }
 .grandpa-home .hero-card { min-height:165px;padding:22px; }
 .grandpa-home .card-icon { font-size:42px; }.grandpa-home strong { font-size:27px; }.grandpa-home small { font-size:17px; }
 @media(max-width:420px){main{padding-inline:12px}.home-section{padding:15px}.home-app-list{grid-template-columns:1fr}.hero-card{padding:13px}.hero-card strong{font-size:16px}.grandpa-home strong{font-size:26px}}
+
+
+/* Mama HOME: compact launcher + direct household-budget shortcuts. */
+.money-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.money-quick-grid .list-card{min-height:66px;padding:9px 10px;grid-template-columns:34px 1fr 10px}
+.money-quick-grid .list-card .card-icon{width:34px;height:34px;font-size:20px}
+.money-quick-grid .list-card strong{font-size:13px}
+.money-quick-grid .list-card small{font-size:10px}
+
+.mama-home main{max-width:720px;padding-top:18px}
+.mama-home header{margin-bottom:14px}
+.mama-home .home-section{padding:13px 14px;margin-bottom:12px;border-radius:18px}
+.mama-home .section-kicker{font-size:11px}
+.mama-home .home-section h2{font-size:17px;margin-bottom:10px}
+.mama-home .hero-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mama-home .hero-card{min-height:105px;padding:11px;border-radius:15px}
+.mama-home .hero-card .card-icon{font-size:24px;margin-bottom:5px}
+.mama-home .hero-card .card-copy strong{font-size:14px}
+.mama-home .hero-card .card-copy small{font-size:10px;margin-top:3px}
+.mama-home .home-app-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mama-home .list-card{min-height:62px;padding:8px 9px;border-radius:14px;grid-template-columns:32px 1fr 10px}
+.mama-home .list-card .card-icon{width:32px;height:32px;font-size:19px;border-radius:10px}
+.mama-home .list-card strong{font-size:12px}
+.mama-home .list-card small{font-size:10px}
+.mama-home .previous-home{min-height:50px;padding:9px 13px;border-radius:14px}
+
+@media(max-width:420px){
+  .mama-home main{padding-inline:10px}
+  .mama-home .hero-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mama-home .home-app-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mama-home .hero-card{min-height:96px;padding:9px}
+  .mama-home .hero-card .card-copy small{display:none}
+  .mama-home .list-card small{display:none}
+}

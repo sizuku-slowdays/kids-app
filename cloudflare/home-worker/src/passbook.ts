@@ -1,3 +1,4 @@
+import { listRewards, rewardImage, rewardBody, raster } from "./passbook-reward-images";
 import { choreRoute } from "./passbook-chores";
 import { snapshot, importLegacy } from "./passbook-import";
 import { activatePassbook } from "./passbook-cutover";
@@ -58,9 +59,12 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    const ledger=adult?'passbook_adult_entries':'passbook_entries';
    const result=await env.DB.prepare(`SELECT id,delta,memo,occurred_at,created_at FROM ${ledger} WHERE account_id=? AND (? IS NULL OR (occurred_at,rowid)<(SELECT occurred_at,rowid FROM ${ledger} WHERE id=? AND account_id=?)) ORDER BY occurred_at DESC,rowid DESC LIMIT 50`).bind(account,before,before,account).all();return reply(result.results);
   }
-  if(path==='/rewards'&&method==='GET')return reply((await env.DB.prepare("SELECT r.*,u.name unit_name FROM passbook_rewards r JOIN passbook_units u ON u.id=r.unit_id WHERE r.household_id=? AND (?=1 OR r.enabled=1)").bind(household,admin?1:0).all()).results);
+  if(path==='/rewards'&&method==='GET')return reply(await listRewards(env,household!,admin));
+  const imageMatch=path.match(/^\/rewards\/([^/]+)\/image$/);if(imageMatch&&['GET','HEAD'].includes(method))return await rewardImage(request,env,household!,admin,decodeURIComponent(imageMatch[1]));
   if(path==='/requests'&&method==='GET')return reply((await env.DB.prepare('SELECT r.*,c.display_name FROM passbook_requests r JOIN passbook_accounts a ON a.id=r.account_id JOIN children c ON c.id=a.child_id WHERE r.household_id=? AND (?=1 OR c.user_id=?) ORDER BY r.requested_at DESC LIMIT 100').bind(household,admin?1:0,userId).all()).results);
-  const data=await readBody(request),now=Math.floor(Date.now()/1000);
+  const rewardEdit=path.match(/^\/rewards\/([^/]+)$/);
+  if((path==='/rewards'&&method==='POST')||(rewardEdit&&method==='PUT'))check(admin,'管理者だけが操作できます',403);
+  const data=await ((path==='/rewards'&&method==='POST')||(rewardEdit&&method==='PUT')?rewardBody(request):readBody(request)),now=Math.floor(Date.now()/1000);
   if(path==='/requests'&&method==='POST'){
    check(own,'本人のアカウントで申請してください',403);
    const reward=await env.DB.prepare('SELECT * FROM passbook_rewards WHERE id=? AND household_id=? AND enabled=1').bind(str(data.reward_id),household).first<{id:string;unit_id:string;name:string;cost:number}>();check(reward,'交換するものが見つかりません',404);
@@ -80,7 +84,12 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    if(!r.meta.changes){check(await env.DB.prepare(`SELECT 1 FROM ${ledger} WHERE account_id=? AND source_app='manual' AND source_event=?`).bind(account,event).first(),'残高が足りません',409);}return reply({ok:true});
   }
   if(path==='/rewards'&&method==='POST'){
-   const unit=str(data.unit_id);check(await env.DB.prepare("SELECT 1 FROM passbook_units WHERE id=? AND household_id=? AND kind='points' AND active=1").bind(unit,household).first(),'ポイント種別を確認してください');const cost=integer(data.cost);check(cost>0,'必要ポイントは1以上です');const stock=data.stock===null?null:integer(data.stock);check(stock===null||stock>=0,'個数を確認してください');const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO passbook_rewards(id,household_id,unit_id,name,cost,stock) VALUES (?,?,?,?,?,?)').bind(id,household,unit,str(data.name),cost,stock).run();return reply({id},201);
+   const unit=str(data.unit_id);check(await env.DB.prepare("SELECT 1 FROM passbook_units WHERE id=? AND household_id=? AND kind='points' AND active=1").bind(unit,household).first(),'ポイント種別を確認してください');const cost=integer(data.cost);check(cost>0,'必要ポイントは1以上です');const stock=data.stock===null?null:integer(data.stock);check(stock===null||stock>=0,'個数を確認してください');const image=data.image_url??null;if(image!==null)raster(image);const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO passbook_rewards(id,household_id,unit_id,name,cost,stock,image_url,image_override) VALUES (?,?,?,?,?,?,?,1)').bind(id,household,unit,str(data.name),cost,stock,image).run();return reply({id},201);
+  }
+  if(rewardEdit&&method==='PUT'){
+   const cost=integer(data.cost);check(cost>0,'必要ポイントは1以上です');const stock=data.stock===null?null:integer(data.stock);check(stock===null||stock>=0,'個数を確認してください');check(typeof data.enabled==='boolean'&&Number.isSafeInteger(data.edit_revision),'設定を確認してください');
+   const changed=Object.prototype.hasOwnProperty.call(data,'image_url'),image=data.image_url??null;if(changed&&image!==null)raster(image);
+   const result=await env.DB.prepare('UPDATE passbook_rewards SET name=?,cost=?,stock=?,enabled=?,image_url=CASE WHEN ?=1 THEN ? ELSE image_url END,image_override=CASE WHEN ?=1 THEN 1 ELSE image_override END,edit_revision=edit_revision+1 WHERE id=? AND household_id=? AND edit_revision=?').bind(str(data.name),cost,stock,data.enabled?1:0,changed?1:0,image,changed?1:0,decodeURIComponent(rewardEdit[1]),household,data.edit_revision).run();check(result.meta.changes>0,'商品が更新されています。開き直してください',409);return reply({ok:true});
   }
   if(path.startsWith('/requests/')&&method==='PUT'){
    check(['approved','rejected'].includes(String(data.status)),'操作を確認してください');const id=path.slice('/requests/'.length);const result=await env.DB.prepare("UPDATE passbook_requests SET status=?,resolved_by=?,resolved_at=? WHERE id=? AND household_id=? AND status='pending'").bind(data.status,userId,now,id,household).run();check(result.meta.changes>0,'この申請は処理済みか見つかりません',409);return reply({ok:true});

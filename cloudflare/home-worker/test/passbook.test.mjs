@@ -69,5 +69,26 @@ test('passbook ownership, migration gate, reservations and atomic approval',asyn
  assert.equal((await call('/chores/'+missing,'mom','PUT',{...conf,point_unit_id:'chores',rotation:[],money:0,enabled:true})).status,409);
  assert.equal((await call('/chores/complete','mom','POST',{chore_id:missing,target:'user:mom',event_id:'adult-points-only',revision:2})).status,200);
  assert.equal((await db.prepare('SELECT SUM(delta) n FROM passbook_adult_entries').first()).n,40);
+
+ // Images add to the same reward row, never a new ledger or replacement product.
+ const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8WQAAAAASUVORK5CYII=';
+ const ledgerBefore=(await db.prepare('SELECT COUNT(*) n FROM passbook_entries').first()).n;
+ const product=(await call('/rewards')).data.find(v=>v.id===reward),edit={name:'写真付きおやつ',cost:70,stock:product.stock,enabled:true,edit_revision:product.edit_revision,image_url:png};
+ assert.equal((await call('/rewards/'+reward,'child','PUT',edit)).status,403);
+ assert.equal((await call('/rewards/'+reward,'mom','PUT',edit,'https://bad.test')).status,403);
+ assert.equal((await call('/rewards/'+reward,'mom','PUT',edit)).status,200);
+ assert.equal((await call('/rewards/'+reward,'mom','PUT',edit)).status,409);
+ const summary=(await call('/rewards')).data.find(v=>v.id===reward);assert.equal(summary.has_image,true);assert.ok(summary.image_path);assert.equal(summary.image_url,undefined);
+ async function pic(who='mom'){return mf.dispatchFetch('https://home.test/api/passbook/rewards/'+encodeURIComponent(reward)+'/image?household=h',{headers:who?{Cookie:cookies[who]}:{}})}
+ assert.equal((await pic(null)).status,401);assert.equal((await pic('stranger')).status,403);
+ const served=await pic('child');assert.equal(served.status,200);assert.equal(served.headers.get('content-type'),'image/png');assert.match(served.headers.get('cache-control'),/no-store/);assert.equal((await served.arrayBuffer()).byteLength,68);
+ assert.equal((await call('/rewards/'+reward,'mom','PUT',{...edit,edit_revision:summary.edit_revision,image_url:'data:image/svg+xml;base64,PHN2Zz4='})).status,415);
+ assert.equal((await call('/rewards/'+reward,'mom','PUT',{...edit,edit_revision:summary.edit_revision,image_url:'https://example.test/private'})).status,415);
+ assert.equal((await call('/rewards/'+reward,'mom','PUT',{...edit,edit_revision:summary.edit_revision,image_url:null})).status,200);assert.equal((await pic()).status,404);
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_entries').first()).n,ledgerBefore);
+ assert.equal((await db.prepare('SELECT cost,reward_name FROM passbook_requests WHERE id=?').bind(req.data.id).first()).reward_name,'おやつ');
+ const appPreview=await mf.dispatchFetch('https://home.test/apps/passbook/',{headers:{Cookie:cookies.mom}});assert.match(appPreview.headers.get('content-security-policy'),/img-src 'self' data: blob:/);
+ const collision=(await call('/rewards','mom','POST',{unit_id:'chores',name:'在庫の競合',cost:10,stock:1})).data.id;const beforeApproval=(await call('/rewards')).data.find(v=>v.id===collision);const pendingCollision=(await call('/requests','sibling','POST',{reward_id:collision})).data.id;assert.equal((await call('/requests/'+pendingCollision,'mom','PUT',{status:'approved'})).status,200);assert.equal((await call('/rewards/'+collision,'mom','PUT',{name:beforeApproval.name,cost:10,stock:1,enabled:true,edit_revision:beforeApproval.edit_revision})).status,409);assert.equal((await db.prepare('SELECT stock FROM passbook_rewards WHERE id=?').bind(collision).first()).stock,0);
+ const huge='data:image/jpeg;base64,'+'A'.repeat(600001);assert.equal((await call('/rewards','mom','POST',{unit_id:'chores',name:'大きすぎ',cost:10,stock:null,image_url:huge})).status,413);
  } finally {await mf.dispose()}
 });

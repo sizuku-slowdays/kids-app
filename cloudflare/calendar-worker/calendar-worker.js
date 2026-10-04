@@ -259,17 +259,7 @@ async function ensureFamilyProfiles(env) {
 
   }
 
-  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM calendars WHERE is_shared = 1').first();
-
-  if (!Number(count?.n || 0)) {
-
-    await env.DB.prepare(`INSERT INTO calendars (id, name, color, owner_google_id, is_shared, created_at)
-
-      VALUES (?, ?, ?, ?, 1, ?)`)
-
-      .bind(genId(), '家族', '#4ECBA8', 'family:mama', now).run();
-
-  }
+  // Shared calendars are created explicitly by their owner. Never recreate a deleted one.
 
 }
 
@@ -1375,11 +1365,7 @@ export default {
 
       if (!user) return err('Unauthorized', 401);
 
-      const stored = await getFamilySetting(env, 'google_ics_urls');
-
-      let count = 0;
-
-      try { count = JSON.parse(stored || '[]').length; } catch {}
+      const count = (await privateGoogleUrls(env,user)).length;
 
       return json({ configured: count > 0, count });
 
@@ -1405,7 +1391,7 @@ export default {
 
       }
 
-      await setFamilySetting(env, 'google_ics_urls', JSON.stringify(urls));
+      await setFamilySetting(env, 'google_ics_urls:'+user.google_id, JSON.stringify(urls));
 
       return json({ ok: true, configured: urls.length > 0, count: urls.length });
 
@@ -1427,9 +1413,7 @@ export default {
 
 
 
-      let urls = [];
-
-      try { urls = JSON.parse(await getFamilySetting(env, 'google_ics_urls') || '[]'); } catch {}
+      const urls = await privateGoogleUrls(env,user);
 
       const results = [];
 
@@ -2581,7 +2565,7 @@ async function homeCalendarGate(request, env, path) {
     const profile = await getHomeCalendarUser(request,env);
     const profiles = identity.admin ? (await env.DB.prepare('SELECT member_id,display_name,role FROM family_members WHERE active=1 ORDER BY created_at').all()).results : [];
     const links = identity.admin ? (await env.DB.prepare('SELECT home_user_id,member_id FROM home_calendar_links').all()).results : [];
-    return json({user:identity.user,admin:identity.admin,groups:identity.groups,users:identity.users,household_id:bound||null,profile,profiles,links});
+    return json({privacy_version:'20261005-owner-ics',user:identity.user,admin:identity.admin,groups:identity.groups,users:identity.users,household_id:bound||null,profile,profiles,links});
   }
   if (path === '/home/link' && request.method === 'POST') {
     if (!identity.admin) return err('HOME管理者だけが連携を設定できます',403);
@@ -2620,7 +2604,42 @@ async function homeCalendarGate(request, env, path) {
     // The database is dedicated to one household. Check after concurrent first setup too.
     return json({ok:true,member_id:member.member_id});
   }
+  if(path==='/home/remove-initial-calendar' && request.method==='POST')return retireInitialFamilyCalendar(request,env);
   if (path.startsWith('/home/') || path === '/family/login' || path === '/family/unlock') return err('HOMEの本人認証を利用してください',403);
   if (!await getHomeCalendarUser(request,env)) return err('カレンダーの本人連携が未設定です。HOME管理者に設定してもらってください',409);
   return null;
+}
+
+async function privateGoogleUrls(env,user) {
+  // Existing family-wide ICS URLs belonged to the original mama account.
+  // Keep them readable only by that stable legacy owner ID, not by every admin.
+  let stored=await getFamilySetting(env,'google_ics_urls:'+user.google_id);
+  if(stored===null){
+    const legacyOwner=await getFamilySetting(env,'google_ics_legacy_owner')||'family:mama';
+    if(user.google_id===legacyOwner)stored=await getFamilySetting(env,'google_ics_urls');
+  }
+  try {const urls=JSON.parse(stored||'[]');return Array.isArray(urls)?urls.filter(v=>typeof v==='string'):[];}catch{return [];}
+}
+async function retireInitialFamilyCalendar(request,env) {
+  const context=homeCalendarContexts.get(request),user=await getHomeCalendarUser(request,env);
+  if(!context?.identity.admin || user?.google_id!=='family:mama')return err('この初期カレンダーはママ本人だけが削除できます',403);
+  if(await getFamilySetting(env,'initial_family_retired_v1'))return json({ok:true,removed:false,completed:true});
+  // Exact signature used by the old seed code. Never select all shared calendars or by name alone.
+  const candidates=(await env.DB.prepare("SELECT * FROM calendars WHERE name='家族' AND color='#4ECBA8' AND owner_google_id='family:mama' AND is_shared=1").all()).results;
+  if(candidates.length>1)return err('初期カレンダーの候補が複数あります。対象を確認するまで削除しません',409);
+  if(!candidates.length){await setFamilySetting(env,'initial_family_retired_v1',new Date().toISOString());return json({ok:true,removed:false,completed:true});}
+  const calendar=candidates[0],events=(await env.DB.prepare('SELECT * FROM calendar_events WHERE calendar_id=?').bind(calendar.id).all()).results,now=new Date().toISOString();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS home_calendar_retired (kind TEXT NOT NULL,record_id TEXT NOT NULL,calendar_id TEXT NOT NULL,row_json TEXT NOT NULL,retired_by TEXT NOT NULL,retired_at TEXT NOT NULL,PRIMARY KEY(kind,record_id))').run();
+  try {await env.DB.batch([
+    env.DB.prepare('INSERT INTO home_calendar_retired VALUES(?,?,?,?,?,?)').bind('calendar',calendar.id,calendar.id,JSON.stringify(calendar),user.google_id,now),
+    ...events.map(event=>env.DB.prepare('INSERT INTO home_calendar_retired VALUES(?,?,?,?,?,?)').bind('event',event.id,calendar.id,JSON.stringify(event),user.google_id,now)),
+    env.DB.prepare('DELETE FROM calendar_events WHERE calendar_id=?').bind(calendar.id),
+    env.DB.prepare('DELETE FROM calendars WHERE id=? AND owner_google_id=?').bind(calendar.id,user.google_id),
+    env.DB.prepare('INSERT INTO family_settings(setting_key,setting_value,updated_at) VALUES(?,?,?)').bind('initial_family_retired_v1',now,now)
+  ]);}catch{
+    if(await getFamilySetting(env,'initial_family_retired_v1'))return json({ok:true,removed:false,completed:true});
+    return err('バックアップを保存できなかったため、初期カレンダーは削除していません',409);
+  }
+  for(const event of events)try{await removeCalendarNotification(env,event.id);}catch{console.error('INITIAL_CALENDAR_NOTIFICATION_CLEANUP_FAILED');}
+  return json({ok:true,removed:true,calendar_id:calendar.id,backed_up_events:events.length,completed:true});
 }

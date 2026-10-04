@@ -946,7 +946,7 @@ async function loadHomeConnection(manage=false,group='') {
     const status=await api('/home/status'+(group?'?group='+encodeURIComponent(group):''));
     homeConnection=status;homeCalendarUserId=status.user.id;
     document.getElementById('home-calendar-manage').style.display=status.admin?'':'none';
-    if(status.profile&&!manage){panel.style.display='none';myProfile=await api('/family/me');hiddenCals=new Set(JSON.parse(localStorage.getItem('homeCalendarHidden:'+homeCalendarUserId)||'[]'));showApp();return;}
+    if(status.profile&&!manage){if(status.privacy_version==='20261005-owner-ics' && status.admin && status.profile.google_id==='family:mama')await api('/home/remove-initial-calendar','POST',{});panel.style.display='none';myProfile=await api('/family/me');hiddenCals=new Set(JSON.parse(localStorage.getItem('homeCalendarHidden:'+homeCalendarUserId)||'[]'));showApp();return;}
     info.textContent=status.admin?'HOMEの利用者と、今まで使っていたカレンダーの名前を一度だけ結びつけます。予定は移動・初期化しません。':'HOMEの本人認証はできています。管理者にカレンダーの本人連携を設定してもらってください。';
     if(!status.admin)return;
     let selectedGroup=status.household_id||group;
@@ -1015,7 +1015,7 @@ async function fetchGoogleEvents() {
     const from = dateStr(new Date(y, m-1, 1)), to = dateStr(new Date(y, m+2, 0));
     gEvents = await api(`/google-events?from=${from}&to=${to}`);
   } catch(e) { gEvents = []; console.warn('Google Calendar fetch error', e); }
-  render();
+  renderLegend(); render();
 }
 async function openFamilyMembers() {
   document.getElementById('user-menu').classList.remove('open');
@@ -1108,7 +1108,7 @@ async function saveGoogleSettings() {
 function renderLegend() {
   const leg = document.getElementById('legend'); leg.querySelectorAll('.legend-item').forEach(el => el.remove()); const addBtn = leg.querySelector('.legend-add');
   const hItem = makeLegendItem('__holiday__', '祝日', '#e53935', true); leg.insertBefore(hItem, addBtn);
-  const gItem = makeLegendItem('__google__', 'Google予定', '#1a73e8', true); leg.insertBefore(gItem, addBtn);
+  if(gEvents.some(e=>e.calendar_id==='__google__')){const gItem = makeLegendItem('__google__', 'Google予定', '#1a73e8', true); leg.insertBefore(gItem, addBtn);}
   calendars.forEach(cal => leg.insertBefore(makeLegendItem(cal.id, cal.name, cal.color, false), addBtn));
 }
 function makeLegendItem(id, name, color, isGoogle) {
@@ -1131,7 +1131,7 @@ async function loadEvents() {
   await fetchGoogleEvents();
 }
 
-function allEvents() { const orig = events.filter(e => !hiddenCals.has(e.calendar_id)); const g = hiddenCals.has('__google__') ? [] : gEvents; return [...orig, ...g]; }
+function allEvents() { const orig = events.filter(e => !hiddenCals.has(e.calendar_id)); const g = gEvents.filter(e=>!hiddenCals.has(e.calendar_id)); return [...orig, ...g]; }
 function getColor(e) { if (e.is_google) return '#1a73e8'; if (e.creator_color) return e.creator_color; if (e.color) return e.color; return calendars.find(c => c.id === e.calendar_id)?.color || '#888'; }
 
 function render() { const y = currentDate.getFullYear(), m = currentDate.getMonth(); document.getElementById('month-label').textContent = `${y}年${m+1}月`; if (viewMode === 'month') renderMonth(y, m); else renderWeek(); }
@@ -1495,4 +1495,3 @@ function renderDayPanel(ds) {
 </script>
 </body>
 </html>
-

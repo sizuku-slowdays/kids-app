@@ -15,11 +15,22 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
   const url = new URL(request.url);
   const path = url.pathname.slice('/api/calendar'.length) || '/home/status';
   // Only calendar routes. Never proxy arbitrary URLs, karada, login or OAuth.
-  if (!/^\/(?:home\/(?:status|link)|family\/(?:me|members(?:\/[^/]+)?)|users|me|calendars(?:\/[^/]+)?|events(?:\/[^/]+)?|google-events|integrations\/google-ics|holidays|notifications\/resync)$/.test(path)) return Response.json({error:'見つかりません'},{status:404});
+  if (!/^\/(?:home\/(?:status|link|remove-initial-calendar)|family\/(?:me|members(?:\/[^/]+)?)|users|me|calendars(?:\/[^/]+)?|events(?:\/[^/]+)?|google-events|integrations\/google-ics|holidays|notifications\/resync)$/.test(path)) return Response.json({error:'見つかりません'},{status:404});
   const upstream = new URL('https://calendar.internal'+path+url.search);
   const outgoing = new Headers({'X-Home-Calendar':'1'});
   // Strip the caller's legacy token and all impersonation headers.
   for (const key of ['cookie','content-type','origin']) { const value=request.headers.get(key); if(value)outgoing.set(key,value); }
+  // Protect the rollout too: an older calendar Worker served mama's ICS to every user.
+  if(path==='/google-events' || path==='/integrations/google-ics'){
+    const check=await env.CALENDAR_SERVICE.fetch(new Request('https://calendar.internal/home/status',{headers:outgoing}));
+    if(!check.ok)return Response.json({error:'カレンダーの本人連携を確認できません'},{status:check.status,headers:{'Cache-Control':'private, no-store'}});
+    const state=await check.json() as {privacy_version?:string;profile?:{google_id?:string}};
+    if(!state.profile)return Response.json({error:'本人連携を設定してください'},{status:409,headers:{'Cache-Control':'private, no-store'}});
+    if(state.privacy_version!=='20261005-owner-ics' && state.profile.google_id!=='family:mama'){
+      if(request.method!=='GET')return Response.json({error:'このGoogle連携は本人だけが変更できます'},{status:403,headers:{'Cache-Control':'private, no-store'}});
+      return Response.json(path==='/google-events'?[]:{configured:false,count:0},{headers:{'Cache-Control':'private, no-store'}});
+    }
+  }
   const response = await env.CALENDAR_SERVICE.fetch(new Request(upstream,{method:request.method,headers:outgoing,body:['GET','HEAD'].includes(request.method)?null:request.body,redirect:'manual'}));
   if(path==='/home/status' && response.status===404) return Response.json({error:'カレンダーWorkerのHOME連携コードの反映が必要です。管理者がCloudflareで設定するまで、本人の予定は表示しません'},{status:503,headers:{'Cache-Control':'private, no-store'}});
   const headers = new Headers({'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});

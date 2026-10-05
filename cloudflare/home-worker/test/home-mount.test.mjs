@@ -23,6 +23,7 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
     headers:{Origin:origin,...(cookie?{Cookie:cookie}:{}),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
   }
   let r=await call('/');assert.equal(r.status,303);assert.equal(r.headers.get('Location'),'/wagaya/login');
+  r=await call('/mama.html?source=installed');assert.equal(r.status,303);assert.equal(r.headers.get('Location'),'/wagaya/login');
   assert.equal((await call('/api/me')).status,401);
   r=await call('/login');const html=await r.text();assert.equal(r.status,200);
   assert.match(html,/src="\/wagaya\/app.js"/);assert.match(html,/href="\/wagaya\/style.css"/);
@@ -38,6 +39,7 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
   const cookie=r.headers.get('Set-Cookie').split(';')[0];assert.match(r.headers.get('Set-Cookie'),/Path=\/; HttpOnly; Secure; SameSite=Lax/);
   const me=await (await call('/api/me',{cookie})).json();assert.equal(me.user.display_name,'非公開の親');
   r=await call('/',{cookie});assert.equal(r.status,200);assert.equal(r.headers.get('Location'),null);
+  r=await call('/mama.html?source=installed',{cookie});assert.equal(r.status,200);assert.equal(r.headers.get('Location'),null);assert.match(await r.text(),/src="\/wagaya\/app.js"/);
   const apps=await (await call('/api/home',{cookie})).json();assert.equal(apps.find(a=>a.id==='muscle-bank').path,'/wagaya/apps/muscle-bank/');
   r=await call('/apps/muscle-bank/',{cookie});assert.match(await r.text(),/href="\/wagaya\/"/);
   r=await call('/apps/muscle-bank/config.js',{cookie});assert.match(await r.text(),/apiBase:'\/wagaya\/api\/muscle-bank'/);

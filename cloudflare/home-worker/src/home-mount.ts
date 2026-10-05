@@ -29,9 +29,11 @@ export async function mountedHome(request: Request, dispatch: (request: Request)
   if (path === "/sw.js" || path === "/mount-pwa.js") return new Response(request.method === "HEAD" ? null : path === "/sw.js" ? worker : pwa, {
     headers: {"Content-Type":"application/javascript; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"},
   });
-  if (!internal.test(path) && path !== "/index.html" && path !== "/manifest.json") return fetch(request);
+  // Installed mama shortcuts retain this start URL; serve HOME there too.
+  const homeEntry = path === "/index.html" || path === "/mama.html";
+  if (!internal.test(path) && !homeEntry && path !== "/manifest.json") return fetch(request);
   const normalized = new URL(url);
-  normalized.pathname = path === "/index.html" ? "/" : path === "/manifest.json" ? "/manifest.webmanifest" : path;
+  normalized.pathname = homeEntry ? "/" : path === "/manifest.json" ? "/manifest.webmanifest" : path;
   const response = await dispatch(new Request(normalized, request));
   const headers = new Headers(response.headers);
   headers.set("X-Home-Mount", "wagaya-v1");

@@ -39,6 +39,8 @@ test("invitation, personal sessions, home settings and private file boundaries",
     const kidneyMigration=await readFile(new URL('../migrations/0008_kidney.sql',import.meta.url),'utf8');
     for(const statement of kidneyMigration.replace(/^--.*$/gm,'').split(';').filter(s=>s.trim()))await db.prepare(statement).run();
     const bucket = await mf.getR2Bucket("PRIVATE_FILES");
+    const preferencesMigration=await readFile(new URL('../migrations/0011_home_favorites.sql',import.meta.url),'utf8');
+    for(const statement of preferencesMigration.split(';').filter(s=>s.trim()))await db.prepare(statement).run();
     async function call(
       path,
       {
@@ -240,6 +242,16 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await call('/api/home/order',{method:'PUT',cookie:registered.cookie,body:{app_ids:order}})).status,409);
     assert.equal((await call('/api/home/order',{method:'PUT',cookie:admin.cookie,body:{app_ids:[order[0],order[0]]}})).status,400);
     assert.equal((await call('/api/home/order',{method:'PUT',body:{app_ids:order}})).status,401);
+    const childFavorites=(await call('/api/home',{cookie:registered.cookie})).data.filter(a=>a.featured).map(a=>a.id);
+    assert.equal((await call('/api/home/favorites',{method:'PUT',cookie:admin.cookie,body:{app_ids:['calendar']}})).status,200);
+    assert.deepEqual((await call('/api/home',{cookie:admin.cookie})).data.filter(a=>a.featured).map(a=>a.id),['calendar']);
+    assert.deepEqual((await call('/api/home',{cookie:registered.cookie})).data.filter(a=>a.featured).map(a=>a.id),childFavorites);
+    assert.deepEqual((await call('/api/home',{cookie:admin.cookie})).data.map(a=>a.id),order);
+    assert.equal((await call('/api/home/favorites',{method:'PUT',cookie:admin.cookie,body:{app_ids:[]}})).status,200);
+    assert.equal((await call('/api/home',{cookie:admin.cookie})).data.filter(a=>a.featured).length,0);
+    assert.equal((await call('/api/home/favorites',{method:'PUT',cookie:registered.cookie,body:{app_ids:['muscle-bank']}})).status,403);
+    assert.equal((await call('/api/home/favorites',{method:'PUT',cookie:admin.cookie,body:{app_ids:['calendar','calendar']}})).status,400);
+    assert.equal((await call('/api/home/favorites',{method:'PUT',body:{app_ids:['calendar']}})).status,401);
     assert.equal((await call("/api/muscle-bank/state",{cookie:admin.cookie})).status,200);
     assert.equal((await call("/api/home/muscle-bank",{method:"PUT",cookie:registered.cookie,body:{visible:true}})).status,403);
     await db.prepare("DELETE FROM personal_app_access WHERE user_id='bootstrap-admin' AND app_id='muscle-bank'").run();

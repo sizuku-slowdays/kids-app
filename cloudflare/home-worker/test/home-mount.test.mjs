@@ -14,7 +14,7 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
   }}}));
  try {
   const db=await mf.getD1Database('DB');
-  for(const file of ['0001_foundation.sql','0003_muscle_bank.sql']){
+  for(const file of ['0001_foundation.sql','0003_muscle_bank.sql','0011_home_favorites.sql']){
    const sql=await readFile(new URL('../migrations/'+file,import.meta.url),'utf8');
    for(const s of sql.replace(/^--.*$/gm,'').split(';').filter(s=>s.trim()))await db.prepare(s).run();
   }

@@ -183,13 +183,19 @@ async function home() {
       {id:"kakeibo-input",name:"すぐ入力",icon:"✍️",path:"https://cetus.fun/kanriapp/kakeibo-input.html",status:"ready"},
     ]) quick.append(appCard(app));
   }
-  const simple=visibleApps.length===2&&visibleApps.every(a=>["calendar","kidney"].includes(a.id));
+  const favoriteApps=visibleApps.filter(a=>a.featured);
+  const otherApps=visibleApps.filter(a=>!a.featured);
+  const simple=visibleApps.length===2&&favoriteApps.length===2&&visibleApps.every(a=>["calendar","kidney"].includes(a.id));
   if (visibleApps.length) {
+    if(favoriteApps.length){
     const featured = appSection('すぐ開く', simple ? '毎日使うアプリ' : 'よく使うアプリ', simple ? 'hero-grid grandpa-home' : 'hero-grid');
-    visibleApps.slice(0, simple ? 2 : 3).forEach(app => featured.append(appCard(app, true)));
+    favoriteApps.forEach(app => featured.append(appCard(app, true)));
+    }
     if (!simple) {
+      if(otherApps.length){
       const grid = appSection('一覧', 'アプリ', 'home-app-list');
-      visibleApps.forEach(app => grid.append(appCard(app)));
+      otherApps.forEach(app => grid.append(appCard(app)));
+      }
       const links = appSection('いつもの', 'からだパワー・お薬タイマー', 'home-app-list');
       for (const app of [
         {id:'karada',name:'からだパワー',icon:'🌈',path:'https://cetus.fun/karada_power/',status:'ready'},
@@ -267,7 +273,7 @@ function settings() {
     },"quiet"),el("p","このアカウントのHOMEだけ、カレンダーと食事チェックを表示します。あとから自由に戻せます。","muted"));
   }
 
-  root.append(el("p", "↑ ↓ で順番を変更できます。表示中の上の3つは「すぐ開く」に表示されます。", "muted"));
+  root.append(el("p", "「よく使う」にチェックすると上に表示します。↑ ↓ で順番を変更できます。", "muted"));
   const appSettingsList=el("div");root.append(appSettingsList);
   let orderSaving=false;
   function renderAppSettings(){
@@ -307,8 +313,22 @@ function settings() {
       move.disabled=orderSaving||index+direction<0||index+direction>=apps.length;
       moves.append(move);
     }
+    const options=el("div",null,"app-preference-options"),visibleLabel=el("label"),favoriteLabel=el("label"),favorite=el("input");
+    visibleLabel.append(input,document.createTextNode("表示"));
+    favorite.type="checkbox";favorite.checked=Boolean(app.featured);
+    favorite.setAttribute("aria-label",app.name+"をよく使うアプリにする");
+    favorite.disabled=orderSaving;
+    favorite.onchange=async()=>{
+      if(orderSaving)return;
+      const previous=app.featured;app.featured=favorite.checked?1:0;
+      orderSaving=true;renderAppSettings();
+      try{await api("/api/home/favorites","PUT",{app_ids:apps.filter(a=>a.featured).map(a=>a.id)});}
+      catch(e){app.featured=previous;showError(e);}
+      finally{orderSaving=false;renderAppSettings();}
+    };
+    favoriteLabel.append(favorite,document.createTextNode("よく使う"));options.append(visibleLabel,favoriteLabel);
     input.disabled=orderSaving;
-    row.classList.add("app-settings-row");row.append(label, input,moves);
+    row.classList.add("app-settings-row");row.append(label,moves,options);
     appSettingsList.append(row);
   }
   }

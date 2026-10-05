@@ -479,7 +479,16 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       )
         .bind(user.id, user.id, user.id)
         .all();
-      return json(result.results);
+      const preference=await env.DB.prepare("SELECT favorite_app_ids FROM home_preferences WHERE user_id=?").bind(user.id).first<{favorite_app_ids:string}>();
+      const favorites:string[]=preference?JSON.parse(preference.favorite_app_ids):result.results.filter(a=>a.visible).slice(0,3).map(a=>String(a.id));
+      return json(result.results.map(a=>({...a,featured:favorites.includes(String(a.id))?1:0})));
+    }
+    if (path === "/api/home/favorites" && method === "PUT") {
+      const data=await body(request);
+      requireValue(Array.isArray(data.app_ids) && data.app_ids.length<=100 && data.app_ids.every((id:unknown)=>typeof id==="string") && new Set(data.app_ids).size===data.app_ids.length,400,"よく使うアプリを確認してください");
+      for(const id of data.app_ids)requireValue(await appAllowed(env,user.id,id),403,"このアプリは利用できません");
+      await env.DB.prepare("INSERT INTO home_preferences(user_id,favorite_app_ids) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET favorite_app_ids=excluded.favorite_app_ids").bind(user.id,JSON.stringify(data.app_ids)).run();
+      return json({ok:true});
     }
     if (path === "/api/home/order" && method === "PUT") {
       const data=await body(request);

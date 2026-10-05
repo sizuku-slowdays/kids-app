@@ -384,7 +384,7 @@
 
     <!-- 最近の入力 -->
     <div class="card" data-collapse-key="recent">
-      <h2>🕐 最近の入力</h2>
+      <h2>🕐 最近入力した10件</h2>
       <div class="recent-list" id="recentList">
         <div class="loading">読み込み中…</div>
       </div>
@@ -587,7 +587,7 @@
         if(saved && typeof saved === "object") return saved;
       }catch(e){}
       // 初回は「今月の合計」と「カテゴリ別」だけ開く
-      return {summary:false,advances:false,payments:true,categories:false,pink:true,budgets:true,funds:true,recent:true};
+      return {summary:false,advances:false,payments:true,categories:false,pink:true,budgets:true,funds:true,recent:false};
     }
 
     function setupCollapsibleCards(){
@@ -868,7 +868,7 @@
       renderPink(m);
       renderBudgets(m);
       renderFunds();
-      renderRecent(monthEntries);
+      renderRecent(entries);
     }
 
     function renderAdvances(m,recoveries){
@@ -1216,36 +1216,37 @@
       }).join("");
     }
 
-    function renderRecent(monthEntries){
+    function renderRecent(allEntries){
       const area = $("recentList");
       const grouped = [];
       const receipts = new Map();
-      monthEntries.forEach(e => {
+      (allEntries||[]).forEach(e => {
         if(!e.receiptId){ grouped.push(e); return; }
         if(!receipts.has(e.receiptId)){
-          const item={...e,amount:Number(e.receiptTotal||e.amount),category:"",_categories:[]};
+          const item={...e,amount:Number(e.receiptTotal||e.amount),category:"",_categories:[],_latestStamp:0};
           receipts.set(e.receiptId,item); grouped.push(item);
         }
         const item=receipts.get(e.receiptId);
         if(e.category && !item._categories.includes(e.category)) item._categories.push(e.category);
         item.category=item._categories.join("・");
+        item._latestStamp=Math.max(item._latestStamp||0,Date.parse(e.createdAt||e.updatedAt||0)||0);
       });
-      const list = grouped
-        .sort((a,b) => String(b.date||"").localeCompare(String(a.date||"")))
-        .slice(0,20);
+      const stamp=e=>e._latestStamp || Date.parse(e.createdAt||e.updatedAt||0) || Date.parse((e.date||"")+"T00:00:00") || 0;
+      const list = grouped.sort((a,b)=>stamp(b)-stamp(a)).slice(0,10);
       if(list.length === 0){
-        area.innerHTML = '<div class="empty">今月の入力はまだありません</div>'; return;
+        area.innerHTML = '<div class="empty">まだ入力履歴がありません</div>'; return;
       }
       area.innerHTML = list.map(e => {
-        const isPink   = normalizePaymentName(e.payment) === normalizePaymentName("楽天PINK");
+        const isPink = normalizePaymentName(e.payment) === normalizePaymentName("楽天PINK");
         const typeLabel = {income:"収入",expense:"支出",advance:"立替",recovery:"回収"}[e.type] || "支出";
-        const amtColor  = (e.type === "income" || e.type === "recovery") ? "var(--safe)" : "var(--text)";
+        const amtColor = (e.type === "income" || e.type === "recovery") ? "var(--safe)" : "var(--text)";
         return `<div class="recent-item">
           <span class="recent-date">${htmlEsc(e.date||"")}</span>
           <div class="recent-detail">
             <div class="recent-memo">${htmlEsc(e.memo || e.category || typeLabel)}</div>
             <div class="recent-payment">
               <span class="tag${isPink?" pink-tag":""}">${htmlEsc(e.payment)}</span>
+              <span class="tag" style="margin-left:4px">${htmlEsc(typeLabel)}</span>
               ${e.counterparty ? `<span class="tag" style="margin-left:4px">👤 ${htmlEsc(e.counterparty)}</span>` : ""}
               ${e.memo && e.category ? `<span class="tag" style="margin-left:4px">${htmlEsc(e.category)}</span>` : ""}
             </div>

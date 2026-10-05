@@ -84,26 +84,27 @@ test('HOME identity replaces saved calendar login; private reads, owner writes a
  assert.equal((await call('/api/calendar/home/link','mom','POST',{}, {Origin:'https://evil.test'})).status,403);
  assert.equal((await cal.prepare('SELECT COUNT(*) n FROM calendar_events').first()).n,2);
  assert.equal((await cal.prepare("SELECT owner_google_id FROM calendars WHERE id='private'").first()).owner_google_id,'family:mama');
- // Retire only the exact old seed, keeping same-named user-created shared calendars.
- await cal.prepare("INSERT INTO calendars VALUES ('initial','家族','#4ECBA8','family:mama',1,'old'),('new-shared','家族','#e53935','family:mama',1,'new'),('ambiguous','家族','#4ECBA8','family:mama',1,'old')").run();
- await cal.prepare("INSERT INTO calendar_events VALUES ('old-event','initial','family:mama',NULL,'古い家族予定','2026-10-01T09:00:00','2026-10-01T10:00:00',0,'none')").run();
+ // Retire only the identified legacy ID, despite the previous erroneous completion marker.
+ const targetId='a3369575-a3ca-4c20-b9df-c468c836202c';
+ await cal.prepare("INSERT INTO calendars VALUES (?,'旧共通','#f6bf26','old-google-user',1,'old'),('new-shared','家族','#e53935','family:mama',1,'new'),('initial','家族','#4ECBA8','family:mama',1,'old')").bind(targetId).run();
+ await cal.prepare("INSERT INTO calendar_events VALUES ('old-event',?,'old-google-user',NULL,'古い家族予定','2026-10-01T09:00:00','2026-10-01T10:00:00',0,'none')").bind(targetId).run();
+ await cal.prepare("INSERT INTO family_settings VALUES ('initial_family_retired_v1','incorrect-completion','old')").run();
  assert.equal((await call('/api/calendar/home/remove-initial-calendar','grandpa','POST',{})).status,403);
- assert.equal((await call('/api/calendar/home/remove-initial-calendar','mom','POST',{})).status,409);
- assert.ok(await cal.prepare("SELECT 1 FROM calendars WHERE id='initial'").first());
- await cal.prepare("DELETE FROM calendars WHERE id='ambiguous'").run();
- const retired=await (await call('/api/calendar/home/remove-initial-calendar','mom','POST',{})).json();assert.equal(retired.removed,true);assert.equal(retired.backed_up_events,1);
- assert.equal(await cal.prepare("SELECT 1 FROM calendars WHERE id='initial'").first(),null);assert.equal(await cal.prepare("SELECT 1 FROM calendar_events WHERE id='old-event'").first(),null);
- assert.ok(await cal.prepare("SELECT 1 FROM calendars WHERE id='new-shared'").first());assert.ok(await cal.prepare("SELECT 1 FROM calendar_events WHERE id='secret'").first());
+ const retired=await (await call('/api/calendar/home/remove-initial-calendar','mom','POST',{calendar_id:'private'})).json();assert.equal(retired.removed,true);assert.equal(retired.backed_up_events,1);
+ assert.equal(await cal.prepare('SELECT 1 FROM calendars WHERE id=?').bind(targetId).first(),null);assert.equal(await cal.prepare("SELECT 1 FROM calendar_events WHERE id='old-event'").first(),null);
+ assert.ok(await cal.prepare("SELECT 1 FROM calendars WHERE id='new-shared'").first());assert.ok(await cal.prepare("SELECT 1 FROM calendars WHERE id='initial'").first());assert.ok(await cal.prepare("SELECT 1 FROM calendar_events WHERE id='secret'").first());
  const backup=await cal.prepare("SELECT row_json FROM home_calendar_retired WHERE kind='event' AND record_id='old-event'").first();assert.equal(JSON.parse(backup.row_json).title,'古い家族予定');
+ const calBackup=await cal.prepare("SELECT row_json FROM home_calendar_retired WHERE kind='calendar' AND record_id=?").bind(targetId).first();assert.equal(JSON.parse(calBackup.row_json).owner_google_id,'old-google-user');
  assert.equal((await (await call('/api/calendar/home/remove-initial-calendar','mom','POST',{})).json()).removed,false);
  await cal.prepare('DELETE FROM calendars WHERE is_shared=1').run();
  assert.equal((await call('/api/calendar/family/me')).status,200);
  assert.equal((await cal.prepare('SELECT COUNT(*) n FROM calendars WHERE is_shared=1').first()).n,0);
- // A backup collision causes no deletion and no completion marker.
- await cal.prepare("DELETE FROM family_settings WHERE setting_key='initial_family_retired_v1'").run();
- await cal.prepare("INSERT INTO calendars VALUES ('initial','家族','#4ECBA8','family:mama',1,'old')").run();
+ // Missing target is not marked completed. Failed backup retains the exact target.
+ await cal.prepare('DELETE FROM family_settings WHERE setting_key=?').bind('retired_calendar:'+targetId).run();
+ assert.equal((await (await call('/api/calendar/home/remove-initial-calendar','mom','POST',{})).json()).completed,false);
+ await cal.prepare("INSERT INTO calendars VALUES (?,'旧共通','#f6bf26','old-google-user',1,'old')").bind(targetId).run();
  assert.equal((await call('/api/calendar/home/remove-initial-calendar','mom','POST',{})).status,409);
- assert.ok(await cal.prepare("SELECT 1 FROM calendars WHERE id='initial'").first());
+ assert.ok(await cal.prepare('SELECT 1 FROM calendars WHERE id=?').bind(targetId).first());
  await home.prepare("UPDATE sessions SET revoked_at=? WHERE user_id='grandpa'").bind(now).run();
  assert.equal((await call('/api/calendar/calendars','grandpa')).status,401);
  await home.prepare("DELETE FROM group_apps WHERE group_id='h' AND app_id='calendar'").run();

@@ -2623,21 +2623,24 @@ async function privateGoogleUrls(env,user) {
 async function retireInitialFamilyCalendar(request,env) {
   const context=homeCalendarContexts.get(request),user=await getHomeCalendarUser(request,env);
   if(!context?.identity.admin || user?.google_id!=='family:mama')return err('この初期カレンダーはママ本人だけが削除できます',403);
-  if(await getFamilySetting(env,'initial_family_retired_v1'))return json({ok:true,removed:false,completed:true});
-  // Exact signature used by the old seed code. Never select all shared calendars or by name alone.
-  const candidates=(await env.DB.prepare("SELECT * FROM calendars WHERE name='家族' AND color='#4ECBA8' AND owner_google_id='family:mama' AND is_shared=1").all()).results;
-  if(candidates.length>1)return err('初期カレンダーの候補が複数あります。対象を確認するまで削除しません',409);
-  if(!candidates.length){await setFamilySetting(env,'initial_family_retired_v1',new Date().toISOString());return json({ok:true,removed:false,completed:true});}
+  // One explicitly identified legacy resource, not a name/color match or a bulk deletion.
+  const targetId='a3369575-a3ca-4c20-b9df-c468c836202c';
+  const marker='retired_calendar:'+targetId;
+  if(await getFamilySetting(env,marker))return json({ok:true,removed:false,completed:true});
+  const target=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(targetId).first();
+  if(!target)return json({ok:true,removed:false,completed:false,reason:'target_not_found'});
+  if(Number(target.is_shared)!==1)return err('指定された旧共通カレンダーの共有設定が変わっています。削除していません',409);
+  const candidates=[target];
   const calendar=candidates[0],events=(await env.DB.prepare('SELECT * FROM calendar_events WHERE calendar_id=?').bind(calendar.id).all()).results,now=new Date().toISOString();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS home_calendar_retired (kind TEXT NOT NULL,record_id TEXT NOT NULL,calendar_id TEXT NOT NULL,row_json TEXT NOT NULL,retired_by TEXT NOT NULL,retired_at TEXT NOT NULL,PRIMARY KEY(kind,record_id))').run();
   try {await env.DB.batch([
     env.DB.prepare('INSERT INTO home_calendar_retired VALUES(?,?,?,?,?,?)').bind('calendar',calendar.id,calendar.id,JSON.stringify(calendar),user.google_id,now),
     ...events.map(event=>env.DB.prepare('INSERT INTO home_calendar_retired VALUES(?,?,?,?,?,?)').bind('event',event.id,calendar.id,JSON.stringify(event),user.google_id,now)),
     env.DB.prepare('DELETE FROM calendar_events WHERE calendar_id=?').bind(calendar.id),
-    env.DB.prepare('DELETE FROM calendars WHERE id=? AND owner_google_id=?').bind(calendar.id,user.google_id),
-    env.DB.prepare('INSERT INTO family_settings(setting_key,setting_value,updated_at) VALUES(?,?,?)').bind('initial_family_retired_v1',now,now)
+    env.DB.prepare('DELETE FROM calendars WHERE id=? AND owner_google_id=?').bind(calendar.id,calendar.owner_google_id),
+    env.DB.prepare('INSERT INTO family_settings(setting_key,setting_value,updated_at) VALUES(?,?,?)').bind(marker,now,now)
   ]);}catch{
-    if(await getFamilySetting(env,'initial_family_retired_v1'))return json({ok:true,removed:false,completed:true});
+    if(await getFamilySetting(env,marker))return json({ok:true,removed:false,completed:true});
     return err('バックアップを保存できなかったため、初期カレンダーは削除していません',409);
   }
   for(const event of events)try{await removeCalendarNotification(env,event.id);}catch{console.error('INITIAL_CALENDAR_NOTIFICATION_CLEANUP_FAILED');}

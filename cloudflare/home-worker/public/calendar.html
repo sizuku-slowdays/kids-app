@@ -618,7 +618,7 @@
     <div id="day-panel-list"></div>
   </div>
 
-  <button id="fab" onclick="openEvModal(null,null)">＋</button>
+  <button id="fab" onclick="openEvModal(null,selectedDate)">＋</button>
 </div>
 
 <!-- 予定追加/編集モーダル -->
@@ -1154,7 +1154,7 @@ function renderMonth(y, m) {
     const cell = document.createElement('div');
     cell.className = 'day-cell' + (isThis ? '' : ' other-month') + (isToday ? ' today' : '') + (dow===0||isHoliday?' sun':dow===6?' sat':'');
     cell.dataset.date = ds;
-    cell.onclick = ev => { renderDayPanel(ds); if (ev.target === cell || ev.target.classList.contains('day-num') || ev.target.classList.contains('more-label')) openEvModal(null, ds); };
+    cell.onclick = () => { renderDayPanel(ds); };
     const dn = document.createElement('div'); dn.className = 'day-num'; dn.textContent = date.getDate(); cell.appendChild(dn);
     const dayEvs = ae.filter(e => evOnDate(e, ds));
     dayEvs.slice(0, 3).forEach(e => { const chip = document.createElement('div'); chip.className = 'event-chip'; chip.style.background = getColor(e); chip.textContent = e.title; chip.onclick = ev => { ev.stopPropagation(); openDetail(e); }; cell.appendChild(chip); });

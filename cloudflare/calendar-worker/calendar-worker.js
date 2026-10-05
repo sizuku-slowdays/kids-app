@@ -847,9 +847,13 @@ function expandRecurring(event, from, to) {
 
 
 
-  if (startDt >= fromDate && startDt <= toDate) {
+  if (startDt >= fromDate && startDt <= toDate && !exceptions.includes(event.start_datetime.slice(0,10))) {
 
-    const already = results.find(r => r.start_datetime === event.start_datetime.slice(0,16));
+    // All-day originals use YYYY-MM-DD; expanded instances use YYYY-MM-DDT00:00.
+    // Compare dates for all-day events and minute precision for timed events.
+    const already = results.find(r => event.all_day
+      ? r.start_datetime.slice(0,10) === event.start_datetime.slice(0,10)
+      : r.start_datetime.slice(0,16) === event.start_datetime.slice(0,16));
 
     if (!already) results.unshift(event);
 

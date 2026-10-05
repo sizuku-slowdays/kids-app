@@ -2487,7 +2487,7 @@ window.FOODS=[
   {
     "id": "grain_013",
     "category": "ごはん・パン・めん",
-    "name": "ビーフン（うま塩）",
+    "name": "ケンミン こく旨塩焼ビーフン",
     "emoji": "🍜",
     "head_power": 0,
     "sparkle_power": 0,
@@ -2495,10 +2495,14 @@ window.FOODS=[
     "bone_power": 0,
     "immunity_power": 0,
     "main_nutrients": "炭水化物",
-    "kids_text": "お米からできた麺だよ。具が入っていたら、具もそれぞれ選ぼう！",
-    "recipe_tags": "ビーフン,うま塩,米麺",
-    "reading": "ビーフン（うま塩）",
+    "kids_text": "お米からできた麺に、こく旨塩ソースがついた焼ビーフンだよ。お肉や野菜を入れたら、それも一緒に登録しよう！",
+    "recipe_tags": "ビーフン,焼ビーフン,うま塩,旨塩,こく旨塩,ケンミン,米麺",
+    "reading": "けんみん こくうましお やきびーふん",
     "category_ui": "🍚 ごはん・パン・めん",
+    "brand": "ケンミン食品",
+    "serving_label": "1人前70g（ビーフン50g・液体ソース20g）",
+    "product_nutrition": {"basis":"1人前70g","kcal":209,"protein":2.5,"fat":2.0,"carb":45.3,"salt":3.0},
+    "product_verified": true,
     "nutrient_list": [
       "炭水化物"
     ]

@@ -481,6 +481,16 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         .all();
       return json(result.results);
     }
+    if (path === "/api/home/order" && method === "PUT") {
+      const data=await body(request);
+      requireValue(Array.isArray(data.app_ids) && data.app_ids.length<=100 && data.app_ids.every((id:unknown)=>typeof id==="string") && new Set(data.app_ids).size===data.app_ids.length,400,"アプリの順番を確認してください");
+      const available=(await env.DB.prepare("SELECT id FROM apps WHERE enabled=1").all<{id:string}>()).results;
+      const allowed:string[]=[];
+      for(const app of available)if(await appAllowed(env,user.id,app.id))allowed.push(app.id);
+      requireValue(data.app_ids.length===allowed.length && data.app_ids.every((id:string)=>allowed.includes(id)),409,"アプリ一覧が変わりました。HOMEを開き直してください");
+      if(allowed.length)await env.DB.batch(data.app_ids.map((id:string,position:number)=>env.DB.prepare("INSERT INTO user_apps(user_id,app_id,visible,position) VALUES(?,?,1,?) ON CONFLICT(user_id,app_id) DO UPDATE SET position=excluded.position").bind(user.id,id,position)));
+      return json({ok:true});
+    }
     if (path === "/api/home/preset" && method === "PUT") {
       const data=await body(request);
       requireValue(data.preset==="grandpa",400,"表示セットを確認してください");

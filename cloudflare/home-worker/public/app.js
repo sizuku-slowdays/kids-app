@@ -267,7 +267,12 @@ function settings() {
     },"quiet"),el("p","このアカウントのHOMEだけ、カレンダーと食事チェックを表示します。あとから自由に戻せます。","muted"));
   }
 
-  for (const app of apps) {
+  root.append(el("p", "↑ ↓ で順番を変更できます。表示中の上の3つは「すぐ開く」に表示されます。", "muted"));
+  const appSettingsList=el("div");root.append(appSettingsList);
+  let orderSaving=false;
+  function renderAppSettings(){
+  appSettingsList.replaceChildren();
+  for (const [index,app] of apps.entries()) {
     const row = el("div", null, "row"),
       label = el("label", app.name),
       input = el("input");
@@ -287,9 +292,27 @@ function settings() {
         input.disabled = false;
       }
     });
-    row.append(label, input);
-    root.append(row);
+    const moves=el("div",null,"app-order-controls");
+    for(const [direction,text] of [[-1,"↑"],[1,"↓"]]){
+      const move=button(text,async()=>{
+        if(orderSaving)return;
+        const previous=[...apps],next=index+direction;
+        [apps[index],apps[next]]=[apps[next],apps[index]];
+        orderSaving=true;renderAppSettings();
+        try{await api("/api/home/order","PUT",{app_ids:apps.map(a=>a.id)});}
+        catch(e){apps=previous;showError(e);}
+        finally{orderSaving=false;renderAppSettings();}
+      },"quiet");
+      move.setAttribute("aria-label",app.name+(direction<0?"を上へ":"を下へ"));
+      move.disabled=orderSaving||index+direction<0||index+direction>=apps.length;
+      moves.append(move);
+    }
+    input.disabled=orderSaving;
+    row.classList.add("app-settings-row");row.append(label, input,moves);
+    appSettingsList.append(row);
   }
+  }
+  renderAppSettings();
   if (
     me.groups.some(
       (g) => g.kind === "household" && ["owner", "admin"].includes(g.role),

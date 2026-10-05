@@ -231,6 +231,15 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await call("/media/"+objects.objects[0].key,{cookie:registered.cookie})).status,404);
     await call("/api/home/muscle-bank",{method:"PUT",cookie:admin.cookie,body:{visible:false}});
     assert.equal((await call("/api/home",{cookie:admin.cookie})).data.find(app=>app.id==='muscle-bank').visible,0);
+    const childOrder=(await call('/api/home',{cookie:registered.cookie})).data.map(a=>a.id);
+    const order=(await call('/api/home',{cookie:admin.cookie})).data.map(a=>a.id).reverse();
+    assert.equal((await call('/api/home/order',{method:'PUT',cookie:admin.cookie,body:{app_ids:order}})).status,200);
+    assert.deepEqual((await call('/api/home',{cookie:admin.cookie})).data.map(a=>a.id),order);
+    assert.equal((await call('/api/home',{cookie:admin.cookie})).data.find(a=>a.id==='muscle-bank').visible,0);
+    assert.deepEqual((await call('/api/home',{cookie:registered.cookie})).data.map(a=>a.id),childOrder);
+    assert.equal((await call('/api/home/order',{method:'PUT',cookie:registered.cookie,body:{app_ids:order}})).status,409);
+    assert.equal((await call('/api/home/order',{method:'PUT',cookie:admin.cookie,body:{app_ids:[order[0],order[0]]}})).status,400);
+    assert.equal((await call('/api/home/order',{method:'PUT',body:{app_ids:order}})).status,401);
     assert.equal((await call("/api/muscle-bank/state",{cookie:admin.cookie})).status,200);
     assert.equal((await call("/api/home/muscle-bank",{method:"PUT",cookie:registered.cookie,body:{visible:true}})).status,403);
     await db.prepare("DELETE FROM personal_app_access WHERE user_id='bootstrap-admin' AND app_id='muscle-bank'").run();

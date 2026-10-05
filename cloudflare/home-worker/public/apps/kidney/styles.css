@@ -13,6 +13,25 @@
   background: #dceee8;
 }
 
+:root[data-person="grandma"] {
+  --ink: #432f3d;
+  --muted: #7d6877;
+  --brand: #a95081;
+  --brand-dark: #843761;
+  --cream: #fff8fb;
+  --line: #efdce7;
+  --planned: rgba(190, 89, 143, .34);
+  --shadow: 0 12px 35px rgba(120, 54, 91, .11);
+  background: #f4dfea;
+}
+:root[data-person="grandma"] body { background: linear-gradient(180deg, #f4dfea 0%, #fff8fb 38%, #f8eaf1 100%); }
+:root[data-person="grandma"] .app-shell { background: rgba(255,250,252,.97); }
+:root[data-person="grandma"] .quick-action { border-color: #e5b9d0; }
+:root[data-person="grandma"] .demo-badge,
+:root[data-person="grandma"] .count-badge { background: #f8e4ee; }
+:root[data-person="grandma"] .category-chip { border-color: #e7c5d6; }
+:root[data-person="grandma"] .food-button .plus { background: #f6dce9; }
+
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; background: linear-gradient(180deg, #dff1eb 0%, #f4faf7 38%, #eaf5f1 100%); }
 button { font: inherit; }

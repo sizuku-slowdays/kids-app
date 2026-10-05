@@ -14,7 +14,8 @@ const existingApps = {
 };
 const descriptions = {
   calendar: '家族みんなの予定を共有',
-  kidney: '食べる前に今日の量を確認',
+  kidney: 'じいちゃんの食事を確認',
+  'kidney-grandma': 'ばあちゃんの食事を確認',
   passbook: 'おこづかい・ポイント・残高',
   'muscle-bank': '思い立ったらすぐ運動',
   'play-agreement': '外遊びの約束を確認',
@@ -185,7 +186,7 @@ async function home() {
   }
   const favoriteApps=visibleApps.filter(a=>a.featured);
   const otherApps=visibleApps.filter(a=>!a.featured);
-  const simple=visibleApps.length===2&&favoriteApps.length===2&&visibleApps.every(a=>["calendar","kidney"].includes(a.id));
+  const simple=visibleApps.length===2&&favoriteApps.length===2&&visibleApps.some(a=>a.id==="calendar")&&visibleApps.some(a=>["kidney","kidney-grandma"].includes(a.id));
   if (visibleApps.length) {
     if(favoriteApps.length){
     const featured = appSection('すぐ開く', simple ? '毎日使うアプリ' : 'よく使うアプリ', simple ? 'hero-grid grandpa-home' : 'hero-grid');
@@ -268,9 +269,14 @@ function settings() {
   }
   root.append(el("h2", "HOMEに置くアプリ"));
   if(apps.some(a=>a.id==="kidney")&&apps.some(a=>a.id==="calendar")){
-    root.append(button("おじいちゃん向け：2つだけにする",async()=>{
+    root.append(button("じいちゃん用：2つだけにする",async()=>{
       try{await api("/api/home/preset","PUT",{preset:"grandpa"});await home();}catch(e){showError(e);}
-    },"quiet"),el("p","このアカウントのHOMEだけ、カレンダーと食事チェックを表示します。あとから自由に戻せます。","muted"));
+    },"quiet"));
+  }
+  if(apps.some(a=>a.id==="kidney-grandma")&&apps.some(a=>a.id==="calendar")){
+    root.append(button("ばあちゃん用：2つだけにする",async()=>{
+      try{await api("/api/home/preset","PUT",{preset:"grandma"});await home();}catch(e){showError(e);}
+    },"quiet"),el("p","選んだ人のHOMEだけ、カレンダーと本人の食事チェックを表示します。あとから自由に戻せます。","muted"));
   }
 
   root.append(el("p", "「よく使う」にチェックすると上に表示します。↑ ↓ で順番を変更できます。", "muted"));

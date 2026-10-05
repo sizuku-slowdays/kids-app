@@ -258,8 +258,10 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await call(musclePath,{cookie:admin.cookie})).status,403);
     assert.equal((await call("/api/muscle-bank/state",{cookie:admin.cookie})).status,403);
     await db.prepare("INSERT INTO personal_app_access VALUES ('bootstrap-admin','muscle-bank')").run();
-    assert.equal(homes.data.length, 7);
-    assert.ok(homes.data.filter(a=>!["kidney","calendar"].includes(a.id)).every(a=>a.status==="planned"));
+    assert.equal(homes.data.length, 8);
+    assert.equal(homes.data.find(a=>a.id==='kidney').name,'じいちゃん');
+    assert.equal(homes.data.find(a=>a.id==='kidney-grandma').name,'ばあちゃん');
+    assert.ok(homes.data.filter(a=>!["kidney","kidney-grandma","calendar"].includes(a.id)).every(a=>a.status==="planned"));
     assert.equal(
       (
         await call("/api/home/album", {
@@ -337,9 +339,21 @@ test("invitation, personal sessions, home settings and private file boundaries",
     assert.equal((await call('/api/kidney/settings'+scope,{method:'PUT',cookie:admin.cookie,body:{settings:targets,revision:0}})).status,409);
     assert.equal((await call('/api/kidney/settings'+scope,{method:'PUT',cookie:admin.cookie,body:{settings:targets,revision:1}})).status,200);
     assert.equal((await call('/api/kidney'+scope+'&day=2026-10-04',{cookie:registered.cookie})).data.revision,2);
+    const grandmaScope='?household='+groupA+'&person=grandma';
+    const grandmaMeal={...meal,id:'grandma-meal'};
+    assert.equal((await call('/api/kidney/meals'+grandmaScope,{method:'POST',cookie:registered.cookie,body:grandmaMeal})).status,201);
+    assert.equal((await call('/api/kidney'+scope+'&day=2026-10-04',{cookie:registered.cookie})).data.records.some(r=>r.id==='grandma-meal'),false);
+    const grandmaDay=await call('/api/kidney'+grandmaScope+'&day=2026-10-04',{cookie:admin.cookie});
+    assert.deepEqual(grandmaDay.data.records.map(r=>r.id),['grandma-meal']);
+    assert.equal(grandmaDay.data.settings,null);
+    const grandmaTargets=Object.fromEntries(['salt','protein','potassium','phosphorus','energy'].map(k=>[k,{max:20,visible:k!=='phosphorus'}]));
+    assert.equal((await call('/api/kidney/settings'+grandmaScope,{method:'PUT',cookie:admin.cookie,body:{settings:grandmaTargets,revision:2}})).status,200);
+    assert.equal((await call('/api/kidney'+scope+'&day=2026-10-04',{cookie:admin.cookie})).data.settings.salt.max,10);
+    assert.equal((await call('/api/kidney'+grandmaScope+'&day=2026-10-04',{cookie:admin.cookie})).data.settings.salt.max,20);
+    assert.equal((await call('/api/home/preset',{method:'PUT',cookie:admin.cookie,body:{preset:'grandma'}})).status,200);
+    assert.deepEqual((await call('/api/home',{cookie:admin.cookie})).data.filter(a=>a.visible).map(a=>a.id).sort(),['calendar','kidney-grandma']);
     assert.equal((await call('/api/home/preset',{method:'PUT',cookie:registered.cookie,body:{preset:'grandpa'}})).status,200);
     assert.deepEqual((await call('/api/home',{cookie:registered.cookie})).data.filter(a=>a.visible).map(a=>a.id).sort(),['calendar','kidney']);
-    assert.ok((await call('/api/home',{cookie:admin.cookie})).data.filter(a=>a.visible).length>2);
     assert.equal((await call('/apps/calendar',{cookie:registered.cookie})).status,200);
     assert.equal((await call('/apps/calendar',{cookie:registered.cookie})).headers.get('Location'),null);
     const otherId=(await call("/api/me",{cookie:userB.cookie})).data.user.id;

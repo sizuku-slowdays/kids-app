@@ -183,6 +183,13 @@ async function appAllowed(env: HomeEnv, userId: string, appId: string) {
       .first(),
   );
 }
+async function ensureKidneyPeopleApps(env: HomeEnv) {
+  await env.DB.batch([
+    env.DB.prepare("UPDATE apps SET name='じいちゃん',icon='👴',path='/apps/kidney/?person=grandpa' WHERE id='kidney'"),
+    env.DB.prepare("INSERT OR IGNORE INTO apps(id,name,icon,path,enabled,status,position,access_mode) VALUES('kidney-grandma','ばあちゃん','👵','/apps/kidney/?person=grandma',1,'ready',8,'group')"),
+    env.DB.prepare("INSERT OR IGNORE INTO group_apps(group_id,app_id) SELECT id,'kidney-grandma' FROM groups WHERE kind='household'"),
+  ]);
+}
 export async function canRead(
   env: HomeEnv,
   userId: string,
@@ -474,6 +481,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       });
     }
     if (path === "/api/home" && method === "GET") {
+      await ensureKidneyPeopleApps(env);
       const result = await env.DB.prepare(
         "SELECT a.id,a.name,a.icon,a.path,a.status,COALESCE(ua.visible,1) visible,COALESCE(ua.position,a.position) position FROM apps a LEFT JOIN user_apps ua ON ua.app_id=a.id AND ua.user_id=? WHERE a.enabled=1 AND ((a.access_mode='personal' AND EXISTS(SELECT 1 FROM personal_app_access pa WHERE pa.app_id=a.id AND pa.user_id=?)) OR (a.access_mode='group' AND EXISTS(SELECT 1 FROM group_apps ga JOIN memberships m ON m.group_id=ga.group_id WHERE ga.app_id=a.id AND m.user_id=?))) ORDER BY position,a.id",
       )
@@ -502,12 +510,14 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     }
     if (path === "/api/home/preset" && method === "PUT") {
       const data=await body(request);
-      requireValue(data.preset==="grandpa",400,"表示セットを確認してください");
-      requireValue(await appAllowed(env,user.id,"kidney") && await appAllowed(env,user.id,"calendar"),403,"この表示セットは利用できません");
+      requireValue(["grandpa","grandma"].includes(String(data.preset)),400,"表示セットを確認してください");
+      const kidneyApp=data.preset==="grandma"?"kidney-grandma":"kidney";
+      requireValue(await appAllowed(env,user.id,kidneyApp) && await appAllowed(env,user.id,"calendar"),403,"この表示セットは利用できません");
       const available=(await env.DB.prepare("SELECT id FROM apps WHERE enabled=1").all<{id:string}>()).results;
       const allowed=[];
       for(const app of available)if(await appAllowed(env,user.id,app.id))allowed.push(app.id);
-      await env.DB.batch(allowed.map(id=>env.DB.prepare("INSERT INTO user_apps(user_id,app_id,visible,position) VALUES(?,?,?,?) ON CONFLICT(user_id,app_id) DO UPDATE SET visible=excluded.visible,position=excluded.position").bind(user.id,id,["calendar","kidney"].includes(id)?1:0,id==="calendar"?0:id==="kidney"?1:10)));
+      await env.DB.batch(allowed.map(id=>env.DB.prepare("INSERT INTO user_apps(user_id,app_id,visible,position) VALUES(?,?,?,?) ON CONFLICT(user_id,app_id) DO UPDATE SET visible=excluded.visible,position=excluded.position").bind(user.id,id,["calendar",kidneyApp].includes(id)?1:0,id==="calendar"?0:id===kidneyApp?1:10)));
+      await env.DB.prepare("INSERT INTO home_preferences(user_id,favorite_app_ids) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET favorite_app_ids=excluded.favorite_app_ids").bind(user.id,JSON.stringify(["calendar",kidneyApp])).run();
       return json({ok:true});
     }
     if (path.startsWith("/api/home/") && method === "PUT") {

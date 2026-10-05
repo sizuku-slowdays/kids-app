@@ -5,6 +5,12 @@ const nutrients = [
   { key:'phosphorus', label:'リン', max:800, unit:'mg', color:'#a46bc5' },
   { key:'energy', label:'エネルギー', max:1800, unit:'kcal', color:'#d45f78' }
 ];
+const person=new URLSearchParams(location.search).get('person')==='grandma'?'grandma':'grandpa';
+const personName=person==='grandma'?'ばあちゃん':'じいちゃん';
+document.documentElement.dataset.person=person;
+document.title=personName+'の食事チェック';
+document.querySelector('#personTitle').textContent=personName;
+document.querySelector('#personBadge').textContent=personName+'用';
 
 const foods = window.BOOK_FOODS || [];
 const categories = ['すべて', '外食', '主食', '肉', '魚', '野菜', '豆・卵', '果物', '汁物'];
@@ -16,7 +22,8 @@ const todayKey = () => {
 let shared=null, household=null, selectedDay=todayKey(), followToday=true, busy=false, loading=false, pendingMeal=null, readGeneration=0;
 const state={plan:new Map(),totals:emptyTotals(),committed:[],selectedGauge:'salt',category:'すべて',query:''};
 async function api(path,method='GET',body){
- const res=await fetch('/api/kidney'+path,{method,credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+ const target=new URL('/api/kidney'+path,location.origin);target.searchParams.set('person',person);
+ const res=await fetch(target.pathname+target.search,{method,credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
  const data=await res.json();if(res.status===401){location.replace('/login');throw Error('ログインしてください');}
  if(!res.ok)throw Error(data.error||'つながりませんでした');return data;
 }
@@ -25,7 +32,7 @@ function applyShared(data){
  shared=data;state.committed=data.records;state.totals=emptyTotals();
  for(const record of state.committed)for(const item of record.items)for(const n of nutrients)state.totals[n.key]+=item.values[n.key]*item.qty;
  for(const n of nutrients){n.max=data.settings?.[n.key]?.max||n.max;n.visible=data.settings?.[n.key]?.visible!==false;}
- document.querySelector('#syncNote').textContent=data.settings?'家族で共有中 · '+data.household.name:'家族で共有中 · 目標値はまだ未設定です';
+ document.querySelector('#syncNote').textContent=data.settings?personName+'の記録 · 家族で共有中':personName+'の目標値はまだ未設定です';
  document.querySelector('#today-title').textContent=selectedDay===todayKey()?'今日のゲージ':selectedDay+'のゲージ';
  renderPlan();updateGauges();renderHistory();
 }
@@ -149,7 +156,7 @@ async function commitMeal(late=false) {
  if(!state.plan.size){showToast('先に食品を選んでください');return;}
  busy=true;readGeneration++;renderPlan();
  if(!pendingMeal)pendingMeal={id:crypto.randomUUID(),day:selectedDay,meal:document.querySelector('#mealSlot').value,items:[...state.plan].map(([id,qty])=>{const f=foodById(id);return {id,qty,name:f.name,portion:f.portion,values:f.values,unavailable:f.unavailable||[],extras:f.extras||{},estimated:f.estimated===true};})};
- try{await api('/meals?'+scope(),'POST',pendingMeal);state.plan.clear();pendingMeal=null;showToast(late?'あとから記録しました':'家族の記録に追加しました');}
+ try{await api('/meals?'+scope(),'POST',pendingMeal);state.plan.clear();pendingMeal=null;showToast(late?'あとから記録しました':personName+'の記録に追加しました');}
  catch(e){showToast(e.message+'。もう一度押して保存できます');}
  finally{busy=false;loading=false;await refresh();renderPlan();}
 }
@@ -215,7 +222,7 @@ async function saveSettings(event) {
  for(const n of nutrients){const max=Number(document.querySelector(`[data-max="${n.key}"]`).value);if(!(max>0)){showToast('目標量を確認してください');return;}settings[n.key]={max,visible:document.querySelector(`[data-visible="${n.key}"]`).checked};}
  if(!Object.values(settings).some(n=>n.visible)){showToast('1つ以上表示してください');return;}
  busy=true;readGeneration++;document.querySelector('#saveSettings').disabled=true;
- try{await api('/settings?'+scope(),'PUT',{settings,revision:shared.revision});document.querySelector('#settingsDialog').close();showToast('家族共通の目標量を保存しました');}
+ try{await api('/settings?'+scope(),'PUT',{settings,revision:shared.revision});document.querySelector('#settingsDialog').close();showToast(personName+'の目標量を保存しました');}
  catch(e){showToast(e.message);}finally{busy=false;document.querySelector('#saveSettings').disabled=false;await refresh();}
 }
 

@@ -1665,6 +1665,8 @@ export default {
 
       if (cal.owner_google_id !== user.google_id) return err('削除権限がありません', 403);
 
+      if (await env.DB.prepare('SELECT 1 FROM calendar_events WHERE calendar_id=? AND (created_by_google_id IS NULL OR created_by_google_id<>?) LIMIT 1').bind(id,user.google_id).first()) return err('ほかの人が登録した予定があるため、このカレンダーは削除できません',409);
+
       const eventRows = await env.DB.prepare('SELECT id FROM calendar_events WHERE calendar_id = ?').bind(id).all();
 
       for (const row of eventRows.results || []) {
@@ -1703,7 +1705,7 @@ export default {
 
       let query = `
 
-        SELECT e.*, u.avatar_color as creator_color FROM calendar_events e
+        SELECT e.*, u.avatar_color as creator_color, u.display_name as creator_name FROM calendar_events e
 
         JOIN calendars c ON e.calendar_id = c.id
 
@@ -1785,7 +1787,7 @@ export default {
 
       if (!cal) return err('カレンダーが見つかりません', 404);
 
-      if (cal.owner_google_id !== user.google_id) return err('このカレンダーは作成者だけが予定を追加できます', 403);
+      if (!Number(cal.is_shared) && cal.owner_google_id !== user.google_id) return err('この個人カレンダーには予定を追加できません', 403);
 
 
 
@@ -1881,7 +1883,7 @@ export default {
 
       if (!ev) return err('予定が見つかりません', 404);
 
-      if (ev.cal_owner !== user.google_id) return err('この予定はカレンダーの作成者だけが編集できます', 403);
+      if ((!Number(ev.is_shared) && ev.cal_owner !== user.google_id) || ev.created_by_google_id !== user.google_id) return err('この予定は登録した本人だけが編集できます', 403);
 
 
 
@@ -1902,6 +1904,10 @@ export default {
 
 
       const evOrig = await env.DB.prepare('SELECT * FROM calendar_events WHERE id = ?').bind(id).first();
+
+      const destination=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(calendar_id).first();
+      if (!destination) return err('カレンダーが見つかりません',404);
+      if (!Number(destination.is_shared) && destination.owner_google_id!==user.google_id) return err('この個人カレンダーには予定を移動できません',403);
 
       const isRecurring = evOrig && evOrig.recurrence_type && evOrig.recurrence_type !== 'none';
 
@@ -2049,7 +2055,7 @@ export default {
 
       if (!ev) return err('予定が見つかりません', 404);
 
-      if (ev.cal_owner !== user.google_id) return err('この予定はカレンダーの作成者だけが削除できます', 403);
+      if ((!Number(ev.is_shared) && ev.cal_owner !== user.google_id) || ev.created_by_google_id !== user.google_id) return err('この予定は登録した本人だけが削除できます', 403);
 
 
 

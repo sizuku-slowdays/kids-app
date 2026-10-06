@@ -40,6 +40,7 @@ test('HOME identity replaces saved calendar login; private reads, owner writes a
   "INSERT INTO calendars VALUES ('private','ママ個人','#aaa','family:mama',0,'now'),('shared','共通','#bbb','family:mama',1,'now')",
   "INSERT INTO calendar_events VALUES ('secret','private','family:mama',NULL,'ママだけの予定','2026-10-01T09:00:00','2026-10-01T10:00:00',0,'none'),('common','shared','family:mama',NULL,'共通予定','2026-10-01T09:00:00','2026-10-01T10:00:00',0,'none')"
  ])await cal.prepare(sql).run();
+ for(const [column,type] of Object.entries({description:'TEXT',color:'TEXT',notify_before:'INTEGER',notification_recipient:'TEXT',recurrence_interval:'INTEGER',recurrence_days:'TEXT',recurrence_end_type:'TEXT',recurrence_end_count:'INTEGER',recurrence_end_date:'TEXT',recurrence_monthly_type:'TEXT',recurrence_week_number:'INTEGER',recurrence_weekday:'INTEGER',recurrence_exceptions:'TEXT',list_type:'TEXT',list_items:'TEXT',created_at:'TEXT',updated_at:'TEXT'}))await cal.prepare('ALTER TABLE calendar_events ADD COLUMN '+column+' '+type).run();
  async function call(path,who='mom',method='GET',body,extra={}){return mf.dispatchFetch('https://cetus.fun/wagaya'+path,{method,redirect:'manual',headers:{Origin:'https://cetus.fun',...(who?{Cookie:'__Host-home_session='+tokens[who]}:{}),'Content-Type':'application/json',...extra},body:body?JSON.stringify(body):undefined});}
  assert.equal((await call('/apps/calendar/',null)).status,303);
  assert.equal((await call('/api/calendar/calendars',null)).status,401);
@@ -62,6 +63,24 @@ test('HOME identity replaces saved calendar login; private reads, owner writes a
  assert.equal((await call('/api/calendar/calendars/shared','grandpa','DELETE')).status,403);
  assert.equal((await call('/api/calendar/calendars','foreign')).status,401);
  assert.equal((await call('/api/calendar/calendars','grandpa','GET',null,{'X-Calendar-User':'mom'})).status,409);
+ const body={title:'おじいちゃんの共有予定',start_datetime:'2026-10-06',end_datetime:'2026-10-06',all_day:true,calendar_id:'shared',created_by_google_id:'family:mama'};
+ let added=await call('/api/calendar/events','grandpa','POST',body);assert.equal(added.status,200);const addedId=(await added.json()).id;
+ assert.equal((await cal.prepare('SELECT created_by_google_id FROM calendar_events WHERE id=?').bind(addedId).first()).created_by_google_id,'family:home_grandpa');
+ const sharedRows=await (await call('/api/calendar/events?from=2026-10-01&to=2026-10-31')).json();assert.equal(sharedRows.find(e=>e.id===addedId).creator_name,'grandpa');
+ assert.equal((await call('/api/calendar/events','grandpa','POST',{...body,calendar_id:'private'})).status,403);
+ assert.equal((await call('/api/calendar/events/'+addedId,'mom','PUT',body)).status,403);
+ assert.equal((await call('/api/calendar/events/'+addedId,'mom','DELETE')).status,403);
+ assert.equal((await call('/api/calendar/calendars/shared','mom','DELETE')).status,409);
+ assert.equal((await call('/api/calendar/events/'+addedId,'grandpa','PUT',{...body,title:'本人が変更'})).status,200);
+ assert.equal((await call('/api/calendar/events/'+addedId,'grandpa','PUT',{...body,calendar_id:'private'})).status,403);
+ assert.equal((await call('/api/calendar/events/'+addedId,'grandpa','DELETE')).status,200);
+ added=await call('/api/calendar/events','grandpa','POST',{...body,recurrence_type:'daily',recurrence_end_type:'count',recurrence_end_count:3});assert.equal(added.status,200);const repeatId=(await added.json()).id;
+ assert.equal((await call('/api/calendar/events/'+repeatId+'_0?mode=single&date=2026-10-06','mom','PUT',body)).status,403);
+ assert.equal((await call('/api/calendar/events/'+repeatId+'_0?mode=single&date=2026-10-06','grandpa','PUT',body)).status,200);
+ const detached=(await cal.prepare('SELECT id FROM calendar_events WHERE created_by_google_id=? AND id<>?').bind('family:home_grandpa',repeatId).all()).results;
+ assert.equal(detached.length,1);
+ assert.equal((await call('/api/calendar/events/'+repeatId,'grandpa','DELETE')).status,200);
+ assert.equal((await call('/api/calendar/events/'+detached[0].id,'grandpa','DELETE')).status,200);
  // Work ICS is private even when another account happens to have an admin role.
  await cal.prepare("INSERT INTO family_settings VALUES ('google_ics_urls',?,'now')").bind(JSON.stringify(['https://calendar.google.com/calendar/ical/private-mama/basic.ics'])).run();
  let google=await (await call('/api/calendar/google-events?from=2026-10-01&to=2026-10-31')).json();
@@ -87,7 +106,7 @@ test('HOME identity replaces saved calendar login; private reads, owner writes a
  // Retire only the identified legacy ID, despite the previous erroneous completion marker.
  const targetId='a3369575-a3ca-4c20-b9df-c468c836202c';
  await cal.prepare("INSERT INTO calendars VALUES (?,'旧共通','#f6bf26','old-google-user',1,'old'),('new-shared','家族','#e53935','family:mama',1,'new'),('initial','家族','#4ECBA8','family:mama',1,'old')").bind(targetId).run();
- await cal.prepare("INSERT INTO calendar_events VALUES ('old-event',?,'old-google-user',NULL,'古い家族予定','2026-10-01T09:00:00','2026-10-01T10:00:00',0,'none')").bind(targetId).run();
+ await cal.prepare("INSERT INTO calendar_events(id,calendar_id,created_by_google_id,recurrence_parent_id,title,start_datetime,end_datetime,all_day,recurrence_type) VALUES ('old-event',?,'old-google-user',NULL,'古い家族予定','2026-10-01T09:00:00','2026-10-01T10:00:00',0,'none')").bind(targetId).run();
  await cal.prepare("INSERT INTO family_settings VALUES ('initial_family_retired_v1','incorrect-completion','old')").run();
  assert.equal((await call('/api/calendar/home/remove-initial-calendar','grandpa','POST',{})).status,403);
  const retired=await (await call('/api/calendar/home/remove-initial-calendar','mom','POST',{calendar_id:'private'})).json();assert.equal(retired.removed,true);assert.equal(retired.backed_up_events,1);

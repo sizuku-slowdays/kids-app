@@ -1235,9 +1235,9 @@ function openEvModal(ev, defaultDate) {
   document.getElementById('ev-del-btn').style.display = ev ? '' : 'none';
   document.getElementById('ev-id').value = ev?.id || '';
   const sel = document.getElementById('ev-cal');
-  const writableCalendars = calendars.filter(c => c.owner_google_id === myProfile?.google_id);
-  const optionCalendars = ev ? calendars.filter(c => c.id === ev.calendar_id || c.owner_google_id === myProfile?.google_id) : writableCalendars;
-  sel.innerHTML = optionCalendars.map(c => `<option value="${c.id}" ${c.owner_google_id === myProfile?.google_id ? '' : 'disabled'}>${escapeHtml(c.name)}${c.is_shared ? '（共通）' : '（個人）'}${c.owner_google_id === myProfile?.google_id ? '' : '・見るだけ'}</option>`).join('');
+  const writableCalendars = calendars.filter(c => c.is_shared || c.owner_google_id === myProfile?.google_id);
+  const optionCalendars = ev ? calendars.filter(c => c.id === ev.calendar_id || c.is_shared || c.owner_google_id === myProfile?.google_id) : writableCalendars;
+  sel.innerHTML = optionCalendars.map(c => `<option value="${c.id}" ${c.is_shared || c.owner_google_id === myProfile?.google_id ? '' : 'disabled'}>${escapeHtml(c.name)}${c.is_shared ? '（共通）' : '（個人）'}</option>`).join('');
   if (!ev && !writableCalendars.length) { alert('自分のカレンダーを先に作成してください'); document.getElementById('ev-overlay').classList.remove('open'); return; }
   if (ev) {
     document.getElementById('ev-title').value = ev.title;
@@ -1344,13 +1344,13 @@ function openDetail(e) {
   document.getElementById('detail-bar').style.background = getColor(e); document.getElementById('detail-title').textContent = e.title;
   document.getElementById('detail-gbadge').style.display = e.is_google ? '' : 'none';
   const eventCal = e.is_google ? null : calendars.find(c => c.id === e.calendar_id);
-  const canEdit = !e.is_google && eventCal?.owner_google_id === myProfile?.google_id;
+  const canEdit = !e.is_google && e.created_by_google_id === myProfile?.google_id;
   document.getElementById('detail-edit-btn').style.display = canEdit ? '' : 'none';
   const s = fmtDt(e.start_datetime, e.all_day), en = fmtDt(e.end_datetime, e.all_day);
   document.getElementById('detail-time').textContent = e.all_day ? (s === en ? s : s + ' 〜 ' + en) : s + ' 〜 ' + en;
   const calName = e.is_google ? 'Googleカレンダー' : (calendars.find(c => c.id === e.calendar_id)?.name || '');
   document.getElementById('detail-cal').innerHTML = `<span style="color:${getColor(e)}">●</span> ${calName}`;
-  document.getElementById('detail-desc').textContent = e.description || ''; renderDetailList(e);
+  document.getElementById('detail-desc').textContent = (e.creator_name ? '登録した人：'+e.creator_name+'\n' : '')+(e.description || ''); renderDetailList(e);
 }
 function closeDetail(e) { if (e && e.target !== document.getElementById('detail-overlay')) return; document.getElementById('detail-overlay').classList.remove('open'); }
 function editFromDetail() { document.getElementById('detail-overlay').classList.remove('open'); openEvModal(detailEvent, null); }
@@ -1407,7 +1407,8 @@ function renderDetailList(e) {
   let items = e.list_items; if (typeof items === 'string') { try { items = JSON.parse(items); } catch { items = []; } }
   if (!items.length) { container.innerHTML = ''; return; }
   const isCheck = e.list_type === 'check';
-  container.innerHTML = '<div class="detail-list">' + items.map((item, i) => isCheck ? `<div class="detail-list-item${item.checked ? ' checked' : ''}" id="list-item-${i}"><input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleListItem(${i}, this.checked)"><span>${item.text}</span></div>` : `<div class="detail-list-item detail-bullet"><span>${item.text}</span></div>`).join('') + '</div>';
+  const canCheck = !e.is_google && e.created_by_google_id === myProfile?.google_id;
+  container.innerHTML = '<div class="detail-list">' + items.map((item, i) => isCheck ? `<div class="detail-list-item${item.checked ? ' checked' : ''}" id="list-item-${i}"><input type="checkbox" ${canCheck ? '' : 'disabled'} ${item.checked ? 'checked' : ''} onchange="toggleListItem(${i}, this.checked)"><span>${item.text}</span></div>` : `<div class="detail-list-item detail-bullet"><span>${item.text}</span></div>`).join('') + '</div>';
   window._detailListItems = items; window._detailListEventId = e.id;
 }
 async function toggleListItem(index, checked) {

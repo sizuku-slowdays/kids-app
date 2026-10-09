@@ -106,6 +106,9 @@
     .split-area{display:none;margin-top:12px}
     .split-area.open{display:block}
     .split-row{display:grid;grid-template-columns:1fr 120px 36px;gap:7px;margin-bottom:8px}
+    .split-detail{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .split-detail label{display:grid;gap:3px;font-size:.75rem;color:var(--muted)}
+    .split-detail select{width:100%}
     .split-row select,.split-row input{min-width:0;width:100%;border:1px solid var(--line);border-radius:10px;
       padding:9px 8px;font-size:.9rem;background:#fffdf8}
     .split-remove{border:none;border-radius:10px;background:#fff1f2;color:#a4161a;font-weight:900}
@@ -638,14 +641,36 @@
     }
 
     function splitRow(category,amount){
-      const row=document.createElement("div");
-      row.className="split-row";
-      row.innerHTML=`<select aria-label="内訳カテゴリ">${CATEGORIES.map(c=>`<option value="${c}"${c===category?" selected":""}>${c}</option>`).join("")}</select>
-        <input type="number" inputmode="numeric" min="0" step="1" placeholder="金額" value="${amount||""}" aria-label="内訳金額">
-        <button type="button" class="split-remove" aria-label="内訳を削除">×</button>`;
-      row.querySelector(".split-remove").addEventListener("click",()=>{row.remove();updateSplitSummary();});
-      row.querySelectorAll("select,input").forEach(el=>el.addEventListener("input",updateSplitSummary));
-      $("splitRows").appendChild(row);
+      const row=document.createElement("div");row.className="split-row";
+      const categorySelect=document.createElement("select");categorySelect.className="split-category";categorySelect.setAttribute("aria-label","内訳カテゴリ");
+      setOptions(categorySelect,CATEGORIES,category);
+      const amountInput=document.createElement("input");amountInput.type="number";amountInput.inputMode="numeric";amountInput.min="0";amountInput.step="1";amountInput.placeholder="金額";amountInput.className="split-amount";amountInput.value=amount||"";
+      const remove=document.createElement("button");remove.type="button";remove.className="split-remove";remove.textContent="×";remove.setAttribute("aria-label","内訳を削除");
+      const detail=document.createElement("div");detail.className="split-detail";
+      function createField(labelText,className,values){
+        const label=document.createElement("label");label.textContent=labelText;
+        const select=document.createElement("select");select.className=className;setOptions(select,values,values[0]||"");
+        label.appendChild(select);detail.appendChild(label);return select;
+      }
+      const middle=createField("中カテゴリ","split-middle",[]);
+      const small=createField("小カテゴリ","split-small",[]);
+      const person=createField("対象者","split-person",["","ママ","長女","次女","家族共通","祖父","祖母"]);
+      const nature=createField("支出の性質","split-nature",["必要","楽しみ","特別費"]);
+      function updateMiddle(){
+        const branches=categorySettings.tree[categorySelect.value]||{"その他":["その他"]};
+        setOptions(middle,Object.keys(branches),middle.value);
+        updateSmall();
+      }
+      function updateSmall(){
+        const values=categorySettings.tree[categorySelect.value]?.[middle.value]||["その他"];
+        setOptions(small,values,small.value);
+      }
+      categorySelect.addEventListener("change",updateMiddle);
+      middle.addEventListener("change",updateSmall);
+      amountInput.addEventListener("input",updateSplitSummary);
+      remove.addEventListener("click",()=>{row.remove();updateSplitSummary()});
+      row.append(categorySelect,amountInput,remove,detail);
+      $("splitRows").appendChild(row);updateMiddle();
     }
 
     function resetSplits(){
@@ -657,8 +682,12 @@
 
     function getSplits(){
       return [...$("splitRows").querySelectorAll(".split-row")].map(row=>({
-        category:row.querySelector("select").value,
-        amount:Number(row.querySelector("input").value||0)
+        category:row.querySelector(".split-category").value,
+        categoryMiddle:row.querySelector(".split-middle").value,
+        categorySmall:row.querySelector(".split-small").value,
+        person:row.querySelector(".split-person").value,
+        expenseNature:row.querySelector(".split-nature").value,
+        amount:Number(row.querySelector(".split-amount").value||0)
       })).filter(x=>x.amount>0);
     }
 
@@ -749,6 +778,8 @@
         const receiptId=makeId();
         splits.forEach((part,index)=>entries.push({
           ...baseEntry,id:makeId(),amount:part.amount,category:part.category,
+          categoryMiddle:part.categoryMiddle,categorySmall:part.categorySmall,
+          person:part.person,expenseNature:part.expenseNature,
           receiptId,receiptTotal:amount,splitIndex:index,splitCount:splits.length
         }));
       }else{

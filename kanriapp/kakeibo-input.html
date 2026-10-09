@@ -82,6 +82,12 @@
 
 
     .category-extra{display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+    .category-step[hidden],.category-extra-grid[hidden]{display:none!important}
+    .category-step-title{font-size:.82rem;font-weight:800;color:#78591d;margin-bottom:7px}
+    .category-step-buttons{display:flex;flex-wrap:wrap;gap:7px}
+    .category-step-buttons button{border:1px solid var(--line);background:#fffaf0;border-radius:999px;padding:9px 13px;color:#62451c;font-weight:700;font:inherit}
+    .category-step-buttons button.selected{background:#ff9d1c;color:#30200b;border-color:#df8a12}
+    .category-path{font-size:.83rem;color:#80612d;line-height:1.6}
     .category-extra-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .category-extra label{display:grid;gap:4px;font-size:.84rem;font-weight:700;color:#65583c}
     .category-extra select{min-width:0;width:100%;border:1px solid var(--line);border-radius:10px;background:#fffdf8;padding:10px;font:inherit}
@@ -300,7 +306,12 @@
 
       <select id="category" aria-label="カテゴリ"></select>
       <div class="category-extra">
-        <div class="category-extra-grid">
+        <div id="categoryPath" class="category-path" aria-live="polite"></div>
+        <div id="middleStep" class="category-step" hidden><div class="category-step-title">② 中カテゴリを選ぶ</div><div id="middleButtons" class="category-step-buttons"></div></div>
+        <div id="smallStep" class="category-step" hidden><div class="category-step-title">③ 小カテゴリを選ぶ</div><div id="smallButtons" class="category-step-buttons"></div></div>
+        <div id="personStep" class="category-step" hidden><div class="category-step-title">④ 誰のもの？（必要なら選ぶ）</div><div id="personButtons" class="category-step-buttons"></div></div>
+        <div id="natureStep" class="category-step" hidden><div class="category-step-title">⑤ 必要・楽しみ・特別費</div><div id="natureButtons" class="category-step-buttons"></div></div>
+        <div class="category-extra-grid" hidden>
           <label>中カテゴリ<select id="categoryMiddle"></select></label>
           <label>小カテゴリ<select id="categorySmall"></select></label>
           <label>対象者<select id="categoryPerson"><option value="">指定なし</option><option>ママ</option><option>長女</option><option>次女</option><option>家族共通</option><option>祖父</option><option>祖母</option></select></label>
@@ -406,16 +417,50 @@
       select.replaceChildren(...values.map(value=>{const opt=document.createElement("option");opt.value=value;opt.textContent=value;return opt}));
       if(values.includes(keep))select.value=keep;
     }
+    let categoryStep=0;
+    function categoryStepButtons(containerId,values,selected,onSelect){
+      const container=$(containerId);container.replaceChildren();
+      values.forEach(value=>{
+        const button=document.createElement("button");button.type="button";button.textContent=value||"指定なし";
+        button.classList.toggle("selected",value===selected);
+        button.addEventListener("click",()=>onSelect(value));
+        container.appendChild(button);
+      });
+    }
+    function renderCategorySteps(){
+      ["middleStep","smallStep","personStep","natureStep"].forEach((id,i)=>$(id).hidden=categoryStep<i+1);
+      const major=$("category").value,middle=$("categoryMiddle").value,small=$("categorySmall").value;
+      const branches=categorySettings.tree[major]||{"その他":["その他"]};
+      categoryStepButtons("middleButtons",Object.keys(branches),middle,value=>{
+        $("categoryMiddle").value=value;refreshSmallCategories();categoryStep=2;renderCategorySteps();
+      });
+      categoryStepButtons("smallButtons",branches[middle]||["その他"],small,value=>{
+        $("categorySmall").value=value;categoryStep=3;renderCategorySteps();
+      });
+      categoryStepButtons("personButtons",["","ママ","長女","次女","家族共通","祖父","祖母"],$("categoryPerson").value,value=>{
+        $("categoryPerson").value=value;categoryStep=4;renderCategorySteps();
+      });
+      categoryStepButtons("natureButtons",["必要","楽しみ","特別費"],$("categoryNature").value,value=>{
+        $("categoryNature").value=value;categoryStep=4;renderCategorySteps();
+      });
+      const path=[major];
+      if(categoryStep>=2)path.push(middle);
+      if(categoryStep>=3)path.push(small);
+      if(categoryStep>=4)path.push($("categoryPerson").value||"対象者なし",$("categoryNature").value);
+      $("categoryPath").textContent="選択： "+path.join(" ＞ ");
+    }
     function refreshSubcategories(){
       const branches=categorySettings.tree[$("category").value]||{"その他":["その他"]};
       const middle=$("categoryMiddle"),small=$("categorySmall");
       const priorMiddle=middle.value,priorSmall=small.value;
       setOptions(middle,Object.keys(branches),priorMiddle);
       setOptions(small,branches[middle.value]||["その他"],priorSmall);
+      renderCategorySteps();
     }
     function refreshSmallCategories(){
       const values=categorySettings.tree[$("category").value]?.[$("categoryMiddle").value]||["その他"];
       setOptions($("categorySmall"),values,$("categorySmall").value);
+      renderCategorySteps();
     }
     function manageCategory(action){
       const major=$("category").value,middle=$("categoryMiddle").value,small=$("categorySmall").value;
@@ -633,6 +678,7 @@
       document.querySelectorAll(".category-btn").forEach(btn => {
         btn.classList.toggle("selected", btn.dataset.category === category);
       });
+      categoryStep=1;
       refreshSubcategories();
     }
 
@@ -727,6 +773,8 @@
       selectCategory(entryType==="advance"||entryType==="recovery" ? "仕事立替" : "その他");
       $("categoryPerson").value="";
       $("categoryNature").value="必要";
+      categoryStep=0;
+      renderCategorySteps();
       $("splitEnabled").checked=false;
       $("splitArea").classList.remove("open");
       resetSplits();
@@ -937,7 +985,7 @@
       refreshCounterparties();
       initFixed();
       buildCategoryButtons();
-      $("categoryMiddle").addEventListener("change",refreshSmallCategories);
+      $("categoryMiddle").addEventListener("change",()=>{refreshSmallCategories();categoryStep=2;renderCategorySteps()});
       document.querySelectorAll("[data-cat-action]").forEach(button=>button.addEventListener("click",()=>manageCategory(button.dataset.catAction)));
       resetSplits();
       syncSettle();

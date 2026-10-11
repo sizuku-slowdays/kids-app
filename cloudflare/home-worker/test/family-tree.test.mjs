@@ -90,6 +90,17 @@ test('family tree enforces adults, household/photo boundaries, atomic revisions 
  combined=await call('/people','mom','POST',{name:'追加する子',revision:combinedRevision,initial_relationship:{person_id:mother,role:'child'}});assert.equal(combined.status,201);
  const newPerson=await combined.json();state=await (await call()).json();assert.equal(state.people.length,beforeCombined+1);assert.equal(state.revision,combinedRevision+1);
  assert.ok(state.relations.some(r=>r.id===newPerson.relationship_id&&r.from_person===mother&&r.to_person===newPerson.id&&r.kind==='biological_parent'));
+ // Adding the second parent to an existing child is atomic and does not duplicate the first.
+ state=await (await call()).json();let parentResponse=await call('/people','mom','POST',{name:'父親',revision:state.revision});assert.equal(parentResponse.status,201);const father=await parentResponse.json();
+ state=await (await call()).json();const childRecord=state.people.find(p=>p.id===newPerson.id);
+ parentResponse=await call('/people/'+newPerson.id,'mom','PUT',{...childRecord,parent_ids:[mother,father.id],revision:state.revision});assert.equal(parentResponse.status,200);
+ state=await (await call()).json();assert.equal(state.relations.filter(r=>r.kind==='biological_parent'&&r.to_person===newPerson.id).length,2);
+ const countRelations=state.relations.length;
+ parentResponse=await call('/people/'+newPerson.id,'mom','PUT',{...childRecord,parent_ids:[mother,father.id],revision:state.revision});assert.equal(parentResponse.status,200);
+ state=await (await call()).json();assert.equal(state.relations.length,countRelations);
+ const fatherRecord=state.people.find(p=>p.id===father.id);
+ parentResponse=await call('/people/'+father.id,'mom','PUT',{...fatherRecord,parent_ids:[newPerson.id],revision:state.revision});assert.equal(parentResponse.status,400);
+ const unchanged=await (await call()).json();assert.equal(unchanged.revision,state.revision);assert.equal(unchanged.relations.length,countRelations);
  const noLogin=await call('/photos/'+photo.id,null);assert.equal(noLogin.status,401);assert.equal(Buffer.from(await noLogin.arrayBuffer()).equals(png),false);
  const photoResponse=await call('/photos/'+photo.id,'grandpa');assert.equal(photoResponse.headers.get('Cache-Control'),'private, no-store');
  assert.equal((await home.prepare('SELECT COUNT(*) n FROM users').first()).n,countBefore);

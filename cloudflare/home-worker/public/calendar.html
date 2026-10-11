@@ -683,7 +683,7 @@
         <label>毎月の繰り返し方法</label>
         <select id="ev-monthly-type-simple" onchange="updateMonthlyTypeSimple()">
           <option value="date">毎月同じ日付</option>
-          <option valmonthly_weekday">毎月同じ週・曜日</option>
+          <option value="monthly_weekday">毎月同じ週・曜日</option>
         </select>
       </div>
       <div id="ev-monthly-weekday-simple-row" style="display:none" class="frow">
@@ -856,7 +856,7 @@
     <div class="frow"><label>閲覧するメンバー（指定メンバーの場合）</label><div id="cal-members"></div></div>
     <div class="frow"><label>予定を登録できる人</label><select id="cal-posting"><option value="*">閲覧できる参加者全員</option><option value="self">自分だけ</option><option value="members">指定メンバー</option></select><div id="cal-editors"></div></div>
     <details class="frow"><summary>別の家庭と共有</summary><label>招待する家庭ID（複数はカンマ区切り）</label><input id="cal-offers"><label>共有を取り消す家庭ID</label><input id="cal-revokes"><small>相手の家庭の管理者が許可すると参加できます。</small></details>
-    <p style="font-size:12px;color:var(--text-sub)">予定の変更・削除は登録した本人だけです。公開範囲を設定したカレンダーでは、旧通知センターへの予定通知を停止します。</p>
+    <p style="font-size:12px;color:var(--text-sub)">予定の変更・削除は登録者と、予定を見られる家庭の管理者が行えます。本人限定の予定は管理者にも見えません。公開範囲を設定したカレンダーでは、旧通知センターへの予定通知を停止します。</p>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeCalModal()">キャンセル</button>
       <button class="btn btn-primary" onclick="saveCalendar()">保存</button>
@@ -1175,7 +1175,7 @@ function renderMonth(y, m) {
 function renderWeek() {
   document.getElementById('month-view').style.display = 'none'; document.getElementById('week-view').style.display = '';
   document.getElementById('btn-month').classList.remove('active'); document.getElementById('btn-week').classList.add('active');
-  const wv = document.getElementById('week-view'), today = new Date(), ws = new Date(currentDat;
+  const wv = document.getElementById('week-view'), today = new Date(), ws = new Date(currentDate);
   ws.setDate(currentDate.getDate() - currentDate.getDay());
   const DAYS = ['日','月','火','水','木','金','土'], ae = allEvents(), H = 48;
 
@@ -1372,7 +1372,7 @@ function memberChecks(target,users,selected=[]){const box=document.getElementByI
 function checkedMembers(target){return [...document.querySelectorAll('#'+target+' input:checked')].map(c=>c.value);}
 function calendarMemberOptions(){const list=editingCalendar?.participants||(sharingData?.users||[]).filter(u=>u.group_ids?.includes(document.getElementById('cal-household').value));memberChecks('cal-members',list,editingCalendar?.visibility?.members||[]);memberChecks('cal-editors',list,editingCalendar?.visibility?.editors||[]);}
 function eventMemberOptions(v){const cal=calendars.find(c=>c.id===document.getElementById('ev-cal').value),users=cal?.participants||[];const select=document.getElementById('ev-subject');select.replaceChildren(new Option('指定しない',''));for(const u of users)select.add(new Option(u.name,u.id));select.value=v?.subject_user_id||'';memberChecks('ev-members',users,v?.members||[]);toggleAudience();}
-function toggleAudience(){const audience=document.getElementById('ev-audience').value;document.getElementById('ev-members').style.display=audience==='members'?'':'none';const cal=calendars.find(c=>c.id===document.getElementById('ev-cal').value);document.getElementById('ev-private-notice').textContent=(cal?.visibility||audience!=='inherit'||document.getElementById('ev-subject').value||eventVisibility)?'この予定は旧通知センターへ通知しません。':'';}
+function toggleAudience(){const audience=document.getElementById('ev-audience').value;document.getElementById('ev-members').style.display=audience==='members'?'':'none';const cal=calendars.find(c=>c.id===document.getElementById('ev-cal').value);document.getElementById('ev-private-notice').textContent=(cal?.visibility||audience!=='inherit'||(!Number(cal?.is_shared)&&(document.getElementById('ev-subject').value||eventVisibility)))?'この予定は旧通知センターへ通知しません。':'';}
 function openCalModal(id){if(!sharingData){alert('カレンダーWorkerの更新後に共有設定を利用できます');return;}editingCalendar=calendars.find(c=>c.id===id)||null;const cal=editingCalendar,v=cal?.visibility;document.getElementById('cal-overlay').classList.add('open');document.getElementById('cal-modal-title').textContent=cal?'カレンダーの設定':'カレンダーを追加';document.getElementById('cal-name').value=cal?.name||'';document.getElementById('cal-visibility').value=v?.mode||(cal?.is_shared?'household':'self');const groups=document.getElementById('cal-household');groups.replaceChildren();for(const g of sharingData.groups)groups.add(new Option(g.name+'（'+g.id+'）',g.id));groups.value=v?.household_id||(sharingData.groups.some(g=>g.id===homeConnection.household_id)?homeConnection.household_id:sharingData.groups[0]?.id)||'';groups.disabled=!!cal;document.getElementById('cal-posting').value=v?.editors.includes('*')?'*':v?.editors.length?'members':cal?.is_shared?'*':'self';calendarMemberOptions();document.getElementById('cal-offers').value='';document.getElementById('cal-revokes').value='';selectedCalColor=cal?.color||PALETTE[calendars.length%PALETTE.length];const cp=document.getElementById('cal-color-picker');cp.innerHTML=PALETTE.map(c=>`<div class="color-swatch${c===selectedCalColor?' selected':''}" style="background:${c}" onclick="selectCalColor(this,'${c}')"></div>`).join('');}
 async function calendarOffers(){try{const offers=await api('/sharing/offers');if(!offers.length){alert('共有の招待はありません');return;}for(const offer of offers)if(confirm('「'+offer.name+'」をこの家庭と共有しますか？'))await api('/calendars/'+offer.calendar_id+'/accept','POST',{group_id:offer.group_id});await loadAll();}catch(e){alert(e.message);}}
 

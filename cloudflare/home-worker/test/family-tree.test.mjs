@@ -57,6 +57,30 @@ test('family tree enforces adults, household/photo boundaries, atomic revisions 
  assert.equal((await call('/people/'+child,'mom','DELETE',{revision:7})).status,200);
  assert.equal((await call('/restore','mom','POST',{backup,confirm_replace:true,revision:8})).status,200);state=await (await call()).json();assert.equal(state.people.length,2);assert.equal(state.relations.length,1);assert.equal(state.revision,9);
  assert.deepEqual(Buffer.from(await (await call('/photos/'+photo.id,'grandpa')).arrayBuffer()),png);
+ // Restoring either order of two deleted endpoints restores their automatically removed relationship.
+ assert.equal((await call('/people/'+mother,'mom','DELETE',{revision:9})).status,200);
+ assert.equal((await call('/people/'+child,'mom','DELETE',{revision:10})).status,200);
+ for(const path of ['', '/trash','/backup','/photos/'+photo.id])assert.equal((await call(path,'foreign')).status,403);
+ assert.equal((await call('/restore-item','foreign','POST',{kind:'person',id:mother,revision:11})).status,403);
+ assert.equal((await call('/people/'+mother,'foreign','PUT',{name:'他家庭から変更',revision:11},'other')).status,403);
+ assert.equal((await call('/restore-item','grandpa','POST',{kind:'person',id:mother,revision:11})).status,403);
+ assert.equal((await call('/restore-item','mom','POST',{kind:'person',id:mother,revision:11})).status,200);
+ state=await (await call()).json();assert.equal(state.relations.length,0);
+ assert.equal((await call('/restore-item','mom','POST',{kind:'person',id:child,revision:12})).status,200);
+ state=await (await call()).json();assert.equal(state.people.length,2);assert.equal(state.relations.length,1);assert.equal(state.relations[0].id,relation);
+ // A relationship deleted on its own stays in the trash when its person is restored.
+ assert.equal((await call('/relations/'+relation,'mom','DELETE',{revision:13})).status,200);
+ assert.equal((await call('/people/'+mother,'mom','DELETE',{revision:14})).status,200);
+ assert.equal((await call('/restore-item','mom','POST',{kind:'person',id:mother,revision:15})).status,200);
+ state=await (await call()).json();assert.equal(state.relations.length,0);
+ assert.equal((await call('/restore-item','mom','POST',{kind:'relation',id:relation,revision:16})).status,200);
+ state=await (await call()).json();assert.equal(state.relations.length,1);
+ // Knowing another household's person ID does not grant read, edit, delete or restore access.
+ await home.prepare("INSERT INTO home_member_attributes VALUES ('other','foreign','adult','foreign','now')").run();
+ for(const [path,method,body] of [['/people/'+mother,'PUT',{name:'侵入',revision:0}],['/people/'+mother,'DELETE',{revision:0}],['/restore-item','POST',{kind:'person',id:mother,revision:0}]])assert.equal((await call(path,'foreign',method,body,'other')).status,404);
+ const otherState=await (await call('','foreign','GET',null,'other')).json();assert.equal(otherState.people.length,0);assert.equal(JSON.stringify(otherState).includes(mother),false);
+ const noLogin=await call('/photos/'+photo.id,null);assert.equal(noLogin.status,401);assert.equal(Buffer.from(await noLogin.arrayBuffer()).equals(png),false);
+ const photoResponse=await call('/photos/'+photo.id,'grandpa');assert.equal(photoResponse.headers.get('Cache-Control'),'private, no-store');
  assert.equal((await home.prepare('SELECT COUNT(*) n FROM users').first()).n,countBefore);
  await home.prepare("UPDATE sessions SET revoked_at=? WHERE user_id='grandpa'").bind(now).run();assert.equal((await call('','grandpa')).status,401);
  }finally{await mf.dispose();}

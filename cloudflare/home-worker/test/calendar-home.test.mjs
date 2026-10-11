@@ -68,14 +68,14 @@ test('HOME identity replaces saved calendar login; private reads, owner writes a
  assert.equal((await cal.prepare('SELECT created_by_google_id FROM calendar_events WHERE id=?').bind(addedId).first()).created_by_google_id,'family:home_grandpa');
  const sharedRows=await (await call('/api/calendar/events?from=2026-10-01&to=2026-10-31')).json();assert.equal(sharedRows.find(e=>e.id===addedId).creator_name,'grandpa');
  assert.equal((await call('/api/calendar/events','grandpa','POST',{...body,calendar_id:'private'})).status,403);
- assert.equal((await call('/api/calendar/events/'+addedId,'mom','PUT',body)).status,403);
- assert.equal((await call('/api/calendar/events/'+addedId,'mom','DELETE')).status,403);
+ assert.equal((await call('/api/calendar/events/'+addedId,'mom','PUT',body)).status,200);
+ assert.equal((await (await call('/api/calendar/events?from=2026-10-01&to=2026-10-31')).json()).find(e=>e.id===addedId).editable,true);
  assert.equal((await call('/api/calendar/calendars/shared','mom','DELETE')).status,409);
  assert.equal((await call('/api/calendar/events/'+addedId,'grandpa','PUT',{...body,title:'本人が変更'})).status,200);
  assert.equal((await call('/api/calendar/events/'+addedId,'grandpa','PUT',{...body,calendar_id:'private'})).status,403);
  assert.equal((await call('/api/calendar/events/'+addedId,'grandpa','DELETE')).status,200);
  added=await call('/api/calendar/events','grandpa','POST',{...body,recurrence_type:'daily',recurrence_end_type:'count',recurrence_end_count:3});assert.equal(added.status,200);const repeatId=(await added.json()).id;
- assert.equal((await call('/api/calendar/events/'+repeatId+'_0?mode=single&date=2026-10-06','mom','PUT',body)).status,403);
+ assert.equal((await (await call('/api/calendar/events?from=2026-10-01&to=2026-10-31')).json()).some(e=>e.id.startsWith(repeatId)&&e.editable),true);
  assert.equal((await call('/api/calendar/events/'+repeatId+'_0?mode=single&date=2026-10-06','grandpa','PUT',body)).status,200);
  const detached=(await cal.prepare('SELECT id FROM calendar_events WHERE created_by_google_id=? AND id<>?').bind('family:home_grandpa',repeatId).all()).results;
  assert.equal(detached.length,1);

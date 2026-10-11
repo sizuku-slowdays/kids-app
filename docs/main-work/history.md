@@ -41,3 +41,13 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 - アプリ一覧、Worker表、仕様・保存先、履歴、未完了事項、更新手順をdocs/main-work/へ作成。rootのAGENTS.mdに今後の資料更新ルールを追加。
 - コード・Worker設定・SQL・実データは変更なし。管理資料のリンク・表・変更ファイル範囲を検証。
 - 本番の新規デプロイ・DB照会・ログイン権限試験は今回実施せず、未確認として整理。
+
+## 2026-10-11（作業ブランチ・本番未反映）
+
+利用者提供のHOME／カレンダーD1スキーマとDashboard Bindingsを照合。既存36／13業務テーブル。旧アルバムの画像配信が認証前に分岐するため、その公開URL方式は家系図に再利用しない。
+
+変更：cloudflare/home-worker/src/index.ts、calendar.ts、household-people.ts、family-tree.ts、migrations/0013_family_tree.sql、public/calendar.html、public/apps/family-tree/*、test/calendar-home.test.mjs、calendar-visibility.test.mjs、family-tree.test.mjs、kinship.test.mjs。cloudflare/calendar-worker/calendar-worker.js、migrations/0001_calendar_visibility.sql。管理資料docs/main-work/*更新。
+
+既存のカレンダー・つうちょう・残高・アルバム保存データを初期化するSQLは実行していない。既存テーブルの移し替えは不要。追加スキーマの本番適用・デプロイは未実施。検証：TypeScript、構文、Wrangler dry-run、既存含む17テスト成功。実機は未確認。詳細：[導入手順と残り](https://github.com/sizuku-slowdays/kids-app/blob/feature/calendar-family-tree-20261011/docs/main-work/calendar-family-tree.md)。
+
+実装コミット：[7474e9c](https://github.com/sizuku-slowdays/kids-app/commit/7474e9c4ce056abef18e74593e02046b8f91c5f9)（feature/calendar-family-tree-20261011）。HOME稼働ブランチは9cf5cb2のまま。本台帳の更新だけをmainへ反映し、アプリコード・Worker設定をmainへコピーしない。

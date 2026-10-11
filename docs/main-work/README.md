@@ -35,3 +35,7 @@
 GitHubのCNAME・ソースから入口URLを整理しました。本番HTTP疎通と全ユーザーの権限試験は今回実施していません。CloudflareのBuild設定やSecret値、D1/R2の本番内容をGitHubだけで確定することはできません。
 
 古いアプリ別READMEには「未移行」など初期段階の説明が残ります。現在のコード・この台帳・実際の本番確認を照合してください。今回の追加は管理資料と更新ルールのみです。
+
+## 2026-10-11の追加資料
+
+[カレンダー共有・家系図の設計／確認構成／導入手順](https://github.com/sizuku-slowdays/kids-app/blob/feature/calendar-family-tree-20261011/docs/main-work/calendar-family-tree.md)。作業ブランチで実装・テスト済み、本番未反映。

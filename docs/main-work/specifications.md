@@ -69,3 +69,7 @@
 - Googleの非公開ICSは所有者別。過去の旧共通カレンダー1件だけを特定しhome_calendar_retiredへ保存して廃止する限定処理あり。この処理を新しい任意共通カレンダー全件削除へ拡大しない。
 
 HOMEへのコミットとcalendar-workerのDashboard反映は別です。最新の投稿・編集制限が本番で有効かは未確認です。
+
+## 2026-10-11 カレンダー権限・家系図
+
+[詳細仕様](https://github.com/sizuku-slowdays/kids-app/blob/feature/calendar-family-tree-20261011/docs/main-work/calendar-family-tree.md)。「全員」は承認済みカレンダー参加者全員。イベント範囲はカレンダー範囲とAND。家庭間は双方許可。旧設定なしの予定は既存の範囲を維持。人物はHOME user IDで連携し、表示名変更で予定タイトルを書き換えない。家系図は家庭別D1グラフ、明示adultのみ編集、soft delete、private R2、revisionガード。実装済み／本番未反映を区別する。

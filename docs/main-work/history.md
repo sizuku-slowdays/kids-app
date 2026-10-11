@@ -59,3 +59,9 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 ## 2026-10-11 22時台 JST：変更前バックアップ確認
 
 利用者がhome-db/calendar-dbをSQLエクスポートし、ローカルメモリ内SQLiteで読み込み・整合性OK、外部キー不整合0を報告。両Workerの稼働コード保存・構文チェック・SHA-256、Bindingsと設定のスクリーンショット保存を報告。GitHubには実データ・Secret値・Bookmark実値を保存しない。R2コピー、本番反映後照合、実機権限試験は未実施。詳細：[バックアップ記録](preproduction-backup.md)。
+
+## 2026-10-11 23時台 JST：本番反映と照合・カレンダー表示負荷の修正
+
+利用者報告：f56cf5dのHOMEビルド成功（Version 5f3f63d5-28c2-44b3-bccc-bf20a12677fd）、calendar-workerの全文貼り替え・Deploy完了。反映後SQLを取得し、照合ツールのhome/calendar両プロファイルok=true、issues=[]。HOMEは予定した8テーブルと家系図アプリのみ追加。Calendar初回アクセス前の照合では新テーブルなし。既存レコードの件数・内容維持を利用者端末で確認。写真/R2コピーと家庭別権限の実機検証は未完了。
+
+カレンダー再表示も遅いと利用者報告。表示処理で本人プロフィールを繰り返し問い合わせ、予定ごとに通知公開範囲を再照会していたため、リクエスト内で本人取得Promiseを共有し、通知の表示情報には既に取得したACLとカレンダーを使用するよう変更。別リクエスト・別利用者へキャッシュしない。通知配信時は従来どおりDBの最新状態を確認。既存データ・スキーマ・HOME実装は変更なし。calendar-read-performance/calendar-home/calendar-visibility/calendar-recurrenceの計6テスト成功。実環境の速度改善は未確認。関連：cloudflare/calendar-worker/calendar-worker.js、cloudflare/home-worker/test/calendar-read-performance.test.mjs。

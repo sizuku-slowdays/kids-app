@@ -84,3 +84,7 @@ python scripts/check-deployment-backups.py --profile calendar --before /PRIVATE_
 - HOMEのGit接続を利用者が確認：sizuku-slowdays/kids-app、Production branch=feat/home-auth-foundation、Deploy command=npx wrangler d1 migrations apply home-db --remote && npx wrangler deploy。
 - R2のオブジェクトコピー／一覧取得は未実施。今回の反映は既存R2オブジェクトを削除・上書きしない。写真の移行・削除・既存キーへの書き込みは別途バックアップ確認前には実行しない。
 - 本番反映後の旧レコード件数／内容照合、家庭・ユーザー別の実機テストは引き続き未実施。ローカルSQL整合性確認を本番の権限試験済みとは扱わない。
+
+## 本番反映後の照合（2026-10-11 22:59～23:00 JST、利用者報告）
+
+利用者端末で反映後home/calendar SQLを取得し、固定コミットf56cf5dの照合ツールを両プロファイルで実行。どちらもok=true、issues=[]。既存行の内容と件数を維持。HOMEの追加8テーブル、apps/group_appsの家系図追加のみ許可差分として確認。Calendarは初回HOMEアクセス前で追加テーブルなし。初回アクセス後の追加5テーブルの確認と実機権限テストは未完了。バックアップの実データはGitHubへ保存していない。

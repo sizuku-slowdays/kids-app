@@ -34,3 +34,13 @@ test('cousins remain visible and families have separate child branches from ever
   assert.ok(nodes.get('older').x-nodes.get('cousin').x>180);
  }
 });
+
+test('current partners stay beside their sibling partners while divorced relations do not pair',async()=>{
+ const {treeLayout,sortSiblingPeople}=await import('../public/apps/family-tree/kinship.js');
+ const people=[{id:'me',birth_order:1},{id:'sister',birth_order:2},{id:'husband'},{id:'sister-husband'}];
+ const relations=[{id:'s',from_person:'me',to_person:'sister',kind:'sibling',status:'current'},{id:'m',from_person:'me',to_person:'husband',kind:'marriage',status:'current'},{id:'n',from_person:'sister',to_person:'sister-husband',kind:'marriage',status:'current'}];
+ assert.deepEqual(sortSiblingPeople(people,relations).map(p=>p.id),['me','husband','sister','sister-husband']);
+ for(const basis of ['me','sister','husband'])assert.deepEqual(treeLayout(people,relations,basis).nodes.sort((a,b)=>a.x-b.x).map(p=>p.id),['me','husband','sister','sister-husband']);
+ const changed=relations.map(r=>r.id==='m'?{...r,status:'divorced'}:r);
+ assert.deepEqual(sortSiblingPeople(people,changed).map(p=>p.id),['me','sister','sister-husband','husband']);
+});

@@ -39,7 +39,7 @@ export function treeLayout(people,relations,centerId,radius=4){
  for(const level of [...groups.keys()].sort((a,b)=>a-b)){
  const list=sortSiblingPeople(groups.get(level),relations),roots=new Map(list.map(p=>[p.id,p.id]));
  const root=id=>{while(roots.get(id)!==id)id=roots.get(id);return id;},join=(a,b)=>{if(roots.has(a)&&roots.has(b))roots.set(root(b),root(a));},firstChild=new Map();
- for(const r of relations){if(r.kind==='sibling')join(r.from_person,r.to_person);if(['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&roots.has(r.to_person)){const old=firstChild.get(r.from_person);if(old)join(old,r.to_person);else firstChild.set(r.from_person,r.to_person);}}
+ for(const r of relations){if(r.kind==='sibling'||['marriage','partnership'].includes(r.kind)&&r.status==='current')join(r.from_person,r.to_person);if(['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&roots.has(r.to_person)){const old=firstChild.get(r.from_person);if(old)join(old,r.to_person);else firstChild.set(r.from_person,r.to_person);}}
  const units=new Map();for(const p of list){const key=root(p.id);if(!units.has(key))units.set(key,[]);units.get(key).push(p);}
  const ordered=[...units.values()].map(members=>{const parents=[...new Set(relations.filter(r=>['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&members.some(p=>p.id===r.to_person)&&positions.has(r.from_person)).map(r=>r.from_person))];const anchor=parents.length?parents.reduce((s,id)=>s+positions.get(id),0)/parents.length:null;return {members,anchor};}).sort((a,b)=>(a.anchor??Infinity)-(b.anchor??Infinity));
  let cursor=30;
@@ -59,7 +59,7 @@ export function sortSiblingPeople(people,relations){
  const join=(a,b)=>{if(roots.has(a)&&roots.has(b))roots.set(root(b),root(a));};const children=new Map();
  for(const r of relations){if(r.kind==='sibling')join(r.from_person,r.to_person);if(['biological_parent','adoptive_parent'].includes(r.kind)){const prior=children.get(r.from_person);if(prior)join(prior,r.to_person);else children.set(r.from_person,r.to_person);}}
  const groups=new Map();people.forEach((p,i)=>{const key=root(p.id);if(!groups.has(key))groups.set(key,[]);groups.get(key).push({p,i});});
- const result=[...people];for(const group of groups.values()){const sorted=group.map(x=>x.p).sort((a,b)=>{const ao=Number.isInteger(a.birth_order)?a.birth_order:null,bo=Number.isInteger(b.birth_order)?b.birth_order:null;if(ao!==null&&bo!==null&&ao!==bo)return ao-bo;const ad=/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(a.birth_date||'')?a.birth_date:null,bd=/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(b.birth_date||'')?b.birth_date:null;if(ad&&bd&&ad!==bd)return ad.localeCompare(bd);return 0;});group.forEach((x,i)=>result[x.i]=sorted[i]);}return result;
+ const result=[...people];for(const group of groups.values()){const sorted=group.map(x=>x.p).sort((a,b)=>{const ao=Number.isInteger(a.birth_order)?a.birth_order:null,bo=Number.isInteger(b.birth_order)?b.birth_order:null;if(ao!==null&&bo!==null&&ao!==bo)return ao-bo;const ad=/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(a.birth_date||'')?a.birth_date:null,bd=/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(b.birth_date||'')?b.birth_date:null;if(ad&&bd&&ad!==bd)return ad.localeCompare(bd);return 0;});group.forEach((x,i)=>result[x.i]=sorted[i]);}return coupleOrder(result,relations);
 }
 
 export function familyRelations(relations){
@@ -68,5 +68,12 @@ export function familyRelations(relations){
  const siblings=new Map();for(const id of siblingRoots.keys()){const key=root(id);if(!siblings.has(key))siblings.set(key,[]);siblings.get(key).push(id);}
  const result=[...relations],keys=new Set(relations.map(r=>r.kind+':'+r.from_person+':'+r.to_person));
  for(const r of relations)if(['biological_parent','adoptive_parent'].includes(r.kind)&&siblingRoots.has(r.to_person)){for(const child of siblings.get(root(r.to_person))||[]){const key=r.kind+':'+r.from_person+':'+child;if(child!==r.from_person&&!keys.has(key)){keys.add(key);result.push({...r,id:'inferred-'+r.id+'-'+child,to_person:child,inferred:true});}}}
+ return result;
+}
+
+export function coupleOrder(people,relations){
+ const byId=new Map(people.map(p=>[p.id,p])),partners=new Map();
+ for(const r of relations)if(['marriage','partnership'].includes(r.kind)&&r.status==='current'&&byId.has(r.from_person)&&byId.has(r.to_person)){partners.set(r.from_person,[...(partners.get(r.from_person)||[]),r.to_person]);partners.set(r.to_person,[...(partners.get(r.to_person)||[]),r.from_person]);}
+ const added=new Set(),result=[];for(const p of people){if(added.has(p.id))continue;result.push(p);added.add(p.id);for(const id of partners.get(p.id)||[])if(!added.has(id)){result.push(byId.get(id));added.add(id);}}
  return result;
 }

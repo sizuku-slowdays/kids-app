@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {relationLabel,treeLayout} from '../public/apps/family-tree/kinship.js';
 test('relationship labels follow the logged-in person without assuming missing birthdays or generations',()=>{
  const people=[{id:'mom',gender:'female',birth_date:'1980-01-01'},{id:'older',gender:'female',birth_date:'2014-02-01'},{id:'younger',gender:'female',birth_date:'2016-02-01'},{id:'dad',gender:'male'},{id:'newdad',gender:'male'}];const relations=[{from_person:'mom',to_person:'older',kind:'biological_parent'},{from_person:'mom',to_person:'younger',kind:'adoptive_parent'},{from_person:'mom',to_person:'dad',kind:'marriage',status:'divorced'},{from_person:'mom',to_person:'newdad',kind:'marriage',status:'current'}];
- assert.equal(relationLabel(people,relations,'mom','older'),'子ども');assert.equal(relationLabel(people,relations,'older','mom'),'お母さん');assert.equal(relationLabel(people,relations,'older','younger'),'妹');assert.equal(relationLabel(people,relations,'younger','older'),'お姉ちゃん');assert.equal(relationLabel(people.map(p=>({...p,birth_date:''})),relations,'older','younger'),'きょうだい');assert.equal(relationLabel(people,relations,'mom','dad'),'以前のパートナー');assert.equal(relationLabel(people,relations,'older','newdad'),'親のパートナー');
+ assert.equal(relationLabel(people,relations,'mom','older'),'子ども');assert.equal(relationLabel(people,relations,'older','mom'),'お母さん');assert.equal(relationLabel(people,relations,'older','younger'),'妹');assert.equal(relationLabel(people,relations,'younger','older'),'お姉ちゃん');assert.equal(relationLabel(people.map(p=>({...p,birth_date:''})),relations,'older','younger'),'きょうだい');assert.equal(relationLabel(people,relations,'mom','dad'),'元夫');assert.equal(relationLabel(people,relations,'older','newdad'),'親のパートナー');
  const many=Array.from({length:20},(_,i)=>({id:'p'+i})),edges=many.slice(1).map((p,i)=>({from_person:many[i].id,to_person:p.id,kind:'biological_parent'}));assert.equal(treeLayout(many,edges,'p0',Infinity).nodes.length,20);assert.equal(treeLayout(many,edges,'p0',2).nodes.length,3);
 });
 
@@ -52,4 +52,16 @@ test('aunts and uncles use kanji with readings and distinguish older relatives f
  for(const [id,want]of [['older-man','伯父（おじ）'],['older-woman','伯母（おば）'],['younger-man','叔父（おじ）'],['younger-woman','叔母（おば）'],['unknown','おじ（年上・年下は未設定）'],['wife','伯母（おば）']])assert.equal(relationLabel(people,relations,'child',id),want);
  const dated=people.map(p=>({...p,birth_order:null,birth_date:p.id==='mom'?'1984-09-01':p.id==='older-man'?'1980-01-01':p.id==='younger-man'?'1987-01-01':''}));
  assert.equal(relationLabel(dated,relations,'child','older-man'),'伯父（おじ）');assert.equal(relationLabel(dated,relations,'child','younger-man'),'叔父（おじ）');
+});
+
+test('marriages show husband or wife and sibling spouses use in-law labels',async()=>{
+ const {relationLabel}=await import('../public/apps/family-tree/kinship.js');
+ const people=[{id:'me',birth_order:2},{id:'sister',gender:'female',birth_order:3},{id:'sister-husband',gender:'male'},{id:'brother',gender:'male',birth_order:1},{id:'brother-wife',gender:'female'}];
+ const relations=[{from_person:'me',to_person:'sister',kind:'sibling'},{from_person:'me',to_person:'brother',kind:'sibling'},{from_person:'sister',to_person:'sister-husband',kind:'marriage',status:'current'},{from_person:'brother',to_person:'brother-wife',kind:'marriage',status:'current'}];
+ assert.equal(relationLabel(people,relations,'sister','sister-husband'),'夫');
+ assert.equal(relationLabel(people,relations,'sister-husband','sister'),'妻');
+ assert.equal(relationLabel(people,relations,'me','sister-husband'),'義弟（ぎてい）');
+ assert.equal(relationLabel(people,relations,'me','brother-wife'),'義姉（ぎし）');
+ const partners=relations.map(r=>r.kind==='marriage'?{...r,kind:'partnership'}:r);assert.equal(relationLabel(people,partners,'sister','sister-husband'),'パートナー');
+ const divorced=relations.map(r=>({...r,status:'divorced'}));assert.equal(relationLabel(people,divorced,'sister','sister-husband'),'元夫');
 });

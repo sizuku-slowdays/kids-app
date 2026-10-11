@@ -83,3 +83,9 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 人物追加フォームで登録済みの相手と「その人の親／子ども／配偶者／きょうだい／養親／養子／育てる人／パートナー」を選択可能。新規人物POSTのinitial_relationshipをAPI側で検証し、同家庭の活動中の相手のみ許可。人物と関係を同じrevisionガード付きD1 batchで保存し、失敗時に片方だけ残さない。既存人物の編集は元の関係を変更しない。関係欄は折りたたみ、選択人物の関係だけを表示し、全員表示を任意で切り替え。別の関係追加も選択人物を初期選択。既存データ・スキーマの変更／移行なし。関連：src/family-tree.ts、public/apps/family-tree/app.js・index.html、family-tree.test.mjs。
 
 検証：TypeScriptチェック、Wrangler dry-run、配信対象JS構文、family-tree/kinship計2テスト成功。追加試験で相手不明・revision競合時に人物が残らないこと、子どもの403、成功時に親子関係と人物が同一revisionで作成されることを確認。本番のフォーム操作は反映後確認待ち。
+
+## 2026-10-12 JST：きょうだいの出生順・自動年齢表示
+
+家系図の同世代で、親を共有する人物／明示きょうだい関係の並びを年上から左へ変更。生年月日不明時の手動birth_order（1〜1000）を人物に追加し、両者に設定があるときは順番優先。既存人物の未指定値はNULL。0014_family_tree_birth_order.sqlは列追加のみ、既存データを更新・削除しない。年齢は保存せず、日本時間の今日と生年月日から表示時に計算し、開いたままでも日付変更を60秒間隔で確認。年月日不明は年齢空欄、命日ありは命日時点の年齢。人物カード・一覧・詳細に表示。バックアップ／復元はbirth_orderを含め、旧バックアップの未指定はNULLとして読み込む。本番確認は反映後。
+
+TypeScript・配信対象JS構文・Wrangler dry-run・family-tree/kinship計3テスト成功。新しく登録された家系図データを含む反映直前HOME SQLの取得確認まで本番ブランチを変更しない。作業ブランチへの保存のみ。

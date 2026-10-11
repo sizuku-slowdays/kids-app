@@ -15,8 +15,9 @@ test('HOME device identity, legacy subscriptions, and live authorization before 
  const env={DB,HOME_AUTH:{async fetch(request){const u=new URL(request.url);if(u.pathname==='/api/notifications/identity')return Response.json({user:{id:'mom',display_name:'テストの母'},session_id:'sid'});checks.push(u.searchParams.get('user'));if(broken)throw Error('offline');return Response.json({allowed,title:'最新の予定名',url:'/wagaya/apps/calendar/'});}}};
  const source=await readFile(new URL('../../notification-center-api/notification-center-api.js',import.meta.url),'utf8');
  const context=vm.createContext({Response,Request,URL,URLSearchParams,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,Date,console,atob,btoa,crypto:globalThis.crypto,sent});
- vm.runInContext(source.replace('export default {','globalThis.worker = {')+`\nsendPush=async(sub,payload)=>{sent.push({endpoint:sub.endpoint,payload});return {ok:true};};globalThis.api={homeNotificationRoute,subsForRecipient,fireRule,b64urlToBytes,bytesToB64url};`,context);
+ vm.runInContext(source.replace('export default {','globalThis.worker = {')+`\nsendPush=async(sub,payload)=>{sent.push({endpoint:sub.endpoint,payload});return {ok:true};};globalThis.api={homeNotificationRoute,subsForRecipient,fireRule,b64urlToBytes,bytesToB64url,legacySafeResponse};`,context);
  const api=context.api;
+ assert.equal(api.legacySafeResponse([{recipient:'home-all',title:'非公開'},{recipient:'mama',title:'従来'}]).length,1);
  const sample=Uint8Array.from([0,1,250,255]);assert.deepEqual(Array.from(api.b64urlToBytes(api.bytesToB64url(sample))),Array.from(sample));
  function req(endpoint,user='forged'){return new Request('https://notification.internal/api/home/subscribe',{method:'POST',headers:{Origin:'https://cetus.fun',Cookie:'test','Content-Type':'application/json'},body:JSON.stringify({endpoint,p256dh:'k',auth:'a',home_user_id:user})});}
  assert.equal((await api.homeNotificationRoute(req('https://push.test/old'),env,'/api/home/subscribe')).status,200);

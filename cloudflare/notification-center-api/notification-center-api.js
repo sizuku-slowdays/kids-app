@@ -939,7 +939,7 @@ function corsHeaders(request, env) {
 
 function json(data, request, env, status = 200) {
 
-  return new Response(JSON.stringify(data), {
+  return new Response(JSON.stringify(legacySafeResponse(data)), {
 
     status,
 
@@ -1193,6 +1193,7 @@ async function handleRequest(request, env) {
   const body = ['POST', 'PUT', 'PATCH'].includes(method) ? await request.json().catch(() => ({})) : {};
 
   const nowP = toJstParts(new Date());
+  if(path!=='/api/calendar-sync' && isHomeNotificationRecipient(body.recipient))return json({error:'HOMEカレンダーから操作してください'},request,env,403);
 
 
 
@@ -1346,9 +1347,9 @@ async function handleRequest(request, env) {
 
 
 
-    const title = String(body.title || '家族カレンダー').trim().slice(0, 60);
+    const title = isHomeNotificationRecipient(body.recipient)?'📅 カレンダーの予定':String(body.title || '家族カレンダー').trim().slice(0, 60);
 
-    const message = String(body.body || '').slice(0, 200);
+    const message = isHomeNotificationRecipient(body.recipient)?'予定の時間です':String(body.body || '').slice(0, 200);
 
     const recipient = pickRecipient(body.recipient);
     if(body.recipient && recipient!==body.recipient)return json({error:'通知先を確認してください'},request,env,400);
@@ -1494,6 +1495,8 @@ async function handleRequest(request, env) {
   if (ruleMatch) {
 
     const id = Number(ruleMatch[1]);
+    const protectedRule=await env.DB.prepare('SELECT recipient FROM notification_rules WHERE id=?').bind(id).first();
+    if(isHomeNotificationRecipient(protectedRule?.recipient))return json({error:'HOMEカレンダーから操作してください'},request,env,404);
 
 
 
@@ -1965,4 +1968,13 @@ async function checkHomeCalendarDelivery(env,rule,userId,sessionId){
  const url=new URL('https://notification-auth.internal/internal/notification-check');
  url.searchParams.set('session',sessionId);url.searchParams.set('user',userId);url.searchParams.set('event',String(rule.external_key).slice(4));
  const response=await env.HOME_AUTH.fetch(new Request(url));return response.ok?response.json():{allowed:false};
+}
+
+function legacySafeResponse(value){
+ if(Array.isArray(value))return value.map(legacySafeResponse).filter(v=>v!==undefined);
+ if(value&&typeof value==='object'){
+   if(isHomeNotificationRecipient(value.recipient)||value.recipient==='home-only')return undefined;
+   return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,legacySafeResponse(v)]).filter(([,v])=>v!==undefined));
+ }
+ return value;
 }

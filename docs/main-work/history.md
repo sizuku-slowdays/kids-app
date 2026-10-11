@@ -128,3 +128,5 @@ TypeScript・配信対象JS構文・Wrangler dry-run・family-tree/kinship計3�
 関連：HOME src/index.ts・notifications.ts・calendar.ts・home-mount.ts・public/calendar.html・notify-sw.js・wrangler.jsonc、calendar-worker.js、notification-center-api.js、通知/共有テスト。DB追加は通知DBの端末本人リンク1テーブル（初回登録時CREATE IF NOT EXISTS）のみ。既存予定の通知先は保存前には変更しない。
 
 実装と自動試験済み。HOMEはGit更新後のビルド確認が必要。calendar-worker / notification-center-apiは利用者による手動Deployと実機配信確認待ち。導入・復旧判断は `cloudflare/notification-center-api/README.md` を参照。
+
+追加検証：通知DBへHOME予定名・詳細を予約文として保存せず汎用文にし、許可された配信時だけ最新の予定名を取得。旧管理APIからHOME通知ルールを除外。

@@ -140,3 +140,7 @@
 詳細：[設計と導入手順](https://github.com/sizuku-slowdays/kids-app/blob/feature/calendar-family-tree-20261011/docs/main-work/calendar-family-tree.md)。既存アプリの状態表を本番反映済みへ変更しない。
 
 カレンダーの追加改修：閲覧できる予定は登録者または所有家庭の管理者が変更可能。本人限定予定は管理者にも非公開。家系図の公開範囲は許可された家庭メンバーのみ。作業PR #3で実装、本番未反映。
+
+
+### 2026-10-12：カレンダー通知のHOME連携
+カレンダーの予定編集画面でHOME表示名による通知先と、HOME本人として端末を通知登録する入口を追加。URLは従来の /wagaya/apps/calendar/ を維持。旧通知センター自体は既存URL・機能を維持。本番Worker手動更新・端末配信確認待ち。

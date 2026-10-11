@@ -1,3 +1,4 @@
+import { notificationProxy, notificationCheck } from "./notifications";
 import { mountedHome } from "./home-mount";
 import { calendarIdentity, calendarProxy } from "./calendar";
 import { advanceChores } from "./passbook-chores";
@@ -228,6 +229,14 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   const url = new URL(request.url),
     path = url.pathname,
     method = request.method;
+  if (url.hostname === 'notification-auth.internal' && path === '/internal/notification-check' && method === 'GET') {
+    const target=await env.DB.prepare('SELECT * FROM users WHERE id=? AND active=1').bind(url.searchParams.get('user')||'').first<User>();
+    if (!target || !await appAllowed(env,target.id,'calendar') || !await appAllowed(env,target.id,'notification')) return json({allowed:false});
+    const activeSession=await env.DB.prepare('SELECT 1 FROM sessions WHERE id=? AND user_id=? AND revoked_at IS NULL AND expires_at>?').bind(url.searchParams.get('session')||'',target.id,Math.floor(Date.now()/1000)).first();
+    if(!activeSession)return json({allowed:false});
+    const identity=await calendarIdentity(env,target,new Request('https://calendar-auth.internal/api/calendar/identity'));
+    return notificationCheck(request,env,await identity.json());
+  }
   // Public friend-facing hostname. Keep the Sites workspace name out of shared URLs.
   if (
     url.hostname === "asobu.cetus.fun" ||
@@ -303,7 +312,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       groupId = crypto.randomUUID();
     mark("bootstrap_database");
     await env.DB.batch([
-     nv.DB.prepare(
+      env.DB.prepare(
         "INSERT INTO users(id,login_name,display_name,password_salt,password_hash,password_iterations,platform_role,created_at) VALUES ('bootstrap-admin',?,?,?,?,?,'operator',?)",
       ).bind(login, display, salt, hash, ITERATIONS, now),
       env.DB.prepare(
@@ -439,6 +448,11 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     if (path === '/api/family-tree' || path.startsWith('/api/family-tree/')) {
       requireValue(await appAllowed(env,user.id,'family-tree'),403,'このアプリは利用できません');
       return familyTreeRoute(request,env,user.id,r=>body(r,path==='/api/family-tree/restore'?30000000:16384));
+    }
+    if (path === '/api/notifications' || path.startsWith('/api/notifications/')) {
+      requireValue(await appAllowed(env,user.id,'notification'),403,'このアプリは利用できません');
+      if(path==='/api/notifications/identity' && url.hostname==='notification-auth.internal' && method==='GET')return json({user:{id:user.id,display_name:user.display_name},session_id:s.id});
+      return notificationProxy(request,env);
     }
     if (path === "/api/calendar/identity" && method === "GET") {
       requireValue(await appAllowed(env,user.id,"calendar"),403,"このアプリは利用できません");
@@ -874,3 +888,4 @@ export default {
     ]);
   },
 } satisfies ExportedHandler<HomeEnv>;
+

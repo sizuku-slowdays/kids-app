@@ -49,3 +49,7 @@ home-workerのASSETS、CALENDAR_SERVICE→calendar-worker、LEGACY_BANK_SERVICE�
 家系図はhome-worker内へ追加し、新規Worker/R2/別D1は作成しない。本番反映は未実施。
 
 2026-10-11追加調整：新公開範囲が旧通知方式で扱えない対象だけ停止。既存通知と従来共有＋表示名のみの変更は継続。通知設定は保持し、停止理由を分離。新しいBinding・DB・R2の追加要求はない。本番未反映。
+
+
+### 2026-10-12：notification-center-api（利用者提供コード・Bindings確認）
+DB → notification-center-db。HOME_AUTH → home-workerを利用者が追加済み。HOME側のNOTIFICATION_SERVICE → notification-center-apiは今回Wrangler設定へ追加。既存Cron/VAPID/APP_PASSWORDを維持する手動Deploy方式。新コードは cloudflare/notification-center-api/notification-center-api.js。DB追加はHOME端末本人リンクのみ。Worker本番反映・実機通知は未確認。

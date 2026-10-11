@@ -39,10 +39,11 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
     }
   }
   if(['POST','PUT'].includes(request.method)){
-    const data=await request.clone().json().catch(()=>null) as {visibility?:unknown}|null;
-    if(data?.visibility!==undefined || request.method==='PUT'&&path.startsWith('/calendars/')){
+    const data=await request.clone().json().catch(()=>null) as {visibility?:unknown;notification_recipient?:string}|null;
+    if(data?.visibility!==undefined || data?.notification_recipient?.startsWith('home') || request.method==='PUT'&&path.startsWith('/calendars/')){
       const check=await env.CALENDAR_SERVICE.fetch(new Request('https://calendar.internal/home/status',{headers:outgoing}));
-      const state=check.ok?await check.json() as {acl_version?:string}:null;
+      const state=check.ok?await check.json() as {acl_version?:string;notification_protocol?:string}:null;
+      if(data?.notification_recipient?.startsWith('home') && state?.notification_protocol!=='home-v1')return Response.json({error:'先にカレンダーWorkerの通知対応コードを反映してください'},{status:503});
       if(state?.acl_version!=='20261011-participants-v1')return Response.json({error:'先にカレンダーWorkerの共有権限コードを反映してください'},{status:503,headers:{'Cache-Control':'private, no-store'}});
     }
   }
@@ -51,3 +52,4 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
   const headers = new Headers({'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
   return new Response(response.body,{status:response.status,headers});
 }
+

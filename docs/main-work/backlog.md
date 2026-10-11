@@ -42,3 +42,10 @@
 [詳細](https://github.com/sizuku-slowdays/kids-app/blob/feature/calendar-family-tree-20261011/docs/main-work/calendar-family-tree.md)。本番未反映の作業ブランチを稼働中と扱わない。
 
 本番反映前のバックアップ・件数／内容照合は未実施。[取得・照合手順](preproduction-backup.md)とscripts/check-deployment-backups.pyを用意。実DB/R2に接続していないため、ローカル権限テスト成功を本番照合済みと扱わない。
+
+
+### 2026-10-12：通知改修の導入後確認
+- notification-center-api → calendar-workerの順に手動Deploy。HOMEのGitビルド成功確認。
+- 各端末をログイン本人へ明示登録し、共通カレンダーの指定閲覧者だけが通知候補になり、対象外へ配信されないことを実機確認。本人限定・大人限定・共有解除・端末セッション失効も確認。
+- 通知DBの追加後バックアップ/旧レコード照合。既存のお薬・習慣通知が維持されていることを確認。
+- 旧通知センター全体の個人認証移行は未実装。

@@ -119,3 +119,12 @@ TypeScript・配信対象JS構文・Wrangler dry-run・family-tree/kinship計3�
 ## 2026-10-12：親を設定し直しても出生順を維持
 
 親を追加したあと兄が右端へ移る利用者報告に対応。取得順で先に来る配偶者を起点に夫婦をまとめると、後から更新された血縁側の出生順が崩れるケースを確認。明示きょうだい・親を共有するきょうだいを夫婦配置の起点として優先し、配偶者の先行取得に左右されないよう修正。父母を全員へ設定したモデルで、4種類の取得順でも兄夫婦・本人夫婦・妹夫婦の順序を維持するテストを追加。DB/API/人物・関係データは変更なし。kinship.js、kinship.test.mjs。構文とkinship計7テスト成功。本番操作確認待ち。
+
+
+## 2026-10-12：カレンダー通知先をHOME個人と閲覧範囲へ接続
+
+旧の固定家族recipient一覧を、HOMEの表示名とカレンダー/予定の閲覧可能者から選ぶ方式へ変更。端末はHOME本人として明示登録し、配信時に最新の家庭・予定権限と登録セッション有効性を確認。新旧通知の全員扱いを分離し、旧Workerへの新ID同期を防止。提供された通知Workerコードを `cloudflare/notification-center-api/` に保存。既存の通知ルール、銀行・ポイント・画像は初期化しない。通知DBバックアップを利用者が取得・整合性ok/外部キー問題0/4テーブル・SHA保存を確認。既存HOME bootstrapの `nv.DB` 誤記も `env.DB` に修正。
+
+関連：HOME src/index.ts・notifications.ts・calendar.ts・home-mount.ts・public/calendar.html・notify-sw.js・wrangler.jsonc、calendar-worker.js、notification-center-api.js、通知/共有テスト。DB追加は通知DBの端末本人リンク1テーブル（初回登録時CREATE IF NOT EXISTS）のみ。既存予定の通知先は保存前には変更しない。
+
+実装と自動試験済み。HOMEはGit更新後のビルド確認が必要。calendar-worker / notification-center-apiは利用者による手動Deployと実機配信確認待ち。導入・復旧判断は `cloudflare/notification-center-api/README.md` を参照。

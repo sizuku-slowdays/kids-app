@@ -14,7 +14,7 @@ test('calendar scopes cap event data, require both households, preserve authors 
  };
  const mf=new Miniflare(convertV4MiniflareOptions({workers:[
   {name:'home-worker',modules:true,scriptPath:new URL('../.wrangler/test-build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'home-calendar'},serviceBindings:{CALENDAR_SERVICE:'calendar-worker',ASSETS:async r=>new Response(await readFile(new URL('../public/calendar.html',import.meta.url),'utf8'),{headers:{'Content-Type':'text/html'}})}},
-  {name:'calendar-worker',modules:true,script:await readFile(new URL('../../calendar-worker/calendar-worker.js',import.meta.url),'utf8'),compatibilityDate:'2026-10-01',d1Databases:{DB:'legacy-calendar'},bindings:{NOTIFICATION_API_URL:'https://notifications.test',NOTIFICATION_APP_PASSWORD:'test-only'},serviceBindings:{HOME_AUTH:'home-worker',NOTIFICATION_API:async request=>{notifications.push(await request.json());return Response.json({ok:!notificationFail},{status:notificationFail?503:200});}},outboundService:googleFixture}
+  {name:'calendar-worker',modules:true,script:await readFile(new URL('../../calendar-worker/calendar-worker.js',import.meta.url),'utf8'),compatibilityDate:'2026-10-01',d1Databases:{DB:'legacy-calendar'},bindings:{NOTIFICATION_API_URL:'https://notifications.test',NOTIFICATION_APP_PASSWORD:'test-only'},serviceBindings:{HOME_AUTH:'home-worker',NOTIFICATION_API:async request=>{if(new URL(request.url).pathname==='/api/health')return Response.json({home_notification_protocol:'home-v1'});notifications.push(await request.json());return Response.json({ok:!notificationFail},{status:notificationFail?503:200});}},outboundService:googleFixture}
  ]}));
  try{
  const home=await mf.getD1Database('DB','home-worker'),cal=await mf.getD1Database('DB','calendar-worker');
@@ -29,7 +29,7 @@ test('calendar scopes cap event data, require both households, preserve authors 
  }
  await home.prepare("INSERT INTO groups VALUES ('h','家族','household','mom',?),('other','別家庭','household','foreign',?)").bind(now,now).run();
  await home.prepare("INSERT INTO memberships VALUES ('h','mom','owner'),('h','grandpa','member'),('other','foreign','owner'),('h','peer','member')").run();
- await home.prepare("INSERT INTO group_apps VALUES ('h','calendar'),('other','calendar')").run();
+ await home.prepare("INSERT INTO group_apps VALUES ('h','calendar'),('other','calendar'),('h','notification')").run();
  await home.prepare("INSERT INTO user_apps VALUES ('grandpa','calendar',0,0)").run();
  for(const sql of [
   'CREATE TABLE users(google_id TEXT PRIMARY KEY,display_name TEXT,avatar_color TEXT,created_at TEXT)',
@@ -132,6 +132,30 @@ test('calendar scopes cap event data, require both households, preserve authors 
  assert.equal((await call('/api/calendar/events/'+adminDetached[0].id,'mom','DELETE')).status,404);
  listed=await (await call('/api/calendar/events?from=2026-10-01&to=2026-10-31','grandpa')).json();assert.equal(listed.find(e=>e.id===adminDetached[0].id).editable,true);
  assert.equal((await call('/api/calendar/events/'+adminDetached[0].id,'grandpa','DELETE')).status,200);
+ // HOME recipients are derived from visibility, and live delivery rechecks changes.
+ response=await call('/api/calendar/calendars','mom','POST',{name:'限定通知',color:'#abcabc',visibility:{mode:'members',household_id:'h',editors:['*'],members:['mom','peer']}});assert.equal(response.status,201);const ncid=(await response.json()).id;
+ let ncal=(await (await call('/api/calendar/calendars','mom')).json()).find(c=>c.id===ncid);
+ assert.deepEqual(ncal.notification_users.map(u=>u.id).sort(),['mom','peer']);
+ const nb={title:'HOME限定通知',start_datetime:'2026-10-13T09:00',end_datetime:'2026-10-13T10:00',calendar_id:ncid,notify_before:5,notification_recipient:'home-all',recurrence_type:'none',visibility:{audience:'inherit',members:[]}};
+ response=await call('/api/calendar/events','mom','POST',{...nb,notification_recipient:'home:grandpa'});assert.equal(response.status,400);
+ response=await call('/api/calendar/events','mom','POST',nb);assert.equal(response.status,200);const neid=(await response.json()).id;
+ assert.ok(notifications.some(p=>p.source_id===neid&&p.recipient==='home-all'&&p.occurrences.length));
+ const hworker=await mf.getWorker('home-worker');
+ async function delivery(who){return (await hworker.fetch('https://notification-auth.internal/internal/notification-check?user='+who+'&session='+who+'&event='+neid)).json();}
+ assert.equal((await delivery('peer')).allowed,true);
+ await home.prepare("UPDATE sessions SET revoked_at=? WHERE user_id='peer'").bind(now).run();assert.equal((await delivery('peer')).allowed,false);await home.prepare("UPDATE sessions SET revoked_at=NULL WHERE user_id='peer'").run();
+ assert.equal((await delivery('grandpa')).allowed,false);assert.equal((await delivery('foreign')).allowed,false);
+ const cworker=await mf.getWorker('calendar-worker');assert.equal((await cworker.fetch('https://calendar-worker.sslowdayss.workers.dev/internal/notification-check',{method:'POST',body:'{}'})).status,404);
+ assert.equal((await call('/api/calendar/events/'+neid,'mom','PUT',{...nb,visibility:{audience:'self',members:[]}})).status,200);
+ assert.equal((await delivery('peer')).allowed,false);assert.equal((await delivery('mom')).allowed,true);
+ assert.equal((await call('/api/calendar/events/'+neid,'mom','PUT',{...nb,visibility:{audience:'adults',members:[]}})).status,200);
+ assert.equal((await delivery('peer')).allowed,true);
+ await home.prepare("UPDATE home_member_attributes SET age_kind='child' WHERE user_id='peer'").run();assert.equal((await delivery('peer')).allowed,false);
+ await home.prepare("UPDATE home_member_attributes SET age_kind='adult' WHERE user_id='peer'").run();
+ ncal=(await (await call('/api/calendar/calendars','mom')).json()).find(c=>c.id===ncid);
+ assert.equal((await call('/api/calendar/calendars/'+ncid,'mom','PUT',{name:'限定通知',color:'#abcabc',visibility:{...ncal.visibility,members:['mom']}})).status,200);
+ assert.equal((await delivery('peer')).allowed,false);
+ await home.prepare("UPDATE users SET active=0 WHERE id='mom'").run();assert.equal((await delivery('mom')).allowed,false);await home.prepare("UPDATE users SET active=1 WHERE id='mom'").run();
  const publicIdentity=await (await call('/api/calendar/identity')).json();assert.equal('directory' in publicIdentity,false);
  assert.equal((await call('/api/calendar/events',null)).status,401);
  await home.prepare("UPDATE sessions SET revoked_at=? WHERE user_id='foreign'").bind(now).run();assert.equal((await call('/api/calendar/calendars','foreign')).status,401);

@@ -19,6 +19,8 @@ self.addEventListener('activate',event=>event.waitUntil(Promise.all([
   caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('wagaya-shell-')).map(key=>caches.delete(key)))),
   self.clients.claim()
 ])));
+self.addEventListener('push',event=>{let d={};try{d=event.data.json();}catch{}event.waitUntil(self.registration.showNotification(d.title||'我が家のお知らせ',{body:d.body||'',tag:d.tag||'wagaya-calendar',icon:'/wagaya/home-icon-192.png',data:{url:d.url||'/wagaya/apps/calendar/'}}));});
+self.addEventListener('notificationclick',event=>{event.notification.close();const url=new URL(event.notification.data?.url||'/wagaya/apps/calendar/',self.location.origin);if(url.origin!==self.location.origin)return;event.waitUntil(self.clients.openWindow(url.href));});
 // Authenticated HOME and private images always use the network; never cache user data.
 `;
 const pwa = `if('serviceWorker' in navigator)navigator.serviceWorker.register('/wagaya/sw.js',{scope:'/wagaya/',updateViaCache:'none'}).catch(()=>{});`;
@@ -63,3 +65,4 @@ export async function mountedHome(request: Request, dispatch: (request: Request)
   headers.delete("ETag");
   return new Response(text, {status:response.status,headers});
 }
+

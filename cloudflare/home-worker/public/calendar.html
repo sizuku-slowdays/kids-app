@@ -599,7 +599,7 @@
   </div>
 
   <div id="legend">
-    <button class="legend-add" onclick="openCalModal()">＋ カレンダーを追加</button>
+    <button class="legend-add" onclick="calendarOffers()">共有の招待</button><button class="legend-add" onclick="openCalModal()">＋ カレンダーを追加</button>
   </div>
 
   <div id="month-view">
@@ -683,7 +683,7 @@
         <label>毎月の繰り返し方法</label>
         <select id="ev-monthly-type-simple" onchange="updateMonthlyTypeSimple()">
           <option value="date">毎月同じ日付</option>
-          <option value="monthly_weekday">毎月同じ週・曜日</option>
+          <option valmonthly_weekday">毎月同じ週・曜日</option>
         </select>
       </div>
       <div id="ev-monthly-weekday-simple-row" style="display:none" class="frow">
@@ -791,6 +791,8 @@
         <input type="date" id="ev-recur-end-date">
       </div>
     </div>
+    <div class="frow"><label>誰の予定？</label><select id="ev-subject"></select></div>
+    <div class="frow"><label>この予定を見られる人</label><select id="ev-audience" onchange="toggleAudience()"><option value="inherit">カレンダーの参加者全員</option><option value="adults">大人だけ</option><option value="members">指定メンバー</option><option value="self">自分だけ</option></select><div id="ev-members"></div><small>カレンダーの公開範囲を超えて共有されません。</small><p id="ev-private-notice" style="font-size:12px;color:var(--text-sub)"></p></div>
     <div class="frow"><label>メモ</label><textarea id="ev-desc" placeholder="詳細・メモ"></textarea></div>
     <div class="frow">
       <label>リスト</label>
@@ -840,7 +842,7 @@
 <!-- カレンダー追加モーダル -->
 <div class="overlay" id="cal-overlay" onclick="closeCalModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
-    <h2>カレンダーを追加</h2>
+    <h2 id="cal-modal-title">カレンダーを追加</h2>
     <div class="frow"><label>名前 *</label><input type="text" id="cal-name" placeholder="例: 家族共通、私の予定"></div>
     <div class="frow">
       <label>色</label>
@@ -848,15 +850,16 @@
     </div>
     <div class="frow">
       <label>公開範囲</label>
-      <select id="cal-visibility">
-        <option value="shared">🌐 共通（家族みんなに見せる）</option>
-        <option value="private">🔒 個人（自分だけ見る）</option>
-      </select>
-      <div style="font-size:12px;color:var(--text-sub);margin-top:6px">共通にしても、予定を追加・編集・削除できるのは作った本人だけです。</div>
+      <select id="cal-visibility"><option value="all">参加者全員</option><option value="household">この家庭</option><option value="members">指定メンバー</option><option value="self">自分だけ</option></select>
     </div>
+    <div class="frow"><label>家庭</label><select id="cal-household" onchange="calendarMemberOptions()"></select></div>
+    <div class="frow"><label>閲覧するメンバー（指定メンバーの場合）</label><div id="cal-members"></div></div>
+    <div class="frow"><label>予定を登録できる人</label><select id="cal-posting"><option value="*">閲覧できる参加者全員</option><option value="self">自分だけ</option><option value="members">指定メンバー</option></select><div id="cal-editors"></div></div>
+    <details class="frow"><summary>別の家庭と共有</summary><label>招待する家庭ID（複数はカンマ区切り）</label><input id="cal-offers"><label>共有を取り消す家庭ID</label><input id="cal-revokes"><small>相手の家庭の管理者が許可すると参加できます。</small></details>
+    <p style="font-size:12px;color:var(--text-sub)">予定の変更・削除は登録した本人だけです。公開範囲を設定したカレンダーでは、旧通知センターへの予定通知を停止します。</p>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeCalModal()">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveCalendar()">追加</button>
+      <button class="btn btn-primary" onclick="saveCalendar()">保存</button>
     </div>
   </div>
 </div>
@@ -1014,7 +1017,8 @@ async function resyncNotificationsOnce() {
   }
 }
 function updateAvatar() { if (!myProfile) return; const btn = document.getElementById('avatar-btn'); btn.style.background = myProfile.avatar_color; btn.textContent = myProfile.display_name.charAt(0); document.getElementById('menu-name').textContent = myProfile.display_name; const isAdmin = myProfile.role === 'admin'; const gs = document.getElementById('google-settings-menu'); if (gs) gs.style.display = isAdmin ? '' : 'none'; const fm = document.getElementById('family-members-menu'); if (fm) fm.style.display = 'none'; }
-async function loadAll() { calendars = await api('/calendars'); renderLegend(); await loadEvents(); }
+let sharingData=null,editingCalendar=null,eventVisibility=null;
+async function loadAll() { sharingData=homeConnection?.acl_version?await api('/sharing'):null;calendars = await api('/calendars'); renderLegend(); await loadEvents(); }
 
 async function fetchGoogleEvents() {
   try {
@@ -1119,11 +1123,13 @@ function renderLegend() {
   calendars.forEach(cal => leg.insertBefore(makeLegendItem(cal.id, cal.name, cal.color, false), addBtn));
 }
 function makeLegendItem(id, name, color, isGoogle) {
+  color=safeColor(color);
   const el = document.createElement('div'); el.className = 'legend-item' + (hiddenCals.has(id) ? ' hidden' : ''); el.style.borderColor = color;
   const cal = isGoogle ? null : calendars.find(c => c.id === id);
   const scope = cal ? (cal.is_shared ? ' 🌐' : ' 🔒') : '';
   el.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${escapeHtml(name)}${scope}</span>`;
   el.onclick = () => toggleLegend(id, el);
+  if(cal?.can_manage && sharingData){const settings=document.createElement('button');settings.type='button';settings.textContent='⚙';settings.setAttribute('aria-label',name+'の共有設定');settings.style.cssText='border:0;background:none;padding:4px 8px';settings.onclick=e=>{e.stopPropagation();openCalModal(cal.id)};el.append(settings);}
   if (cal && cal.owner_google_id === myProfile?.google_id) {
     el.oncontextmenu = (e) => { e.preventDefault(); if (confirm(`「${name}」を削除しますか？予定もすべて削除されます`)) api(`/calendars/${id}`, 'DELETE').then(() => loadAll()).catch(e => alert('削除失敗: ' + e.message)); };
   }
@@ -1139,7 +1145,9 @@ async function loadEvents() {
 }
 
 function allEvents() { const orig = events.filter(e => !hiddenCals.has(e.calendar_id)); const g = gEvents.filter(e=>!hiddenCals.has(e.calendar_id)); return [...orig, ...g]; }
-function getColor(e) { if (e.is_google) return '#1a73e8'; if (e.creator_color) return e.creator_color; if (e.color) return e.color; return calendars.find(c => c.id === e.calendar_id)?.color || '#888'; }
+function safeColor(c){return /^#[0-9a-f]{3,8}$/i.test(c||'')?c:'#5b8dee';}
+function eventLabel(e){return (e.subject_name?e.subject_name+'：':'')+e.title;}
+function getColor(e){return safeColor(e.is_google?'#1a73e8':e.creator_color||e.color||calendars.find(c=>c.id===e.calendar_id)?.color);}
 
 function render() { const y = currentDate.getFullYear(), m = currentDate.getMonth(); document.getElementById('month-label').textContent = `${y}年${m+1}月`; if (viewMode === 'month') renderMonth(y, m); else renderWeek(); }
 
@@ -1157,7 +1165,7 @@ function renderMonth(y, m) {
     cell.onclick = () => { renderDayPanel(ds); };
     const dn = document.createElement('div'); dn.className = 'day-num'; dn.textContent = date.getDate(); cell.appendChild(dn);
     const dayEvs = ae.filter(e => evOnDate(e, ds));
-    dayEvs.slice(0, 3).forEach(e => { const chip = document.createElement('div'); chip.className = 'event-chip'; chip.style.background = getColor(e); chip.textContent = e.title; chip.onclick = ev => { ev.stopPropagation(); openDetail(e); }; cell.appendChild(chip); });
+    dayEvs.slice(0, 3).forEach(e => { const chip = document.createElement('div'); chip.className = 'event-chip'; chip.style.background = getColor(e); chip.textContent = eventLabel(e); chip.onclick = ev => { ev.stopPropagation(); openDetail(e); }; cell.appendChild(chip); });
     if (dayEvs.length > 3) { const more = document.createElement('div'); more.className = 'more-label'; more.textContent = `+${dayEvs.length - 3}件`; cell.appendChild(more); }
     grid.appendChild(cell);
   }
@@ -1167,17 +1175,18 @@ function renderMonth(y, m) {
 function renderWeek() {
   document.getElementById('month-view').style.display = 'none'; document.getElementById('week-view').style.display = '';
   document.getElementById('btn-month').classList.remove('active'); document.getElementById('btn-week').classList.add('active');
-  const wv = document.getElementById('week-view'), today = new Date(), ws = new Date(currentDate);
+  const wv = document.getElementById('week-view'), today = new Date(), ws = new Date(currentDat;
   ws.setDate(currentDate.getDate() - currentDate.getDay());
   const DAYS = ['日','月','火','水','木','金','土'], ae = allEvents(), H = 48;
 
+  const weekDetailEvents=[];const eventAttr=e=>{const index=weekDetailEvents.push(e)-1;return 'data-calendar-event="'+index+'"';};
   // 終日予定エリア
   let allDayHtml = '<div class="week-allday-grid"><div class="week-allday-label">終日</div>';
   for (let d = 0; d < 7; d++) {
     const dt = new Date(ws); dt.setDate(ws.getDate() + d); const ds = dateStr(dt);
     const dayAllDay = ae.filter(e => evOnDate(e, ds) && e.all_day);
     allDayHtml += `<div class="week-allday-col">`;
-    dayAllDay.forEach(e => { allDayHtml += `<div class="event-chip" style="background:${getColor(e)};margin-bottom:2px" onclick='openDetail(${JSON.stringify(e).replace(/"/g,"&quot;")})'>${e.title}</div>`; });
+    dayAllDay.forEach(e => { allDayHtml += `<div class="event-chip" style="background:${getColor(e)};margin-bottom:2px" ${eventAttr(e)}>${escapeHtml(eventLabel(e))}</div>`; });
     allDayHtml += `</div>`;
   }
   allDayHtml += '</div>';
@@ -1203,13 +1212,13 @@ function renderWeek() {
       const s = new Date(e.start_datetime), en = new Date(e.end_datetime);
       const top = (s.getHours()*60 + s.getMinutes()) / 60 * H;
       const ht = Math.max(((en - s) / 3600000) * H, 22);
-      const eJson = JSON.stringify(e).replace(/"/g,'&quot;');
-      html += `<div class="week-event" style="top:${top}px;height:${ht}px;background:${getColor(e)}" onclick='openDetail(${eJson})'>${e.title}</div>`;
+
+      html += `<div class="week-event" style="top:${top}px;height:${ht}px;background:${getColor(e)}" ${eventAttr(e)}>${escapeHtml(eventLabel(e))}</div>`;
     });
     html += `</div>`;
   }
   html += `</div></div>`;
-  wv.innerHTML = allDayHtml + html;
+  wv.innerHTML = allDayHtml + html;wv.querySelectorAll('[data-calendar-event]').forEach(el=>el.onclick=()=>openDetail(weekDetailEvents[Number(el.dataset.calendarEvent)]));
 }
 
 function dateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -1235,9 +1244,9 @@ function openEvModal(ev, defaultDate) {
   document.getElementById('ev-del-btn').style.display = ev ? '' : 'none';
   document.getElementById('ev-id').value = ev?.id || '';
   const sel = document.getElementById('ev-cal');
-  const writableCalendars = calendars.filter(c => c.is_shared || c.owner_google_id === myProfile?.google_id);
-  const optionCalendars = ev ? calendars.filter(c => c.id === ev.calendar_id || c.is_shared || c.owner_google_id === myProfile?.google_id) : writableCalendars;
-  sel.innerHTML = optionCalendars.map(c => `<option value="${c.id}" ${c.is_shared || c.owner_google_id === myProfile?.google_id ? '' : 'disabled'}>${escapeHtml(c.name)}${c.is_shared ? '（共通）' : '（個人）'}</option>`).join('');
+  const writableCalendars = calendars.filter(c => c.can_post ?? (c.is_shared || c.owner_google_id === myProfile?.google_id));
+  const optionCalendars = ev ? calendars.filter(c => c.id === ev.calendar_id || (c.can_post ?? (c.is_shared || c.owner_google_id === myProfile?.google_id))) : writableCalendars;
+  sel.innerHTML = optionCalendars.map(c => `<option value="${c.id}" ${c.can_post ?? (c.is_shared || c.owner_google_id === myProfile?.google_id) ? '' : 'disabled'}>${escapeHtml(c.name)}${c.is_shared ? '（共通）' : '（個人）'}</option>`).join('');
   if (!ev && !writableCalendars.length) { alert('自分のカレンダーを先に作成してください'); document.getElementById('ev-overlay').classList.remove('open'); return; }
   if (ev) {
     document.getElementById('ev-title').value = ev.title;
@@ -1260,6 +1269,7 @@ function openEvModal(ev, defaultDate) {
     document.getElementById('ev-end-date').value = base; document.getElementById('ev-end-time').value = '10:00';
     document.getElementById('ev-start-d').value = base; document.getElementById('ev-end-d').value = base;
   }
+  eventVisibility=ev?.visibility||null;document.getElementById('ev-audience').value=eventVisibility?.audience||'inherit';eventMemberOptions(eventVisibility);sel.onchange=()=>eventMemberOptions(null);document.getElementById('ev-subject').onchange=toggleAudience;
   toggleAllDay();
   toggleNotifyRecipient();
 }
@@ -1321,6 +1331,9 @@ async function saveEvent() {
   const cal = calendars.find(c => c.id === calId), notify_before = parseInt(document.getElementById('ev-notify').value), recurData = getRecurrenceData();
   const notification_recipient = document.getElementById('ev-notify-recipient').value;
   const body = { title, description: document.getElementById('ev-desc').value, start_datetime: start, end_datetime: end, all_day: allDay, calendar_id: calId, color: cal?.color || '#5b8dee', notify_before, notification_recipient, ...recurData, list_type: currentListType !== 'none' ? currentListType : null, list_items: currentListType !== 'none' ? getListItems() : null };
+  const audience=document.getElementById('ev-audience').value,subject=document.getElementById('ev-subject').value;
+  if(sharingData&&(eventVisibility||audience!=='inherit'||subject))body.visibility={audience,members:checkedMembers('ev-members'),subject_user_id:subject||null};
+  if(!sharingData&&(audience!=='inherit'||subject)){alert('先にカレンダーWorkerを更新してください');return;}
   const editId = document.getElementById('ev-id').value;
   try {
     if (editId) {
@@ -1344,21 +1357,29 @@ function openDetail(e) {
   document.getElementById('detail-bar').style.background = getColor(e); document.getElementById('detail-title').textContent = e.title;
   document.getElementById('detail-gbadge').style.display = e.is_google ? '' : 'none';
   const eventCal = e.is_google ? null : calendars.find(c => c.id === e.calendar_id);
-  const canEdit = !e.is_google && e.created_by_google_id === myProfile?.google_id;
+  const canEdit = !e.is_google && (e.editable ?? (e.created_by_google_id === myProfile?.google_id));
   document.getElementById('detail-edit-btn').style.display = canEdit ? '' : 'none';
   const s = fmtDt(e.start_datetime, e.all_day), en = fmtDt(e.end_datetime, e.all_day);
   document.getElementById('detail-time').textContent = e.all_day ? (s === en ? s : s + ' 〜 ' + en) : s + ' 〜 ' + en;
   const calName = e.is_google ? 'Googleカレンダー' : (calendars.find(c => c.id === e.calendar_id)?.name || '');
-  document.getElementById('detail-cal').innerHTML = `<span style="color:${getColor(e)}">●</span> ${calName}`;
-  document.getElementById('detail-desc').textContent = (e.creator_name ? '登録した人：'+e.creator_name+'\n' : '')+(e.description || ''); renderDetailList(e);
+  document.getElementById('detail-cal').innerHTML = `<span style="color:${getColor(e)}">●</span> ${escapeHtml(calName)}`;
+  document.getElementById('detail-desc').textContent = (e.subject_name?'誰の予定：'+e.subject_name+'\n':'')+(e.creator_name ? '登録した人：'+e.creator_name+'\n' : '')+(e.description || ''); renderDetailList(e);
 }
 function closeDetail(e) { if (e && e.target !== document.getElementById('detail-overlay')) return; document.getElementById('detail-overlay').classList.remove('open'); }
 function editFromDetail() { document.getElementById('detail-overlay').classList.remove('open'); openEvModal(detailEvent, null); }
 
-function openCalModal() { document.getElementById('cal-overlay').classList.add('open'); document.getElementById('cal-name').value = ''; document.getElementById('cal-visibility').value = 'shared'; selectedCalColor = PALETTE[calendars.length % PALETTE.length]; const cp = document.getElementById('cal-color-picker'); cp.innerHTML = PALETTE.map(c => `<div class="color-swatch${c===selectedCalColor?' selected':''}" style="background:${c}" onclick="selectCalColor(this,'${c}')"></div>`).join(''); }
+function memberChecks(target,users,selected=[]){const box=document.getElementById(target);box.replaceChildren();for(const u of users){const label=document.createElement('label');label.style.cssText='display:inline-flex;align-items:center;gap:4px;margin:6px 12px 6px 0';const check=document.createElement('input');check.type='checkbox';check.value=u.id;check.checked=selected.includes(u.id);label.append(check,document.createTextNode(u.name));box.append(label);}}
+function checkedMembers(target){return [...document.querySelectorAll('#'+target+' input:checked')].map(c=>c.value);}
+function calendarMemberOptions(){const list=editingCalendar?.participants||(sharingData?.users||[]).filter(u=>u.group_ids?.includes(document.getElementById('cal-household').value));memberChecks('cal-members',list,editingCalendar?.visibility?.members||[]);memberChecks('cal-editors',list,editingCalendar?.visibility?.editors||[]);}
+function eventMemberOptions(v){const cal=calendars.find(c=>c.id===document.getElementById('ev-cal').value),users=cal?.participants||[];const select=document.getElementById('ev-subject');select.replaceChildren(new Option('指定しない',''));for(const u of users)select.add(new Option(u.name,u.id));select.value=v?.subject_user_id||'';memberChecks('ev-members',users,v?.members||[]);toggleAudience();}
+function toggleAudience(){const audience=document.getElementById('ev-audience').value;document.getElementById('ev-members').style.display=audience==='members'?'':'none';const cal=calendars.find(c=>c.id===document.getElementById('ev-cal').value);document.getElementById('ev-private-notice').textContent=(cal?.visibility||audience!=='inherit'||document.getElementById('ev-subject').value||eventVisibility)?'この予定は旧通知センターへ通知しません。':'';}
+function openCalModal(id){if(!sharingData){alert('カレンダーWorkerの更新後に共有設定を利用できます');return;}editingCalendar=calendars.find(c=>c.id===id)||null;const cal=editingCalendar,v=cal?.visibility;document.getElementById('cal-overlay').classList.add('open');document.getElementById('cal-modal-title').textContent=cal?'カレンダーの設定':'カレンダーを追加';document.getElementById('cal-name').value=cal?.name||'';document.getElementById('cal-visibility').value=v?.mode||(cal?.is_shared?'household':'self');const groups=document.getElementById('cal-household');groups.replaceChildren();for(const g of sharingData.groups)groups.add(new Option(g.name+'（'+g.id+'）',g.id));groups.value=v?.household_id||(sharingData.groups.some(g=>g.id===homeConnection.household_id)?homeConnection.household_id:sharingData.groups[0]?.id)||'';groups.disabled=!!cal;document.getElementById('cal-posting').value=v?.editors.includes('*')?'*':v?.editors.length?'members':cal?.is_shared?'*':'self';calendarMemberOptions();document.getElementById('cal-offers').value='';document.getElementById('cal-revokes').value='';selectedCalColor=cal?.color||PALETTE[calendars.length%PALETTE.length];const cp=document.getElementById('cal-color-picker');cp.innerHTML=PALETTE.map(c=>`<div class="color-swatch${c===selectedCalColor?' selected':''}" style="background:${c}" onclick="selectCalColor(this,'${c}')"></div>`).join('');}
+async function calendarOffers(){try{const offers=await api('/sharing/offers');if(!offers.length){alert('共有の招待はありません');return;}for(const offer of offers)if(confirm('「'+offer.name+'」をこの家庭と共有しますか？'))await api('/calendars/'+offer.calendar_id+'/accept','POST',{group_id:offer.group_id});await loadAll();}catch(e){alert(e.message);}}
+
 function closeCalModal(e) { if (e && e.target !== document.getElementById('cal-overlay')) return; document.getElementById('cal-overlay').classList.remove('open'); }
 function selectCalColor(el, c) { document.querySelectorAll('#cal-color-picker .color-swatch').forEach(s => s.classList.remove('selected')); el.classList.add('selected'); selectedCalColor = c; }
-async function saveCalendar() { const name = document.getElementById('cal-name').value.trim(); if (!name) { alert('名前を入力してください'); return; } try { await api('/calendars', 'POST', { name, color: selectedCalColor, is_shared: document.getElementById('cal-visibility').value === 'shared' }); document.getElementById('cal-overlay').classList.remove('open'); await loadAll(); } catch(e) { alert('追加失敗: ' + e.message); } }
+async function saveCalendar(){const name=document.getElementById('cal-name').value.trim();if(!name){alert('名前を入力してください');return;}const posting=document.getElementById('cal-posting').value;const data={name,color:selectedCalColor,visibility:{mode:document.getElementById('cal-visibility').value,household_id:document.getElementById('cal-household').value,members:checkedMembers('cal-members'),editors:posting==='*'?['*']:posting==='self'?[]:checkedMembers('cal-editors'),revision:editingCalendar?.visibility?.revision},offer_groups:document.getElementById('cal-offers').value.split(',').map(s=>s.trim()).filter(Boolean),revoke_groups:document.getElementById('cal-revokes').value.split(',').map(s=>s.trim()).filter(Boolean)};try{await api('/calendars'+(editingCalendar?'/'+editingCalendar.id:''),editingCalendar?'PUT':'POST',data);closeCalModal();await loadAll();}catch(e){alert('保存失敗: '+e.message);}}
+
 
 function toggleUserMenu() {
   const menu=document.getElementById('user-menu'),anchor=document.getElementById('avatar-btn').getBoundingClientRect();
@@ -1503,7 +1524,7 @@ function renderDayPanel(ds) {
   const ae = allEvents().filter(e => evOnDate(e, ds)), list = document.getElementById('day-panel-list');
   if (ae.length === 0) { list.innerHTML = '<div class="day-panel-empty">予定はありません</div>'; return; }
   ae.sort((a, b) => (a.start_datetime || '') < (b.start_datetime || '') ? -1 : 1);
-  list.innerHTML = ae.map(e => { const color = getColor(e), time = e.all_day ? '終日' : (e.start_datetime || '').slice(11, 16); return `<div class="day-panel-item" onclick="openDetail(${JSON.stringify(e).replace(/"/g,'&quot;')})"><div class="day-panel-dot" style="background:${color}"></div><div class="day-panel-time">${time}</div><div class="day-panel-name">${e.title}</div></div>`; }).join('');
+  list.replaceChildren(...ae.map(e=>{const row=document.createElement('div');row.className='day-panel-item';row.onclick=()=>openDetail(e);const dot=document.createElement('div');dot.className='day-panel-dot';dot.style.background=getColor(e);const time=document.createElement('div');time.className='day-panel-time';time.textContent=e.all_day?'終日':(e.start_datetime||'').slice(11,16);const name=document.createElement('div');name.className='day-panel-name';name.textContent=eventLabel(e);row.append(dot,time,name);return row;}));
 }
 
 </script>

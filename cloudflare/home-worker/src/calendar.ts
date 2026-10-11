@@ -6,7 +6,14 @@ export async function calendarIdentity(env: CalendarEnv, user: IdentityUser, req
   if (group && !groups.some(g => g.id === group)) return Response.json({error:'この家庭のカレンダーは利用できません'},{status:403});
   const admin = user.platform_role === 'operator';
   const users = admin && group ? (await env.DB.prepare("SELECT u.id,u.login_name,u.display_name,u.platform_role FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.group_id=? AND u.active=1").bind(group).all()).results : [];
-  return Response.json({user:{id:user.id,display_name:user.display_name,login_name:user.login_name},admin,groups,users},{headers:{'Cache-Control':'private, no-store'}});
+  const internal=new URL(request.url).hostname==='calendar-auth.internal';
+  let directory:unknown[]=[];
+  if(internal){
+    const installed=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='home_member_attributes'").first();
+    const rows=(await env.DB.prepare(installed?"SELECT u.id,u.display_name,COALESCE(n.nickname,'') nickname,m.group_id,m.role,COALESCE(a.age_kind,'unknown') age_kind FROM users u JOIN memberships m ON m.user_id=u.id JOIN groups g ON g.id=m.group_id LEFT JOIN home_member_attributes a ON a.user_id=u.id AND a.group_id=m.group_id LEFT JOIN home_person_names n ON n.user_id=u.id WHERE u.active=1 AND g.kind='household'":"SELECT u.id,u.display_name,'' nickname,m.group_id,m.role,'unknown' age_kind FROM users u JOIN memberships m ON m.user_id=u.id JOIN groups g ON g.id=m.group_id WHERE u.active=1 AND g.kind='household'").all()).results;
+    directory=rows;
+  }
+  return Response.json({user:{id:user.id,display_name:user.display_name,login_name:user.login_name},admin,groups,users,...(internal?{directory}: {})},{headers:{'Cache-Control':'private, no-store'}});
 }
 export async function calendarProxy(env: CalendarEnv, request: Request, userId: string) {
   const expected=request.headers.get('X-Calendar-User');
@@ -15,7 +22,7 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
   const url = new URL(request.url);
   const path = url.pathname.slice('/api/calendar'.length) || '/home/status';
   // Only calendar routes. Never proxy arbitrary URLs, karada, login or OAuth.
-  if (!/^\/(?:home\/(?:status|link|remove-initial-calendar)|family\/(?:me|members(?:\/[^/]+)?)|users|me|calendars(?:\/[^/]+)?|events(?:\/[^/]+)?|google-events|integrations\/google-ics|holidays|notifications\/resync)$/.test(path)) return Response.json({error:'見つかりません'},{status:404});
+  if (!/^\/(?:home\/(?:status|link|remove-initial-calendar)|sharing(?:\/offers)?|family\/(?:me|members(?:\/[^/]+)?)|users|me|calendars(?:\/[^/]+(?:\/accept)?)?|events(?:\/[^/]+)?|google-events|integrations\/google-ics|holidays|notifications\/resync)$/.test(path)) return Response.json({error:'見つかりません'},{status:404});
   const upstream = new URL('https://calendar.internal'+path+url.search);
   const outgoing = new Headers({'X-Home-Calendar':'1'});
   // Strip the caller's legacy token and all impersonation headers.
@@ -29,6 +36,14 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
     if(state.privacy_version!=='20261005-owner-ics' && state.profile.google_id!=='family:mama'){
       if(request.method!=='GET')return Response.json({error:'このGoogle連携は本人だけが変更できます'},{status:403,headers:{'Cache-Control':'private, no-store'}});
       return Response.json(path==='/google-events'?[]:{configured:false,count:0},{headers:{'Cache-Control':'private, no-store'}});
+    }
+  }
+  if(['POST','PUT'].includes(request.method)){
+    const data=await request.clone().json().catch(()=>null) as {visibility?:unknown}|null;
+    if(data?.visibility!==undefined || request.method==='PUT'&&path.startsWith('/calendars/')){
+      const check=await env.CALENDAR_SERVICE.fetch(new Request('https://calendar.internal/home/status',{headers:outgoing}));
+      const state=check.ok?await check.json() as {acl_version?:string}:null;
+      if(state?.acl_version!=='20261011-participants-v1')return Response.json({error:'先にカレンダーWorkerの共有権限コードを反映してください'},{status:503,headers:{'Cache-Control':'private, no-store'}});
     }
   }
   const response = await env.CALENDAR_SERVICE.fetch(new Request(upstream,{method:request.method,headers:outgoing,body:['GET','HEAD'].includes(request.method)?null:request.body,redirect:'manual'}));

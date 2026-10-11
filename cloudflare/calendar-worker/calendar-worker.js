@@ -1019,7 +1019,16 @@ function calendarNotificationPayload(event) {
 
 
 
-async function syncCalendarNotification(env, event) {
+async function syncCalendarNotification(env, event, locked=false) {
+  if(!locked && event?.id && await env.DB.prepare("SELECT 1 FROM sqlite_master WHERE name='home_calendar_notification_locks'").first()){
+    const calendarId=event.calendar_id||(await env.DB.prepare('SELECT calendar_id FROM calendar_events WHERE id=?').bind(event.id).first())?.calendar_id;
+    if(calendarId)return withCalendarNotificationLock(env,calendarId,()=>syncCalendarNotification(env,event,true));
+  }
+  if(event?.calendar_id && await env.DB.prepare("SELECT 1 FROM sqlite_master WHERE name='home_calendar_acl'").first()){
+    const restricted=await env.DB.prepare('SELECT 1 FROM home_calendar_acl WHERE calendar_id=? UNION SELECT 1 FROM home_event_visibility WHERE event_id=? LIMIT 1').bind(event.calendar_id,event.id).first();
+    if(restricted)return removeCalendarNotification(env,event.id,true);
+  }
+
 
   const apiUrl = String(env.NOTIFICATION_API_URL || '').replace(/\/+$/, '');
 
@@ -1065,7 +1074,7 @@ async function syncCalendarNotification(env, event) {
 
 
 
-async function removeCalendarNotification(env, eventId) {
+async function removeCalendarNotification(env, eventId, locked=false) {
 
   return syncCalendarNotification(env, {
 
@@ -1079,13 +1088,13 @@ async function removeCalendarNotification(env, eventId) {
 
     notification_recipient: 'all',
 
-  });
+  },locked);
 
 }
 
 
 
-export default {
+const calendarWorker = {
 
   async fetch(request, env) {
 
@@ -1102,6 +1111,7 @@ export default {
     const path = url.pathname;
     const homeResponse = await homeCalendarGate(request,env,path);
     if(homeResponse)return homeResponse;
+    const advancedResponse=await advancedCalendarRoute(request,env,path);if(advancedResponse)return advancedResponse;
 
 
 
@@ -1347,7 +1357,7 @@ export default {
 
       const existing = await env.DB.prepare('SELECT role FROM family_members WHERE member_id = ? AND active = 1').bind(memberId).first();
 
-      if (!existing) return err('家族が見つかりません', 404);
+      if (!existing) return err('家族が見つかりません' 404);
 
       if (existing.role === 'admin') return err('管理者アカウントは削除できません');
 
@@ -1561,11 +1571,11 @@ export default {
 
       const rows = await env.DB.prepare(
 
-        'SELECT * FROM calendars WHERE is_shared = 1 OR owner_google_id = ? ORDER BY is_shared DESC, name'
+        homeCalendarContexts.has(request)?'SELECT * FROM calendars WHERE ? IS NOT NULL ORDER BY is_shared DESC,name':'SELECT * FROM calendars WHERE is_shared = 1 OR owner_google_id = ? ORDER BY is_shared DESC, name'
 
       ).bind(user.google_id).all();
 
-      return json(rows.results);
+      const visible=[];for(const cal of rows.results)if(await aclCanRead(request,env,cal))visible.push(await aclCalendarView(request,env,cal));return json(visible);
 
     }
 
@@ -1600,6 +1610,7 @@ export default {
       const errors = [];
 
       for (const event of rows.results || []) {
+        const cal=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(event.calendar_id).first();if(!cal||!await aclEventReadable(request,env,event,cal))continue;
 
         try {
 
@@ -1711,7 +1722,7 @@ export default {
 
         LEFT JOIN users u ON e.created_by_google_id = u.google_id
 
-        WHERE (c.is_shared = 1 OR c.owner_google_id = ?)
+        WHERE (${homeCalendarContexts.has(request)?"? IS NOT NULL":"c.is_shared = 1 OR c.owner_google_id = ?"})
 
         AND (e.recurrence_parent_id IS NULL OR e.recurrence_parent_id = '')
 
@@ -1729,11 +1740,14 @@ export default {
 
 
 
+      const calendarRows=(await env.DB.prepare('SELECT * FROM calendars').all()).results;
       let expanded = [];
 
       for (const ev of rows.results) {
 
-        const instances = expandRecurring(ev, from || '1900-01-01', to || '2100-12-31');
+        const cal=calendarRows.find(c=>c.id===ev.calendar_id);if(!cal||!await aclEventReadable(request,env,ev,cal))continue;
+        const visibleEvent=await aclEventView(request,env,ev,cal);
+        const instances = expandRecurring(visibleEvent, from || '1900-01-01', to || '2100-12-31');
 
         for (const inst of instances) {
 
@@ -1787,7 +1801,7 @@ export default {
 
       if (!cal) return err('カレンダーが見つかりません', 404);
 
-      if (!Number(cal.is_shared) && cal.owner_google_id !== user.google_id) return err('この個人カレンダーには予定を追加できません', 403);
+      if (!await aclCanPost(request,env,cal)) return err('このカレンダーには予定を追加できません',403);
 
 
 
@@ -1795,7 +1809,7 @@ export default {
 
       const now = new Date().toISOString();
 
-      await env.DB.prepare(
+      await aclEventWrite(env,request,id,env.DB.prepare(
 
         `INSERT INTO calendar_events
 
@@ -1831,7 +1845,7 @@ export default {
 
         now, now
 
-      ).run();
+      ));
 
       const created = await env.DB.prepare('SELECT * FROM calendar_events WHERE id = ?').bind(id).first();
 
@@ -1883,7 +1897,7 @@ export default {
 
       if (!ev) return err('予定が見つかりません', 404);
 
-      if ((!Number(ev.is_shared) && ev.cal_owner !== user.google_id) || ev.created_by_google_id !== user.google_id) return err('この予定は登録した本人だけが編集できます', 403);
+      if ((!homeCalendarContexts.has(request) && !Number(ev.is_shared) && ev.cal_owner !== user.google_id) || ev.created_by_google_id !== user.google_id) return err('この予定は登録した本人だけが編集できます', 403);
 
 
 
@@ -1907,7 +1921,7 @@ export default {
 
       const destination=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(calendar_id).first();
       if (!destination) return err('カレンダーが見つかりません',404);
-      if (!Number(destination.is_shared) && destination.owner_google_id!==user.google_id) return err('この個人カレンダーには予定を移動できません',403);
+      if (!await aclCanPost(request,env,destination)) return err('このカレンダーには予定を移動できません',403);
 
       const isRecurring = evOrig && evOrig.recurrence_type && evOrig.recurrence_type !== 'none';
 
@@ -1923,15 +1937,13 @@ export default {
 
         if (!exceptions.includes(date)) exceptions.push(date);
 
-        await env.DB.prepare('UPDATE calendar_events SET recurrence_exceptions = ? WHERE id = ?')
-
-          .bind(exceptions.join(','), id).run();
+        const exceptionStatement=env.DB.prepare('UPDATE calendar_events SET recurrence_exceptions = ? WHERE id = ?').bind(exceptions.join(','), id);
 
         const newId = genId();
 
         createdSingleId = newId;
 
-        await env.DB.prepare(
+        await aclEventWrite(env,request,newId,env.DB.prepare(
 
           `INSERT INTO calendar_events
 
@@ -1955,11 +1967,11 @@ export default {
 
           list_type || null, list_items ? JSON.stringify(list_items) : null, now, now
 
-        ).run();
+        ),[exceptionStatement],id);
 
       } else {
 
-        await env.DB.prepare(
+        await aclEventWrite(env,request,id,env.DB.prepare(
 
           `UPDATE calendar_events SET
 
@@ -1993,7 +2005,7 @@ export default {
 
           now, id
 
-        ).run();
+        ));
 
       }
 
@@ -2055,7 +2067,7 @@ export default {
 
       if (!ev) return err('予定が見つかりません', 404);
 
-      if ((!Number(ev.is_shared) && ev.cal_owner !== user.google_id) || ev.created_by_google_id !== user.google_id) return err('この予定は登録した本人だけが削除できます', 403);
+      if ((!homeCalendarContexts.has(request) && !Number(ev.is_shared) && ev.cal_owner !== user.google_id) || ev.created_by_google_id !== user.google_id) return err('この予定は登録した本人だけが削除できます', 403);
 
 
 
@@ -2548,7 +2560,7 @@ async function homeCalendarIdentity(request, env, group) {
   if (!env.HOME_AUTH) return null;
   const cookie = request.headers.get('Cookie');
   if (!cookie) return null;
-  const url = new URL('https://home-worker.sslowdayss.workers.dev/api/calendar/identity');
+  const url = new URL('https://calendar-auth.internal/api/calendar/identity');
   if (group) url.searchParams.set('group', group);
   const response = await env.HOME_AUTH.fetch(new Request(url,{headers:{Cookie:cookie}}));
   return response.ok ? response.json() : null;
@@ -2556,6 +2568,7 @@ async function homeCalendarIdentity(request, env, group) {
 async function getHomeCalendarUser(request, env) {
   const context = homeCalendarContexts.get(request);
   if (!context?.identity || !context.bound) return null;
+  if (!context.identity.groups.some(g=>g.id===context.bound)) return {google_id:'home:'+context.identity.user.id,profile_key:'home_'+context.identity.user.id,name:context.identity.user.display_name,avatar_color:'#5b9a82',role:'member'};
   const profile = await env.DB.prepare('SELECT f.* FROM home_calendar_links l JOIN family_members f ON f.member_id=l.member_id WHERE l.home_user_id=? AND l.household_id=? AND f.active=1').bind(context.identity.user.id,context.bound).first();
   return profile ? {google_id:'family:'+profile.member_id,profile_key:profile.member_id,name:profile.display_name,avatar_color:profile.avatar_color,role:profile.role} : null;
 }
@@ -2568,14 +2581,16 @@ async function homeCalendarGate(request, env, path) {
   if (!marked) return bound ? err('HOMEからログインしてカレンダーを開いてください',401) : null;
   if (!env.HOME_AUTH) return err('CloudflareでHOME_AUTHをhome-workerへ接続してください',503);
   if (!['GET','HEAD'].includes(request.method) && !['https://cetus.fun','https://home-worker.sslowdayss.workers.dev'].includes(request.headers.get('Origin'))) return err('HOMEから操作してください',403);
-  const identity = await homeCalendarIdentity(request,env,bound || new URL(request.url).searchParams.get('group'));
+  let identity = await homeCalendarIdentity(request,env,new URL(request.url).searchParams.get('group'));
+  if(identity && bound && identity.groups.some(g=>g.id===bound)) identity=await homeCalendarIdentity(request,env,bound);
   if (!identity) return err('HOMEにログインしてください',401);
   homeCalendarContexts.set(request,{identity,bound});
+  await ensureCalendarAcl(env);
   if (path === '/home/status' && request.method === 'GET') {
     const profile = await getHomeCalendarUser(request,env);
-    const profiles = identity.admin ? (await env.DB.prepare('SELECT member_id,display_name,role FROM family_members WHERE active=1 ORDER BY created_at').all()).results : [];
-    const links = identity.admin ? (await env.DB.prepare('SELECT home_user_id,member_id FROM home_calendar_links').all()).results : [];
-    return json({privacy_version:'20261005-owner-ics',user:identity.user,admin:identity.admin,groups:identity.groups,users:identity.users,household_id:bound||null,profile,profiles,links});
+    const profiles = identity.admin && (!bound||identity.groups.some(g=>g.id===bound)) ? (await env.DB.prepare('SELECT member_id,display_name,role FROM family_members WHERE active=1 ORDER BY created_at').all()).results : [];
+    const links = identity.admin && (!bound||identity.groups.some(g=>g.id===bound)) ? (await env.DB.prepare('SELECT home_user_id,member_id FROM home_calendar_links').all()).results : [];
+    return json({privacy_version:'20261005-owner-ics',acl_version:Array.isArray(identity.directory)?CALENDAR_ACL_VERSION:null,user:identity.user,admin:identity.admin,groups:identity.groups,users:identity.users,household_id:bound||null,profile,profiles,links});
   }
   if (path === '/home/link' && request.method === 'POST') {
     if (!identity.admin) return err('HOME管理者だけが連携を設定できます',403);
@@ -2656,3 +2671,97 @@ async function retireInitialFamilyCalendar(request,env) {
   for(const event of events)try{await removeCalendarNotification(env,event.id);}catch{console.error('INITIAL_CALENDAR_NOTIFICATION_CLEANUP_FAILED');}
   return json({ok:true,removed:true,calendar_id:calendar.id,backed_up_events:events.length,completed:true});
 }
+
+const calendarAclSchema=["CREATE TABLE IF NOT EXISTS home_calendar_acl (\n calendar_id TEXT PRIMARY KEY, owner_home_id TEXT NOT NULL, household_id TEXT NOT NULL,\n mode TEXT NOT NULL CHECK(mode IN ('all','household','members','self')),\n members_json TEXT NOT NULL CHECK(json_valid(members_json)), editors_json TEXT NOT NULL CHECK(json_valid(editors_json)),\n revision INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL\n);", "\nCREATE TABLE IF NOT EXISTS home_calendar_participation (\n calendar_id TEXT NOT NULL, group_id TEXT NOT NULL, offered_by TEXT NOT NULL,\n accepted_by TEXT, accepted_at TEXT, revoked_at TEXT, PRIMARY KEY(calendar_id,group_id)\n);", "\nCREATE TABLE IF NOT EXISTS home_event_visibility (\n event_id TEXT PRIMARY KEY, owner_home_id TEXT NOT NULL,\n audience TEXT NOT NULL CHECK(audience IN ('inherit','adults','members','self')),\n members_json TEXT NOT NULL CHECK(json_valid(members_json)), subject_user_id TEXT,\n updated_at TEXT NOT NULL\n);", "\nCREATE TABLE IF NOT EXISTS home_calendar_policy_backups (\n id TEXT PRIMARY KEY, calendar_id TEXT NOT NULL, actor_home_id TEXT NOT NULL,\n calendar_json TEXT NOT NULL, events_json TEXT NOT NULL, policies_json TEXT NOT NULL,\n calendar_count INTEGER NOT NULL, event_count INTEGER NOT NULL, created_at TEXT NOT NULL\n);", "\nCREATE TABLE IF NOT EXISTS home_calendar_notification_locks (\n calendar_id TEXT PRIMARY KEY, token TEXT NOT NULL, created_at TEXT NOT NULL\n);"];
+// Sidecar policies: no policy means the unchanged legacy household/owner rules.
+const CALENDAR_ACL_VERSION='20261011-participants-v1';
+function aclCheck(ok,message,status=400){if(!ok)throw Object.assign(new Error(message),{status});}
+const aclJson=value=>JSON.parse(value||'[]');
+async function ensureCalendarAcl(env){
+ await env.DB.batch(calendarAclSchema.map(sql=>env.DB.prepare(sql)));
+}
+async function calendarAclState(request,env){
+ const ctx=homeCalendarContexts.get(request);if(!ctx)return null;if(ctx.acl)return ctx.acl;
+ const results=await env.DB.batch([env.DB.prepare('SELECT * FROM home_calendar_acl'),env.DB.prepare('SELECT * FROM home_calendar_participation'),env.DB.prepare('SELECT * FROM home_event_visibility'),env.DB.prepare('SELECT * FROM home_calendar_links')]);
+ ctx.acl={policies:new Map(results[0].results.map(p=>[p.calendar_id,p])),participations:results[1].results,events:new Map(results[2].results.map(p=>[p.event_id,p])),links:results[3].results};return ctx.acl;
+}
+function homeIdForGoogle(ctx,acl,googleId){if(googleId?.startsWith('home:'))return googleId.slice(5);if(googleId?.startsWith('family:'))return acl.links.find(l=>l.member_id===googleId.slice(7))?.home_user_id||null;return null;}
+function aclParticipants(ctx,acl,policy){const groups=new Set([policy.household_id,...acl.participations.filter(p=>p.calendar_id===policy.calendar_id&&p.accepted_at&&!p.revoked_at).map(p=>p.group_id)]);return (ctx.identity.directory||[]).filter(p=>groups.has(p.group_id));}
+async function aclCanRead(request,env,cal){
+ const ctx=homeCalendarContexts.get(request);if(!ctx){const user=await getUser(request,env);return Boolean(user&&(Number(cal.is_shared)||cal.owner_google_id===user.google_id));}
+ const acl=await calendarAclState(request,env),policy=acl.policies.get(cal.id),uid=ctx.identity.user.id;
+ if(!policy){const user=await getHomeCalendarUser(request,env);return Boolean(user&&ctx.bound&&ctx.identity.groups.some(g=>g.id===ctx.bound)&&(Number(cal.is_shared)||cal.owner_google_id===user.google_id));}
+ const participants=aclParticipants(ctx,acl,policy);if(!participants.some(p=>p.id===uid))return false;if(policy.owner_home_id===uid)return true;
+ if(policy.mode==='self')return false;if(policy.mode==='members')return aclJson(policy.members_json).includes(uid);if(policy.mode==='household')return participants.some(p=>p.id===uid&&p.group_id===policy.household_id);return true;
+}
+async function aclCanPost(request,env,cal){if(!await aclCanRead(request,env,cal))return false;const ctx=homeCalendarContexts.get(request);if(!ctx){const u=await getUser(request,env);return Boolean(u&&(Number(cal.is_shared)||cal.owner_google_id===u.google_id));}const acl=await calendarAclState(request,env),p=acl.policies.get(cal.id);if(!p)return true;const ids=aclJson(p.editors_json);return p.owner_home_id===ctx.identity.user.id||ids.includes('*')||ids.includes(ctx.identity.user.id);}
+async function aclEventReadable(request,env,event,cal){if(!await aclCanRead(request,env,cal))return false;const ctx=homeCalendarContexts.get(request);if(!ctx)return true;const acl=await calendarAclState(request,env),p=acl.events.get(event.id);if(!p)return true;const uid=ctx.identity.user.id;if(p.owner_home_id===uid)return true;if(p.audience==='self')return false;if(p.audience==='members')return aclJson(p.members_json).includes(uid);if(p.audience==='adults'){const cp=acl.policies.get(cal.id);const groups=cp?new Set(aclParticipants(ctx,acl,cp).map(x=>x.group_id)):new Set([ctx.bound]);return (ctx.identity.directory||[]).some(u=>u.id===uid&&groups.has(u.group_id)&&u.age_kind==='adult');}return true;}
+async function aclCalendarView(request,env,cal){const ctx=homeCalendarContexts.get(request);if(!ctx)return cal;const acl=await calendarAclState(request,env),p=acl.policies.get(cal.id),user=await getHomeCalendarUser(request,env);const list=p?aclParticipants(ctx,acl,p):(ctx.identity.directory||[]).filter(u=>u.group_id===ctx.bound);const dedup=[...new Map(list.map(u=>[u.id,{id:u.id,name:u.nickname||u.display_name,age_kind:u.age_kind}])).values()];return {...cal,visibility:p?{mode:p.mode,household_id:p.household_id,members:aclJson(p.members_json),editors:aclJson(p.editors_json),revision:p.revision}:null,participants:dedup,can_manage:p?p.owner_home_id===ctx.identity.user.id:cal.owner_google_id===user?.google_id,can_post:await aclCanPost(request,env,cal),notifications_supported:!p};}
+async function aclEventView(request,env,event,cal){const ctx=homeCalendarContexts.get(request);if(!ctx)return event;const acl=await calendarAclState(request,env),p=acl.events.get(event.recurrence_parent_id||event.id)||acl.events.get(event.id);const subject=(ctx.identity.directory||[]).find(u=>u.id===p?.subject_user_id),creator=(ctx.identity.directory||[]).find(u=>u.id===homeIdForGoogle(ctx,acl,event.created_by_google_id));const user=await getHomeCalendarUser(request,env);return {...event,creator_name:creator?(creator.nickname||creator.display_name):event.creator_name,subject_name:subject?(subject.nickname||subject.display_name):'',visibility:p?{audience:p.audience,members:aclJson(p.members_json),subject_user_id:p.subject_user_id}:null,editable:event.created_by_google_id===user?.google_id&&await aclCanPost(request,env,cal)};}
+async function aclValidateEvent(request,env,data,cal,sourceId){
+ const ctx=homeCalendarContexts.get(request);if(!ctx||data.visibility===undefined)return null;aclCheck(Array.isArray(ctx.identity.directory),'先にHOMEを更新してください',503);const acl=await calendarAclState(request,env),prior=acl.events.get(sourceId),v=data.visibility;
+ aclCheck(v&&typeof v==='object'&&!Array.isArray(v),'予定の公開範囲を確認してください');const audience=v.audience||prior?.audience||'inherit';aclCheck(['inherit','adults','members','self'].includes(audience),'予定の公開範囲を確認してください');
+ const cp=acl.policies.get(cal.id),list=cp?aclParticipants(ctx,acl,cp):(ctx.identity.directory||[]).filter(u=>u.group_id===ctx.bound),ids=new Set(list.map(u=>u.id));const members=v.members||[];aclCheck(Array.isArray(members)&&members.length<=500&&new Set(members).size===members.length&&members.every(id=>typeof id==='string'&&ids.has(id)),'カレンダー参加者から閲覧する人を選んでください');aclCheck(audience!=='members'||members.length>0,'閲覧する人を選んでください');const subject=v.subject_user_id||null;aclCheck(!subject||typeof subject==='string'&&ids.has(subject),'カレンダー参加者から予定の人を選んでください');
+ return {owner_home_id:prior?.owner_home_id||ctx.identity.user.id,audience,members_json:JSON.stringify(members),subject_user_id:subject};
+}
+async function aclEventWrite(env,request,eventId,statement,extra=[],sourceId=eventId){
+ const ctx=homeCalendarContexts.get(request),data=ctx?.eventBody;let policy=null;
+ if(ctx){const cal=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(data.calendar_id).first();aclCheck(cal&&await aclCanPost(request,env,cal),'このカレンダーには登録できません',403);policy=await aclValidateEvent(request,env,data,cal,sourceId);const acl=await calendarAclState(request,env);if(!policy&&sourceId!==eventId&&acl.events.has(sourceId))policy=acl.events.get(sourceId);}
+ const statements=[...extra,statement];
+ if(policy){statements.push(env.DB.prepare('INSERT INTO home_event_visibility(event_id,owner_home_id,audience,members_json,subject_user_id,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(event_id) DO UPDATE SET audience=excluded.audience,members_json=excluded.members_json,subject_user_id=excluded.subject_user_id,updated_at=excluded.updated_at').bind(eventId,policy.owner_home_id,policy.audience,policy.members_json,policy.subject_user_id,new Date().toISOString()));}
+ const source=policy?await env.DB.prepare('SELECT calendar_id FROM calendar_events WHERE id=?').bind(sourceId).first():null;const keys=policy?[...new Set([data.calendar_id,source?.calendar_id].filter(Boolean))].sort():[];await withCalendarNotificationLocks(env,keys,async()=>{if(policy)await aclStopOldNotification(env,sourceId,true);await env.DB.batch(statements);});if(ctx)ctx.acl=null;
+}
+async function aclSnapshot(env,calendarId,actor){const calendar=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(calendarId).first(),events=(await env.DB.prepare('SELECT * FROM calendar_events WHERE calendar_id=?').bind(calendarId).all()).results,policy=await env.DB.prepare('SELECT * FROM home_calendar_acl WHERE calendar_id=?').bind(calendarId).first(),eventPolicies=(await env.DB.prepare('SELECT v.* FROM home_event_visibility v JOIN calendar_events e ON e.id=v.event_id WHERE e.calendar_id=?').bind(calendarId).all()).results,participation=(await env.DB.prepare('SELECT * FROM home_calendar_participation WHERE calendar_id=?').bind(calendarId).all()).results;return env.DB.prepare('INSERT INTO home_calendar_policy_backups VALUES(?,?,?,?,?,?,?,?,?)').bind(genId(),calendarId,actor,JSON.stringify(calendar),JSON.stringify(events),JSON.stringify({policy,eventPolicies,participation}),calendar?1:0,events.length,new Date().toISOString());}
+// No timed expiry: a failed invocation leaves a fail-closed lock for an administrator to inspect.
+async function withCalendarNotificationLock(env,calendarId,operation){const token=genId();try{await env.DB.prepare('INSERT INTO home_calendar_notification_locks VALUES(?,?,?)').bind(calendarId,token,new Date().toISOString()).run();}catch(e){if(String(e).includes('UNIQUE'))throw Object.assign(new Error('通知の処理中です。少し待って再試行してください'),{status:503});throw e;}try{return await operation();}finally{await env.DB.prepare('DELETE FROM home_calendar_notification_locks WHERE calendar_id=? AND token=?').bind(calendarId,token).run();}}
+async function withCalendarNotificationLocks(env,keys,operation){if(!keys.length)return operation();return withCalendarNotificationLock(env,keys[0],()=>withCalendarNotificationLocks(env,keys.slice(1),operation));}
+async function aclStopOldNotification(env,eventId,locked=false){const prior=await env.DB.prepare('SELECT notify_before FROM calendar_events WHERE id=?').bind(eventId).first();try{const result=await removeCalendarNotification(env,eventId,locked);aclCheck(!prior||Number(prior.notify_before??-1)<0||!result.skipped,'既存の通知を停止できません。通知連携の設定を確認してください',503);}catch(e){if(e.status)throw e;throw Object.assign(new Error('既存の通知を停止できません。設定を確認して再試行してください'),{status:503});}}
+async function aclPauseNotifications(env,calendarId,locked=false){const events=(await env.DB.prepare('SELECT id FROM calendar_events WHERE calendar_id=?').bind(calendarId).all()).results;for(const e of events)await aclStopOldNotification(env,e.id,locked);}
+async function advancedCalendarRoute(request,env,path){
+ const ctx=homeCalendarContexts.get(request);if(!ctx){if(path.startsWith('/sharing')||request.method==='PUT'&&path.startsWith('/calendars/'))return err('HOMEからログインしてください',401);return null;}
+ const acl=await calendarAclState(request,env),uid=ctx.identity.user.id,user=await getHomeCalendarUser(request,env);
+ if(['/members','/users','/family/members'].includes(path)&&request.method==='GET'){
+ const own=new Set(ctx.identity.groups.map(g=>g.id));const directory=(ctx.identity.directory||[]).filter(u=>own.has(u.group_id));
+ const ids=new Set(directory.map(u=>u.id));const links=acl.links.filter(l=>ids.has(l.home_user_id));
+ if(path==='/family/members'){const rows=(await env.DB.prepare('SELECT member_id,display_name,avatar_color,role FROM family_members WHERE active=1').all()).results;return json(rows.filter(r=>links.some(l=>l.member_id===r.member_id)));}
+ return json([...new Map(directory.map(u=>{const l=links.find(l=>l.home_user_id===u.id);return [u.id,{google_id:l?'family:'+l.member_id:'home:'+u.id,display_name:u.nickname||u.display_name,avatar_color:'#5b9a82'}]})).values()]);
+ }
+ if(path==='/family/me'&&request.method==='GET'&&user?.google_id.startsWith('home:'))return json({google_id:user.google_id,display_name:user.name,avatar_color:user.avatar_color,profile_key:user.profile_key,role:'member'});
+ if(path==='/sharing'&&request.method==='GET'){
+ const ownGroups=new Set(ctx.identity.groups.map(g=>g.id));const users=[...new Map((ctx.identity.directory||[]).filter(u=>ownGroups.has(u.group_id)).map(u=>[u.id,{id:u.id,name:u.nickname||u.display_name,age_kind:u.age_kind,group_ids:[...new Set(ctx.identity.directory.filter(p=>p.id===u.id&&ownGroups.has(p.group_id)).map(p=>p.group_id))]}])).values()];return json({version:CALENDAR_ACL_VERSION,groups:ctx.identity.groups,users});
+ }
+ if(path==='/sharing/offers'&&request.method==='GET'){
+ const groupIds=new Set(ctx.identity.groups.filter(g=>['owner','admin'].includes(g.role)).map(g=>g.id));const offers=acl.participations.filter(p=>groupIds.has(p.group_id)&&!p.accepted_at&&!p.revoked_at);const cals=(await env.DB.prepare('SELECT id,name FROM calendars').all()).results;return json(offers.map(o=>({calendar_id:o.calendar_id,group_id:o.group_id,name:cals.find(c=>c.id===o.calendar_id)?.name||'カレンダー'})));
+ }
+ const match=path.match(/^\/calendars\/([^/]+)(\/accept)?$/);
+ if(match&&match[2]&&request.method==='POST'){
+ const data=await request.json();aclCheck(ctx.identity.groups.some(g=>g.id===data.group_id&&['owner','admin'].includes(g.role)),'この家庭の管理者だけが参加を許可できます',403);const offer=acl.participations.find(p=>p.calendar_id===match[1]&&p.group_id===data.group_id&&!p.revoked_at);aclCheck(offer,'参加の招待が見つかりません',404);await env.DB.prepare('UPDATE home_calendar_participation SET accepted_by=?,accepted_at=? WHERE calendar_id=? AND group_id=? AND accepted_at IS NULL AND revoked_at IS NULL').bind(uid,new Date().toISOString(),match[1],data.group_id).run();return json({ok:true});
+ }
+ if(path==='/calendars'&&request.method==='POST'||match&&!match[2]&&request.method==='PUT'){
+ const data=await request.clone().json();if(request.method==='POST'&&data.visibility===undefined){aclCheck(ctx.identity.groups.some(g=>g.id===ctx.bound),'公開範囲を選んでください',400);return null;}aclCheck(Array.isArray(ctx.identity.directory),'先にHOMEの認証基盤を更新してください',503);
+ const existing=match?await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(match[1]).first():null;if(match)aclCheck(existing,'カレンダーが見つかりません',404);const prior=existing?acl.policies.get(existing.id):null;aclCheck(!existing||(prior?prior.owner_home_id===uid:existing.owner_google_id===user?.google_id),'設定を変更できるのは所有者だけです',403);aclCheck(!existing||await aclCanRead(request,env,existing),'このカレンダーは利用できません',403);
+ const v=data.visibility;aclCheck(v&&['all','household','members','self'].includes(v.mode),'公開範囲を確認してください');const household=prior?.household_id||v.household_id||ctx.bound;aclCheck(ctx.identity.groups.some(g=>g.id===household),'所属する家庭を選んでください',403);if(existing&&!prior)aclCheck(household===ctx.bound,'既存カレンダーの家庭は変更できません',403);const cid=existing?.id||genId(),now=new Date().toISOString();const newPolicy={calendar_id:cid,household_id:household,owner_home_id:uid};const participants=aclParticipants(ctx,acl,newPolicy),available=new Set(participants.map(p=>p.id));const members=v.members||[],editors=v.editors||[];aclCheck(Array.isArray(members)&&members.length<=500&&members.every(id=>available.has(id)),'参加者から閲覧する人を選んでください');aclCheck(v.mode!=='members'||members.length>0,'閲覧する人を選んでください');aclCheck(Array.isArray(editors)&&editors.length<=500&&editors.every(id=>id==='*'||available.has(id)),'参加者から登録する人を選んでください');aclCheck(!prior||v.revision===prior.revision,'別の端末で設定が変わりました。読み直してください',409);
+ const name=String(data.name||existing?.name||'').trim(),color=String(data.color||existing?.color||'#5b8dee');aclCheck(name.length>0&&name.length<=100&&/^#[0-9a-fA-F]{6}$/.test(color),'名前と色を確認してください');
+ const offerGroups=data.offer_groups||[];aclCheck(Array.isArray(offerGroups)&&offerGroups.length<=100&&offerGroups.every(id=>typeof id==='string'&&(ctx.identity.directory||[]).some(u=>u.group_id===id)),'共有する家庭のIDを確認してください');
+ return withCalendarNotificationLock(env,cid,async()=>{
+ if(existing)await aclPauseNotifications(env,cid,true);
+ const statements=[];if(existing)statements.push(await aclSnapshot(env,cid,uid));
+ if(existing){if(prior)statements.push(env.DB.prepare('INSERT INTO home_calendar_policy_backups(id,calendar_id,actor_home_id,calendar_json,events_json,policies_json,calendar_count,event_count,created_at) SELECT ?,?,?,?, ?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM home_calendar_acl WHERE calendar_id=? AND revision=?)').bind(genId(),cid,uid,'','',null,0,0,now,cid,v.revision));}
+ statements.push(existing?env.DB.prepare('UPDATE calendars SET name=?,color=? WHERE id=?').bind(name,color,cid):env.DB.prepare('INSERT INTO calendars VALUES(?,?,?,?,?,?)').bind(cid,name,color,user.google_id,v.mode==='self'?0:1,now));
+ statements.push(env.DB.prepare('INSERT INTO home_calendar_acl VALUES(?,?,?,?,?,?,1,?) ON CONFLICT(calendar_id) DO UPDATE SET mode=excluded.mode,members_json=excluded.members_json,editors_json=excluded.editors_json,revision=home_calendar_acl.revision+1,updated_at=excluded.updated_at').bind(cid,uid,household,v.mode,JSON.stringify([...new Set(members)]),JSON.stringify([...new Set(editors)]),now));
+ for(const g of offerGroups)if(g!==household)statements.push(env.DB.prepare('INSERT INTO home_calendar_participation VALUES(?,?,?,NULL,NULL,NULL) ON CONFLICT(calendar_id,group_id) DO UPDATE SET offered_by=excluded.offered_by,accepted_by=NULL,accepted_at=NULL,revoked_at=NULL WHERE home_calendar_participation.revoked_at IS NOT NULL').bind(cid,g,uid));
+ const revoked=data.revoke_groups||[];aclCheck(Array.isArray(revoked)&&revoked.every(g=>typeof g==='string'&&g!==household),'取消対象を確認してください');for(const g of revoked)statements.push(env.DB.prepare('UPDATE home_calendar_participation SET revoked_at=? WHERE calendar_id=? AND group_id=?').bind(now,cid,g));
+ try{await env.DB.batch(statements);}catch(e){if(String(e).includes('NOT NULL'))return err('別の端末で設定が変わりました。読み直してください',409);throw e;}ctx.acl=null;return json(await aclCalendarView(request,env,{id:cid,name,color,owner_google_id:existing?.owner_google_id||user.google_id,is_shared:existing?.is_shared??(v.mode==='self'?0:1)}),existing?200:201);
+ });
+ }
+ if(path==='/events'&&request.method==='POST'||path.startsWith('/events/')&&request.method==='PUT'){
+ const data=await request.clone().json();if(path!=='/events'){const original=await env.DB.prepare('SELECT * FROM calendar_events WHERE id=?').bind(path.split('/')[2].replace(/_\d+$/,'')).first();if(original)aclCheck(original.created_by_google_id===user.google_id,'この予定は登録した本人だけが編集できます',403);}aclCheck(typeof data.calendar_id==='string','カレンダーを選んでください');const cal=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(data.calendar_id).first();aclCheck(cal&&await aclCanPost(request,env,cal),'このカレンダーには予定を登録できません',403);const source=path==='/events'?null:path.split('/')[2].replace(/_\d+$/,'');if(source){const ev=await env.DB.prepare('SELECT * FROM calendar_events WHERE id=?').bind(source).first();if(ev){const priorCal=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(ev.calendar_id).first();aclCheck(priorCal&&await aclEventReadable(request,env,ev,priorCal),'予定が見つかりません',404);aclCheck(await aclCanPost(request,env,priorCal),'この予定は変更できません',403);}}
+ await aclValidateEvent(request,env,data,cal,source);ctx.eventBody=data;
+ }
+ if(path.startsWith('/events/')&&request.method==='DELETE'){
+ const eid=path.split('/')[2].replace(/_\d+$/,''),ev=await env.DB.prepare('SELECT * FROM calendar_events WHERE id=?').bind(eid).first();if(ev){const cal=await env.DB.prepare('SELECT * FROM calendars WHERE id=?').bind(ev.calendar_id).first();aclCheck(cal&&await aclEventReadable(request,env,ev,cal),'予定が見つかりません',404);aclCheck(await aclCanPost(request,env,cal),'この予定は変更できません',403);}
+ }
+ return null;
+}
+
+export default {async fetch(request,env){try{return await calendarWorker.fetch(request,env);}catch(e){console.error('calendar_request_failed',e.status||500);return err(e.status?e.message:'処理できませんでした',e.status||500);}}};

@@ -61,7 +61,7 @@ test('HOME identity replaces saved calendar login; private reads, owner writes a
  assert.equal((await call('/api/calendar/events/common','grandpa','PUT',{})).status,403);
  assert.equal((await call('/api/calendar/events/common','grandpa','DELETE')).status,403);
  assert.equal((await call('/api/calendar/calendars/shared','grandpa','DELETE')).status,403);
- assert.equal((await call('/api/calendar/calendars','foreign')).status,401);
+ assert.deepEqual(await (await call('/api/calendar/calendars','foreign')).json(),[]);
  assert.equal((await call('/api/calendar/calendars','grandpa','GET',null,{'X-Calendar-User':'mom'})).status,409);
  const body={title:'おじいちゃんの共有予定',start_datetime:'2026-10-06',end_datetime:'2026-10-06',all_day:true,calendar_id:'shared',created_by_google_id:'family:mama'};
  let added=await call('/api/calendar/events','grandpa','POST',body);assert.equal(added.status,200);const addedId=(await added.json()).id;

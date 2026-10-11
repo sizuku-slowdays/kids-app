@@ -2,6 +2,8 @@ import { mountedHome } from "./home-mount";
 import { calendarIdentity, calendarProxy } from "./calendar";
 import { advanceChores } from "./passbook-chores";
 import { kidneyRoute } from "./kidney";
+import { peopleRoute } from "./household-people";
+import { familyTreeRoute } from "./family-tree";
 import { passbookRoute } from "./passbook";
 import { muscleRoute } from "./muscle-bank";
 import {
@@ -76,14 +78,14 @@ function loginName(value: unknown) {
   );
   return result;
 }
-async function body(request: Request): Promise<Record<string, unknown>> {
+async function body(request: Request, maxBytes = 16384): Promise<Record<string, unknown>> {
   requireValue(
     request.headers.get("Content-Type")?.split(";")[0] === "application/json",
     415,
     "JSON形式で送信してください",
   );
   requireValue(
-    Number(request.headers.get("Content-Length") || 0) <= 16384,
+    Number(request.headers.get("Content-Length") || 0) <= maxBytes,
     413,
     "入力が大きすぎます",
   );
@@ -95,7 +97,7 @@ async function body(request: Request): Promise<Record<string, unknown>> {
     const { done, value } = await reader.read();
     if (done) break;
     length += value.byteLength;
-    if (length > 16384) {
+    if (length > maxBytes) {
       await reader.cancel();
       throw new Failure(413, "入力が大きすぎます");
     }
@@ -301,7 +303,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       groupId = crypto.randomUUID();
     mark("bootstrap_database");
     await env.DB.batch([
-      env.DB.prepare(
+     nv.DB.prepare(
         "INSERT INTO users(id,login_name,display_name,password_salt,password_hash,password_iterations,platform_role,created_at) VALUES ('bootstrap-admin',?,?,?,?,?,'operator',?)",
       ).bind(login, display, salt, hash, ITERATIONS, now),
       env.DB.prepare(
@@ -433,6 +435,11 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if (path === '/api/household-people') return peopleRoute(request,env,user.id,body);
+    if (path === '/api/family-tree' || path.startsWith('/api/family-tree/')) {
+      requireValue(await appAllowed(env,user.id,'family-tree'),403,'このアプリは利用できません');
+      return familyTreeRoute(request,env,user.id,r=>body(r,path==='/api/family-tree/restore'?30000000:16384));
+    }
     if (path === "/api/calendar/identity" && method === "GET") {
       requireValue(await appAllowed(env,user.id,"calendar"),403,"このアプリは利用できません");
       return calendarIdentity(env,user,request);
@@ -702,6 +709,19 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   if (path.startsWith("/api/") || path.startsWith("/media/"))
     throw new Failure(404, "見つかりません");
+  if (path === '/apps/family-tree' || path.startsWith('/apps/family-tree/')) {
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
+    requireValue(await appAllowed(env,s.user_id,'family-tree'),403,'このアプリは利用できません');
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    const file=path.replace(/^\/apps\/family-tree\/?/,'')||'index.html';
+    requireValue(['index.html','app.js','kinship.js','style.css'].includes(file),404,'見つかりません');
+    const assetUrl=new URL(url);assetUrl.pathname='/apps/family-tree/'+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);
+    for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
+    protectedHeaders.set('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
   if (path === "/apps/calendar" || path === "/apps/calendar/") {
     if(!s)return new Response(null,{status:303,headers:{...headers,Location:"/login"}});
     requireValue(await appAllowed(env,s.user_id,"calendar"),403,"このアプリは利用できません");

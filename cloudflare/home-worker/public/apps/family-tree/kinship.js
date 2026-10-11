@@ -6,6 +6,11 @@ export function relationLabel(people, relations, basisId, targetId) {
  const older=()=>Number.isInteger(basis.birth_order)&&Number.isInteger(target.birth_order)&&basis.birth_order!==target.birth_order?(target.birth_order<basis.birth_order?'older':'younger'):/^\d{4}-\d{2}-\d{2}$/.test(basis.birth_date)&&/^\d{4}-\d{2}-\d{2}$/.test(target.birth_date)&&basis.birth_date!==target.birth_date?(target.birth_date<basis.birth_date?'older':'younger'):null;
  const sibling=()=>{const age=older();if(!age)return 'きょうだい';return target.gender==='female'?(age==='older'?'お姉ちゃん':'妹'):target.gender==='male'?(age==='older'?'お兄ちゃん':'弟'):(age==='older'?'年上のきょうだい':'年下のきょうだい');};
  if(relations.some(r=>r.kind==='sibling'&&[r.from_person,r.to_person].includes(basisId)&&[r.from_person,r.to_person].includes(targetId))||parents(basisId).some(p=>parents(targetId).includes(p)))return sibling();
+ const parentPeople=parents(basisId).map(id=>byId.get(id)).filter(Boolean);
+ const isSibling=(a,b)=>a!==b&&(relations.some(r=>r.kind==='sibling'&&[r.from_person,r.to_person].includes(a)&&[r.from_person,r.to_person].includes(b))||parents(a).some(id=>parents(b).includes(id)));
+ const auntUncle=(relative,gender)=>{const parent=parentPeople.find(p=>isSibling(p.id,relative.id));if(!parent)return null;const order=compareBirthOrder(parent,relative);const read=gender==='female'?'おば':gender==='male'?'おじ':null;if(!read)return '親のきょうだい';if(order===null)return read+'（年上・年下は未設定）';return (order<0?(gender==='female'?'伯母':'伯父'):(gender==='female'?'叔母':'叔父'))+'（'+read+'）';};
+ const bloodAuntUncle=auntUncle(target,target.gender);if(bloodAuntUncle)return bloodAuntUncle;
+ for(const r of relations)if(['marriage','partnership'].includes(r.kind)&&r.status==='current'&&[r.from_person,r.to_person].includes(targetId)){const partner=byId.get(r.from_person===targetId?r.to_person:r.from_person);const label=partner&&auntUncle(partner,target.gender);if(label)return label;}
  const direct=relations.find(r=>['marriage','partnership'].includes(r.kind)&&[r.from_person,r.to_person].includes(basisId)&&[r.from_person,r.to_person].includes(targetId));if(direct)return direct.status==='current'?'パートナー':'以前のパートナー';
  const graph=new Map();const add=(a,b,code)=>graph.set(a,[...(graph.get(a)||[]),{id:b,code}]);
  for(const r of relations)if(['biological_parent','adoptive_parent'].includes(r.kind)){add(r.from_person,r.to_person,'D');add(r.to_person,r.from_person,'U');}
@@ -76,4 +81,12 @@ export function coupleOrder(people,relations){
  for(const r of relations)if(['marriage','partnership'].includes(r.kind)&&r.status==='current'&&byId.has(r.from_person)&&byId.has(r.to_person)){partners.set(r.from_person,[...(partners.get(r.from_person)||[]),r.to_person]);partners.set(r.to_person,[...(partners.get(r.to_person)||[]),r.from_person]);}
  const added=new Set(),result=[];for(const p of people){if(added.has(p.id))continue;result.push(p);added.add(p.id);for(const id of partners.get(p.id)||[])if(!added.has(id)){result.push(byId.get(id));added.add(id);}}
  return result;
+}
+
+export function compareBirthOrder(reference,target){
+ if(Number.isInteger(reference.birth_order)&&Number.isInteger(target.birth_order)&&reference.birth_order!==target.birth_order)return target.birth_order-reference.birth_order;
+ const a=reference.birth_date||'',b=target.birth_date||'';
+ if(/^\d{4}/.test(a)&&/^\d{4}/.test(b)&&a.slice(0,4)!==b.slice(0,4))return b.slice(0,4)<a.slice(0,4)?-1:1;
+ if(/^\d{4}-\d{2}-\d{2}$/.test(a)&&/^\d{4}-\d{2}-\d{2}$/.test(b)&&a!==b)return b<a?-1:1;
+ return null;
 }

@@ -44,3 +44,12 @@ test('current partners stay beside their sibling partners while divorced relatio
  const changed=relations.map(r=>r.id==='m'?{...r,status:'divorced'}:r);
  assert.deepEqual(sortSiblingPeople(people,changed).map(p=>p.id),['me','sister','sister-husband','husband']);
 });
+
+test('aunts and uncles use kanji with readings and distinguish older relatives from younger ones',async()=>{
+ const {relationLabel}=await import('../public/apps/family-tree/kinship.js');
+ const people=[{id:'child'},{id:'mom',gender:'female',birth_order:3},{id:'older-man',gender:'male',birth_order:1},{id:'older-woman',gender:'female',birth_order:2},{id:'younger-man',gender:'male',birth_order:4},{id:'younger-woman',gender:'female',birth_order:5},{id:'unknown',gender:'male'},{id:'wife',gender:'female'}];
+ const relations=[{from_person:'mom',to_person:'child',kind:'biological_parent'},...people.slice(2,7).map(p=>({from_person:'mom',to_person:p.id,kind:'sibling'})),{from_person:'older-man',to_person:'wife',kind:'marriage',status:'current'}];
+ for(const [id,want]of [['older-man','伯父（おじ）'],['older-woman','伯母（おば）'],['younger-man','叔父（おじ）'],['younger-woman','叔母（おば）'],['unknown','おじ（年上・年下は未設定）'],['wife','伯母（おば）']])assert.equal(relationLabel(people,relations,'child',id),want);
+ const dated=people.map(p=>({...p,birth_order:null,birth_date:p.id==='mom'?'1984-09-01':p.id==='older-man'?'1980-01-01':p.id==='younger-man'?'1987-01-01':''}));
+ assert.equal(relationLabel(dated,relations,'child','older-man'),'伯父（おじ）');assert.equal(relationLabel(dated,relations,'child','younger-man'),'叔父（おじ）');
+});

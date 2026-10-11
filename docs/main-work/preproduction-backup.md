@@ -1,6 +1,6 @@
 # 本番反映前のバックアップ・照合（2026-10-11）
 
-対象：カレンダー公開権限と家系図の作業PR #3。**本番のバックアップ・件数照合は未実施**。現在のWorkからCloudflare本番DB/R2を操作する接続は確認できないため、取得済みとは記録しない。コードは作業ブランチに保存し、本番反映前にこの手順を完了する。
+対象：カレンダー公開権限と家系図の作業PR #3。**変更前D1 SQLの保存・ローカル整合性確認は利用者報告で完了。本番反映後の件数・内容照合は未実施**。Workから本番DB/R2を直接確認する接続はない。実データ入りバックアップは利用者の非公開ローカルフォルダに保存し、GitHubへ追加しない。
 
 ## 保存するもの
 
@@ -72,3 +72,15 @@ python scripts/check-deployment-backups.py --profile calendar --before /PRIVATE_
 | 人物2人を順に削除して復元 | 両人物が戻った時点で、人物削除に伴った関係も復元 |
 | 関係だけを意図的に削除 | 人物の復元で勝手に戻らず、ごみ箱から別途復元 |
 | 通知対象 | 従来設定の通知は継続。新公開範囲の未対応対象だけ停止。件名を旧通知APIへ漏らさない |
+
+## 2026-10-11 22時台 JST：変更前バックアップの確認（利用者報告）
+
+- home-db SQL：415,871 bytes。Node.js 22.14.0のメモリ内SQLiteで読み込み成功、integrity_check=OK、37テーブル（内部テーブルを含む集計）、foreign_key_checkの問題0。
+- calendar-db SQL：31,316 bytes。同様に読み込み成功、integrity_check=OK、13テーブル、foreign_key_checkの問題0。
+- 両SQLのSHA-256照合用記録をローカル保存。Time Travel Bookmarkも別途取得済み。実値・ダウンロード用署名URLはGitHubへ記載しない。
+- 稼働Workerのコードを利用者が保存：calendar-worker 78,181 bytes、home-worker 132,116 bytes。両方node --check成功、SHA-256記録保存。
+- 両WorkerのBindingsと設定ページのスクリーンショット保存済み。SecretはValue encrypted表示のまま。
+- 反映前Version IDの短縮表示：home-worker c24c8490、calendar-worker 2d733ab2。完全UUIDは未確認。
+- HOMEのGit接続を利用者が確認：sizuku-slowdays/kids-app、Production branch=feat/home-auth-foundation、Deploy command=npx wrangler d1 migrations apply home-db --remote && npx wrangler deploy。
+- R2のオブジェクトコピー／一覧取得は未実施。今回の反映は既存R2オブジェクトを削除・上書きしない。写真の移行・削除・既存キーへの書き込みは別途バックアップ確認前には実行しない。
+- 本番反映後の旧レコード件数／内容照合、家庭・ユーザー別の実機テストは引き続き未実施。ローカルSQL整合性確認を本番の権限試験済みとは扱わない。

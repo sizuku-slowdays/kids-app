@@ -55,3 +55,7 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 作業ブランチfeature/calendar-family-tree-20261011、[PR #3](https://github.com/sizuku-slowdays/kids-app/pull/3)。通知を一律停止せず、新公開範囲の未対応対象だけ停止。従来共有＋表示名追加だけの通知は継続。閲覧できる予定に所有家庭の管理者の編集／削除を許可し、本人限定予定はAPIから管理者にも返さない。編集後も元の登録者を維持。家系図は2人を順に削除・復元した場合の関係復元を修正し、独立して削除した関係は自動復元しない。
 
 関連ファイル：calendar-worker.js、public/calendar.html、family-tree.ts、calendar-home/calendar-visibility/family-tree各テスト、scripts/check-deployment-backups.py、scripts/test-deployment-backups.py、管理資料。追加migrationはない。TypeScript・Wrangler dry-run・既存含む17テスト、バックアップ照合用Python3テストを実施。本番DB/R2のバックアップ・件数照合・実機試験は未実施。[手順](preproduction-backup.md)。
+
+## 2026-10-11 22時台 JST：変更前バックアップ確認
+
+利用者がhome-db/calendar-dbをSQLエクスポートし、ローカルメモリ内SQLiteで読み込み・整合性OK、外部キー不整合0を報告。両Workerの稼働コード保存・構文チェック・SHA-256、Bindingsと設定のスクリーンショット保存を報告。GitHubには実データ・Secret値・Bookmark実値を保存しない。R2コピー、本番反映後照合、実機権限試験は未実施。詳細：[バックアップ記録](preproduction-backup.md)。

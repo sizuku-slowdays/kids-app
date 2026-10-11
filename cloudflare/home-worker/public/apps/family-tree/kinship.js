@@ -80,7 +80,12 @@ export function familyRelations(relations){
 export function coupleOrder(people,relations){
  const byId=new Map(people.map(p=>[p.id,p])),partners=new Map();
  for(const r of relations)if(['marriage','partnership'].includes(r.kind)&&r.status==='current'&&byId.has(r.from_person)&&byId.has(r.to_person)){partners.set(r.from_person,[...(partners.get(r.from_person)||[]),r.to_person]);partners.set(r.to_person,[...(partners.get(r.to_person)||[]),r.from_person]);}
- const added=new Set(),result=[];for(const p of people){if(added.has(p.id))continue;result.push(p);added.add(p.id);for(const id of partners.get(p.id)||[])if(!added.has(id)){result.push(byId.get(id));added.add(id);}}
+ const siblings=new Set(),children=new Map();
+ for(const r of relations){if(r.kind==='sibling'&&byId.has(r.from_person)&&byId.has(r.to_person)){siblings.add(r.from_person);siblings.add(r.to_person);}if(['biological_parent','adoptive_parent'].includes(r.kind)&&byId.has(r.to_person)){if(!children.has(r.from_person))children.set(r.from_person,new Set());children.get(r.from_person).add(r.to_person);}}
+ for(const ids of children.values())if(ids.size>1)for(const id of ids)siblings.add(id);
+ const added=new Set(),result=[];const append=p=>{if(added.has(p.id))return;result.push(p);added.add(p.id);for(const id of partners.get(p.id)||[])if(!added.has(id)){result.push(byId.get(id));added.add(id);}};
+ for(const p of people){if(!siblings.has(p.id)&&(partners.get(p.id)||[]).some(id=>siblings.has(id)))continue;append(p);}
+ for(const p of people)append(p);
  return result;
 }
 

@@ -65,3 +65,13 @@ test('marriages show husband or wife and sibling spouses use in-law labels',asyn
  const partners=relations.map(r=>r.kind==='marriage'?{...r,kind:'partnership'}:r);assert.equal(relationLabel(people,partners,'sister','sister-husband'),'パートナー');
  const divorced=relations.map(r=>({...r,status:'divorced'}));assert.equal(relationLabel(people,divorced,'sister','sister-husband'),'元夫');
 });
+
+test('editing parents cannot move older siblings behind their spouses',async()=>{
+ const {treeLayout,sortSiblingPeople}=await import('../public/apps/family-tree/kinship.js');
+ const people=[{id:'brother',birth_order:1},{id:'mom',birth_order:2},{id:'sister',birth_order:3},{id:'brother-wife'},{id:'mom-husband'},{id:'sister-husband'},{id:'grandpa'},{id:'grandma'}];
+ const byId=new Map(people.map(p=>[p.id,p]));
+ const relations=[...['brother','mom','sister'].flatMap(id=>['grandpa','grandma'].map(parent=>({from_person:parent,to_person:id,kind:'biological_parent'}))),...['brother','mom','sister'].map((id,i)=>({from_person:id,to_person:['brother-wife','mom-husband','sister-husband'][i],kind:'marriage',status:'current'}))];
+ const want=['brother','brother-wife','mom','mom-husband','sister','sister-husband'];
+ const inputs=[want,[...want].reverse(),['mom-husband','sister-husband','brother-wife','mom','sister','brother'],['sister','mom','brother-wife','mom-husband','sister-husband','brother']];
+ for(const ids of inputs){const row=ids.map(id=>byId.get(id));assert.deepEqual(sortSiblingPeople(row,relations).map(p=>p.id),want);const layout=treeLayout([...row,byId.get('grandpa'),byId.get('grandma')],relations,'mom');const level=layout.nodes.find(p=>p.id==='mom').y;assert.deepEqual(layout.nodes.filter(p=>p.y===level).sort((a,b)=>a.x-b.x).map(p=>p.id),want);}
+});

@@ -1,4 +1,5 @@
 export function relationLabel(people, relations, basisId, targetId) {
+ relations=familyRelations(relations);
  if(basisId===targetId)return 'わたし';
  const byId=new Map(people.map(p=>[p.id,p])),basis=byId.get(basisId),target=byId.get(targetId);if(!basis||!target)return '親せき';
  const parents=id=>relations.filter(r=>['biological_parent','adoptive_parent'].includes(r.kind)&&r.to_person===id).map(r=>r.from_person);
@@ -25,13 +26,26 @@ export function relationLabel(people, relations, basisId, targetId) {
  if(relations.some(r=>['marriage','partnership'].includes(r.kind)&&r.status==='current'&&parents(basisId).includes(r.from_person)&&r.to_person===targetId||['marriage','partnership'].includes(r.kind)&&r.status==='current'&&parents(basisId).includes(r.to_person)&&r.from_person===targetId))return '親のパートナー';
  return '親せき';
 }
-export function treeLayout(people,relations,centerId,radius=2){
+export function treeLayout(people,relations,centerId,radius=4){
+ relations=familyRelations(relations);
  const adjacent=new Map();const edge=(a,b,delta)=>adjacent.set(a,[...(adjacent.get(a)||[]),{id:b,delta}]);
  for(const r of relations){const parent=['biological_parent','adoptive_parent','guardian'].includes(r.kind);edge(r.from_person,r.to_person,parent?1:0);edge(r.to_person,r.from_person,parent?-1:0);}
  const levels=new Map([[centerId,0]]),dist=new Map([[centerId,0]]),queue=[centerId];while(queue.length){const id=queue.shift();for(const next of adjacent.get(id)||[])if(!levels.has(next.id)&&dist.get(id)<radius){levels.set(next.id,levels.get(id)+next.delta);dist.set(next.id,dist.get(id)+1);queue.push(next.id);}}
  if(radius===Infinity)for(const p of people)if(!levels.has(p.id))levels.set(p.id,0);
- const groups=new Map();for(const p of people)if(levels.has(p.id))groups.set(levels.get(p.id),[...(groups.get(levels.get(p.id))||[]),p]);const lowest=Math.min(0,...groups.keys()),widest=Math.max(1,...[...groups.values()].map(g=>g.length));const width=Math.max(650,widest*180+60);
- const nodes=[];for(const [level,list]of groups)sortSiblingPeople(list,relations).forEach((p,i)=>nodes.push({...p,x:width/2+(i-(list.length-1)/2)*180,y:60+(level-lowest)*160}));return {nodes,width,height:(Math.max(0,...groups.keys())-lowest+1)*160+80};
+ const groups=new Map();for(const p of people)if(levels.has(p.id))groups.set(levels.get(p.id),[...(groups.get(levels.get(p.id))||[]),p]);const lowest=Math.min(0,...groups.keys());
+ const visible=new Set(people.filter(p=>levels.has(p.id)).map(p=>p.id)),positions=new Map(),nodes=[];
+ const descendants=id=>[...new Set(relations.filter(r=>['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&r.from_person===id&&visible.has(r.to_person)).map(r=>r.to_person))];
+ const span=(id,seen=new Set())=>{if(seen.has(id))return 180;const next=new Set([...seen,id]),kids=descendants(id);return Math.max(180,kids.reduce((total,k)=>total+span(k,next),0)+Math.max(0,kids.length-1)*36);};
+ for(const level of [...groups.keys()].sort((a,b)=>a-b)){
+ const list=sortSiblingPeople(groups.get(level),relations),roots=new Map(list.map(p=>[p.id,p.id]));
+ const root=id=>{while(roots.get(id)!==id)id=roots.get(id);return id;},join=(a,b)=>{if(roots.has(a)&&roots.has(b))roots.set(root(b),root(a));},firstChild=new Map();
+ for(const r of relations){if(r.kind==='sibling')join(r.from_person,r.to_person);if(['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&roots.has(r.to_person)){const old=firstChild.get(r.from_person);if(old)join(old,r.to_person);else firstChild.set(r.from_person,r.to_person);}}
+ const units=new Map();for(const p of list){const key=root(p.id);if(!units.has(key))units.set(key,[]);units.get(key).push(p);}
+ const ordered=[...units.values()].map(members=>{const parents=[...new Set(relations.filter(r=>['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&members.some(p=>p.id===r.to_person)&&positions.has(r.from_person)).map(r=>r.from_person))];const anchor=parents.length?parents.reduce((s,id)=>s+positions.get(id),0)/parents.length:null;return {members,anchor};}).sort((a,b)=>(a.anchor??Infinity)-(b.anchor??Infinity));
+ let cursor=30;
+ for(const {members,anchor}of ordered){const sizes=members.map(p=>span(p.id)),total=sizes.reduce((a,b)=>a+b,0)+(members.length-1)*36;let left=Math.max(cursor,anchor===null?cursor:anchor-total/2);for(let i=0;i<members.length;i++){const p=members[i],x=left+sizes[i]/2;positions.set(p.id,x);nodes.push({...p,x,y:60+(level-lowest)*170});left+=sizes[i]+36;}cursor=left+84;}
+ }
+ const width=Math.max(650,...nodes.map(p=>p.x+110));return {nodes,width,height:(Math.max(0,...groups.keys())-lowest+1)*170+80};
 }
 
 export function ageLabel(person, today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())){
@@ -46,4 +60,13 @@ export function sortSiblingPeople(people,relations){
  for(const r of relations){if(r.kind==='sibling')join(r.from_person,r.to_person);if(['biological_parent','adoptive_parent'].includes(r.kind)){const prior=children.get(r.from_person);if(prior)join(prior,r.to_person);else children.set(r.from_person,r.to_person);}}
  const groups=new Map();people.forEach((p,i)=>{const key=root(p.id);if(!groups.has(key))groups.set(key,[]);groups.get(key).push({p,i});});
  const result=[...people];for(const group of groups.values()){const sorted=group.map(x=>x.p).sort((a,b)=>{const ao=Number.isInteger(a.birth_order)?a.birth_order:null,bo=Number.isInteger(b.birth_order)?b.birth_order:null;if(ao!==null&&bo!==null&&ao!==bo)return ao-bo;const ad=/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(a.birth_date||'')?a.birth_date:null,bd=/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(b.birth_date||'')?b.birth_date:null;if(ad&&bd&&ad!==bd)return ad.localeCompare(bd);return 0;});group.forEach((x,i)=>result[x.i]=sorted[i]);}return result;
+}
+
+export function familyRelations(relations){
+ const siblingRoots=new Map();const root=id=>{if(!siblingRoots.has(id))siblingRoots.set(id,id);while(siblingRoots.get(id)!==id)id=siblingRoots.get(id);return id;};
+ for(const r of relations)if(r.kind==='sibling')siblingRoots.set(root(r.to_person),root(r.from_person));
+ const siblings=new Map();for(const id of siblingRoots.keys()){const key=root(id);if(!siblings.has(key))siblings.set(key,[]);siblings.get(key).push(id);}
+ const result=[...relations],keys=new Set(relations.map(r=>r.kind+':'+r.from_person+':'+r.to_person));
+ for(const r of relations)if(['biological_parent','adoptive_parent'].includes(r.kind)&&siblingRoots.has(r.to_person)){for(const child of siblings.get(root(r.to_person))||[]){const key=r.kind+':'+r.from_person+':'+child;if(child!==r.from_person&&!keys.has(key)){keys.add(key);result.push({...r,id:'inferred-'+r.id+'-'+child,to_person:child,inferred:true});}}}
+ return result;
 }

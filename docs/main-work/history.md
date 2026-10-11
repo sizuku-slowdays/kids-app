@@ -91,3 +91,9 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 TypeScript・配信対象JS構文・Wrangler dry-run・family-tree/kinship計3テスト成功。新しく登録された家系図データを含む反映直前HOME SQLの取得確認まで本番ブランチを変更しない。作業ブランチへの保存のみ。
 
 2026-10-12 00:04 JST利用者報告：登録済み家系図を含むhome-db-before-birth-order.sqlの追加エクスポート成功。ローカルメモリ内SQLiteへ読み込み、integrity_check=ok、foreign_key_check問題0。バックアップ実データと署名URLはGitHubへ保存していない。これを確認して出生順追加の本番ビルド対象ブランチへ反映する。本番ビルド成功・実機表示は確認待ち。
+
+## 2026-10-12：家系図の家庭ごとの枝分け・いとこの表示
+
+同じ世代を一列に均等配置していた表示を変更し、親ごとに子どもの枝をまとめ、異なる家庭の間隔を広げる。表示範囲の初期値を4段階（いとこまで）にし、本人切替でいとこが消える問題を修正。明示きょうだい関係から親をたどる表示用の推定辺を作り、兄視点で妹の親が親せきになる問題と、祖父母未登録時のいとこ判定を修正。推定関係はDBへ保存せず点線で表示。元の人物・関係・権限は変更なし。関連：public/apps/family-tree/kinship.js、app.js、index.html、kinship.test.mjs。本番再確認待ち。
+
+検証：配信対象JS構文、kinship計3テスト成功。ママ・長女・次女・兄の各表示基準で、いとこが残ること、兄がママの左、その子が姉妹の枝と分離、きょうだいの年齢順、兄から見た親の呼び名、元のrelations配列を変更しないことを確認。

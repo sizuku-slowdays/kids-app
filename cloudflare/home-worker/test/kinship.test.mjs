@@ -17,3 +17,20 @@ test('ages change on the birthday and siblings sort by age or explicit order',as
  assert.deepEqual(sortSiblingPeople([{id:'me',birth_order:2},{id:'brother',birth_order:1}],relations).map(p=>p.id),['brother','me']);
  assert.deepEqual(sortSiblingPeople(siblings,[]).map(p=>p.id),['me','brother']);
 });
+
+test('cousins remain visible and families have separate child branches from every viewpoint',async()=>{
+ const {relationLabel,treeLayout,familyRelations}=await import('../public/apps/family-tree/kinship.js');
+ const people=[{id:'mom',gender:'female',birth_date:'1984-09-01'},{id:'brother',gender:'male',birth_date:'1980-01-01'},{id:'older',gender:'female',birth_date:'2015-01-01'},{id:'younger',gender:'female',birth_date:'2017-01-01'},{id:'cousin',birth_date:'2016-01-01'},{id:'grandma',gender:'female'},{id:'dad',gender:'male'}];
+ const relations=[{id:'s',from_person:'mom',to_person:'brother',kind:'sibling',status:'current'},{id:'a',from_person:'mom',to_person:'older',kind:'biological_parent',status:'current'},{id:'b',from_person:'mom',to_person:'younger',kind:'biological_parent',status:'current'},{id:'c',from_person:'brother',to_person:'cousin',kind:'biological_parent',status:'current'},{id:'d',from_person:'grandma',to_person:'mom',kind:'biological_parent',status:'current'},{id:'e',from_person:'dad',to_person:'older',kind:'biological_parent',status:'current'},{id:'f',from_person:'dad',to_person:'younger',kind:'biological_parent',status:'current'}];
+ assert.equal(relationLabel(people,relations,'older','cousin'),'いとこ');
+ assert.equal(relationLabel(people,relations,'younger','cousin'),'いとこ');
+ assert.equal(relationLabel(people,relations,'brother','grandma'),'お母さん');
+ const source=JSON.stringify(relations);assert.ok(familyRelations(relations).some(r=>r.from_person==='grandma'&&r.to_person==='brother'&&r.inferred));assert.equal(JSON.stringify(relations),source);
+ for(const basis of ['mom','older','younger','brother']){
+  const layout=treeLayout(people,relations,basis);const nodes=new Map(layout.nodes.map(p=>[p.id,p]));
+  assert.ok(nodes.has('cousin'));assert.ok(nodes.get('brother').x<nodes.get('mom').x);
+  assert.ok(nodes.get('cousin').x<nodes.get('older').x);
+  assert.ok(nodes.get('older').x<nodes.get('younger').x);
+  assert.ok(nodes.get('older').x-nodes.get('cousin').x>180);
+ }
+});

@@ -89,3 +89,5 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 家系図の同世代で、親を共有する人物／明示きょうだい関係の並びを年上から左へ変更。生年月日不明時の手動birth_order（1〜1000）を人物に追加し、両者に設定があるときは順番優先。既存人物の未指定値はNULL。0014_family_tree_birth_order.sqlは列追加のみ、既存データを更新・削除しない。年齢は保存せず、日本時間の今日と生年月日から表示時に計算し、開いたままでも日付変更を60秒間隔で確認。年月日不明は年齢空欄、命日ありは命日時点の年齢。人物カード・一覧・詳細に表示。バックアップ／復元はbirth_orderを含め、旧バックアップの未指定はNULLとして読み込む。本番確認は反映後。
 
 TypeScript・配信対象JS構文・Wrangler dry-run・family-tree/kinship計3テスト成功。新しく登録された家系図データを含む反映直前HOME SQLの取得確認まで本番ブランチを変更しない。作業ブランチへの保存のみ。
+
+2026-10-12 00:04 JST利用者報告：登録済み家系図を含むhome-db-before-birth-order.sqlの追加エクスポート成功。ローカルメモリ内SQLiteへ読み込み、integrity_check=ok、foreign_key_check問題0。バックアップ実データと署名URLはGitHubへ保存していない。これを確認して出生順追加の本番ビルド対象ブランチへ反映する。本番ビルド成功・実機表示は確認待ち。

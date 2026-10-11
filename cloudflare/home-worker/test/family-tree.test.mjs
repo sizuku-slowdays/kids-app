@@ -79,6 +79,17 @@ test('family tree enforces adults, household/photo boundaries, atomic revisions 
  await home.prepare("INSERT INTO home_member_attributes VALUES ('other','foreign','adult','foreign','now')").run();
  for(const [path,method,body] of [['/people/'+mother,'PUT',{name:'侵入',revision:0}],['/people/'+mother,'DELETE',{revision:0}],['/restore-item','POST',{kind:'person',id:mother,revision:0}]])assert.equal((await call(path,'foreign',method,body,'other')).status,404);
  const otherState=await (await call('','foreign','GET',null,'other')).json();assert.equal(otherState.people.length,0);assert.equal(JSON.stringify(otherState).includes(mother),false);
+ // Person and initial relation commit together, with household and revision checks.
+ state=await (await call()).json();const combinedRevision=state.revision;
+ const beforeCombined=state.people.length;
+ let combined=await call('/people','mom','POST',{name:'追加する子',revision:combinedRevision,initial_relationship:{person_id:'missing',role:'child'}});
+ assert.equal(combined.status,400);state=await (await call()).json();assert.equal(state.people.length,beforeCombined);assert.equal(state.revision,combinedRevision);
+ combined=await call('/people','mom','POST',{name:'追加する子',revision:combinedRevision-1,initial_relationship:{person_id:mother,role:'child'}});
+ assert.equal(combined.status,409);state=await (await call()).json();assert.equal(state.people.length,beforeCombined);
+ combined=await call('/people','grandpa','POST',{name:'追加する子',revision:combinedRevision,initial_relationship:{person_id:mother,role:'child'}});assert.equal(combined.status,403);
+ combined=await call('/people','mom','POST',{name:'追加する子',revision:combinedRevision,initial_relationship:{person_id:mother,role:'child'}});assert.equal(combined.status,201);
+ const newPerson=await combined.json();state=await (await call()).json();assert.equal(state.people.length,beforeCombined+1);assert.equal(state.revision,combinedRevision+1);
+ assert.ok(state.relations.some(r=>r.id===newPerson.relationship_id&&r.from_person===mother&&r.to_person===newPerson.id&&r.kind==='biological_parent'));
  const noLogin=await call('/photos/'+photo.id,null);assert.equal(noLogin.status,401);assert.equal(Buffer.from(await noLogin.arrayBuffer()).equals(png),false);
  const photoResponse=await call('/photos/'+photo.id,'grandpa');assert.equal(photoResponse.headers.get('Cache-Control'),'private, no-store');
  assert.equal((await home.prepare('SELECT COUNT(*) n FROM users').first()).n,countBefore);

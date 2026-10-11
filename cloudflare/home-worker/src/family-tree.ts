@@ -62,7 +62,18 @@ export async function familyTreeRoute(request:Request,env:TreeEnv,userId:string,
  if(p.home_user_id)check(ctx.rows.some(u=>u.id===p.home_user_id),'この家庭のHOME利用者を選んでください');
  if(p.photo_id)check(await env.DB.prepare('SELECT 1 FROM family_tree_photos WHERE id=? AND household_id=?').bind(p.photo_id,household).first(),'この家庭の写真を選んでください');
  if(prior)p.created_by=prior.created_by;
- await commit(env,household,userId,data.revision,[personStatement(env,p)]);return reply({ok:true,id:p.id,revision:revision+1},method==='POST'?201:200);
+ const statements=[personStatement(env,p)];let relationshipId:string|null=null;
+ if(data.initial_relationship!==undefined){
+ check(method==='POST','関係の追加は人物の新規登録時に指定してください');
+ const initial=data.initial_relationship as Record<string,unknown>;check(initial&&typeof initial==='object'&&!Array.isArray(initial),'関係を確認してください');
+ const target=id(initial.person_id),role=text(initial.role,30);
+ check(people.some(other=>other.id===target&&!other.deleted_at)&&target!==p.id,'この家庭の登録済み人物を選んでください');
+ const choices:Record<string,{kind:string;newIsFrom:boolean}>={parent:{kind:'biological_parent',newIsFrom:true},child:{kind:'biological_parent',newIsFrom:false},adoptive_parent:{kind:'adoptive_parent',newIsFrom:true},adoptive_child:{kind:'adoptive_parent',newIsFrom:false},guardian:{kind:'guardian',newIsFrom:true},marriage:{kind:'marriage',newIsFrom:false},partnership:{kind:'partnership',newIsFrom:false},sibling:{kind:'sibling',newIsFrom:false}};
+ const choice=choices[role];check(Boolean(choice),'関係を選んでください');
+ const r:Relation={id:crypto.randomUUID(),household_id:household,from_person:choice.newIsFrom?p.id:target,to_person:choice.newIsFrom?target:p.id,kind:choice.kind,status:'current',start_date:'',end_date:'',memo:'',deleted_at:null,deleted_with_person:null,updated_at:now};
+ check(!hasCycle([...relations,r]),'親子関係が循環するため保存できません');statements.push(relationStatement(env,r));relationshipId=r.id;
+ }
+ await commit(env,household,userId,data.revision,statements);return reply({ok:true,id:p.id,relationship_id:relationshipId,revision:revision+1},method==='POST'?201:200);
  }
  if(path.startsWith('/people/')&&method==='DELETE'){
  const p=people.find(p=>p.id===path.slice(8));check(p&&!p.deleted_at,'人物が見つかりません',404);

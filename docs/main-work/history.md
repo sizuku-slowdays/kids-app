@@ -77,3 +77,9 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 ## 2026-10-11：続柄の表示基準切り替えと人物一覧の省スペース化
 
 人物選択／一覧の「この人から見る」で、ツリーの中心と続柄の基準人物を切り替え。「自分から見る」でHOMEに紐づく本人へ戻す。ログインユーザーやAPI権限は変えず、表示だけを切り替える。初期表示はHOME本人が基準。家庭変更・認証失効時に表示基準を消去。人物一覧は初期折りたたみ、展開時も高さ240pxの内部スクロールに制限。関連：public/apps/family-tree/app.js、index.html、style.css。DB・API・保存済み人物情報の変更なし。修正した配信対象JSのmodule構文確認。本番操作確認は待ち。
+
+## 2026-10-11：人物追加と最初の関係を一括保存
+
+人物追加フォームで登録済みの相手と「その人の親／子ども／配偶者／きょうだい／養親／養子／育てる人／パートナー」を選択可能。新規人物POSTのinitial_relationshipをAPI側で検証し、同家庭の活動中の相手のみ許可。人物と関係を同じrevisionガード付きD1 batchで保存し、失敗時に片方だけ残さない。既存人物の編集は元の関係を変更しない。関係欄は折りたたみ、選択人物の関係だけを表示し、全員表示を任意で切り替え。別の関係追加も選択人物を初期選択。既存データ・スキーマの変更／移行なし。関連：src/family-tree.ts、public/apps/family-tree/app.js・index.html、family-tree.test.mjs。
+
+検証：TypeScriptチェック、Wrangler dry-run、配信対象JS構文、family-tree/kinship計2テスト成功。追加試験で相手不明・revision競合時に人物が残らないこと、子どもの403、成功時に親子関係と人物が同一revisionで作成されることを確認。本番のフォーム操作は反映後確認待ち。

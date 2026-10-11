@@ -49,7 +49,7 @@
 | 家計簿メニュー | [開く](https://cetus.fun/kanriapp/kakeibo-index.html) / [kanriapp/kakeibo-index.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kanriapp/kakeibo-index.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | 支出を入力 | [開く](https://cetus.fun/kanriapp/kakeibo-input.html) / [kanriapp/kakeibo-input.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kanriapp/kakeibo-input.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | 予算・積み立て | [開く](https://cetus.fun/kanriapp/kakeibo-plan.html) / [kanriapp/kakeibo-plan.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kanriapp/kakeibo-plan.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
-| 家計簿 | [開く](https://cetus.fun/kanriapp/kakeibo_gdrive.html) / [kanriapp/kakeibo_gdrive.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2e07819a028a95789a9/kanriapp/kakeibo_gdrive.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
+| 家計簿 | [開く](https://cetus.fun/kanriapp/kakeibo_gdrive.html) / [kanriapp/kakeibo_gdrive.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kanriapp/kakeibo_gdrive.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | からだカレンダー | [開く](https://cetus.fun/kanriapp/karada_calendar.html) / [kanriapp/karada_calendar.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kanriapp/karada_calendar.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | 矯正チェック日記 🦷 | [開く](https://cetus.fun/kanriapp/kyosei-check.html) / [kanriapp/kyosei-check.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kanriapp/kyosei-check.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | ママ銀行 👀 | [開く](https://cetus.fun/kanriapp/mama-bank-view.html) / [kanriapp/mama-bank-view.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kanriapp/mama-bank-view.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
@@ -88,7 +88,7 @@
 | おみせやさん けいさんゲーム | [開く](https://cetus.fun/kids-app/shop_calc1.html) / [kids-app/shop_calc1.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kids-app/shop_calc1.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | とけい はじめてまなぶ | [開く](https://cetus.fun/kids-app/tokei-nyumon.html) / [kids-app/tokei-nyumon.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kids-app/tokei-nyumon.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | とけいタイムマシン | [開く](https://cetus.fun/kids-app/tokei-time.html) / [kids-app/tokei-time.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kids-app/tokei-time.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
-| 時計れんしゅう | [開く](https://cetus.fun/kids-app/tokei.html) / [kids-app/tokei.html](https://github.com/sizuku-slowdays/kids-ob/7afd93235cc6f4cfec2568e07819a028a95789a9/kids-app/tokei.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
+| 時計れんしゅう | [開く](https://cetus.fun/kids-app/tokei.html) / [kids-app/tokei.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kids-app/tokei.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | 漢字書き順プリントメーカー | [開く](https://cetus.fun/maker/10kanji-stroke-print-maker.html) / [maker/10kanji-stroke-print-maker.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/maker/10kanji-stroke-print-maker.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | ひっ算プリントメーカー 明朝体版 | [開く](https://cetus.fun/maker/1hissan-print-maker-mincho.html) / [maker/1hissan-print-maker-mincho.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/maker/1hissan-print-maker-mincho.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
 | ひっ算プリントメーカー | [開く](https://cetus.fun/maker/1hissan-print-maker.html) / [maker/1hissan-print-maker.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/maker/1hissan-print-maker.html) | kids-app / main | 静的HTMLあり。本番・利用状況：未確認 |
@@ -138,3 +138,5 @@
 | カレンダー共有拡張 | https://cetus.fun/wagaya/apps/calendar/ | 既存calendar-dbを維持し追加権限テーブルを使用。実装・ローカルテスト済み、本番未反映 |
 
 詳細：[設計と導入手順](https://github.com/sizuku-slowdays/kids-app/blob/feature/calendar-family-tree-20261011/docs/main-work/calendar-family-tree.md)。既存アプリの状態表を本番反映済みへ変更しない。
+
+カレンダーの追加改修：閲覧できる予定は登録者または所有家庭の管理者が変更可能。本人限定予定は管理者にも非公開。家系図の公開範囲は許可された家庭メンバーのみ。作業PR #3で実装、本番未反映。

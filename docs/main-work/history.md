@@ -51,3 +51,11 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 既存のカレンダー・つうちょう・残高・アルバム保存データを初期化するSQLは実行していない。既存テーブルの移し替えは不要。追加スキーマの本番適用・デプロイは未実施。検証：TypeScript、構文、Wrangler dry-run、既存含む17テスト成功。実機は未確認。詳細：[導入手順と残り](https://github.com/sizuku-slowdays/kids-app/blob/feature/calendar-family-tree-20261011/docs/main-work/calendar-family-tree.md)。
 
 実装コミット：[7474e9c](https://github.com/sizuku-slowdays/kids-app/commit/7474e9c4ce056abef18e74593e02046b8f91c5f9)（feature/calendar-family-tree-20261011）。HOME稼働ブランチは9cf5cb2のまま。本台帳の更新だけをmainへ反映し、アプリコード・Worker設定をmainへコピーしない。
+
+## 2026-10-11：本番前の追加調整（本番未反映）
+
+作業ブランチfeature/calendar-family-tree-20261011、[PR #3](https://github.com/sizuku-slowdays/kids-app/pull/3)。通知を一律停止せず、新公開範囲の未対応対象だけ停止。従来共有＋表示名追加だけの通知は継続。閲覧できる予定に所有家庭の管理者の編集／削除を許可し、本人限定予定はAPIから管理者にも返さない。編集後も元の登録者を維持。家系図は2人を順に削除・復元した場合の関係復元を修正し、独立して削除した関係は自動復元しない。
+
+関連ファイル：calendar-worker.js、public/calendar.html、family-tree.ts、calendar-home/calendar-visibility/family-tree各テスト、scripts/check-deployment-backups.py、scripts/test-deployment-backups.py、管理資料。追加migrationはない。TypeScript・Wrangler dry-run・既存含む17テスト、バックアップ照合用Python3テストを実施。本番DB/R2のバックアップ・件数照合・実機試験は未実施。[手順](preproduction-backup.md)。
+
+追加調整コミット：[859e14d](https://github.com/sizuku-slowdays/kids-app/commit/859e14d89c650a485095ccc4d4629c367de206fd)。本番未反映。mainは管理資料だけを更新。

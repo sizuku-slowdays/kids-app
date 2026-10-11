@@ -39,3 +39,5 @@ GitHubのCNAME・ソースから入口URLを整理しました。本番HTTP疎�
 ## 2026-10-11の追加資料
 
 [カレンダー共有・家系図の設計／確認構成／導入手順](https://github.com/sizuku-slowdays/kids-app/blob/feature/calendar-family-tree-20261011/docs/main-work/calendar-family-tree.md)。作業ブランチで実装・テスト済み、本番未反映。
+
+[本番反映前のバックアップ・照合と権限試験](preproduction-backup.md)。取得・本番照合は未実施。

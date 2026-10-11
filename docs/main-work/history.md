@@ -65,3 +65,7 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 利用者報告：f56cf5dのHOMEビルド成功（Version 5f3f63d5-28c2-44b3-bccc-bf20a12677fd）、calendar-workerの全文貼り替え・Deploy完了。反映後SQLを取得し、照合ツールのhome/calendar両プロファイルok=true、issues=[]。HOMEは予定した8テーブルと家系図アプリのみ追加。Calendar初回アクセス前の照合では新テーブルなし。既存レコードの件数・内容維持を利用者端末で確認。写真/R2コピーと家庭別権限の実機検証は未完了。
 
 カレンダー再表示も遅いと利用者報告。表示処理で本人プロフィールを繰り返し問い合わせ、予定ごとに通知公開範囲を再照会していたため、リクエスト内で本人取得Promiseを共有し、通知の表示情報には既に取得したACLとカレンダーを使用するよう変更。別リクエスト・別利用者へキャッシュしない。通知配信時は従来どおりDBの最新状態を確認。既存データ・スキーマ・HOME実装は変更なし。calendar-read-performance/calendar-home/calendar-visibility/calendar-recurrenceの計6テスト成功。実環境の速度改善は未確認。関連：cloudflare/calendar-worker/calendar-worker.js、cloudflare/home-worker/test/calendar-read-performance.test.mjs。
+
+## 2026-10-11 23:13 JST：家系図の配信JavaScript構文を修正
+
+利用者が送ったブラウザ配信app.jsとGitHub f56cf5dのapp.jsを照合し、recenter内のconstがonstになっていることを確認。ローカル検証用ファイルにはこの欠落がなかったため従来チェックでは検出できなかった。GitHub取得内容を直接修正し、修正後の内容をNode module構文チェックで確認。人物・関係・写真・権限・DBスキーマは変更なし。ブラウザ初期表示の再確認は未完了。カレンダー速度修正版は利用者が手動Deployし、若干改善したと報告、現状を了承。

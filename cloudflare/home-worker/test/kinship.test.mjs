@@ -75,3 +75,26 @@ test('editing parents cannot move older siblings behind their spouses',async()=>
  const inputs=[want,[...want].reverse(),['mom-husband','sister-husband','brother-wife','mom','sister','brother'],['sister','mom','brother-wife','mom-husband','sister-husband','brother']];
  for(const ids of inputs){const row=ids.map(id=>byId.get(id));assert.deepEqual(sortSiblingPeople(row,relations).map(p=>p.id),want);const layout=treeLayout([...row,byId.get('grandpa'),byId.get('grandma')],relations,'mom');const level=layout.nodes.find(p=>p.id==='mom').y;assert.deepEqual(layout.nodes.filter(p=>p.y===level).sort((a,b)=>a.x-b.x).map(p=>p.id),want);}
 });
+
+
+test('couples stay close when three grown children have households of different sizes',()=>{
+ const people=[{id:'grandpa'},{id:'grandma'},{id:'brother',birth_order:1},{id:'mom',birth_order:2},{id:'sister',birth_order:3},{id:'brother-wife'},{id:'mom-husband'},{id:'sister-husband'}];
+ const relations=[{from_person:'grandpa',to_person:'grandma',kind:'marriage',status:'current'}];
+ for(const [adult,partner,count] of [['brother','brother-wife',1],['mom','mom-husband',2],['sister','sister-husband',3]]){
+  for(const parent of ['grandpa','grandma'])relations.push({from_person:parent,to_person:adult,kind:'biological_parent'});
+  relations.push({from_person:adult,to_person:partner,kind:'marriage',status:'current'});
+  for(let i=0;i<count;i++){const id=adult+'-child-'+i;people.push({id,birth_order:i+1});for(const parent of [adult,partner])relations.push({from_person:parent,to_person:id,kind:'biological_parent'});}
+ }
+ const snapshot=JSON.stringify({people,relations});
+ for(const input of [people,[...people].reverse()])for(const basis of ['grandpa','grandma','mom','brother','sister','mom-child-0']){
+  const layout=treeLayout(input,relations,basis,Infinity),nodes=new Map(layout.nodes.map(n=>[n.id,n]));
+  assert.equal(nodes.size,people.length);
+  for(const [a,b]of [['grandpa','grandma'],['brother','brother-wife'],['mom','mom-husband'],['sister','sister-husband']]){
+   assert.equal(nodes.get(a).y,nodes.get(b).y);const gap=Math.abs(nodes.get(a).x-nodes.get(b).x);assert.ok(gap>=150&&gap<=216,'couple '+a+' gap '+gap);
+  }
+  assert.ok(nodes.get('brother').x<nodes.get('mom').x);assert.ok(nodes.get('mom').x<nodes.get('sister').x);
+  for(const y of new Set(layout.nodes.map(n=>n.y))){const row=layout.nodes.filter(n=>n.y===y).sort((a,b)=>a.x-b.x);for(let i=1;i<row.length;i++)assert.ok(row[i].x-row[i-1].x>=150);}
+  assert.ok(nodes.get('brother-child-0').x<nodes.get('mom-child-0').x);assert.ok(nodes.get('mom-child-1').x<nodes.get('sister-child-0').x);
+ }
+ assert.equal(JSON.stringify({people,relations}),snapshot);
+});

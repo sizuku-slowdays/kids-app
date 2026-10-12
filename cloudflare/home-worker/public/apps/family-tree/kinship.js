@@ -40,8 +40,14 @@ export function treeLayout(people,relations,centerId,radius=4){
  if(radius===Infinity)for(const p of people)if(!levels.has(p.id))levels.set(p.id,0);
  const groups=new Map();for(const p of people)if(levels.has(p.id))groups.set(levels.get(p.id),[...(groups.get(levels.get(p.id))||[]),p]);const lowest=Math.min(0,...groups.keys());
  const visible=new Set(people.filter(p=>levels.has(p.id)).map(p=>p.id)),positions=new Map(),nodes=[];
- const descendants=id=>[...new Set(relations.filter(r=>['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&r.from_person===id&&visible.has(r.to_person)).map(r=>r.to_person))];
- const span=(id,seen=new Set())=>{if(seen.has(id))return 180;const next=new Set([...seen,id]),kids=descendants(id);return Math.max(180,kids.reduce((total,k)=>total+span(k,next),0)+Math.max(0,kids.length-1)*36);};
+ // Reserve descendants' space for a couple together, then draw their cards close.
+ // Giving both parents a separate descendant span spreads spouses across the tree.
+ const coupleRoots=new Map([...visible].map(id=>[id,id]));
+ const coupleKey=id=>{while(coupleRoots.get(id)!==id)id=coupleRoots.get(id);return id;};
+ for(const r of relations)if(['marriage','partnership'].includes(r.kind)&&r.status==='current'&&visible.has(r.from_person)&&visible.has(r.to_person)&&levels.get(r.from_person)===levels.get(r.to_person))coupleRoots.set(coupleKey(r.to_person),coupleKey(r.from_person));
+ const couples=new Map();for(const id of visible){const key=coupleKey(id);if(!couples.has(key))couples.set(key,[]);couples.get(key).push(id);}
+ const descendants=id=>{const members=new Set(couples.get(coupleKey(id)));return [...new Set(relations.filter(r=>['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&members.has(r.from_person)&&visible.has(r.to_person)).map(r=>coupleKey(r.to_person)))];};
+ const span=(id,seen=new Set())=>{const key=coupleKey(id),minimum=couples.get(key).length*180;if(seen.has(key))return minimum;const next=new Set([...seen,key]),kids=descendants(id);return Math.max(minimum,kids.reduce((total,k)=>total+span(k,next),0)+Math.max(0,kids.length-1)*36);};
  for(const level of [...groups.keys()].sort((a,b)=>a-b)){
  const list=sortSiblingPeople(groups.get(level),relations),roots=new Map(list.map(p=>[p.id,p.id]));
  const root=id=>{while(roots.get(id)!==id)id=roots.get(id);return id;},join=(a,b)=>{if(roots.has(a)&&roots.has(b))roots.set(root(b),root(a));},firstChild=new Map();
@@ -49,7 +55,17 @@ export function treeLayout(people,relations,centerId,radius=4){
  const units=new Map();for(const p of list){const key=root(p.id);if(!units.has(key))units.set(key,[]);units.get(key).push(p);}
  const ordered=[...units.values()].map(members=>{const parents=[...new Set(relations.filter(r=>['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&members.some(p=>p.id===r.to_person)&&positions.has(r.from_person)).map(r=>r.from_person))];const anchor=parents.length?parents.reduce((s,id)=>s+positions.get(id),0)/parents.length:null;return {members,anchor};}).sort((a,b)=>(a.anchor??Infinity)-(b.anchor??Infinity));
  let cursor=30;
- for(const {members,anchor}of ordered){const sizes=members.map(p=>span(p.id)),total=sizes.reduce((a,b)=>a+b,0)+(members.length-1)*36;let left=Math.max(cursor,anchor===null?cursor:anchor-total/2);for(let i=0;i<members.length;i++){const p=members[i],x=left+sizes[i]/2;positions.set(p.id,x);nodes.push({...p,x,y:60+(level-lowest)*170});left+=sizes[i]+36;}cursor=left+84;}
+ for(const {members,anchor}of ordered){
+   const blocks=new Map();for(const p of members){const key=coupleKey(p.id);if(!blocks.has(key))blocks.set(key,[]);blocks.get(key).push(p);}
+   const rows=[...blocks.values()],sizes=rows.map(block=>span(block[0].id)),total=sizes.reduce((a,b)=>a+b,0)+(rows.length-1)*36;
+   let left=Math.max(cursor,anchor===null?cursor:anchor-total/2);
+   for(let i=0;i<rows.length;i++){
+     const block=rows[i],center=left+sizes[i]/2;
+     for(let j=0;j<block.length;j++){const p=block[j],x=center+(j-(block.length-1)/2)*180;positions.set(p.id,x);nodes.push({...p,x,y:60+(level-lowest)*170});}
+     left+=sizes[i]+36;
+   }
+   cursor=left+84;
+ }
  }
  const width=Math.max(650,...nodes.map(p=>p.x+110));return {nodes,width,height:(Math.max(0,...groups.keys())-lowest+1)*170+80};
 }
@@ -96,3 +112,4 @@ export function compareBirthOrder(reference,target){
  if(/^\d{4}-\d{2}-\d{2}$/.test(a)&&/^\d{4}-\d{2}-\d{2}$/.test(b)&&a!==b)return b<a?-1:1;
  return null;
 }
+

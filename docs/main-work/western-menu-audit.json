@@ -1,0 +1,42 @@
+{
+  "source_url": "https://western-fukuoka.jp/img/menu-arita.pdf",
+  "source_sha256": "440d2f4996ce1367290b1875ededcf1cb2bea72244a0ede225a61d9fa00b7135",
+  "verified_date": "2026-10-12",
+  "pdf_pages": 6,
+  "products": 106,
+  "price_variants": 189,
+  "pages": [
+    {
+      "page": 1,
+      "products": 10,
+      "price_variants": 29
+    },
+    {
+      "page": 2,
+      "products": 27,
+      "price_variants": 55
+    },
+    {
+      "page": 3,
+      "products": 39,
+      "price_variants": 69
+    },
+    {
+      "page": 4,
+      "products": 7,
+      "price_variants": 7
+    },
+    {
+      "page": 5,
+      "products": 5,
+      "price_variants": 5
+    },
+    {
+      "page": 6,
+      "products": 18,
+      "price_variants": 24
+    }
+  ],
+  "unreadable": [],
+  "note": "サイズ/ソース/赤白等の選択肢は商品内の税込価格別バリエーションとして数える。画像のみの第5ページを目視確認。時刻の記載がない品はその旨を表示。"
+}

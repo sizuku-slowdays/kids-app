@@ -32,14 +32,30 @@ test('HOME auth, household separation, persistent CRUD and concurrent saves pres
   const first=await (await call()).json();assert.equal(first.editable,true);assert.deepEqual(first.stores[0].courses.map(c=>c.prices),prices);
   assert.equal((await (await call('kid')).json()).editable,false);assert.equal((await call('kid','PUT',{revision:first.revision,stores:[]})).status,403);
   const stores=structuredClone(first.stores);stores.push({id:'another',name:'別のお店',note:'税込',courses:[{id:'c',name:'コース',prices:[1000,900,800,500,0]}]});
-  assert.equal((await call('mom','PUT',{revision:first.revision,stores})).status,200);assert.equal((await (await call()).json()).stores.length,2);
+  assert.equal((await call('mom','PUT',{revision:first.revision,stores})).status,200);assert.equal((await (await call()).json()).stores.length,3);
   assert.equal((await call('mom','PUT',{revision:first.revision,stores:[]})).status,409);
   let latest=await (await call()).json();const bad=structuredClone(latest.stores);bad[0].courses[0].prices[0]=-1;assert.equal((await call('mom','PUT',{revision:latest.revision,stores:bad})).status,400);
-  const other=await (await call('other','GET',null,'other')).json();assert.equal(other.stores.length,1);assert.deepEqual(other.stores[0].courses.map(c=>c.prices),prices);
+  const other=await (await call('other','GET',null,'other')).json();assert.equal(other.stores.length,2);assert.deepEqual(other.stores[0].courses.map(c=>c.prices),prices);
   assert.equal((await call('mom','PUT',{revision:latest.revision,stores:[]})).status,200);assert.deepEqual((await (await call()).json()).stores,[]);
+  // Existing custom buffet prices are appended to, backed up and never reset.
+  await db.prepare("INSERT INTO groups VALUES('late','後からの家庭','household','mom',?)").bind(now).run();
+  await db.prepare("INSERT INTO memberships VALUES('late','mom','owner')").run();await db.prepare("INSERT INTO group_apps VALUES('late','dining-prices')").run();
+  const oldStores=[structuredClone(first.stores[0]),{id:'my-store',name:'保存済みの店',note:'残すメモ',courses:[]}];oldStores[0].courses[0].prices[0]=4001;
+  await db.prepare("INSERT INTO dining_price_states VALUES('late',?,9,'mom','now')").bind(JSON.stringify(oldStores)).run();
+  const imported=await (await call('mom','GET',null,'late')).json();assert.equal(imported.stores.length,3);assert.deepEqual(imported.stores.slice(0,2),oldStores);assert.equal(imported.revision,10);
+  const backup=await db.prepare("SELECT stores_json,revision FROM dining_price_backups WHERE household_id='late'").first();assert.equal(backup.stores_json,JSON.stringify(oldStores));assert.equal(backup.revision,9);
+  const again=await (await call('mom','GET',null,'late')).json();assert.equal(again.revision,10);
+  const restaurant=again.stores.find(s=>s.type==='order');assert.equal(restaurant.products.length,106);assert.equal(restaurant.products.reduce((n,p)=>n+p.variants.length,0),189);
+  const changes=structuredClone(again.stores);changes.find(s=>s.type==='order').products[0].variants[0].price=9999;
+  assert.equal((await call('mom','PUT',{revision:again.revision,stores:changes},'late')).status,200);
+  assert.equal((await (await call('mom','GET',null,'late')).json()).stores.find(s=>s.type==='order').products[0].variants[0].price,9999);
+  let saved=await (await call('mom','GET',null,'late')).json();assert.equal(saved.stores[0].courses[0].prices[0],4001);
+  assert.equal((await call('mom','PUT',{revision:saved.revision,stores:oldStores},'late')).status,200);
+  assert.deepEqual((await (await call('mom','GET',null,'late')).json()).stores,oldStores);
   assert.equal(JSON.stringify((await db.prepare('SELECT * FROM users ORDER BY id').all()).results),before);
   const homeApps=await mf.dispatchFetch('https://cetus.fun/wagaya/api/home',{headers:{Cookie:'__Host-home_session='+tokens.mom}});assert.ok((await homeApps.json()).some(a=>a.id==='dining-prices'&&a.path==='/wagaya/apps/dining-prices/'));
   const page=await mf.dispatchFetch('https://cetus.fun/wagaya/apps/dining-prices/',{headers:{Cookie:'__Host-home_session='+tokens.mom}});assert.equal(page.status,200);assert.ok((await page.text()).includes('外食料金'));
   assert.equal((await mf.dispatchFetch('https://cetus.fun/wagaya/apps/dining-prices/',{redirect:'manual'})).status,303);
  }finally{await mf.dispose();}
 });
+

@@ -57,3 +57,7 @@ DB → notification-center-db。HOME_AUTH → home-workerを利用者が追加�
 
 ### 2026-10-12：外食料金のWorker・保存先
 既存home-worker内の /api/dining-prices と /apps/dining-prices/ を追加。DB=home-db、binding=DB。D1追加テーブル dining_price_states：household_id・stores_json・revision・updated_by・updated_at。新Worker/新D1/R2/Bindings/Secretsの追加なし。既存Gitビルドの migrations apply → deploy により0015_dining_prices.sqlを適用する。
+
+
+### 2026-10-12：単品注文メニューの保存・初回追加
+新Worker/Binding/R2なし。home-worker + home-db継続。0016_dining_order_imports.sqlで dining_price_imports（家庭別・取込版の一意印）、dining_price_backups（追加前の料金JSON・revision）を追加。既存JSONへ店舗を追記する前にD1内へスナップショット退避し、revision条件で競合時の上書きを防止する。元の焼肉ウエスト・ユーザー追加店舗はそのまま保持。取込済みの店を編集/削除しても再シードしない。バックアップの中身は公開リポジトリへ保存しない。

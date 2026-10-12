@@ -152,3 +152,7 @@
 
 ### 2026-10-12：外食料金（新規HOMEアプリ）
 名前：外食料金。通常URL：https://cetus.fun/wagaya/apps/dining-prices/ 。home-worker直URL：https://home-worker.sslowdayss.workers.dev/apps/dining-prices/ 。リポジトリ：kids-app / feat/home-auth-foundation。ソース：cloudflare/home-worker/public/apps/dining-prices/、src/dining-prices.ts。HOMEの個人セッション認証と家庭アプリ権限を使用。5区分・人数0人開始・店舗切替時の人数維持・全コース税込合計/最安差/任意2コース差・店舗/コース/価格編集。Git自動ビルドへの反映待ち。本番ログイン後と実機iPhoneの確認は未確認。
+
+
+### 2026-10-12：外食料金・単品注文型
+外食料金へ「ビフテキうえすたん ウエストコート姪浜店」を2店舗目として追加。通常/ランチ/テイクアウトのモード、カテゴリ、検索、12商品単位のページ送り、サイズ/種類選択、数量、小計、合計、画面下の注文入口。106商品・189価格選択肢（PDF6ページ全部）。商品/カテゴリ/価格/表示・非表示/計算方式を大人が編集しD1へ保存する。URLは同じ /wagaya/apps/dining-prices/。コード試験済み、Git自動ビルド後の本番実機は確認待ち。

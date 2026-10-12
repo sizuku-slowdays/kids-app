@@ -1,4 +1,4 @@
-import {relationLabel,treeLayout,ageLabel,familyRelations} from './kinship.js';
+import {relationLabel,treeLayout,ageLabel,familyRelations} from './kinship.js?v=20261012-parent-layout';
 const $=id=>document.getElementById(id),apiRoot='/api/family-tree';let group='',state=null,center='',viewBasis='',scale=1,layout=null,busy=false;
 const label=p=>p.name||state?.users.find(u=>u.id===p.home_user_id)?.nickname||state?.users.find(u=>u.id===p.home_user_id)?.display_name||'名前未設定';
 const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
@@ -35,3 +35,4 @@ function clearPrivateView(){state=null;center='';viewBasis='';$('view-basis').te
 window.addEventListener('pageshow',e=>{if(e.persisted&&group)(document.querySelector('dialog[open]')?call():load()).catch(e=>status(e.message,true));});window.addEventListener('focus',()=>{if(group&&!busy)(document.querySelector('dialog[open]')?call():load()).catch(e=>status(e.message,true));});
 
 let ageDay='';setInterval(()=>{const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());if(today!==ageDay){ageDay=today;if(state){render();renderPeople();const f=$('person-form');$('person-age').textContent=ageLabel({birth_date:f.elements.birth_date.value,death_date:f.elements.death_date.value},today);}}},60000);for(const key of ['birth_date','death_date'])$('person-form').elements[key].addEventListener('input',()=>{$('person-age').textContent=ageLabel({birth_date:$('person-form').elements.birth_date.value,death_date:$('person-form').elements.death_date.value});});
+

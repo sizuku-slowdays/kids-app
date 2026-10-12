@@ -33,6 +33,7 @@ export function relationLabel(people, relations, basisId, targetId) {
  return '親せき';
 }
 export function treeLayout(people,relations,centerId,radius=4){
+ const parentPairs=parentLayoutPairs(people,relations);
  relations=familyRelations(relations);
  const adjacent=new Map();const edge=(a,b,delta)=>adjacent.set(a,[...(adjacent.get(a)||[]),{id:b,delta}]);
  for(const r of relations){const parent=['biological_parent','adoptive_parent','guardian'].includes(r.kind);edge(r.from_person,r.to_person,parent?1:0);edge(r.to_person,r.from_person,parent?-1:0);}
@@ -45,6 +46,7 @@ export function treeLayout(people,relations,centerId,radius=4){
  const coupleRoots=new Map([...visible].map(id=>[id,id]));
  const coupleKey=id=>{while(coupleRoots.get(id)!==id)id=coupleRoots.get(id);return id;};
  for(const r of relations)if(['marriage','partnership'].includes(r.kind)&&r.status==='current'&&visible.has(r.from_person)&&visible.has(r.to_person)&&levels.get(r.from_person)===levels.get(r.to_person))coupleRoots.set(coupleKey(r.to_person),coupleKey(r.from_person));
+ for(const [a,b] of parentPairs)if(visible.has(a)&&visible.has(b)&&levels.get(a)===levels.get(b))coupleRoots.set(coupleKey(b),coupleKey(a));
  const couples=new Map();for(const id of visible){const key=coupleKey(id);if(!couples.has(key))couples.set(key,[]);couples.get(key).push(id);}
  const descendants=id=>{const members=new Set(couples.get(coupleKey(id)));return [...new Set(relations.filter(r=>['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&members.has(r.from_person)&&visible.has(r.to_person)).map(r=>coupleKey(r.to_person)))];};
  const span=(id,seen=new Set())=>{const key=coupleKey(id),minimum=couples.get(key).length*180;if(seen.has(key))return minimum;const next=new Set([...seen,key]),kids=descendants(id);return Math.max(minimum,kids.reduce((total,k)=>total+span(k,next),0)+Math.max(0,kids.length-1)*36);};
@@ -52,6 +54,8 @@ export function treeLayout(people,relations,centerId,radius=4){
  const list=sortSiblingPeople(groups.get(level),relations),roots=new Map(list.map(p=>[p.id,p.id]));
  const root=id=>{while(roots.get(id)!==id)id=roots.get(id);return id;},join=(a,b)=>{if(roots.has(a)&&roots.has(b))roots.set(root(b),root(a));},firstChild=new Map();
  for(const r of relations){if(r.kind==='sibling'||['marriage','partnership'].includes(r.kind)&&r.status==='current')join(r.from_person,r.to_person);if(['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&roots.has(r.to_person)){const old=firstChild.get(r.from_person);if(old)join(old,r.to_person);else firstChild.set(r.from_person,r.to_person);}}
+ // Co-parents can belong to a sibling's separate unit without a marriage edge.
+ for(const p of list)for(const id of couples.get(coupleKey(p.id)))join(p.id,id);
  const units=new Map();for(const p of list){const key=root(p.id);if(!units.has(key))units.set(key,[]);units.get(key).push(p);}
  const ordered=[...units.values()].map(members=>{const parents=[...new Set(relations.filter(r=>['biological_parent','adoptive_parent','guardian'].includes(r.kind)&&members.some(p=>p.id===r.to_person)&&positions.has(r.from_person)).map(r=>r.from_person))];const anchor=parents.length?parents.reduce((s,id)=>s+positions.get(id),0)/parents.length:null;return {members,anchor};}).sort((a,b)=>(a.anchor??Infinity)-(b.anchor??Infinity));
  let cursor=30;
@@ -113,3 +117,23 @@ export function compareBirthOrder(reference,target){
  return null;
 }
 
+
+
+// Layout only: a unique pair with the identical registered child set can share space.
+// This neither infers a marriage nor changes labels/records. Explicit separation and
+// a different current partner take precedence; ambiguous groups remain unpaired.
+export function parentLayoutPairs(people,relations){
+ const ids=new Set(people.map(p=>p.id)),children=new Map();
+ for(const r of relations)if(['biological_parent','adoptive_parent'].includes(r.kind)&&!r.inferred&&ids.has(r.from_person)&&ids.has(r.to_person)){
+  if(!children.has(r.from_person))children.set(r.from_person,new Set());children.get(r.from_person).add(r.to_person);
+ }
+ const sameChildren=new Map();for(const [parent,kids]of children){const key=JSON.stringify([...kids].sort());if(!sameChildren.has(key))sameChildren.set(key,[]);sameChildren.get(key).push(parent);}
+ const pairs=[];for(const parents of sameChildren.values()){
+  if(parents.length!==2)continue;const [a,b]=parents;
+  const coupleRelations=relations.filter(r=>['marriage','partnership'].includes(r.kind));
+  if(coupleRelations.some(r=>[a,b].includes(r.from_person)&&[a,b].includes(r.to_person)&&['divorced','ended'].includes(r.status)))continue;
+  if(coupleRelations.some(r=>r.status==='current'&&([a,b].includes(r.from_person)&&![a,b].includes(r.to_person)||[a,b].includes(r.to_person)&&![a,b].includes(r.from_person))))continue;
+  pairs.push([a,b]);
+ }
+ return pairs;
+}

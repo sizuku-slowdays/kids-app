@@ -98,3 +98,29 @@ test('couples stay close when three grown children have households of different 
  }
  assert.equal(JSON.stringify({people,relations}),snapshot);
 });
+
+
+
+test('registered co-parents share descendant space without assuming or adding a marriage',async()=>{
+ const {parentLayoutPairs}=await import('../public/apps/family-tree/kinship.js');
+ const people=[{id:'gp'},{id:'gm'},{id:'old',birth_order:1},{id:'middle',birth_order:2},{id:'young',birth_order:3}];
+ const relations=[];
+ for(const [id,count]of [['old',1],['middle',2],['young',3]]){
+  people.push({id:id+'-spouse'});relations.push({from_person:id,to_person:id+'-spouse',kind:'marriage',status:'current'});
+  for(const parent of ['gp','gm'])relations.push({from_person:parent,to_person:id,kind:'biological_parent'});
+  for(let i=0;i<count;i++){people.push({id:id+'-kid-'+i,birth_order:i+1});for(const parent of [id,id+'-spouse'])relations.push({from_person:parent,to_person:id+'-kid-'+i,kind:'biological_parent'});}
+ }
+ const original=JSON.stringify({people,relations});
+ assert.ok(parentLayoutPairs(people,relations).some(pair=>pair.includes('gp')&&pair.includes('gm')));
+ for(const input of [people,[...people].reverse()])for(const basis of ['gp','gm','old','middle','young','middle-kid-0']){
+  const layout=treeLayout(input,relations,basis,Infinity),byId=new Map(layout.nodes.map(p=>[p.id,p]));
+  assert.equal(Math.abs(byId.get('gp').x-byId.get('gm').x),180);assert.equal(byId.get('gp').y,byId.get('gm').y);
+  assert.ok(byId.get('old').x<byId.get('middle').x&&byId.get('middle').x<byId.get('young').x);
+  for(const y of new Set(layout.nodes.map(n=>n.y))){const row=layout.nodes.filter(n=>n.y===y).sort((a,b)=>a.x-b.x);for(let i=1;i<row.length;i++)assert.ok(row[i].x-row[i-1].x>=150);}
+ }
+ assert.equal(JSON.stringify({people,relations}),original);
+ const divorced=[...relations,{from_person:'gp',to_person:'gm',kind:'marriage',status:'divorced'}];assert.equal(parentLayoutPairs(people,divorced).some(p=>p.includes('gp')),false);
+ const remarried=[...relations,{from_person:'gp',to_person:'old-spouse',kind:'marriage',status:'current'}];assert.equal(parentLayoutPairs(people,remarried).some(p=>p.includes('gp')),false);
+ const ambiguous=[...people,{id:'third-parent'}],three=[...relations,...['old','middle','young'].map(id=>({from_person:'third-parent',to_person:id,kind:'adoptive_parent'}))];assert.equal(parentLayoutPairs(ambiguous,three).some(p=>p.includes('gp')),false);
+ assert.deepEqual(parentLayoutPairs([{id:'a'},{id:'b'},{id:'c'}],[{from_person:'a',to_person:'c',kind:'guardian'},{from_person:'b',to_person:'c',kind:'guardian'}]),[]);
+});

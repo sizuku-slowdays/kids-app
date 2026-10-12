@@ -166,3 +166,6 @@ HOME内に外食料金→店舗一覧→店舗別シミュレーターを新設�
 変更：src/dining-prices.ts・dining-western.ts・index.ts、public/apps/dining-prices/{index.html,app.js,order.js,calculator.js,style.css}、migrations/0016_dining_order_imports.sql、外食料金試験・DOM操作確認スクリプト、western-menu-audit.json、管理資料。新Worker/既存Bindings/旧アプリ/R2の変更なし。
 
 検証：TypeScript・JS構文・HOME dry-run、料金/全商品数/画像ページの商品数/時間帯別価格/合計/小計、API永続保存・旧料金退避/保持・削除後非再取込・家庭/子ども権限・同時更新、既存HOME/家系図を含む15試験通過。Node DOM操作で2店舗、食べ放題9416円、サイズ選択、単品5260円、カテゴリ/店舗変更の保持、注文全削除、価格編集・保存の操作を確認。PC/iPhoneの実ブラウザ描画・本番ログイン後は未確認。Gitビルド反映確認待ち。
+
+
+2026-10-13：利用者が姪浜店で食べたことを確認し、公式共通メニュー掲載キッズプレート（税込700円）を追加。既存家庭には1回だけ追記し、料金編集や後の非表示・削除を上書きしない。

@@ -27,3 +27,6 @@ PDF全6ページをテキストと紙面で照合。取得ファイルの内部M
 HOMEディレクトリで dry-run を作った後、node --test test/dining-prices.test.mjs test/dining-order.test.mjs を実行。
 
 DOM操作の追加確認は任意のjsdom環境で scripts/check-dining-order-dom.mjs を実行する。例：npm install --prefix /tmp/wagaya-dom jsdom --no-save --ignore-scripts で用意し、DINING_DOM_PACKAGE=/tmp/wagaya-dom/package.json node scripts/check-dining-order-dom.mjs 。一時依存は本番Workerに不要。DOM確認は実機iPhone描画の代替ではない。
+
+
+2026-10-13補足：利用者の姪浜店での利用確認を受け、公式共通メニューのキッズプレート700円を別途追加。PDF抽出106商品/189価格項目は変更なし。アプリ初期商品は107商品/190価格項目。既存の商品・編集価格は維持。

@@ -2,6 +2,8 @@ import {westernStore} from './dining-western';
 type Course = {id:string;name:string;prices:number[]};
 type Product={id:string;name:string;category:string;period:string;time_note:string;note:string;hidden:boolean;source_page?:number;variants:{id:string;label:string;price:number}[]};
 type Store = {id:string;name:string;note:string;courses:Course[];type?:string;categories?:string[];products?:Product[];[key:string]:unknown};
+const kidsProduct:Product={id:'western-kids-plate',name:'キッズプレート',category:'キッズ',period:'all',time_note:'提供時間帯の記載なし',note:'ハンバーグ・ウインナー・エビフライ・ポテトフライ・ミニサラダ・ライス・ジュース付き。公式共通メニュー掲載。姪浜店での利用実績は利用者確認済み。',hidden:false,variants:[{id:'western-kids-plate-1',label:'プレート',price:700}],source_url:'https://western-fukuoka.jp/menu'} as Product & {source_url:string};
+const seededWestern={...westernStore,categories:[...westernStore.categories,'キッズ'],products:[...westernStore.products,kidsProduct]};
 const initial:Store[]=[{id:'west-hashimoto',name:'焼肉ウエスト 橋本店',note:'2026年9月版 店舗チラシの税込料金。食べ放題にはサラダ＆デザートバー付き。',courses:[
  {id:'lunch',name:'ランチ',prices:[3828,3498,3608,1914,0]},
  {id:'marutoku',name:'まる得',prices:[4708,4268,4378,2354,0]},
@@ -42,9 +44,10 @@ export async function diningRoute(request:Request,env:Env,userId:string,readBody
  if(!['GET','PUT'].includes(request.method))return json({error:'この操作はできません'},405);
  if(request.method==='PUT'&&!editable)return json({error:'店舗・料金の編集は家庭の大人が行えます'},403);
  let row=await env.DB.prepare('SELECT * FROM dining_price_states WHERE household_id=?').bind(group.id).first<{stores_json:string;revision:number}>();
- if(!row){await env.DB.prepare('INSERT OR IGNORE INTO dining_price_states VALUES(?,?,1,?,?)').bind(group.id,JSON.stringify([...initial,westernStore]),userId,new Date().toISOString()).run();row=await env.DB.prepare('SELECT * FROM dining_price_states WHERE household_id=?').bind(group.id).first<{stores_json:string;revision:number}>();}
+ if(!row){await env.DB.prepare('INSERT OR IGNORE INTO dining_price_states VALUES(?,?,1,?,?)').bind(group.id,JSON.stringify([...initial,seededWestern]),userId,new Date().toISOString()).run();row=await env.DB.prepare('SELECT * FROM dining_price_states WHERE household_id=?').bind(group.id).first<{stores_json:string;revision:number}>();}
  if(!row)return json({error:'料金を読み込めませんでした'},503);
  row=await importWestern(env,group.id,userId,row);
+ row=await importWestern(env,group.id,userId,row,true);
  if(request.method==='PUT'){
   let data;try{data=await readBody(request);}catch(e){throw e;}
   if(!Number.isSafeInteger(data.revision))return json({error:'画面を読み直してください'},400);
@@ -57,17 +60,19 @@ export async function diningRoute(request:Request,env:Env,userId:string,readBody
 }
 
 
-async function importWestern(env:Env,household:string,userId:string,row:{stores_json:string;revision:number}){
- const source=westernStore.source_version,id=westernStore.id;
+async function importWestern(env:Env,household:string,userId:string,row:{stores_json:string;revision:number},kids=false){
+ const source=kids?'western-kids-common-20261013':westernStore.source_version,id=westernStore.id;
  for(let retry=0;retry<3;retry++){
   if(await env.DB.prepare('SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?').bind(household,source).first())return row;
   const stores=JSON.parse(row.stores_json) as Store[];
-  if(stores.some(s=>s.id===id)){await env.DB.prepare('INSERT OR IGNORE INTO dining_price_imports VALUES(?,?,?)').bind(household,source,new Date().toISOString()).run();return row;}
-  const now=new Date().toISOString();
+  const target=stores.find(s=>s.id===id);
+  if(kids?(!target||target.products?.some(p=>p.id===kidsProduct.id)):!!target){await env.DB.prepare('INSERT OR IGNORE INTO dining_price_imports VALUES(?,?,?)').bind(household,source,new Date().toISOString()).run();return row;}
+  const next=kids?stores.map(s=>s.id===id?{...s,categories:[...(s.categories||[]),...((s.categories||[]).includes('キッズ')?[]:['キッズ'])],products:[...(s.products||[]),kidsProduct]}:s):[...stores,seededWestern];
+  const nextJSON=JSON.stringify(next),now=new Date().toISOString();
   await env.DB.batch([
    env.DB.prepare('INSERT INTO dining_price_backups SELECT ?,household_id,revision,stores_json,? FROM dining_price_states WHERE household_id=? AND revision=? AND NOT EXISTS(SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?)').bind(crypto.randomUUID(),now,household,row.revision,household,source),
-   env.DB.prepare('UPDATE dining_price_states SET stores_json=?,revision=revision+1,updated_by=?,updated_at=? WHERE household_id=? AND revision=? AND NOT EXISTS(SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?)').bind(JSON.stringify([...stores,westernStore]),userId,now,household,row.revision,household,source),
-   env.DB.prepare("INSERT OR IGNORE INTO dining_price_imports SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM dining_price_states s,json_each(s.stores_json) j WHERE s.household_id=? AND json_extract(j.value,'$.id')=?)").bind(household,source,now,household,id)
+   env.DB.prepare('UPDATE dining_price_states SET stores_json=?,revision=revision+1,updated_by=?,updated_at=? WHERE household_id=? AND revision=? AND NOT EXISTS(SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?)').bind(nextJSON,userId,now,household,row.revision,household,source),
+   env.DB.prepare("INSERT OR IGNORE INTO dining_price_imports SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM dining_price_states WHERE household_id=? AND revision=? AND stores_json=?)").bind(household,source,now,household,row.revision+1,nextJSON)
   ]);
   const current=await env.DB.prepare('SELECT stores_json,revision FROM dining_price_states WHERE household_id=?').bind(household).first<{stores_json:string;revision:number}>();if(!current)throw Error('料金を読み込めませんでした');row=current;
  }

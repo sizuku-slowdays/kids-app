@@ -45,7 +45,17 @@ test('HOME auth, household separation, persistent CRUD and concurrent saves pres
   const imported=await (await call('mom','GET',null,'late')).json();assert.equal(imported.stores.length,3);assert.deepEqual(imported.stores.slice(0,2),oldStores);assert.equal(imported.revision,10);
   const backup=await db.prepare("SELECT stores_json,revision FROM dining_price_backups WHERE household_id='late'").first();assert.equal(backup.stores_json,JSON.stringify(oldStores));assert.equal(backup.revision,9);
   const again=await (await call('mom','GET',null,'late')).json();assert.equal(again.revision,10);
-  const restaurant=again.stores.find(s=>s.type==='order');assert.equal(restaurant.products.length,106);assert.equal(restaurant.products.reduce((n,p)=>n+p.variants.length,0),189);
+  const restaurant=again.stores.find(s=>s.type==='order');assert.equal(restaurant.products.length,107);assert.equal(restaurant.products.reduce((n,p)=>n+p.variants.length,0),190);
+  // Simulate an existing household from the previous release: preserve edited prices,
+  // add only the kids plate, and do not recreate it after later deletion.
+  const prior=structuredClone(again.stores);const priorWestern=prior.find(s=>s.type==='order');
+  priorWestern.products=priorWestern.products.filter(p=>p.id!=='western-kids-plate');priorWestern.categories=priorWestern.categories.filter(c=>c!=='キッズ');priorWestern.products[0].variants[0].price=8888;
+  await db.prepare('UPDATE dining_price_states SET stores_json=?,revision=revision+1 WHERE household_id=?').bind(JSON.stringify(prior),'late').run();
+  await db.prepare('DELETE FROM dining_price_imports WHERE household_id=? AND source_id=?').bind('late','western-kids-common-20261013').run();
+  const supplemented=await (await call('mom','GET',null,'late')).json();const kids=supplemented.stores.find(s=>s.type==='order').products.find(p=>p.id==='western-kids-plate');assert.equal(kids.variants[0].price,700);assert.equal(kids.period,'all');assert.equal(supplemented.stores.find(s=>s.type==='order').products[0].variants[0].price,8888);
+  const removed=structuredClone(supplemented.stores);removed.find(s=>s.type==='order').products=removed.find(s=>s.type==='order').products.filter(p=>p.id!=='western-kids-plate');
+  assert.equal((await call('mom','PUT',{revision:supplemented.revision,stores:removed},'late')).status,200);assert.ok(!(await (await call('mom','GET',null,'late')).json()).stores.find(s=>s.type==='order').products.some(p=>p.id==='western-kids-plate'));
+  again.stores=removed;again.revision=supplemented.revision+1;
   const changes=structuredClone(again.stores);changes.find(s=>s.type==='order').products[0].variants[0].price=9999;
   assert.equal((await call('mom','PUT',{revision:again.revision,stores:changes},'late')).status,200);
   assert.equal((await (await call('mom','GET',null,'late')).json()).stores.find(s=>s.type==='order').products[0].variants[0].price,9999);

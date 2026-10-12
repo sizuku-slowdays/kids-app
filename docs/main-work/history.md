@@ -146,3 +146,5 @@ HOME内に外食料金→店舗一覧→店舗別シミュレーターを新設�
 変更：HOME src/dining-prices.ts、src/index.ts、public/app.js、public/apps/dining-prices/{index.html,app.js,calculator.js,style.css}、migrations/0015_dining_prices.sql、test/dining-prices.test.mjs、関連管理資料。移行は新テーブル1個と新アプリ/家庭利用権限の追加のみ。既存テーブルを削除・ALTER・置換しない。既存HOMEのWrangler・Bindings・R2設定は変更していない。
 
 検証：TypeScript・JS構文・HOME dry-run、提示表の全区分・1大人2小学生/8人構成の合計/差額・永続追加/削除・空状態保持・競合保存・未認証/子ども/別家庭の権限・HOME導線/API・既存認証/URLの回帰試験通過。本番反映はGitビルド確認待ち。クラウドブラウザのHOMEはログイン画面であり、ログイン後と実機iPhoneの操作確認は未完了。
+
+外食料金のスマホ編集グリッドにminmax(0,1fr)/min-width:0を指定し、数値入力で画面が横に広がらないよう調整。本番入口は確認用ブラウザでHOMEログインへ移動することを確認。ログイン後・実機iPhoneは未確認。GitHubのcommit status/check-runにはCloudflareのビルド結果が掲載されておらず、本番ビルドSuccessは利用者確認待ち。

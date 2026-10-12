@@ -137,3 +137,12 @@ TypeScript・配信対象JS構文・Wrangler dry-run・family-tree/kinship計3�
 現婚姻/パートナーの双方に子孫用の幅を別々に割り当てていたため、祖父母に3つの子ども世帯があると夫婦カードが大きく離れる不具合を再現。現夫婦を配置ブロックとして扱い、共通の子孫の幅は1回だけ予約し、夫婦カードは近くに配置。子ども世帯ごとの余白と、きょうだいの出生順は維持。人物・関係・写真・DB・権限の変更なし。
 
 変更：public/apps/family-tree/kinship.js と test/kinship.test.mjs（HOME配下）。子ども人数1/2/3の3世帯を持つ祖父母、6人の視点、入力順反転、カード重なり、既存続柄/出生順を含む8試験通過。修正前は祖父母間隔1296、修正後は180（論理座標）。HOMEのGit自動ビルド反映待ち、利用者の実画面確認は未確認。
+
+
+## 2026-10-12：翌日利用向けの外食料金アプリ新規実装
+
+HOME内に外食料金→店舗一覧→店舗別シミュレーターを新設。提示されたウエスト橋本店の税込価格20セルを初期登録し、人数5区分の増減と全コース/コース間差を即時計算。店舗・コース・料金の編集は家庭別D1永続保存、revisionで同時更新を保護。既存アプリ・予定・通帳・画像への更新処理は追加していない。
+
+変更：HOME src/dining-prices.ts、src/index.ts、public/app.js、public/apps/dining-prices/{index.html,app.js,calculator.js,style.css}、migrations/0015_dining_prices.sql、test/dining-prices.test.mjs、関連管理資料。移行は新テーブル1個と新アプリ/家庭利用権限の追加のみ。既存テーブルを削除・ALTER・置換しない。既存HOMEのWrangler・Bindings・R2設定は変更していない。
+
+検証：TypeScript・JS構文・HOME dry-run、提示表の全区分・1大人2小学生/8人構成の合計/差額・永続追加/削除・空状態保持・競合保存・未認証/子ども/別家庭の権限・HOME導線/API・既存認証/URLの回帰試験通過。本番反映はGitビルド確認待ち。クラウドブラウザのHOMEはログイン画面であり、ログイン後と実機iPhoneの操作確認は未完了。

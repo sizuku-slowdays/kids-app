@@ -53,3 +53,7 @@ home-workerのASSETS、CALENDAR_SERVICE→calendar-worker、LEGACY_BANK_SERVICE�
 
 ### 2026-10-12：notification-center-api（利用者提供コード・Bindings確認）
 DB → notification-center-db。HOME_AUTH → home-workerを利用者が追加済み。HOME側のNOTIFICATION_SERVICE → notification-center-apiは今回Wrangler設定へ追加。既存Cron/VAPID/APP_PASSWORDを維持する手動Deploy方式。新コードは cloudflare/notification-center-api/notification-center-api.js。DB追加はHOME端末本人リンクのみ。Worker本番反映・実機通知は未確認。
+
+
+### 2026-10-12：外食料金のWorker・保存先
+既存home-worker内の /api/dining-prices と /apps/dining-prices/ を追加。DB=home-db、binding=DB。D1追加テーブル dining_price_states：household_id・stores_json・revision・updated_by・updated_at。新Worker/新D1/R2/Bindings/Secretsの追加なし。既存Gitビルドの migrations apply → deploy により0015_dining_prices.sqlを適用する。

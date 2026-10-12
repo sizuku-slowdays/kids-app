@@ -1,4 +1,5 @@
 import { notificationProxy, notificationCheck } from "./notifications";
+import { diningRoute } from "./dining-prices";
 import { mountedHome } from "./home-mount";
 import { calendarIdentity, calendarProxy } from "./calendar";
 import { advanceChores } from "./passbook-chores";
@@ -444,6 +445,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if(path==='/api/dining-prices'||path.startsWith('/api/dining-prices/')){
+      requireValue(await appAllowed(env,user.id,'dining-prices'),403,'このアプリは利用できません');
+      return diningRoute(request,env,user.id,r=>body(r,2000000));
+    }
     if (path === '/api/household-people') return peopleRoute(request,env,user.id,body);
     if (path === '/api/family-tree' || path.startsWith('/api/family-tree/')) {
       requireValue(await appAllowed(env,user.id,'family-tree'),403,'このアプリは利用できません');
@@ -723,6 +728,18 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   if (path.startsWith("/api/") || path.startsWith("/media/"))
     throw new Failure(404, "見つかりません");
+  if(path==='/apps/dining-prices'||path.startsWith('/apps/dining-prices/')){
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
+    requireValue(await appAllowed(env,s.user_id,'dining-prices'),403,'このアプリは利用できません');
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    if(path==='/apps/dining-prices')return new Response(null,{status:303,headers:{...headers,Location:'/apps/dining-prices/'}});
+    const file=path.slice('/apps/dining-prices/'.length)||'index.html';
+    requireValue(['index.html','app.js','calculator.js','style.css'].includes(file),404,'見つかりません');
+    const assetUrl=new URL(url);assetUrl.pathname='/apps/dining-prices/'+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
   if (path === '/apps/family-tree' || path.startsWith('/apps/family-tree/')) {
     if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
     requireValue(await appAllowed(env,s.user_id,'family-tree'),403,'このアプリは利用できません');
@@ -888,4 +905,5 @@ export default {
     ]);
   },
 } satisfies ExportedHandler<HomeEnv>;
+
 

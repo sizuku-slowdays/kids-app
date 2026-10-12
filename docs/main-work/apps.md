@@ -148,3 +148,7 @@
 
 ### 2026-10-12：家系図の夫婦間隔の修正
 子ども3人が別世帯を持つ場合でも、祖父母を近くに表示する配置へ改修。自動試験8件通過。HOME Gitビルド後に家系図を再読込して確認。利用URL・DB・写真保存先の変更なし。実画面は利用者確認待ち。
+
+
+### 2026-10-12：外食料金（新規HOMEアプリ）
+名前：外食料金。通常URL：https://cetus.fun/wagaya/apps/dining-prices/ 。home-worker直URL：https://home-worker.sslowdayss.workers.dev/apps/dining-prices/ 。リポジトリ：kids-app / feat/home-auth-foundation。ソース：cloudflare/home-worker/public/apps/dining-prices/、src/dining-prices.ts。HOMEの個人セッション認証と家庭アプリ権限を使用。5区分・人数0人開始・店舗切替時の人数維持・全コース税込合計/最安差/任意2コース差・店舗/コース/価格編集。Git自動ビルドへの反映待ち。本番ログイン後と実機iPhoneの確認は未確認。

@@ -113,3 +113,6 @@ HOME専用端末はrecipient=allでDB制約を満たすが、home_notification_o
 
 
 月表示のサイズは従来通り（日付13px/スマホ11px、予定10px/スマホ9px、セル高82px/スマホ58px）。枠内の予定も日付選択として扱い詳細は開かない。詳細選択は下の一日一覧（最低64px行、17px予定文字）を使う。前記の月日付拡大仕様を置き換える。
+
+
+HOME通知予約：notification_rules.recipientは既存制約に適合するall。texts.__home_calendar_recipientにhome-all/home:IDを記録する。配信時に必ずHOME宛先を復元し、HOMEリンクと最新ACLを確認。旧通知管理の一覧・個別変更から除外。既存旧予約は変更しない。

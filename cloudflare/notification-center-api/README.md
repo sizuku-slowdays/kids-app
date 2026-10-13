@@ -34,3 +34,5 @@ TypeScript、HOME dry-run、カレンダー認証・共有・繰返しの回帰�
 
 ## 2026-10-13：実DBの制約対応
 利用者提供CREATE TABLEでrecipientがmama/child1/child2/allに限定されていることを確認。home-only文字列の保存を止め、HOME専用端末区分テーブルを追加する。旧端末のrecipient・購読データは保持。旧全員配信除外、HOME本人リンク、解除/再登録を制約付きテストで確認。再度通知Workerのみ手動Deployが必要。
+
+通知予約のrecipientにも同じCHECKがあるため、HOME宛先はtexts JSONの__home_calendar_recipientで保持。配信時に復元してHOME端末・権限チェックを行う。既存予約をALTER/初期化しない。修正版Deploy後に未来のテスト予定を通知ありで再保存する。

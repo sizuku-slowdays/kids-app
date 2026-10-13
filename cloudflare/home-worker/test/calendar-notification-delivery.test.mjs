@@ -7,12 +7,14 @@ import {DatabaseSync} from 'node:sqlite';
 test('HOME device identity, legacy subscriptions, and live authorization before every calendar push',async()=>{
  const sqlite=new DatabaseSync(':memory:');sqlite.exec(`
  CREATE TABLE push_subscriptions(id INTEGER PRIMARY KEY,endpoint TEXT UNIQUE,p256dh TEXT,auth TEXT,recipient TEXT NOT NULL CHECK(recipient IN ('mama','child1','child2','all')),device_name TEXT,user_agent TEXT,enabled INTEGER,fail_count INTEGER,last_error TEXT,last_success_at TEXT,updated_at TEXT);
+ CREATE TABLE notification_rules(id INTEGER PRIMARY KEY,title TEXT,body TEXT,recipient TEXT NOT NULL CHECK(recipient IN ('mama','child1','child2','all')),url TEXT,external_key TEXT,texts TEXT,repeat_type TEXT,time TEXT,days_of_week TEXT,start_time TEXT,end_time TEXT,interval_hours INTEGER,once_date TEXT,enabled INTEGER,track_completion INTEGER);
+ CREATE TABLE notification_logs(rule_id INTEGER);
  CREATE TABLE habit_completions(rule_id INTEGER,date TEXT,recipient TEXT,status TEXT);
  INSERT INTO push_subscriptions VALUES(1,'https://push.test/old','k','a','mama','old','ua',1,0,NULL,NULL,NULL);
  `);
  const DB={prepare(sql){let values=[];return {bind(...v){values=v;return this;},async run(){return sqlite.prepare(sql).run(...values);},async all(){return {results:sqlite.prepare(sql).all(...values)};},async first(){return sqlite.prepare(sql).get(...values)||null;}};},async batch(statements){return Promise.all(statements.map(s=>s.run()));}};
  let allowed=true,broken=false;const checks=[],sent=[];
- const env={DB,HOME_AUTH:{async fetch(request){const u=new URL(request.url);if(u.pathname==='/api/notifications/identity')return Response.json({user:{id:'mom',display_name:'テストの母'},session_id:'sid'});checks.push(u.searchParams.get('user'));if(broken)throw Error('offline');return Response.json({allowed,title:'最新の予定名',url:'/wagaya/apps/calendar/'});}}};
+ const env={DB,APP_PASSWORD:'test',HOME_AUTH:{async fetch(request){const u=new URL(request.url);if(u.pathname==='/api/notifications/identity')return Response.json({user:{id:'mom',display_name:'テストの母'},session_id:'sid'});checks.push(u.searchParams.get('user'));if(broken)throw Error('offline');return Response.json({allowed,title:'最新の予定名',url:'/wagaya/apps/calendar/'});}}};
  const source=await readFile(new URL('../../notification-center-api/notification-center-api.js',import.meta.url),'utf8');
  const context=vm.createContext({Response,Request,URL,URLSearchParams,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,Date,console,atob,btoa,crypto:globalThis.crypto,sent});
  vm.runInContext(source.replace('export default {','globalThis.worker = {')+`\nsendPush=async(sub,payload)=>{sent.push({endpoint:sub.endpoint,payload});return {ok:true};};globalThis.api={homeNotificationRoute,subsForRecipient,fireRule,b64urlToBytes,bytesToB64url,legacySafeResponse};`,context);
@@ -28,6 +30,10 @@ test('HOME device identity, legacy subscriptions, and live authorization before 
  assert.equal((await api.homeNotificationRoute(req('https://push.test/new'),env,'/api/home/subscribe')).status,200);
  assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM home_notification_only_endpoints').get().n,1);
  assert.equal((await api.subsForRecipient(env,'all')).length,1);assert.equal((await api.subsForRecipient(env,'home:forged')).length,0);assert.equal((await api.subsForRecipient(env,'home:mom')).length,2);
+ const syncResponse=await context.worker.fetch(new Request('https://notification.internal/api/calendar-sync',{method:'POST',headers:{'X-App-Password':'test','Content-Type':'application/json'},body:JSON.stringify({source_id:'event',recipient:'home-all',occurrences:[{date:'2026-10-13',time:'14:00'}]})}),env,{});
+ assert.equal(syncResponse.status,200);assert.equal((await syncResponse.json()).scheduled,1);
+ const persisted=sqlite.prepare('SELECT * FROM notification_rules').get();assert.equal(persisted.recipient,'all');assert.equal(JSON.parse(persisted.texts).__home_calendar_recipient,'home-all');assert.equal(api.legacySafeResponse([persisted]).length,0);
+ const beforeReserved=sent.length;await api.fireRule(env,persisted,'reserved','2026-10-13');assert.equal(sent.length-beforeReserved,2);sent.length=0;checks.length=0;
  const rule={id:9,title:'古い予定名',body:'5分前',recipient:'home-all',external_key:'cal_event',repeat_type:'once',track_completion:0,url:'/wagaya/apps/calendar/'};
  await api.fireRule(env,rule,'1','2026-10-12');assert.equal(sent.length,2);assert.equal(sent[0].payload.title,'最新の予定名');assert.deepEqual(checks,['mom','mom']);
  allowed=false;await api.fireRule(env,rule,'2','2026-10-12');assert.equal(sent.length,2);

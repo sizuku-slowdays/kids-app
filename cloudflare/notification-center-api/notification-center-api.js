@@ -624,6 +624,8 @@ async function markSubResult(env, sub, r) {
 /** 1つのルール発火を、対象端末それぞれへ送る（文面は端末の持ち主ごとに切り替え） */
 
 async function fireRule(env, rule, fireKey, dateStr) {
+  const homeRecipient=homeRuleRecipient(rule);
+  if(homeRecipient)rule={...rule,recipient:homeRecipient};
 
   const subs = await subsForRecipient(env, rule.recipient);
 
@@ -1421,9 +1423,9 @@ async function handleRequest(request, env) {
 
              days_of_week, start_time, end_time, interval_hours, once_date, enabled, track_completion)
 
-           VALUES (?, ?, ?, ?, ?, NULL, 'once', ?, NULL, NULL, NULL, NULL, ?, 1, 0)`
+           VALUES (?, ?, ?, ?, ?, ?, 'once', ?, NULL, NULL, NULL, NULL, ?, 1, 0)`
 
-        ).bind(title, message, recipient, targetUrl, externalKey, o.time, o.date)));
+        ).bind(title, message, isHomeNotificationRecipient(recipient)?'all':recipient, targetUrl, externalKey, isHomeNotificationRecipient(recipient)?JSON.stringify({__home_calendar_recipient:recipient}):null, o.time, o.date)));
 
       }
 
@@ -1496,8 +1498,8 @@ async function handleRequest(request, env) {
   if (ruleMatch) {
 
     const id = Number(ruleMatch[1]);
-    const protectedRule=await env.DB.prepare('SELECT recipient FROM notification_rules WHERE id=?').bind(id).first();
-    if(isHomeNotificationRecipient(protectedRule?.recipient))return json({error:'HOMEカレンダーから操作してください'},request,env,404);
+    const protectedRule=await env.DB.prepare('SELECT recipient,texts FROM notification_rules WHERE id=?').bind(id).first();
+    if(homeRuleRecipient(protectedRule))return json({error:'HOMEカレンダーから操作してください'},request,env,404);
 
 
 
@@ -1977,10 +1979,16 @@ async function checkHomeCalendarDelivery(env,rule,userId,sessionId){
  const response=await env.HOME_AUTH.fetch(new Request(url));return response.ok?response.json():{allowed:false};
 }
 
+function homeRuleRecipient(rule){
+ if(isHomeNotificationRecipient(rule?.recipient))return rule.recipient;
+ let texts=rule?.texts;try{if(typeof texts==='string')texts=JSON.parse(texts);}catch{return null;}
+ const recipient=texts?.__home_calendar_recipient;
+ return isHomeNotificationRecipient(recipient)?recipient:null;
+}
 function legacySafeResponse(value){
  if(Array.isArray(value))return value.map(legacySafeResponse).filter(v=>v!==undefined);
  if(value&&typeof value==='object'){
-   if(isHomeNotificationRecipient(value.recipient)||value.recipient==='home-only')return undefined;
+   if(homeRuleRecipient(value)||value.recipient==='home-only')return undefined;
    return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,legacySafeResponse(v)]).filter(([,v])=>v!==undefined));
  }
  return value;

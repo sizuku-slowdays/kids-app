@@ -104,3 +104,6 @@ HOME認証済みの家庭メンバーが閲覧・計算できる。料金編集�
 
 
 通知SW：/apps/calendar/notify-sw.js は個人情報なしJavaScriptを未認証でもGET/HEAD配信。cetus.funの/wagaya/sw.jsは従来通り。予定・画像・APIの認証と閲覧権限は維持。通知500ログはoperation/status/分類reasonのみ、Cookie・endpoint・氏名・例外原文は記録しない。
+
+
+HOME専用端末はrecipient=allでDB制約を満たすが、home_notification_only_endpointsで旧全員配信から除外。既存旧端末は従来recipientを保持。HOMEリンク解除後も専用区分を維持し、旧通知へ漏れない。

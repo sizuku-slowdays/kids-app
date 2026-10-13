@@ -565,6 +565,7 @@ function tapUrl(rule, occurrenceKey, recipient, text) {
 
 
 async function subsForRecipient(env, recipient) {
+  await ensureHomeNotificationTable(env);
   if(isHomeNotificationRecipient(recipient)){
     await ensureHomeNotificationTable(env);
     return (await env.DB.prepare('SELECT s.*,h.home_user_id,h.home_session_id FROM push_subscriptions s JOIN home_notification_subscriptions h ON h.endpoint=s.endpoint WHERE s.enabled=1 AND (?=\'home-all\' OR h.home_user_id=?)').bind(recipient,String(recipient).slice(5)).all()).results;
@@ -574,7 +575,7 @@ async function subsForRecipient(env, recipient) {
 
     `SELECT * FROM push_subscriptions
 
-      WHERE enabled = 1 AND recipient != 'home-only' AND (? = 'all' OR recipient = 'all' OR recipient = ?)`
+      WHERE enabled = 1 AND recipient != 'home-only' AND NOT EXISTS (SELECT 1 FROM home_notification_only_endpoints h WHERE h.endpoint=push_subscriptions.endpoint) AND (? = 'all' OR recipient = 'all' OR recipient = ?)`
 
   )
 
@@ -1938,7 +1939,12 @@ export default {
 
 };
 function isHomeNotificationRecipient(value){return value==='home-all'||/^home:[a-zA-Z0-9_-]{1,100}$/.test(value||'');}
-async function ensureHomeNotificationTable(env){await env.DB.prepare('CREATE TABLE IF NOT EXISTS home_notification_subscriptions (endpoint TEXT PRIMARY KEY,home_user_id TEXT NOT NULL,home_session_id TEXT NOT NULL,updated_at TEXT NOT NULL)').run();}
+async function ensureHomeNotificationTable(env){
+ await env.DB.prepare('CREATE TABLE IF NOT EXISTS home_notification_subscriptions (endpoint TEXT PRIMARY KEY,home_user_id TEXT NOT NULL,home_session_id TEXT NOT NULL,updated_at TEXT NOT NULL)').run();
+ // Separate HOME-only delivery from the legacy recipient CHECK constraint.
+ // Keep this marker even after HOME unlinking, so legacy 'all' cannot reach it.
+ await env.DB.prepare('CREATE TABLE IF NOT EXISTS home_notification_only_endpoints (endpoint TEXT PRIMARY KEY)').run();
+}
 async function homeNotificationRoute(request,env,path){
  if(new URL(request.url).hostname!=='notification.internal')return json({error:'見つかりません'},request,env,404);
  if(!env.HOME_AUTH)return json({error:'HOME_AUTHの接続を確認してください'},request,env,503);
@@ -1958,7 +1964,8 @@ async function homeNotificationRoute(request,env,path){
  }
  if(!body.p256dh||!body.auth)return json({error:'購読情報が足りません'},request,env,400);
  await env.DB.batch([
-   env.DB.prepare("INSERT INTO push_subscriptions (endpoint,p256dh,auth,recipient,device_name,user_agent,enabled,fail_count) VALUES(?,?,?,'home-only',?,?,1,0) ON CONFLICT(endpoint) DO UPDATE SET p256dh=excluded.p256dh,auth=excluded.auth,enabled=1").bind(endpoint,String(body.p256dh),String(body.auth),String(body.device_name||'HOMEの端末').slice(0,80),request.headers.get('User-Agent')||''),
+   env.DB.prepare('INSERT OR IGNORE INTO home_notification_only_endpoints SELECT ? WHERE NOT EXISTS(SELECT 1 FROM push_subscriptions WHERE endpoint=?)').bind(endpoint,endpoint),
+   env.DB.prepare("INSERT INTO push_subscriptions (endpoint,p256dh,auth,recipient,device_name,user_agent,enabled,fail_count) VALUES(?,?,?,'all',?,?,1,0) ON CONFLICT(endpoint) DO UPDATE SET p256dh=excluded.p256dh,auth=excluded.auth,enabled=1").bind(endpoint,String(body.p256dh),String(body.auth),String(body.device_name||'HOMEの端末').slice(0,80),request.headers.get('User-Agent')||''),
    env.DB.prepare('INSERT INTO home_notification_subscriptions VALUES(?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET home_user_id=excluded.home_user_id,home_session_id=excluded.home_session_id,updated_at=excluded.updated_at').bind(endpoint,user.id,session_id,new Date().toISOString())
  ]);
  return json({ok:true,user},request,env);

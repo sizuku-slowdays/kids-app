@@ -12,7 +12,7 @@
 ## 追加データと権限
 `home_notification_subscriptions` は初回HOME端末登録で作成するサイドカーテーブル。endpoint、HOMEユーザーID、HOMEセッションID、更新日時を保存。既存の4テーブルは削除・初期化しない。
 
-HOMEセッションをWorker間で確認し、本文に入れた他人のIDは採用しない。既存endpointの旧recipientは維持。新しいHOME専用端末は `home-only` として旧「全員」通知から除外する。
+HOMEセッションをWorker間で確認し、本文に入れた他人のIDは採用しない。既存endpointの旧recipientは維持。新しいHOME専用端末は `home_notification_only_endpoints` の区分で旧「全員」通知から除外する。既存DBのrecipient CHECK（mama/child1/child2/all）を維持し、recipient値はallを使うが旧配信の検索から除外する。解除後も区分を維持する。
 
 カレンダーの新しい通知先は `home-all` または `home:<user_id>`。通知直前にHOME経由でカレンダーの最新閲覧権限を確認する。HOME利用権限、アカウント有効性、登録セッションの有効期限・失効、家庭参加・共有範囲、予定個別範囲を確認。失敗・通信障害・対象外・削除済みなら送らない。新旧の「全員」は混ぜない。HOME予定の予約には汎用文だけを保存し、予定名は許可を確認した配信直前に取得する。HOME形式のルールは旧管理APIの一覧・詳細・編集から除外する。
 
@@ -31,3 +31,6 @@ HOMEセッションをWorker間で確認し、本文に入れた他人のIDは�
 TypeScript、HOME dry-run、カレンダー認証・共有・繰返しの回帰試験、通知配信直前ACL、ユーザー/セッション失効、個別端末登録、旧端末維持、通信障害時の配信停止を自動確認。実際のWeb Push配信、iPhoneの許可・購読、DB追加後の照合は本番導入後に利用者と確認する。
 
 旧通知センター全体のHOME認証移行は今回の対象外。通知Workerの既存管理APIは従来の合言葉方式を維持している。
+
+## 2026-10-13：実DBの制約対応
+利用者提供CREATE TABLEでrecipientがmama/child1/child2/allに限定されていることを確認。home-only文字列の保存を止め、HOME専用端末区分テーブルを追加する。旧端末のrecipient・購読データは保持。旧全員配信除外、HOME本人リンク、解除/再登録を制約付きテストで確認。再度通知Workerのみ手動Deployが必要。

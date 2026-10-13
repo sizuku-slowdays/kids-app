@@ -172,3 +172,6 @@ HOME内に外食料金→店舗一覧→店舗別シミュレーターを新設�
 
 
 2026-10-13：カレンダー通知端末登録のnotify-sw.jsがWorker直接URLで404となる配信ルート漏れを修正。公開するのは個人情報を含まない通知スクリプトのみ。通知API500を操作・HTTP・匿名化理由で診断可能に変更。iPhoneのサーバーエラー原因と実通知到着は未確認。
+
+
+2026-10-13：本番push_subscriptionsのrecipient CHECK（mama/child1/child2/all）によりhome-only保存が失敗することを利用者提供DDLで確定。旧テーブルの構造と既存端末は維持し、home_notification_only_endpoints区分テーブルで旧全員配信を除外する方式へ修正。通知Worker再Deploy・実通知確認待ち。

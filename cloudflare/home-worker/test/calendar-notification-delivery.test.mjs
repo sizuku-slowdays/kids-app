@@ -6,7 +6,7 @@ import {DatabaseSync} from 'node:sqlite';
 
 test('HOME device identity, legacy subscriptions, and live authorization before every calendar push',async()=>{
  const sqlite=new DatabaseSync(':memory:');sqlite.exec(`
- CREATE TABLE push_subscriptions(id INTEGER PRIMARY KEY,endpoint TEXT UNIQUE,p256dh TEXT,auth TEXT,recipient TEXT,device_name TEXT,user_agent TEXT,enabled INTEGER,fail_count INTEGER,last_error TEXT,last_success_at TEXT,updated_at TEXT);
+ CREATE TABLE push_subscriptions(id INTEGER PRIMARY KEY,endpoint TEXT UNIQUE,p256dh TEXT,auth TEXT,recipient TEXT NOT NULL CHECK(recipient IN ('mama','child1','child2','all')),device_name TEXT,user_agent TEXT,enabled INTEGER,fail_count INTEGER,last_error TEXT,last_success_at TEXT,updated_at TEXT);
  CREATE TABLE habit_completions(rule_id INTEGER,date TEXT,recipient TEXT,status TEXT);
  INSERT INTO push_subscriptions VALUES(1,'https://push.test/old','k','a','mama','old','ua',1,0,NULL,NULL,NULL);
  `);
@@ -24,11 +24,18 @@ test('HOME device identity, legacy subscriptions, and live authorization before 
  assert.equal(sqlite.prepare('SELECT recipient FROM push_subscriptions WHERE id=1').get().recipient,'mama');
  assert.equal(sqlite.prepare('SELECT home_user_id FROM home_notification_subscriptions').get().home_user_id,'mom');
  assert.equal((await api.homeNotificationRoute(req('https://push.test/new'),env,'/api/home/subscribe')).status,200);
+ assert.equal(sqlite.prepare("SELECT recipient FROM push_subscriptions WHERE endpoint='https://push.test/new'").get().recipient,'all');
+ assert.equal((await api.homeNotificationRoute(req('https://push.test/new'),env,'/api/home/subscribe')).status,200);
+ assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM home_notification_only_endpoints').get().n,1);
  assert.equal((await api.subsForRecipient(env,'all')).length,1);assert.equal((await api.subsForRecipient(env,'home:forged')).length,0);assert.equal((await api.subsForRecipient(env,'home:mom')).length,2);
  const rule={id:9,title:'古い予定名',body:'5分前',recipient:'home-all',external_key:'cal_event',repeat_type:'once',track_completion:0,url:'/wagaya/apps/calendar/'};
  await api.fireRule(env,rule,'1','2026-10-12');assert.equal(sent.length,2);assert.equal(sent[0].payload.title,'最新の予定名');assert.deepEqual(checks,['mom','mom']);
  allowed=false;await api.fireRule(env,rule,'2','2026-10-12');assert.equal(sent.length,2);
  allowed=true;broken=true;await api.fireRule(env,rule,'3','2026-10-12');assert.equal(sent.length,2);
+ const unlink=new Request('https://notification.internal/api/home/unsubscribe',{method:'POST',headers:{Origin:'https://cetus.fun',Cookie:'test','Content-Type':'application/json'},body:JSON.stringify({endpoint:'https://push.test/new'})});
+ assert.equal((await api.homeNotificationRoute(unlink,env,'/api/home/unsubscribe')).status,200);
+ assert.equal((await api.subsForRecipient(env,'all')).length,1);assert.equal((await api.subsForRecipient(env,'home:mom')).length,1);
+ assert.equal((await api.homeNotificationRoute(req('https://push.test/new'),env,'/api/home/subscribe')).status,200);assert.equal((await api.subsForRecipient(env,'all')).length,1);
  const untrusted=new Request('https://notification-center-api.sslowdayss.workers.dev/api/home/subscribe',{method:'POST'});assert.equal((await api.homeNotificationRoute(untrusted,env,'/api/home/subscribe')).status,404);
  sqlite.close();
 });

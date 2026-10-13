@@ -61,3 +61,6 @@ DB → notification-center-db。HOME_AUTH → home-workerを利用者が追加�
 
 ### 2026-10-12：単品注文メニューの保存・初回追加
 新Worker/Binding/R2なし。home-worker + home-db継続。0016_dining_order_imports.sqlで dining_price_imports（家庭別・取込版の一意印）、dining_price_backups（追加前の料金JSON・revision）を追加。既存JSONへ店舗を追記する前にD1内へスナップショット退避し、revision条件で競合時の上書きを防止する。元の焼肉ウエスト・ユーザー追加店舗はそのまま保持。取込済みの店を編集/削除しても再シードしない。バックアップの中身は公開リポジトリへ保存しない。
+
+
+通知Worker追加テーブル：home_notification_only_endpoints（HOME専用端末の配信区分）。初回CREATE IF NOT EXISTS、既存push_subscriptionsをALTER/削除しない。recipientの実DB制約に対応。

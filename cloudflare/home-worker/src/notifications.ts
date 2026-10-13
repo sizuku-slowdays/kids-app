@@ -5,6 +5,11 @@ export async function notificationProxy(request: Request, env: NotificationEnv) 
   if (!['/subscribe','/unsubscribe','/vapid-public-key'].includes(path)) return new Response(null,{status:404});
   const headers=new Headers(request.headers);headers.delete('X-App-Password');
   const response=await env.NOTIFICATION_SERVICE.fetch(new Request('https://notification.internal/api/home'+path,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body}));
+  if(response.status>=500){
+    let detail='';try{const data=await response.clone().json() as {detail?:string};detail=String(data.detail||'');}catch{}
+    const reason=/no such table/i.test(detail)?'missing_table':/no such column/i.test(detail)?'missing_column':/constraint/i.test(detail)?'database_constraint':/D1|SQLITE/i.test(detail)?'database_error':/fetch|network/i.test(detail)?'service_connection':'upstream_error';
+    console.error({event:'home_notification_proxy_failed',operation:path,status:response.status,reason});
+  }
   const resultHeaders=new Headers(response.headers);resultHeaders.set('Cache-Control','private, no-store');return new Response(response.body,{status:response.status,headers:resultHeaders});
 }
 export async function notificationCheck(request: Request, env: NotificationEnv, identity: unknown) {

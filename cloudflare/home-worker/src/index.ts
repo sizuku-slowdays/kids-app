@@ -238,6 +238,13 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     const identity=await calendarIdentity(env,target,new Request('https://calendar-auth.internal/api/calendar/identity'));
     return notificationCheck(request,env,await identity.json());
   }
+  // Public, user-independent script: browser registration must receive JavaScript,
+  // including background updates after the HOME session expires.
+  if (path === '/apps/calendar/notify-sw.js') {
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    const response=await env.ASSETS.fetch(new Request(url,{method}));
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+  }
   // Public friend-facing hostname. Keep the Sites workspace name out of shared URLs.
   if (
     url.hostname === "asobu.cetus.fun" ||

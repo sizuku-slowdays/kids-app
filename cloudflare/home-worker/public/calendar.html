@@ -1286,12 +1286,12 @@ async function connectCalendarNotifications(){
  try{
   if(!('PushManager' in window)||!('serviceWorker' in navigator))throw new Error('iPhoneではHOMEをホーム画面に追加して開いてください');
   if(await Notification.requestPermission()!=='granted')throw new Error('この端末の通知を許可してください');
-  const keyResponse=await fetch('/api/notifications/vapid-public-key');const config=await keyResponse.json();if(!keyResponse.ok)throw new Error(config.error||'通知の接続を確認してください');
+  const keyResponse=await fetch('/api/notifications/vapid-public-key');const config=await keyResponse.json();if(!keyResponse.ok)throw new Error((config.error||'通知の接続を確認してください')+'（通知キー取得・HTTP '+keyResponse.status+'）');
   if(config.user.id!==homeCalendarUserId)throw new Error('HOMEの利用者が変わりました。開き直してください');
   const mounted=location.pathname.startsWith('/wagaya/');const reg=await navigator.serviceWorker.register(mounted?'/wagaya/sw.js':'/apps/calendar/notify-sw.js',{scope:mounted?'/wagaya/':'/apps/calendar/'});await navigator.serviceWorker.ready;
   const raw=atob(config.publicKey.replace(/-/g,'+').replace(/_/g,'/'));const key=Uint8Array.from(raw,c=>c.charCodeAt(0));
   const sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});const data=sub.toJSON();
-  const result=await fetch('/api/notifications/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint,p256dh:data.keys.p256dh,auth:data.keys.auth})});const saved=await result.json();if(!result.ok)throw new Error(saved.error||'通知の登録に失敗しました');
+  const result=await fetch('/api/notifications/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint,p256dh:data.keys.p256dh,auth:data.keys.auth})});const saved=await result.json();if(!result.ok)throw new Error((saved.error||'通知の登録に失敗しました')+'（端末登録・HTTP '+result.status+'）');
   message.textContent=saved.user.display_name+'として登録しました';
  }catch(e){message.textContent=e.message;}
 }

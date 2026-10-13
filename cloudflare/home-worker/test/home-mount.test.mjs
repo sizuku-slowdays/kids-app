@@ -22,6 +22,10 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
    return mf.dispatchFetch('https://cetus.fun/wagaya'+path,{method,redirect:'manual',
     headers:{Origin:origin,...(cookie?{Cookie:cookie}:{}),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
   }
+  for(const url of ['https://home-worker.sslowdayss.workers.dev/apps/calendar/notify-sw.js','https://cetus.fun/wagaya/apps/calendar/notify-sw.js','https://cetus.fun/wagaya/sw.js']){
+   const sw=await mf.dispatchFetch(url,{redirect:'manual'});assert.equal(sw.status,200);assert.match(sw.headers.get('Content-Type'),/javascript/);assert.match(await sw.text(),/addEventListener\('push'/);
+   const head=await mf.dispatchFetch(url,{method:'HEAD',redirect:'manual'});assert.equal(head.status,200);assert.equal(await head.text(),'');
+  }
   let r=await call('/');assert.equal(r.status,303);assert.equal(r.headers.get('Location'),'/wagaya/login');
   r=await call('/mama.html?source=installed');assert.equal(r.status,303);assert.equal(r.headers.get('Location'),'/wagaya/login');
   assert.equal((await call('/api/me')).status,401);

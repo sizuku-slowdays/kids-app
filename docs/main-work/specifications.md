@@ -101,3 +101,6 @@ HOME認証済みの家庭メンバーが閲覧・計算できる。料金編集�
 
 
 キッズプレート：税込700円、キッズカテゴリ、通常・ランチ表示。提供時間の明記はない。共通メニュー https://western-fukuoka.jp/menu が出典、姪浜店での利用は利用者確認。D1の既存追記・バックアップ方式を流用し新規テーブルは追加しない。
+
+
+通知SW：/apps/calendar/notify-sw.js は個人情報なしJavaScriptを未認証でもGET/HEAD配信。cetus.funの/wagaya/sw.jsは従来通り。予定・画像・APIの認証と閲覧権限は維持。通知500ログはoperation/status/分類reasonのみ、Cookie・endpoint・氏名・例外原文は記録しない。

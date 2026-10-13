@@ -282,13 +282,12 @@
   .day-cell.selected-day { background: rgba(78,203,168,0.08); }
 
   .day-num {
-    font-size: 17px;
-    font-weight: 700;
-    width: 100%; height: 44px;
-    border: 0; background: transparent; font-family: inherit; cursor: pointer; touch-action: manipulation;
+    font-size: 13px;
+    font-weight: 600;
+    width: 26px; height: 26px;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 10px;
-    margin-bottom: 6px;
+    border-radius: 50%;
+    margin-bottom: 2px;
     transition: all var(--transition);
     color: var(--text);
   }
@@ -308,8 +307,7 @@
 
   /* 予定チップ */
   .event-chip {
-    font-size: 13px;
-    line-height: 1.5; min-height: 28px;
+    font-size: 10px;
     padding: 2px 6px;
     border-radius: 6px;
     margin-bottom: 2px;
@@ -503,8 +501,7 @@
   }
   #notify-permission-btn:hover { transform: scale(1.03); }
 
-  .month-touch-help { display: none; }
-  .day-num:focus-visible,.day-panel-item:focus-visible { outline: 3px solid var(--mint); outline-offset: -3px; }
+  .day-panel-item:focus-visible { outline: 3px solid var(--mint); outline-offset: -3px; }
   @media (max-width: 580px) {
     header { display: grid; grid-template-columns: 36px 48px 36px minmax(0,1fr) 34px; gap: 8px; padding: 10px 12px; }
     header .spacer { display: none; }
@@ -513,14 +510,10 @@
     header .avatar { grid-row: 1; grid-column: 5; }
     #month-view { padding: 8px 6px 4px; }
     .month-grid,.week-header { grid-template-columns: repeat(7,minmax(0,1fr)); }
-    .day-cell { min-height: 104px; padding: 2px; }
-    .event-chip { font-size: 12px; padding: 3px 4px; }
-    /* Narrow month cells select the day; full-size agenda rows open events. */
-    .month-grid .event-chip { pointer-events: none; cursor: inherit; }
-    .day-num { font-size: 18px; width: 100%; height: 44px; }
-    .more-label { font-size: 12px; }
+    .day-cell { min-height: 58px; padding: 3px 2px; }
+    .event-chip { font-size: 9px; padding: 1px 4px; }
+    .day-num { font-size: 11px; width: 22px; height: 22px; }
     #day-panel-title { font-size: 17px; }
-    .month-touch-help { display: block; padding: 8px 4px; font-size: 13px; color: var(--text-sub); }
 
     #day-panel { margin: 0 10px 10px; }
   }
@@ -619,7 +612,6 @@
         <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
       </div>
       <div class="month-grid" id="month-grid"></div>
-      <p class="month-touch-help">日付を選び、下の一覧で予定を開けます</p>
     </div>
   </div>
 
@@ -1173,9 +1165,9 @@ function renderMonth(y, m) {
     cell.className = 'day-cell' + (isThis ? '' : ' other-month') + (isToday ? ' today' : '') + (dow===0||isHoliday?' sun':dow===6?' sat':'');
     cell.dataset.date = ds;
     cell.onclick = () => { renderDayPanel(ds); };
-    const dn = document.createElement('button'); dn.type='button'; dn.className = 'day-num'; dn.textContent = date.getDate(); dn.setAttribute('aria-label',`${date.getMonth()+1}月${date.getDate()}日の予定を表示`); dn.onclick=ev=>{ev.stopPropagation();renderDayPanel(ds);}; cell.appendChild(dn);
+    const dn = document.createElement('div'); dn.className = 'day-num'; dn.textContent = date.getDate(); cell.appendChild(dn);
     const dayEvs = ae.filter(e => evOnDate(e, ds));
-    dayEvs.slice(0, 3).forEach(e => { const chip = document.createElement('div'); chip.className = 'event-chip'; chip.style.background = getColor(e); chip.textContent = eventLabel(e); chip.onclick = ev => { ev.stopPropagation(); openDetail(e); }; cell.appendChild(chip); });
+    dayEvs.slice(0, 3).forEach(e => { const chip = document.createElement('div'); chip.className = 'event-chip'; chip.style.background = getColor(e); chip.textContent = eventLabel(e); chip.onclick = ev => { ev.stopPropagation(); renderDayPanel(ds); }; cell.appendChild(chip); });
     if (dayEvs.length > 3) { const more = document.createElement('div'); more.className = 'more-label'; more.textContent = `+${dayEvs.length - 3}件`; cell.appendChild(more); }
     grid.appendChild(cell);
   }

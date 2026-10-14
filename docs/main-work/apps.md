@@ -159,3 +159,10 @@
 
 
 外食料金：うえすたんにキッズプレート700円を共通メニューから追加。店舗専用PDF106商品とは別の補足1商品。
+
+### 2026-10-14：まいにち漢字3文字
+- 利用URL：https://cetus.fun/wagaya/apps/daily-kanji/。
+- 正本：sizuku-slowdays/kids-app / feat/home-auth-foundation / cloudflare/home-worker。
+- HOME共通認証、1日3文字、日本時間、ユーザー別D1。図鑑・書き順再生・保護者の学年/学習確認。
+- 1〜3年440文字＋進級用4〜6年を含む全1026文字。既存の漢字アプリを再利用した新規教材で、旧アプリは上書きしない。
+- コード/ローカル試験済み。本番ビルド・ログイン済みiPhone/Android/PCでの表示確認は未確認。

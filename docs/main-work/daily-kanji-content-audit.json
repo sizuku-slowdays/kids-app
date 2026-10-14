@@ -1,0 +1,23 @@
+{
+  "version": "20261014",
+  "counts": {
+    "1": 80,
+    "2": 160,
+    "3": 200,
+    "4": 202,
+    "5": 193,
+    "6": 191
+  },
+  "total": 1026,
+  "initial_range_1_3": 440,
+  "strokes": 1026,
+  "missing": [],
+  "independent_grade_check": "KANJIDIC2 1026/1026 matched",
+  "kanjidic_date": "2026-10-12",
+  "kanjivg_release": "r20260714",
+  "input_sha256": {
+    "kanjidic-data.json": "dafa06c53d38c16294e2c6a8ba6c237b20b56f90c9235921d79c49468c02dad9",
+    "kvg.zip": "b5df6cd2bc249dd49b8041eb99e38ba9f8dc6b9ea57962a80084b4a315d1a7fc"
+  },
+  "existing_app_commit": "b4c2ddafbf561ccaf791133d8e3475a218f0c262"
+}

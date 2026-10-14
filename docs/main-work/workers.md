@@ -64,3 +64,6 @@ DB → notification-center-db。HOME_AUTH → home-workerを利用者が追加�
 
 
 通知Worker追加テーブル：home_notification_only_endpoints（HOME専用端末の配信区分）。初回CREATE IF NOT EXISTS、既存push_subscriptionsをALTER/削除しない。recipientの実DB制約に対応。
+
+### 2026-10-14：まいにち漢字3文字
+home-workerに /api/daily-kanji と /apps/daily-kanji/ を追加。既存DB binding（home-db）のみ利用し、Worker・R2・Service binding・Cron・Secretsの追加なし。0017_daily_kanji.sqlで新規4テーブルを追加。既存の自動BuildのD1 migrations applyで反映する。既存のカレンダー/通知Workerの貼り替えは不要。

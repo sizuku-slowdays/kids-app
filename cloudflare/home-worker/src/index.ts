@@ -1,3 +1,4 @@
+import {dailyKanjiRoute} from './daily-kanji';
 import { notificationProxy, notificationCheck } from "./notifications";
 import { diningRoute } from "./dining-prices";
 import { mountedHome } from "./home-mount";
@@ -452,6 +453,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if(path==='/api/daily-kanji'||path.startsWith('/api/daily-kanji/')){
+      requireValue(await appAllowed(env,user.id,'daily-kanji'),403,'このアプリは利用できません');
+      return dailyKanjiRoute(request,env,user.id,body);
+    }
     if(path==='/api/dining-prices'||path.startsWith('/api/dining-prices/')){
       requireValue(await appAllowed(env,user.id,'dining-prices'),403,'このアプリは利用できません');
       return diningRoute(request,env,user.id,r=>body(r,2000000));
@@ -743,6 +748,18 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     const file=path.slice('/apps/dining-prices/'.length)||'index.html';
     requireValue(['index.html','app.js','calculator.js','order.js','style.css'].includes(file),404,'見つかりません');
     const assetUrl=new URL(url);assetUrl.pathname='/apps/dining-prices/'+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
+  if (path === '/apps/daily-kanji' || path.startsWith('/apps/daily-kanji/')) {
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
+    requireValue(await appAllowed(env,s.user_id,'daily-kanji'),403,'このアプリは利用できません');
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    if(path==='/apps/daily-kanji')return new Response(null,{status:303,headers:{...headers,Location:'/apps/daily-kanji/'}});
+    const file=path.slice('/apps/daily-kanji/'.length)||'index.html';
+    requireValue(['index.html','app.js','style.css','catalog.json','licenses.txt',...Array.from({length:6},(_,i)=>'strokes-'+(i+1)+'.json')].includes(file),404,'見つかりません');
+    const assetUrl=new URL(url);assetUrl.pathname='/apps/daily-kanji/'+file;
     const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
     const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
     return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});

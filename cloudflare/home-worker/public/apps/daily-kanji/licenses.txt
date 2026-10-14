@@ -1,0 +1,33 @@
+まいにち漢字3文字 — 教材の出典と利用条件（2026-10-14）
+
+学年配当：文部科学省 小学校学習指導要領（平成29年告示）解説 国語編。
+https://www.mext.go.jp/content/20220606-mxt_kyoiku02-100002607_002.pdf
+1年80、2年160、3年200、4年202、5年193、6年191、計1026文字。
+既存我が家の kanji-stroke-app.html の学年一覧を再利用し、配当数を照合。
+
+書き順：KanjiVG © Ulrich Apel and contributors。
+https://kanjivg.tagaini.net/ / https://github.com/KanjiVG/kanjivg
+固定版 r20260714。CC BY-SA 3.0。
+https://creativecommons.org/licenses/by-sa/3.0/
+原SVGから、書き順に並ぶpathのd属性を抽出した派生JSON（strokes-1〜6.json）。
+図形の座標・画の順は変更せず、背景と色、再生方法はアプリで追加。
+この書き順JSONはCC BY-SA 3.0で提供。原データの利用条件を維持。
+
+読みの補完：KANJIDIC2 © Electronic Dictionary Research and Development Group。
+https://www.edrdg.org/wiki/KANJIDIC_Project.html
+CC BY-SA 4.0。https://creativecommons.org/licenses/by-sa/4.0/
+scriptin/jmdict-simplified の 3.6.2+20261012204142、辞書日付2026-10-12から
+日本語の音訓だけを抽出。名前読み、辞書番号、SKIP等の検索コードは使用しない。
+https://github.com/scriptin/jmdict-simplified
+catalog.json の教材データはCC BY-SA 4.0で提供。
+主な読みを掲載するため、全ての辞書読みや学校段階別の全音訓の網羅ではない。
+
+意味・使用例：既存我が家 kanji-stroke-app.html / kanji_review_multi_grade_v1.html
+（b4c2ddafbf561ccaf791133d8e3475a218f0c262）を再利用。
+不足分は本アプリで補足し、送り仮名省略や「雲天」等の不適切な例を修正。
+学年一覧から生成しているため、旧アプリにない曜・昭・陛も収録。
+説明のふりがなはビルド時にpykakasiで補助生成。実行時の外部通信はない。
+語彙の説明は短い学習用の説明であり、漢字辞典の全義を網羅しない。
+
+学習データ（利用者・学年・学習履歴）は教材の公開ライセンス対象ではありません。
+既存アプリのコード・データは上書きしません。

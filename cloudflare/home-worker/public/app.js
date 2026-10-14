@@ -187,9 +187,14 @@ async function home() {
     ]) quick.append(appCard(app));
   }
   const favoriteApps=visibleApps.filter(a=>a.featured);
-  const otherApps=visibleApps.filter(a=>!a.featured);
+  const learningApps=visibleApps.filter(a=>a.id==='daily-kanji'&&!a.featured);
+  const otherApps=visibleApps.filter(a=>!a.featured&&a.id!=='daily-kanji');
   const simple=visibleApps.length===2&&favoriteApps.length===2&&visibleApps.some(a=>a.id==="calendar")&&visibleApps.some(a=>["kidney","kidney-grandma"].includes(a.id));
   if (visibleApps.length) {
+    if(learningApps.length){
+      const learning = appSection('まいにち少しずつ', 'まなぶ', 'home-app-list');
+      learningApps.forEach(app => learning.append(appCard(app)));
+    }
     if(favoriteApps.length){
     const featured = appSection('すぐ開く', simple ? '毎日使うアプリ' : 'よく使うアプリ', simple ? 'hero-grid grandpa-home' : 'hero-grid');
     favoriteApps.forEach(app => featured.append(appCard(app, true)));
@@ -551,6 +556,10 @@ async function sessions() {
     showError(e);
   }
 }
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible" && me && root.querySelector("h1")?.textContent === "わが家")
+    home().catch(showError);
+});
 addEventListener("pageshow", (event) => {
   if (event.persisted) location.reload();
 });
@@ -565,4 +574,5 @@ else
       );
     }
   });
+
 

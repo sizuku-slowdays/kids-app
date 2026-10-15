@@ -1,3 +1,4 @@
+import { schoolRoute, schoolNotificationCheck } from './school-prep';
 import { runCashAutomation } from './passbook-finance';
 
 import { goodDeedsRoute } from './good-deeds';
@@ -234,6 +235,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   const url = new URL(request.url),
     path = url.pathname,
     method = request.method;
+  if (path === '/internal/school-prep/notification-check') return schoolNotificationCheck(request,env);
   if (url.hostname === 'notification-auth.internal' && path === '/internal/notification-check' && method === 'GET') {
     const target=await env.DB.prepare('SELECT * FROM users WHERE id=? AND active=1').bind(url.searchParams.get('user')||'').first<User>();
     if (!target || !await appAllowed(env,target.id,'calendar') || !await appAllowed(env,target.id,'notification')) return json({allowed:false});
@@ -456,6 +458,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if(path==='/api/school-prep'||path.startsWith('/api/school-prep/')){
+      requireValue(await appAllowed(env,user.id,'school-prep'),403,'このアプリは利用できません');
+      return schoolRoute(request,env,user.id,body);
+    }
     if(path==='/api/good-deeds'||path.startsWith('/api/good-deeds/')){
       requireValue(await appAllowed(env,user.id,'good-deeds'),403,'このアプリは利用できません');
       return goodDeedsRoute(request,env,user.id,body);
@@ -755,6 +761,18 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     const file=path.slice('/apps/dining-prices/'.length)||'index.html';
     requireValue(['index.html','app.js','calculator.js','order.js','style.css'].includes(file),404,'見つかりません');
     const assetUrl=new URL(url);assetUrl.pathname='/apps/dining-prices/'+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
+  if (path === '/apps/school-prep' || path.startsWith('/apps/school-prep/')) {
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
+    requireValue(await appAllowed(env,s.user_id,'school-prep'),403,'このアプリは利用できません');
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    if(path==='/apps/school-prep')return new Response(null,{status:303,headers:{...headers,Location:'/apps/school-prep/'}});
+    const file=path.slice('/apps/school-prep/'.length)||'index.html';
+    requireValue(['index.html','app.js','style.css'].includes(file),404,'見つかりません');
+    const assetUrl=new URL(url);assetUrl.pathname='/apps/school-prep/'+file;
     const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
     const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
     return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});

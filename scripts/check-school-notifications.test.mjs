@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+import {DatabaseSync} from 'node:sqlite';
+
+test('school push uses only opted-in HOME identity, rechecks sessions, and preserves existing rules/subscriptions',async()=>{
+ const sqlite=new DatabaseSync(':memory:');
+ sqlite.exec(`CREATE TABLE push_subscriptions(id INTEGER PRIMARY KEY,endpoint TEXT UNIQUE,p256dh TEXT,auth TEXT,recipient TEXT CHECK(recipient IN ('mama','child1','child2','all')),enabled INTEGER);
+ CREATE TABLE home_notification_subscriptions(endpoint TEXT PRIMARY KEY,home_user_id TEXT,home_session_id TEXT,updated_at TEXT);
+ CREATE TABLE notification_rules(id INTEGER PRIMARY KEY,title TEXT);
+ INSERT INTO notification_rules VALUES(1,'existing calendar notification');
+ INSERT INTO push_subscriptions VALUES(1,'https://push.test/mom','k','a','mama',1),(2,'https://push.test/child','k','a','child1',1);
+ INSERT INTO home_notification_subscriptions VALUES('https://push.test/mom','mom','sid',''),('https://push.test/child','child','child-sid','');`);
+ sqlite.exec(await readFile(new URL('../cloudflare/notification-center-api/school-preparation.sql',import.meta.url),'utf8'));
+ const before=JSON.stringify(sqlite.prepare('SELECT * FROM push_subscriptions').all()),rules=JSON.stringify(sqlite.prepare('SELECT * FROM notification_rules').all());
+ const DB={prepare(sql){let values=[];return {bind(...v){values=v;return this;},async run(){return sqlite.prepare(sql).run(...values);},async all(){return {results:sqlite.prepare(sql).all(...values)};},async first(){return sqlite.prepare(sql).get(...values)||null;}};}};
+ let allowed=true,liveAllowed=true,fail=false;const calls=[],sent=[];
+ const env={DB,HOME_AUTH:{async fetch(request){const url=new URL(request.url);calls.push(url);return Response.json({allowed:url.searchParams.has('session')?allowed&&liveAllowed:allowed,recipient_id:'mom',body:'宿題がぜんぶ終わりました',url:'/wagaya/apps/school-prep/'});}}};
+ const context=vm.createContext({Response,Request,URL,URLSearchParams,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,Date,console,atob,btoa,crypto:globalThis.crypto,sent});
+ const source=await readFile(new URL('../cloudflare/notification-center-api/notification-center-api.js',import.meta.url),'utf8');
+ vm.runInContext(source.replace('export default {','globalThis.worker = {')+'\nglobalThis.send=schoolPreparationPush;globalThis.setPush=fn=>{sendPush=fn};',context);
+ context.setPush(async(sub,payload)=>{sent.push({sub,payload});return {ok:!fail};});
+ const request=(key='delivery-1',host='notification.internal')=>new Request('https://'+host+'/internal/school-prep/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delivery_id:key,recipient_id:'child'})});
+ assert.equal((await context.send(request('x','public.example'),env)).status,404);
+ let r=await context.send(request(),env);assert.equal(r.status,200);assert.equal((await r.json()).delivered,1);assert.equal(sent.length,1);assert.equal(sent[0].sub.home_user_id,'mom');assert.equal(sent[0].payload.tag,'school-delivery-1');
+ await context.send(request(),env);assert.equal(sent.length,1,'successful endpoint is not pushed twice');
+ assert.equal(calls.filter(u=>u.searchParams.has('session')).every(u=>u.searchParams.get('user')==='mom'),true);
+ liveAllowed=false;await context.send(request('delivery-2'),env);assert.equal(sent.length,1);
+ liveAllowed=true;allowed=false;r=await context.send(request('delivery-3'),env);assert.equal((await r.json()).cancelled,true);assert.equal(sent.length,1);
+ allowed=true;fail=true;assert.equal((await context.send(request('delivery-4'),env)).status,503);assert.equal(sqlite.prepare("SELECT status FROM school_push_deliveries WHERE delivery_id='delivery-4'").get().status,'pending');
+ fail=false;assert.equal((await context.send(request('delivery-4'),env)).status,200);assert.equal(sqlite.prepare("SELECT status FROM school_push_deliveries WHERE delivery_id='delivery-4'").get().status,'sent');
+ assert.equal(JSON.stringify(sqlite.prepare('SELECT * FROM push_subscriptions').all()),before);
+ assert.equal(JSON.stringify(sqlite.prepare('SELECT * FROM notification_rules').all()),rules);
+ sqlite.close();
+});

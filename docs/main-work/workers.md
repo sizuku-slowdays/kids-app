@@ -86,3 +86,8 @@ home-worker/home-db/PRIVATE_FILESを継続利用。0018で10表と報酬トリ�
 旧いいことWorkerの提示コードはGET/POST/DELETEのiikoto_records操作のみ、owner固定コード照合でHOME認証なし。DashboardのDB bindingはmama-bank-dbと利用者確認。旧記録を残し、新しいgood_deed_*台帳を0開始する方式を維持。10月16日00:17、旧DBのiikotoテーブル確認・最新home-dbエクスポートと整合性・両バックアップハッシュ保存がすべてOKとの利用者報告。本番移行は未実施。
 
 今回の統合は0018金融機能と0019いいことの両方を保持する。旧API保護・新画面の本番反映・実アカウント権限確認・旧リンク切替は残作業。旧DBやつうちょうへのリセットは実施しない。
+
+
+## 2026-10-16 学校じゅんび（準備）
+
+既存home-workerとnotification-center-apiを拡張。home-dbへ0020で5表、notification-center-dbへschool_push_deliveries 1表。新Binding/Secret/Cronなし。既存通知ルール/購読を更新しない。導入前に現行通知コード一致確認と両DBバックアップが必要。 詳細：[仕様・試験・導入ゲート](school-prep-20261016.md)。

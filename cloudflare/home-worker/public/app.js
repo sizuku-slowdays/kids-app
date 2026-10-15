@@ -13,6 +13,7 @@ const existingApps = {
   learning: ['https://cetus.fun/wagaya/keisan/', '計算・ことばの練習'],
 };
 const descriptions = {
+  'school-prep': '宿題と持ち物を、夜と朝に確認しよう',
   'good-deeds': '自分のいいことを記録して、ポイントをためよう',
   'daily-kanji': '1日3文字。よみ・いみ・書きじゅんをたしかめよう',
   'dining-prices': '人数を選んで、コース料金を比較',

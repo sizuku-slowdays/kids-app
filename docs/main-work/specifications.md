@@ -136,3 +136,9 @@ daily-kanji はHOME上部の「まなぶ」に表示（APIで許可・表示さ�
 ## 2026-10-15 漢字アプリのデータ取得URL修正
 
 漢字クライアントのAPI/ログイン先はアプリディレクトリから ../../api/daily-kanji、../../login をURL解決する。mountの文字列書き換えとの二重prefixを避け、cetus.fun/wagaya とworkers.devの両方に対応。JSON応答のContent-Typeを確認し、HTMLをJSONとして解析しない。
+
+
+
+## 2026-10-15 キッズ一覧といいことポイント
+
+いいことポイントはchildren.user_idとHOME表示名で本人専用。家庭owner/adminのみ同家庭の全子ども管理。新開始日時と0残高を独立保存し、再開始APIも既存新ポイントを消さない。旧残高を移行せず、passbook台帳に一切書き込まない。 [詳細と残作業](good-deeds-20261015.md)。

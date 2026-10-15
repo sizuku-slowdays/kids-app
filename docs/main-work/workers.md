@@ -67,3 +67,9 @@ DB → notification-center-db。HOME_AUTH → home-workerを利用者が追加�
 
 ### 2026-10-14：まいにち漢字3文字
 home-workerに /api/daily-kanji と /apps/daily-kanji/ を追加。既存DB binding（home-db）のみ利用し、Worker・R2・Service binding・Cron・Secretsの追加なし。0017_daily_kanji.sqlで新規4テーブルを追加。既存の自動BuildのD1 migrations applyで反映する。既存のカレンダー/通知Workerの貼り替えは不要。
+
+
+
+## 2026-10-15 キッズ一覧といいことポイント
+
+新いいことは既存home-worker/home-dbへgood_deed_*3表で独立。新Worker/bindingは不要。旧HTMLの接続先iikoto-apiは確認できるが、Workerコード・実DB名・認証は未確認。旧API保護とバックアップまで切替保留。 [詳細と残作業](good-deeds-20261015.md)。

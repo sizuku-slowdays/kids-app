@@ -40,8 +40,15 @@ export async function choreRoute(request:Request,env:Context,h:string,user:strin
  if(path==='/complete'&&method==='POST'){
   const chore=String(data.chore_id||''),target=String(data.target||''),event=String(data.event_id||''),today=japanDay();if(event.length<8||event.length>100||!people.some(p=>p.id===target))fail('完了した人を選んでください');
   const old=await env.DB.prepare("SELECT chore_id,target FROM passbook_chore_days WHERE household_id=? AND event_id=? AND kind='complete'").bind(h,event).first<{chore_id:string;target:string}>();if(old){if(old.chore_id!==chore||old.target!==target)fail('登録内容が一致しません',409);return {ok:true,already_recorded:true};}
+  const settled=await env.DB.prepare("SELECT t.target FROM passbook_chore_attempt_settlements s JOIN passbook_chore_attempts t ON t.household_id=s.household_id AND t.event_id=s.event_id WHERE s.household_id=? AND s.chore_id=? AND s.day=?").bind(h,chore,today).first<{target:string}>();if(settled){if(settled.target!==target)fail('この日の報酬は精算済みです',409);return {ok:true,already_recorded:true};}
   const c=await env.DB.prepare('SELECT * FROM passbook_chores WHERE id=? AND household_id=? AND enabled=1').bind(chore,h).first<Chore>();if(!c)fail('お手伝いが見つかりません',404);if(c.next_date!==today)fail('今日は登録済みです。履歴を確認してください',409);if(data.revision!==c.revision)fail('お手伝いの設定が更新されています。開き直してください',409);
-  const result=await env.DB.prepare(`INSERT INTO passbook_chore_days(id,chore_id,household_id,day,kind,target,assigned_to,points,money,memo,occurred_at,created_at,actor,event_id) SELECT ?,id,household_id,?,'complete',?,next_target,points,money,name,?,?,?,? FROM passbook_chores WHERE id=? AND household_id=? AND next_date=? AND enabled=1 AND revision=?`).bind(crypto.randomUUID(),today,target,new Date().toISOString(),Math.floor(Date.now()/1000),user,event,chore,h,today,c.revision).run();if(!result.meta.changes)fail("今日は登録済みです。履歴を確認してください",409);return {ok:true};
+  await env.DB.prepare('INSERT INTO passbook_chore_attempts(household_id,chore_id,day,event_id,target,points,money,point_unit_id,memo,revision,actor,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(chore_id,day) DO NOTHING').bind(h,chore,today,event,target,c.points,c.money,c.point_unit_id,c.name,c.revision,user,Math.floor(Date.now()/1000)).run();
+  const attempt=await env.DB.prepare('SELECT target,points,money FROM passbook_chore_attempts WHERE chore_id=? AND day=?').bind(chore,today).first<{target:string;points:number;money:number}>();
+  if(attempt?.target!==target||attempt.points!==c.points||attempt.money!==c.money)fail('未払いの登録内容が残っています。担当者と金額を確認してください',409);
+  try {
+  const result=await env.DB.prepare(`INSERT INTO passbook_chore_days(id,chore_id,household_id,day,kind,target,assigned_to,points,money,memo,occurred_at,created_at,actor,event_id) SELECT ?,id,household_id,?,'complete',?,next_target,points,money,name,?,?,?,? FROM passbook_chores WHERE id=? AND household_id=? AND next_date=? AND enabled=1 AND revision=?`).bind(crypto.randomUUID(),today,target,new Date().toISOString(),Math.floor(Date.now()/1000),user,event,chore,h,today,c.revision).run();if(!result.meta.changes)fail("今日は登録済みです。履歴を確認してください",409);
+  await env.DB.prepare("UPDATE passbook_chore_attempts SET status='completed',error=NULL WHERE chore_id=? AND day=?").bind(chore,today).run();return {ok:true};
+  }catch(e){await env.DB.prepare("UPDATE passbook_chore_attempts SET error='報酬未処理。完了履歴を確認して再試行してください' WHERE chore_id=? AND day=? AND status='pending'").bind(chore,today).run();throw e;}
  }
  if((path===''&&method==='POST')||(path.startsWith('/')&&method==='PUT')){
   const id=method==='POST'?crypto.randomUUID():decodeURIComponent(path.slice(1));const rotation=data.rotation;
@@ -56,3 +63,4 @@ export async function choreRoute(request:Request,env:Context,h:string,user:strin
  }
  fail('見つかりません',404);
 }
+

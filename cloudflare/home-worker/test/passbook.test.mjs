@@ -64,11 +64,12 @@ test('passbook ownership, migration gate, reservations and atomic approval',asyn
  const missing=(await call('/chores','mom','POST',{name:'買い物',points:40,money:100,point_unit_id:'chores',rotation:[],next_target:null})).data.id;
  const blocked=await call('/chores/complete','mom','POST',{chore_id:missing,target:'user:mom',event_id:'no-cash-wallet',revision:1});assert.equal(blocked.status,409,JSON.stringify(blocked));
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_adult_entries').first()).n,0);assert.equal((await db.prepare('SELECT COUNT(*) n FROM passbook_chore_days WHERE chore_id=?').bind(missing).first()).n,0);
- const conf=(await call('/chores')).data.chores.find(c=>c.id===missing);
- assert.equal((await call('/chores/'+missing,'mom','PUT',{...conf,point_unit_id:'chores',rotation:[],money:0,enabled:true})).status,200);
- assert.equal((await call('/chores/'+missing,'mom','PUT',{...conf,point_unit_id:'chores',rotation:[],money:0,enabled:true})).status,409);
- assert.equal((await call('/chores/complete','mom','POST',{chore_id:missing,target:'user:mom',event_id:'adult-points-only',revision:2})).status,200);
- assert.equal((await db.prepare('SELECT SUM(delta) n FROM passbook_adult_entries').first()).n,40);
+ // Creating the independent adult cash wallet enables retry of the original failed attempt.
+ assert.equal((await call('/finance/self-account','mom','POST',{})).status,200);
+ assert.equal((await call('/chores/complete','mom','POST',{chore_id:missing,target:'user:mom',event_id:'no-cash-wallet',revision:1})).status,200);
+ assert.equal((await call('/chores/complete','mom','POST',{chore_id:missing,target:'user:mom',event_id:'no-cash-wallet',revision:1})).status,200);
+ assert.equal((await db.prepare("SELECT SUM(delta) n FROM passbook_adult_entries WHERE account_id='adult'").first()).n,40);
+ assert.equal((await db.prepare("SELECT SUM(delta) n FROM passbook_adult_entries WHERE account_id='h:user:mom:cash'").first()).n,100);
 
  // Images add to the same reward row, never a new ledger or replacement product.
  const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8WQAAAAASUVORK5CYII=';
@@ -92,3 +93,4 @@ test('passbook ownership, migration gate, reservations and atomic approval',asyn
  const huge='data:image/jpeg;base64,'+'A'.repeat(600001);assert.equal((await call('/rewards','mom','POST',{unit_id:'chores',name:'大きすぎ',cost:10,stock:null,image_url:huge})).status,413);
  } finally {await mf.dispose()}
 });
+

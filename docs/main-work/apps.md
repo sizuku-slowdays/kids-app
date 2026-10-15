@@ -171,3 +171,14 @@
 ## 2026-10-15 HOME下部リンク
 
 HOME下部の「以前のHOME」を「🎮 キッズアプリ一覧」に変更。リンク先は https://cetus.fun/kids-app/ （HTTP取得・title「キッズアプリ」を確認）。旧HOME自体や既存アプリ・認証・DBは変更なし。home-mountテストの期待リンクも更新。漢字アプリ小学4年生の表示は利用者確認済み。
+
+
+## 2026-10-15 学校準備・英語フラッシュ（準備のみ）
+
+| アプリ | URL | コード／状態 |
+| --- | --- | --- |
+| 学校準備 | 本番URLなし。将来候補 /wagaya/apps/school-prep/ | preparations/learning-20261015/preview と routes.mjs。画面・API試作、HOME未接続 |
+| 英語フラッシュ | 本番URLなし。将来候補 /wagaya/apps/english-flash/ | 同ディレクトリ。26字＋30語、音声・図鑑試作、HOME未接続 |
+| つうちょう追加機能 | 既存 /wagaya/apps/passbook/。追加分未反映 | PR #4を保持。新規作り直しなし |
+
+[今回の詳細と未決定事項](../../preparations/learning-20261015/README.md)。

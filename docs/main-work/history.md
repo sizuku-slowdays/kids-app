@@ -206,3 +206,8 @@ cetus.fun/wagaya のレスポンス書き換えとクライアントのprefix付
 ## 2026-10-15 HOME下部リンク
 
 HOME下部の「以前のHOME」を「🎮 キッズアプリ一覧」に変更。リンク先は https://cetus.fun/kids-app/ （HTTP取得・title「キッズアプリ」を確認）。旧HOME自体や既存アプリ・認証・DBは変更なし。home-mountテストの期待リンクも更新。漢字アプリ小学4年生の表示は利用者確認済み。
+
+
+## 2026-10-15 独立した学習アプリ準備
+
+feature/learning-preparation-20261015に学校準備・英語フラッシュの画面試作/API/SQL案/テスト/Windows手順を追加。HOME基点9bf81b5、main旧学校・時間割は8b07bdeを調査。Node/Miniflare5群、DOM1群、SQLite既存51テーブル保持をローカル検証。本番デプロイ・DB実行・通知送信・台帳変更なし。つうちょうPR #4、いいことPR #5/#6は未完了のまま保持。[再開台帳](../../preparations/learning-20261015/README.md)。

@@ -1,0 +1,8 @@
+{
+ "name":"wagaya-learning-preparation",
+ "private":true,
+ "type":"module",
+ "description":"Local preparation only; no deploy command or production bindings",
+ "scripts":{"test":"node --test test/learning.test.mjs test/preview.test.mjs"},
+ "devDependencies":{"jsdom":"26.1.0"}
+}

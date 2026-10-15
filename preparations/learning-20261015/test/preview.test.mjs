@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {readFile} from 'node:fs/promises';
+import {catalog} from '../catalog.mjs';
+import {jstDay,sortedTasks,summarizeSchoolDays} from '../core.mjs';
+const require=createRequire(process.env.LEARNING_DOM_PACKAGE||new URL('../package.json',import.meta.url));
+const {JSDOM}=require('jsdom');
+test('preview child/guardian flows, independent siblings, separate night and morning, no network writes',async()=>{
+ const html=await readFile(new URL('../preview/index.html',import.meta.url),'utf8');
+ const code=(await readFile(new URL('../preview/app.mjs',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');
+ const dom=new JSDOM(html,{runScripts:'outside-only',url:'http://localhost:8765/preview/'});
+ const w=dom.window;Object.assign(w,{catalog,jstDay,sortedTasks,summarizeSchoolDays});let requests=0;w.fetch=()=>{requests++;throw Error('network forbidden');};
+ w.eval(code);const byText=(text)=>[...w.document.querySelectorAll('button')].find(b=>b.textContent===text);
+ byText('夜 · 用意した').click();let complete=w.document.querySelector('.task button');complete.click();assert.equal(w.document.querySelectorAll('.stamp').length,1);
+ byText('朝 · 持った').click();assert.equal(w.document.querySelectorAll('.stamp').length,0);
+ w.document.getElementById('english').click();assert.ok(w.document.querySelector('.letter').textContent);
+ byText('覚えた！').click();assert.match(w.document.querySelector('summary').textContent,/1文字/);
+ const learner=w.document.getElementById('learner');learner.value='sample-b';learner.dispatchEvent(new w.Event('change'));
+ assert.match(w.document.querySelector('summary').textContent,/0文字/);assert.equal(w.document.querySelector('.letter').textContent,'A a');
+ const viewer=w.document.getElementById('viewer');viewer.value='guardian';viewer.dispatchEvent(new w.Event('change'));assert.ok(byText('サンプル設定を保存'));
+ w.document.getElementById('school').click();assert.ok(byText('確認して確定'));const textarea=w.document.querySelector('textarea');textarea.value='<img src=x onerror=alert(1)>';byText('確認して確定').click();
+ byText('宿題').click();assert.equal(w.document.querySelectorAll('#content img').length,0);assert.match(w.document.querySelector('.task span').textContent,/<img/);
+ assert.equal(requests,0);dom.window.close();
+});

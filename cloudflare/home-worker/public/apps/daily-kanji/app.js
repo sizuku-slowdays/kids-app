@@ -1,10 +1,11 @@
 const root=document.getElementById('main'),status=document.getElementById('status'),tabs=document.getElementById('tabs');
-const mounted=location.pathname.startsWith('/wagaya/'),apiBase=(mounted?'/wagaya':'')+'/api/daily-kanji';
+// Resolve from the app directory so HOME mounting cannot add /wagaya twice.
+const appDirectory=new URL('./',location.href),apiBase=new URL('../../api/daily-kanji',appDirectory).pathname,loginURL=new URL('../../login',appDirectory).pathname;
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const ruby=(word,reading)=>{const n=el('ruby',word);n.append(el('rt',reading));return n;};
 const button=(text,run,cls)=>{const b=el('button',text,cls);b.type='button';b.onclick=run;return b;};
 const label=(word,reading)=>ruby(word,reading);
-const fetchJSON=async(url,options)=>{const r=await fetch(url,options);if(r.status===401){location.replace((mounted?'/wagaya':'')+'/login');throw Error('HOMEにログインしてください');}const d=await r.json();if(!r.ok)throw Error(d.error||'保存できませんでした。もう一度ためしてください');return d;};
+const fetchJSON=async(url,options)=>{const r=await fetch(url,{credentials:'same-origin',cache:'no-store',...options});if(r.status===401||(r.redirected&&new URL(r.url).pathname===loginURL)){location.replace(loginURL);throw Error('HOMEにログインしてください');}if(!(r.headers.get('Content-Type')||'').includes('application/json'))throw Error('データを読みこめませんでした。HOMEからもう一度ひらいてください。');const d=await r.json();if(!r.ok)throw Error(d.error||'保存できませんでした。もう一度ためしてください');return d;};
 let data,catalog,byChar,view='today',index=0,group='',bookGrade='all',bookState='all',bookSearch='',bookPage=0,animationToken=0;
 const strokeCache=new Map();
 const gradeName=g=>g<=6?'小学'+g+'年生':'中学'+(g-6)+'年生';

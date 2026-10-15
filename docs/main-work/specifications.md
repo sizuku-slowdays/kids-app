@@ -131,3 +131,8 @@ HOME通知予約：notification_rules.recipientは既存制約に適合するall
 ## 2026-10-15 漢字アプリのHOME導線
 
 daily-kanji はHOME上部の「まなぶ」に表示（APIで許可・表示され、よく使う未指定の場合）。よく使う指定なら従来のよく使う欄に表示。非表示や未許可のアプリは出さない。画面復帰時はHOME画面に限り一覧を再取得し、設定画面の操作を中断しない。
+
+
+## 2026-10-15 漢字アプリのデータ取得URL修正
+
+漢字クライアントのAPI/ログイン先はアプリディレクトリから ../../api/daily-kanji、../../login をURL解決する。mountの文字列書き換えとの二重prefixを避け、cetus.fun/wagaya とworkers.devの両方に対応。JSON応答のContent-Typeを確認し、HTMLをJSONとして解析しない。

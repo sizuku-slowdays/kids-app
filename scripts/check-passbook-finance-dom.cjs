@@ -1,0 +1,16 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {createRequire}=require('node:module');
+const {JSDOM}=createRequire(process.env.PASSBOOK_DOM_PACKAGE||require('node:path').join(__dirname,'../cloudflare/home-worker/package.json'))('jsdom');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../cloudflare/home-worker/public/apps/passbook/app.js'),'utf8');
+const dom=new JSDOM('<main id="app"></main><dialog id="sheet"></dialog>',{url:'https://home.test/apps/passbook/',runScripts:'outside-only'}),w=dom.window;
+w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.confirm=()=>true;
+let saved=[];const accounts=[{id:'cash',child_id:'c',display_name:'こども',name:'現金',kind:'money',code:'cash',symbol:'円',balance:1000,pending:0},{id:'wallet',child_id:'c',display_name:'こども',name:'おさいふ',kind:'money',code:'wallet',symbol:'円',balance:200,pending:0},{id:'points',child_id:'c',display_name:'こども',name:'ポイント',kind:'points',code:'chores',symbol:'ポイント',balance:30,pending:0}];
+w.fetch=async(url,opt={})=>{let path=new URL(url,w.location.origin).pathname.replace('/api/passbook',''),data;if(opt.body)saved.push({path,data:JSON.parse(opt.body)});if(path==='/households')data=[{id:'h',name:'家庭'}];else if(path==='')data={admin:true,active:true,children:[{id:'c',display_name:'こども'},{id:'user:mom',display_name:'自分'}],accounts};else if(path==='/finance')data={accounts,plans:[],interest:[],logs:[]};else if(path==='/chores')data={people:[],chores:[],today:'2026-10-15',done:[]};else if(path==='/rewards'||path==='/requests')data=[];else data={ok:true};return {ok:true,status:200,json:async()=>data};};
+(async()=>{w.eval(source);await new Promise(r=>setTimeout(r,20));assert.match(w.document.body.textContent,/1,200/);assert.match(w.document.body.textContent,/おさいふ/);
+await w.financeSettings();assert.match(w.document.querySelector('#sheet').textContent,/自分の現金通帳を作る/);
+w.walletForm(accounts[0]);let f=w.document.querySelector('form');f.elements.balance.value=250;await f.onsubmit({preventDefault(){}});assert.equal(saved.at(-1).path,'/finance/wallet');assert.equal(saved.at(-1).data.balance,250);assert.ok(saved.at(-1).data.event_id);
+w.transferForm(accounts[0],accounts[1]);f=w.document.querySelector('form');f.elements.amount.value=100;await f.onsubmit({preventDefault(){}});assert.equal(saved.at(-1).data.from_account,'cash');assert.equal(saved.at(-1).data.to_account,'wallet');
+w.allowanceForm(accounts[0]);f=w.document.querySelector('form');f.elements.amount.value=500;await f.onsubmit({preventDefault(){}});assert.equal(saved.at(-1).data.total_payments,12);assert.equal(saved.at(-1).path,'/finance/allowance');
+w.interestForm(accounts[0]);f=w.document.querySelector('form');assert.equal(f.elements.rate.value,'3');assert.equal(f.elements.cap.value,'300');f.querySelector('[type=checkbox]').checked=true;await f.onsubmit({preventDefault(){}});assert.equal(saved.at(-1).data.rate_bps,300);assert.equal(saved.at(-1).data.enabled,true);
+w.error(Error('same'));w.error(Error('same'));assert.equal(w.document.querySelectorAll('.error').length,1);
+console.log('PASS: parent settings, cash total, wallet, transfer, allowance, interest defaults, error deduplication');dom.window.close();})().catch(e=>{console.error(e);process.exit(1)});

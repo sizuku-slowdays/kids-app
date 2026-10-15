@@ -7,7 +7,7 @@
 - 一覧整理：mainの `a0c12416e4762bd25525a0934499459a267a4e8b` へ反映。公開JSONのHTTP取得でも、mama-bank/pointsがなくpassbookがあることを確認。
 - HOME本人対応：`feature/good-deeds-home-20261015` に実装・テスト。**本番未反映。実際の姉妹の新残高への切替も未実施。**
 - 一覧のいいことリンク統合と旧HTMLの転送：`feature/good-deeds-links-20261015` に準備。HOME新画面の配信・旧API保護・バックアップ後に適用する。
-- つうちょう現金拡張：[PR #4](https://github.com/sizuku-slowdays/kids-app/pull/4)は**本番反映前home-dbバックアップ・2026-10-14未払い3件の実照合待ち**。今回の実装へ混ぜず保留。
+- つうちょう現金拡張：PR4は2a83a28で本番反映済み、全旧台帳の照合・本人現金口座と報酬を利用者確認済み。今回の統合でも0018・金融Cron・既存処理を保持。
 
 ## 確認済みの旧構成
 
@@ -15,7 +15,11 @@
 
 旧いいことは `kanriapp/iikoto1.html` / `iikoto2.html`。それぞれ固定OWNER=saru/unicornを付け、`https://iikoto-api.sslowdayss.workers.dev/api/iikoto` へGET/POST/DELETEする。HTMLはHOME認証情報を送っていない。APIのレスポンス期待形式は records[{id,owner,title,point,memo,created_at}]。合計/今日/月/回数、登録、任意ポイントと10/50/100/500/1000の簡単選択、削除がある。
 
-**旧Workerのコード、Bindings、実際のDB/KV等の保存先・テーブル名・認証実装・旧件数は未確認。** GitHubのmain/cloudflareはmuscle-bank-workerのみ、HOMEブランチ/cloudflareはcalendar-worker/home-worker/notification-center-apiで、iikoto Workerコードがない。つうちょうのpassbook台帳へ送るコードは旧いいことHTMLにはない。saruがどのHOMEユーザーかを推測して紐付けない。旧APIの一般公開防止は、新URLへのリンク変更だけでは完了と扱わない。
+旧Workerコード全文は2026-10-15に利用者が提示。GET/POST/DELETE `/api/iikoto` が `env.DB` の `iikoto_records(id,owner,title,point,memo,created_at)` を操作する。owner=saru/unicornの文字列照合だけでHOME認証なし。CORSは*。利用者がDashboardで `DB → mama-bank-db` を確認（既存旧銀行と同じDB）。提示コードにpassbook台帳操作はない。旧人物コードを新しいユーザーへ推測で紐付ける必要はない。新台帳へ旧残高は移行しない。
+
+10月16日00:17 JST、利用者のPCで旧DBの整合性・iikoto_recordsの存在/列/件数確認、最新home-dbのエクスポートと整合性、両SQLのSHA256保存がすべてOKとの報告。バックアップは利用者PCにあり、内容をGitHubへ保存しない。件数の数値自体は未報告。
+
+旧公開API停止用 `cloudflare/iikoto-api/retired-worker.js` を準備した。該当ルートは410、OPTIONSは204、その他404。DBには一切アクセスせず、旧記録を保持する。HOME新画面の本番確認後にiikoto-apiへ別途反映するため、このファイルの追加だけでは旧API停止済みとは扱わない。
 
 ## 新しい方式
 
@@ -45,13 +49,12 @@
 - DOM操作：子ども画面に他の子の選択肢なし、HOME名、0開始、保護者選択、登録、/wagaya API URLを確認。スマホ用48pxボタン・レスポンシブCSSを実装。実iPhone/Android/PCでの目視は未確認。
 - 全SQLをSQLite適用しintegrity=ok、foreign_key_issues=0。
 
-## 残作業・必要な事実
+## 統合検証と残作業（2026-10-16 JST）
 
-1. 利用者が帰宅後、Cloudflare `iikoto-api` のWorkerコードとBindings（保存先名）を確認。旧APIの公開経路や他用途を推測で停止しない。
-2. 実保存先が判明したら旧いいことDB/データのバックアップを取得・件数検証。旧記録を新しい残高へ入れない。旧名コードの人物対応付けも不要。
-3. home-dbの新しい全体バックアップと整合性確認。保留のPR4とまとめて取得できるが、本番反映はそれぞれの差分を再照合。
-4. 旧APIの未認証アクセスを止める方法を、実コードを見て実装。HOME新画面からの接続先は旧APIではないので、新画面を守るだけで旧API保護済みと報告しない。
-5. HOME本人対応を先に配信して、実アカウントごとの0開始・権限を確認。その後にリンク/旧HTMLを切替。旧記録は保管。
-6. PR4は別件として復帰。HOME共通ファイル・管理資料・マイグレーションの差分を再統合し、本番反映前バックアップ、10/14の実記録照合を省略しない。
-
-この作業中の本番変更は、旧銀行・旧お手伝いポイントの一覧カード整理だけ。いいことの実データ・つうちょうの残高や履歴は変更していない。
+- 現行HOME 2a83a28を基準にPR5を統合。0018金融機能・自動処理を残し、0019のみ新規追加。TypeScript、Wrangler dry-run、関連21テスト、子ども/保護者DOM試験を合格。旧API停止用2テストも合格。
+- home-dbの変更前バックアップ：利用者PC `home-db-before-good-deeds-20261016-001714.sql`。旧mama-bank-dbも取得・検証済み。
+- HOMEへ反映後、自動Build成功、既存passbookの全行保持、実アカウントごとの0開始と権限を確認する。現在は本番結果未確認。
+- 次にiikoto-apiへretired-worker.jsを反映し、旧公開経路が情報を返さないことを確認する。旧DBは削除・初期化しない。
+- 新入口と旧API保護を確認した後、別PR6の一覧リンク統合と旧HTML転送を反映する。
+- 実iPhone/Androidでの操作は利用者確認待ち。
+- 10月14日の報酬補填は証拠不足のため保留。おさいふは利用者希望で後回し。学校準備・英語フラッシュは別PR7の準備に保持し本番未反映。

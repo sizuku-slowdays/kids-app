@@ -136,3 +136,8 @@ daily-kanji はHOME上部の「まなぶ」に表示（APIで許可・表示さ�
 ## 2026-10-15 漢字アプリのデータ取得URL修正
 
 漢字クライアントのAPI/ログイン先はアプリディレクトリから ../../api/daily-kanji、../../login をURL解決する。mountの文字列書き換えとの二重prefixを避け、cetus.fun/wagaya とworkers.devの両方に対応。JSON応答のContent-Typeを確認し、HTMLをJSONとして解析しない。
+
+
+## 2026-10-15 学習アプリの設計・ローカル試作
+
+学校準備は家庭/子/日付/確定版、完了は宿題/夜/朝で分離。英語は家庭/本人/JST日付の固定セットとremember/review履歴。SQL案はlearning_接頭辞9テーブルで既存データのUPDATE/DELETEなし。保護者確定・本人チェック・家庭間分離を合成データで試験。保存先は将来home-db候補だが本番未作成。画像は旧時間割APIを直接流用せず、所有者確認と非公開配信接続待ち。AI/報酬/通知は無効。[詳しい設計](../../preparations/learning-20261015/integration-proposal.md)。

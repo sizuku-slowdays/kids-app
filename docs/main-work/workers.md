@@ -67,3 +67,8 @@ DB → notification-center-db。HOME_AUTH → home-workerを利用者が追加�
 
 ### 2026-10-14：まいにち漢字3文字
 home-workerに /api/daily-kanji と /apps/daily-kanji/ を追加。既存DB binding（home-db）のみ利用し、Worker・R2・Service binding・Cron・Secretsの追加なし。0017_daily_kanji.sqlで新規4テーブルを追加。既存の自動BuildのD1 migrations applyで反映する。既存のカレンダー/通知Workerの貼り替えは不要。
+
+
+## 2026-10-15 学習アプリの準備
+
+学校準備・英語はhome-worker内への将来組込候補。新Worker／D1／R2の作成なし。現在はpreparations/learning-20261015に分離し、index.ts／wrangler／public／正式migrationsは未変更。AI bindingと送信サービスの実接続は未確認・未設定。学校・英語のCron追加なし。つうちょうPR #4のCron案は別途保持。[組込み案](../../preparations/learning-20261015/integration-proposal.md)。

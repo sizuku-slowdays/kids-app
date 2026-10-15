@@ -1,0 +1,7 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>まなびの準備画面</title><link rel="stylesheet" href="style.css"></head><body>
+<main><p class="notice">画面確認用サンプル · 本番データへの接続なし · 閉じるとリセット</p>
+<header><p class="eyebrow">我が家 · まなぶ</p><h1 id="heading">学校のじゅんび</h1></header>
+<nav aria-label="アプリ"><button id="school" aria-pressed="true">🎒 学校のじゅんび</button><button id="english" aria-pressed="false">🔤 英語フラッシュ</button></nav>
+<div class="toolbar"><label>画面の確認 <select id="viewer"><option value="child">こども</option><option value="guardian">保護者</option></select></label><label>サンプル <select id="learner"><option value="sample-a">サンプルA</option><option value="sample-b">サンプルB</option></select></label></div>
+<p id="status" role="status" aria-live="polite"></p><section id="content"></section>
+<footer>通知・AI・ポイントは未接続です。この画面での操作は保存されません。</footer></main><script type="module" src="app.mjs"></script></body></html>

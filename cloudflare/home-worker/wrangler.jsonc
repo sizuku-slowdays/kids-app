@@ -35,6 +35,7 @@
     { "binding": "LEGACY_CHORE_SERVICE", "service": "otetsudai-api" },
   ],
   "observability": { "enabled": true, "head_sampling_rate": 1 },
-  "triggers": { "crons": ["15 18 * * *", "0 15 * * *"] },
+  "triggers": { "crons": ["15 18 * * *", "0 15 * * *", "5 * * * *"] },
 }
+
 

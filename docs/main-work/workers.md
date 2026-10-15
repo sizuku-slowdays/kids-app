@@ -67,3 +67,9 @@ DB → notification-center-db。HOME_AUTH → home-workerを利用者が追加�
 
 ### 2026-10-14：まいにち漢字3文字
 home-workerに /api/daily-kanji と /apps/daily-kanji/ を追加。既存DB binding（home-db）のみ利用し、Worker・R2・Service binding・Cron・Secretsの追加なし。0017_daily_kanji.sqlで新規4テーブルを追加。既存の自動BuildのD1 migrations applyで反映する。既存のカレンダー/通知Workerの貼り替えは不要。
+
+
+
+## 2026-10-15 つうちょう現金機能
+
+home-worker/home-db/PRIVATE_FILESを継続利用。0018で10表と報酬トリガー拡張。既存Cron2本を保ち毎時05分の金融ジョブを追加。新Worker・Secretなし。作業ブランチのみ、本番反映なし。 詳細は[設計・検証・反映手順](passbook-cash-20261015.md)。

@@ -67,44 +67,6 @@
       "order": 3
     },
     {
-      "id": "mama-bank",
-      "name": "ママ銀行",
-      "description": "おこづかい・残高",
-      "url": "https://cetus.fun/kanriapp/mama-bank-view.html",
-      "icon": "🏦",
-      "color": "yellow",
-      "category": "money",
-      "featured": true,
-      "order": 4,
-      "urls": {
-        "kids": "https://cetus.fun/kanriapp/mama-bank-view.html",
-        "mama": "https://cetus.fun/kanriapp/mama-bank.html"
-      }
-    },
-    {
-      "id": "points",
-      "name": "ポイント一覧",
-      "description": "お手伝いポイント",
-      "url": "https://cetus.fun/kanriapp/otetsuday-points.html",
-      "icon": "🎁",
-      "color": "mint",
-      "category": "money",
-      "featured": true,
-      "order": 5,
-      "urls": {
-        "kids": "https://cetus.fun/kanriapp/otetsuday-points.html",
-        "mama": "https://cetus.fun/kanriapp/otetsuday-toban.html"
-      },
-      "names": {
-        "kids": "ポイント一覧",
-        "mama": "お手伝い当番"
-      },
-      "descriptions": {
-        "kids": "お手伝いポイントを見る",
-        "mama": "当番・ポイント・ごほうびを管理"
-      }
-    },
-    {
       "id": "karada",
       "name": "からだカレンダー",
       "description": "からだの記録を確認",
@@ -169,6 +131,17 @@
       "category": "study",
       "featured": false,
       "order": 11
+    },
+    {
+      "id": "passbook",
+      "name": "つうちょう",
+      "description": "お金・お手伝いポイントを確認",
+      "url": "https://cetus.fun/wagaya/apps/passbook/",
+      "icon": "📒",
+      "color": "yellow",
+      "category": "money",
+      "featured": true,
+      "order": 4
     }
   ],
   "notes": "家族カレンダーをホーム・一覧に表示。おうちアルバムはピアノとスターデューバレーの参考画像・動画用。"

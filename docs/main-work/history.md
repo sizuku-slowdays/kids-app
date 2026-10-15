@@ -59,3 +59,11 @@ HOMEにはfoundation、home-mount、passbook、passbook-import、calendar-home�
 関連ファイル：calendar-worker.js、public/calendar.html、family-tree.ts、calendar-home/calendar-visibility/family-tree各テスト、scripts/check-deployment-backups.py、scripts/test-deployment-backups.py、管理資料。追加migrationはない。TypeScript・Wrangler dry-run・既存含む17テスト、バックアップ照合用Python3テストを実施。本番DB/R2のバックアップ・件数照合・実機試験は未実施。[手順](preproduction-backup.md)。
 
 追加調整コミット：[859e14d](https://github.com/sizuku-slowdays/kids-app/commit/859e14d89c650a485095ccc4d4629c367de206fd)。本番未反映。mainは管理資料だけを更新。
+
+
+## 2026-10-15 キッズ一覧の旧通帳リンク整理
+
+`wagaya/data/apps.json` の旧mama-bank/pointsを削除し、HOME認証のつうちょうへ統一。共通JSONのためkids/mama両一覧に適用。他のカードは全フィールド維持。apps.jsとapps.htmlの版番号を更新し、旧DB・履歴・通帳の現金/ポイントには変更なし。いいことポイントの本人対応は別途調査・作業中。
+
+未完了の引き継ぎ：つうちょう現金改修は[PR #4](https://github.com/sizuku-slowdays/kids-app/pull/4)でテスト済み。本番反映前の新しいhome-dbバックアップ・10月14日の未払い3件の実データ照合待ち。外出中のため保留し、今回の一覧整理に混ぜない。
+

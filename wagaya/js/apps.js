@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const DATA_URL = './data/apps.json?v=20261015-1';
+  const DATA_URL = './data/apps.json?v=20261015-2';
   const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
 
   document.addEventListener('DOMContentLoaded', () => {

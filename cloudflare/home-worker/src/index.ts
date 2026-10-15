@@ -1,4 +1,6 @@
 import { runCashAutomation } from './passbook-finance';
+
+import { goodDeedsRoute } from './good-deeds';
 import {dailyKanjiRoute} from './daily-kanji';
 import { notificationProxy, notificationCheck } from "./notifications";
 import { diningRoute } from "./dining-prices";
@@ -454,6 +456,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if(path==='/api/good-deeds'||path.startsWith('/api/good-deeds/')){
+      requireValue(await appAllowed(env,user.id,'good-deeds'),403,'このアプリは利用できません');
+      return goodDeedsRoute(request,env,user.id,body);
+    }
     if(path==='/api/daily-kanji'||path.startsWith('/api/daily-kanji/')){
       requireValue(await appAllowed(env,user.id,'daily-kanji'),403,'このアプリは利用できません');
       return dailyKanjiRoute(request,env,user.id,body);
@@ -749,6 +755,18 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     const file=path.slice('/apps/dining-prices/'.length)||'index.html';
     requireValue(['index.html','app.js','calculator.js','order.js','style.css'].includes(file),404,'見つかりません');
     const assetUrl=new URL(url);assetUrl.pathname='/apps/dining-prices/'+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
+  if (path === '/apps/good-deeds' || path.startsWith('/apps/good-deeds/')) {
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
+    requireValue(await appAllowed(env,s.user_id,'good-deeds'),403,'このアプリは利用できません');
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    if(path==='/apps/good-deeds')return new Response(null,{status:303,headers:{...headers,Location:'/apps/good-deeds/'}});
+    const file=path.slice('/apps/good-deeds/'.length)||'index.html';
+    requireValue(['index.html','app.js','style.css'].includes(file),404,'見つかりません');
+    const assetUrl=new URL(url);assetUrl.pathname='/apps/good-deeds/'+file;
     const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
     const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
     return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});

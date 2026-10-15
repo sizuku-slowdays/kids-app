@@ -36,7 +36,7 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
   assert.match(script,/api\("\/wagaya\/api\/me"\)/);
   assert.match(script,/location.replace\("\/wagaya\/"\)/);
   assert.match(script,/pathname.startsWith\('\/wagaya\/apps\/'\)/);
-  assert.match(script,/https:\/\/cetus.fun\/wagaya\/old-home.html/);
+  assert.match(script,/https:\/\/cetus.fun\/kids-app\//);assert.match(script,/キッズアプリ一覧/);assert.doesNotMatch(script,/old-home\.html/);
   const bootstrap={secret:'test-bootstrap-secret',household_name:'家族',display_name:'非公開の親',login_name:'mama',password:'test-password-123',device_name:'端末'};
   assert.equal((await call('/api/bootstrap',{method:'POST',body:bootstrap,origin:'https://evil.test'})).status,403);
   r=await call('/api/bootstrap',{method:'POST',body:bootstrap});assert.equal(r.status,201);

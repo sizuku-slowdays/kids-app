@@ -214,10 +214,10 @@ async function home() {
   if (!visibleApps.length)
     root.append(el("p", "設定から、使うアプリを追加できます。", "muted"));
   const previousHome = el("a", null, "previous-home");
-  previousHome.href = "https://cetus.fun/wagaya/old-home.html";
+  previousHome.href = "https://cetus.fun/kids-app/";
   previousHome.append(
-    el("span", "🏡", "icon"),
-    el("strong", "以前のHOME"),
+    el("span", "🎮", "icon"),
+    el("strong", "キッズアプリ一覧"),
     el("small", "›"),
   );
   root.append(previousHome);

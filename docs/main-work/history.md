@@ -201,3 +201,8 @@ HOMEの漢字アプリ導線を改善。非表示でなく、よく使うにも�
 ## 2026-10-15 漢字アプリのデータ取得URL修正
 
 cetus.fun/wagaya のレスポンス書き換えとクライアントのprefix付加が重なり、/wagaya/wagaya/api/daily-kanji を取得してHTMLのJSON解析エラーになっていた。アプリディレクトリからの相対URL解決に変更。学習・保護者・保存APIとログイン先を双方の配信元でテスト（2件成功）。非JSON応答は日本語エラーで表示。DB・学年・学習データ・認可の変更なし。対象：public/apps/daily-kanji/app.js、test/daily-kanji-url.test.cjs。本番Buildと配信ファイルは別途確認。
+
+
+## 2026-10-15 HOME下部リンク
+
+HOME下部の「以前のHOME」を「🎮 キッズアプリ一覧」に変更。リンク先は https://cetus.fun/kids-app/ （HTTP取得・title「キッズアプリ」を確認）。旧HOME自体や既存アプリ・認証・DBは変更なし。home-mountテストの期待リンクも更新。漢字アプリ小学4年生の表示は利用者確認済み。

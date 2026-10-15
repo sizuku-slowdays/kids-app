@@ -89,28 +89,6 @@
       "order": 9
     },
     {
-      "id": "iikoto-usagi",
-      "name": "うさぎいいこと",
-      "description": "今日のいいことを記録",
-      "url": "https://cetus.fun/kanriapp/iikoto1.html",
-      "icon": "🐰",
-      "color": "orange",
-      "category": "record",
-      "featured": false,
-      "order": 7
-    },
-    {
-      "id": "iikoto-unicorn",
-      "name": "ユニコーンいいこと",
-      "description": "今日のいいことを記録",
-      "url": "https://cetus.fun/kanriapp/iikoto2.html",
-      "icon": "🦄",
-      "color": "purple",
-      "category": "record",
-      "featured": false,
-      "order": 8
-    },
-    {
       "id": "ohajiki-anzan",
       "name": "おはじき暗算",
       "description": "おはじきでくり下がりを練習",
@@ -142,6 +120,17 @@
       "category": "money",
       "featured": true,
       "order": 4
+    },
+    {
+      "id": "good-deeds",
+      "name": "いいことポイント",
+      "description": "自分のいいことを記録",
+      "url": "https://cetus.fun/wagaya/apps/good-deeds/",
+      "icon": "🌸",
+      "color": "mint",
+      "category": "record",
+      "featured": false,
+      "order": 7
     }
   ],
   "notes": "家族カレンダーをホーム・一覧に表示。おうちアルバムはピアノとスターデューバレーの参考画像・動画用。"

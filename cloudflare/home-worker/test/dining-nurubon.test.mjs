@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {calculate,countsForStore,drinkTotal} from '../public/apps/dining-prices/calculator.js';
+const source=await readFile(new URL('../src/dining-nurubon.ts',import.meta.url),'utf8');
+const {nurubonStore:store}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+test('Fukushige verified seven categories, pending teen prices, shared participant mapping and drinks',()=>{
+ assert.deepEqual(store.courses.map(c=>c.prices),[[3718,3388,null,1859,1408,748,0],[3278,2948,null,1639,1188,748,0],[4708,4378,null,2354,1518,748,0],[5808,5478,null,2904,1628,748,0],[6908,6578,null,3454,1738,748,0]]);
+ const people=[1,0,0,1,1,0,0];
+ assert.deepEqual(calculate(store.courses,people).courses.map(c=>c.total),[6985,6105,8580,10340,12100]);
+ assert.deepEqual(countsForStore({},people),[1,0,0,2,0]);
+ assert.deepEqual(countsForStore({},[1,2,3,4,5,6,7]),[1,2,3,9,13]);
+ assert.ok(calculate(store.courses,[0,0,1,0,0,0,0]).courses.every(c=>c.total===null));
+ assert.ok(calculate(store.courses,[0,0,0,0,0,0,0]).courses.every(c=>c.total===0));
+ assert.equal(drinkTotal(store,people,'soft'),1650);
+ assert.equal(drinkTotal(store,people,'no-beer',1),2838);
+ assert.equal(drinkTotal(store,people,'beer',1),3278);
+ assert.equal(drinkTotal(store,[0,0,0,0,0,1,1],'soft'),110);
+ assert.throws(()=>drinkTotal(store,people,'beer',2));
+ assert.throws(()=>drinkTotal(store,people,'invalid',0));
+ const custom=structuredClone(store);custom.drink_options[0].prices[3]=null;
+ assert.equal(drinkTotal(custom,people,'soft'),null);
+ assert.equal(drinkTotal({},people,'beer',1),0);
+});

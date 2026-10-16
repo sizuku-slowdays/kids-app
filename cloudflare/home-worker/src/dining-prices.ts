@@ -1,5 +1,6 @@
+import {nurubonStore} from './dining-nurubon';
 import {westernStore} from './dining-western';
-type Course = {id:string;name:string;prices:number[]};
+type Course = {id:string;name:string;prices:(number|null)[]};
 type Product={id:string;name:string;category:string;period:string;time_note:string;note:string;hidden:boolean;source_page?:number;variants:{id:string;label:string;price:number}[]};
 type Store = {id:string;name:string;note:string;courses:Course[];type?:string;categories?:string[];products?:Product[];[key:string]:unknown};
 const kidsProduct:Product={id:'western-kids-plate',name:'キッズプレート',category:'キッズ',period:'all',time_note:'提供時間帯の記載なし',note:'ハンバーグ・ウインナー・エビフライ・ポテトフライ・ミニサラダ・ライス・ジュース付き。公式共通メニュー掲載。姪浜店での利用実績は利用者確認済み。',hidden:false,variants:[{id:'western-kids-plate-1',label:'プレート',price:700}],source_url:'https://western-fukuoka.jp/menu'} as Product & {source_url:string};
@@ -17,9 +18,13 @@ function cleanStores(value:unknown):Store[]{
   if(!s||typeof s!=='object'||typeof s.id!=='string'||!/^[-a-zA-Z0-9_]{1,100}$/.test(s.id)||ids.has(s.id))throw Error('店舗の情報を確認してください');ids.add(s.id);
   if(typeof s.name!=='string'||!s.name.trim()||s.name.length>100||typeof s.note!=='string'||s.note.length>1000)throw Error('店舗名・メモを確認してください');
   if(!Array.isArray(s.courses)||s.courses.length>30)throw Error('コースは店舗ごとに30件以内で登録してください');
+  if(s.age_scheme!==undefined&&!['standard','split-school'].includes(s.age_scheme))throw Error('年齢区分を確認してください');
+  const rateCount=s.age_scheme==='split-school'?7:5;
+  const validRates=(p:any)=>Array.isArray(p)&&p.length===rateCount&&p.every((n:any)=>n===null&&rateCount===7||Number.isSafeInteger(n)&&n>=0&&n<=10000000);
+  if(s.drink_options!==undefined&&(!Array.isArray(s.drink_options)||s.drink_options.length!==3||!s.drink_options.every((o:any,i:number)=>o&&o.id===['soft','no-beer','beer'][i]&&typeof o.name==='string'&&o.name.length<=80&&validRates(o.prices))))throw Error('飲み放題の料金を確認してください');
   const courseIds=new Set<string>();const courses=s.courses.map((c:Course)=>{
    if(!c||typeof c.id!=='string'||!/^[-a-zA-Z0-9_]{1,100}$/.test(c.id)||courseIds.has(c.id)||typeof c.name!=='string'||!c.name.trim()||c.name.length>80)throw Error('コース名・情報を確認してください');courseIds.add(c.id);
-   if(!Array.isArray(c.prices)||c.prices.length!==5||!c.prices.every(p=>Number.isSafeInteger(p)&&p>=0&&p<=10000000))throw Error('料金は5区分とも0〜10,000,000円の整数で入力してください');
+   if(!validRates(c.prices))throw Error('料金は年齢区分ごとに0〜10,000,000円の整数で入力してください（確認待ちは空欄）');
    return {id:c.id,name:c.name.trim(),prices:c.prices};
   });
   const type=s.type||'buffet';if(!['buffet','order'].includes(type))throw Error('計算方式を確認してください');
@@ -48,6 +53,7 @@ export async function diningRoute(request:Request,env:Env,userId:string,readBody
  if(!row)return json({error:'料金を読み込めませんでした'},503);
  row=await importWestern(env,group.id,userId,row);
  row=await importWestern(env,group.id,userId,row,true);
+ row=await importNurubon(env,group.id,userId,row);
  if(request.method==='PUT'){
   let data;try{data=await readBody(request);}catch(e){throw e;}
   if(!Number.isSafeInteger(data.revision))return json({error:'画面を読み直してください'},400);
@@ -76,5 +82,23 @@ async function importWestern(env:Env,household:string,userId:string,row:{stores_
   ]);
   const current=await env.DB.prepare('SELECT stores_json,revision FROM dining_price_states WHERE household_id=?').bind(household).first<{stores_json:string;revision:number}>();if(!current)throw Error('料金を読み込めませんでした');row=current;
  }
+ return row;
+}
+
+async function importNurubon(env:Env,household:string,userId:string,row:{stores_json:string;revision:number}){
+ const source=nurubonStore.source_version;
+ for(let retry=0;retry<3;retry++){
+  if(await env.DB.prepare('SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?').bind(household,source).first())return row;
+  const stores=JSON.parse(row.stores_json) as Store[],now=new Date().toISOString();
+  if(stores.some(s=>s.id===nurubonStore.id)){await env.DB.prepare('INSERT OR IGNORE INTO dining_price_imports VALUES(?,?,?)').bind(household,source,now).run();return row;}
+  const nextJSON=JSON.stringify([...stores,nurubonStore]);
+  await env.DB.batch([
+   env.DB.prepare('INSERT INTO dining_price_backups SELECT ?,household_id,revision,stores_json,? FROM dining_price_states WHERE household_id=? AND revision=? AND NOT EXISTS(SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?)').bind(crypto.randomUUID(),now,household,row.revision,household,source),
+   env.DB.prepare('UPDATE dining_price_states SET stores_json=?,revision=revision+1,updated_by=?,updated_at=? WHERE household_id=? AND revision=? AND NOT EXISTS(SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?)').bind(nextJSON,userId,now,household,row.revision,household,source),
+   env.DB.prepare('INSERT OR IGNORE INTO dining_price_imports SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM dining_price_states WHERE household_id=? AND revision=? AND stores_json=?)').bind(household,source,now,household,row.revision+1,nextJSON)
+  ]);
+  const current=await env.DB.prepare('SELECT stores_json,revision FROM dining_price_states WHERE household_id=?').bind(household).first<{stores_json:string;revision:number}>();if(!current)throw Error('料金を読み込めませんでした');row=current;
+ }
+ if(!await env.DB.prepare('SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?').bind(household,source).first())throw Error('店舗追加中に更新が重なりました。もう一度開いてください');
  return row;
 }

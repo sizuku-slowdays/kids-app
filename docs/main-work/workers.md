@@ -111,3 +111,7 @@ HOMEの0021追加3表/2view、通知DBにgift_push_deliveries追加SQL、通知W
 ## 2026-10-16 通帳表示・A4印刷（本番未反映）
 
 HOMEへ読み取り専用book APIと認証済み静的ページを準備。DBマイグレーション・通知Worker・Cron・Binding・Secret・R2変更なし。HOME Git Buildのみ反映待ち。 [設計・検証・導入手順](passbook-book-20261016.md)。
+
+
+## 2026-10-16 家系図の日付入力改善
+人物・関係の日付入力で月日1桁/スラッシュ/全角数字を既存のYYYY-MM-DD形式へ正規化。年・年月のみと空欄も維持。西暦なし・存在しない日付は項目名と具体的な案内をダイアログ内に表示し、APIエラーも保存ボタン付近に表示。既存DB・権限・API・R2の変更なし。日付検証12ケース通過。対象：family-tree/app.js,index.html。HOME自動Build成功・実機確認は未確認。

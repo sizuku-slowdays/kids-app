@@ -18,3 +18,13 @@ export function validatePlan(b) {
  });
 }
 export function taskPhaseAllowed(task,phase) {return task.kind==='homework'?phase==='homework':['night','morning'].includes(phase);}
+
+// Explicit day plans override the weekday default, including Saturday classes.
+export function nextSchoolDay(today, overrides=[]) {
+ const days=new Map(overrides.map(d=>[d.school_day,!!d.is_school_day]));
+ let stamp=Date.parse(today+'T12:00:00Z');
+ for (;;) {
+  stamp+=86400000;const date=new Date(stamp),day=date.toISOString().slice(0,10);
+  if(days.has(day)?days.get(day):![0,6].includes(date.getUTCDay()))return day;
+ }
+}

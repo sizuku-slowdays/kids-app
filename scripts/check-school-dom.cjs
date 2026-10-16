@@ -2,7 +2,7 @@ const {createRequire}=require('node:module'),path=require('node:path'),fs=requir
 const {JSDOM}=createRequire(process.env.SCHOOL_DOM_PACKAGE||path.join(__dirname,'../cloudflare/home-worker/package.json'))('jsdom');
 const source=fs.readFileSync(path.join(__dirname,'../cloudflare/home-worker/public/apps/school-prep/app.js'),'utf8');
 const tick=()=>new Promise(r=>setTimeout(r,20));
-async function run(admin){
+async function run(admin,blank=false){
  const dom=new JSDOM('<div id="status"></div><div id="people"></div><nav id="tabs"></nav><div id="content"></div><button id="reload"></button>',{url:'https://cetus.fun/wagaya/apps/school-prep/',runScripts:'outside-only'}),w=dom.window;
  const calls=[],checked=[],today='2026-10-16',tomorrow='2026-10-19';let prefs=false,revision=1;
  const tasks=[{id:'a',kind:'homework',text:'<img src=x onerror=alert(1)>'},{id:'b',kind:'belonging',text:'水筒'}];
@@ -11,11 +11,12 @@ async function run(admin){
  if(u.pathname.endsWith('/check'))checked.push({task_id:body.task_id,phase:body.phase,done:body.done?1:0});
  if(u.pathname.endsWith('/preferences'))prefs=body.notify_enabled;
  if(u.pathname.endsWith('/confirm'))revision++;
- return {status:200,ok:true,headers:{get:()=> 'application/json'},json:async()=>body?{ok:true}:{admin,groups:[{id:'h',name:'家庭'}],household_id:'h',children:admin?[{id:'child',display_name:'HOME-A'},{id:'other',display_name:'HOME-B'}]:[{id:'child',display_name:'HOME-A'}],selected:'child',today,day:u.searchParams.get('day')||today,plan:{revision,is_school_day:1,dismissal:'14:30',tasks},checks:checked,days:[{school_day:tomorrow,is_school_day:1},{school_day:today,is_school_day:1}],summary:{school_days:1,completed:0},notify_enabled:prefs,notifications:[]}};
+ return {status:200,ok:true,headers:{get:()=> 'application/json'},json:async()=>body?{ok:true}:{admin,groups:[{id:'h',name:'家庭'}],household_id:'h',children:admin?[{id:'child',display_name:'HOME-A'},{id:'other',display_name:'HOME-B'}]:[{id:'child',display_name:'HOME-A'}],selected:'child',today,next_school_day:tomorrow,day:u.searchParams.get('day')||today,plan:blank?null:{revision,is_school_day:1,dismissal:'14:30',tasks},checks:checked,days:[{school_day:tomorrow,is_school_day:1},{school_day:today,is_school_day:1}],summary:{school_days:1,completed:0},notify_enabled:prefs,notifications:[]}};
  };
  w.eval(source);await tick();
  assert.ok(w.document.body.textContent.includes('HOME-A'));assert.equal(w.document.querySelectorAll('img').length,0);
  if(admin){
+  if(blank){assert.equal(w.document.querySelector('textarea').value,'漢字：\n計算：\n音読：');const save=Array.from(w.document.querySelectorAll('button')).find(b=>b.textContent==='確認して確定する');save.click();await tick();assert.equal(calls.find(c=>c.u.pathname.endsWith('/confirm')).body.tasks.length,0,'empty default labels must not become homework');dom.window.close();return;}
   assert.equal(w.document.querySelector('select[aria-label="子ども"]').options.length,2);
   assert.ok(Array.from(w.document.querySelectorAll('.task button')).every(b=>b.disabled));
   const checkbox=w.document.querySelector('details input[type=checkbox]:last-of-type');
@@ -32,4 +33,4 @@ async function run(admin){
  }
  dom.window.close();
 }
-(async()=>{await run(false);await run(true);console.log('PASS: school child/guardian controls, safe text, mounted URL, next-school-day night checks, persistence requests and stamps');})().catch(e=>{console.error(e);process.exitCode=1;});
+(async()=>{await run(false);await run(true);await run(true,true);console.log('PASS: school child/guardian controls, safe text, mounted URL, next-school-day night checks, persistence requests and stamps');})().catch(e=>{console.error(e);process.exitCode=1;});

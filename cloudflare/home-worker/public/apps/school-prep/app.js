@@ -6,8 +6,7 @@ function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefine
 function button(text,fn,cls){const b=el('button',text,cls);b.type='button';b.onclick=async()=>{if(busy)return;busy=true;b.disabled=true;$('status').textContent='';try{await fn();}catch(e){$('status').textContent=e.message;}finally{busy=false;if(b.isConnected)b.disabled=false;}};return b;}
 function field(parent,label,node){const l=el('label',label);l.append(node);parent.append(l);return node;}
 function dateLabel(value){return new Date(value+'T12:00:00+09:00').toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});}
-function tomorrow(value){return new Date(Date.parse(value+'T12:00:00+09:00')+86400000).toLocaleDateString('sv-SE',{timeZone:'Asia/Tokyo'});}
-function targetDay(p){if(p!=='night')return state.today;return state.days.filter(d=>d.is_school_day&&d.school_day>state.today).map(d=>d.school_day).sort()[0]||tomorrow(state.today);}
+function targetDay(p){return p==='night'?state.next_school_day:state.today;}
 async function api(path='',method='GET',body){
  const url=new URL(endpoint);url.pathname+=path;if(household)url.searchParams.set('household',household);if(child)url.searchParams.set('child',child);if(day)url.searchParams.set('day',day);
  const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});
@@ -30,7 +29,7 @@ function render(){
  else $('people').append(el('p',state.children.find(c=>c.id===child)?.display_name||'子どものHOMEアカウントを連携してください','person'));
  for(const [p,label] of Object.entries(labels)){const b=button(label,async()=>{phase=p;day=targetDay(p);await load();});b.setAttribute('aria-pressed',String(phase===p));$('tabs').append(b);}
  if(!child)return;
- const plan=state.plan,c=card();c.append(el('p',dateLabel(day)+' の'+labels[phase],'date'));
+ const plan=state.plan,c=card();c.append(el('p',dateLabel(day)+(phase==='night'?' のもちもの':' の'+labels[phase]),'date'));
  const sub={homework:'きょうの宿題',night:'次の登校日のもちもの',morning:'きょう学校に持っていくもの'}[phase];c.append(el('h2',sub));
  if(state.admin){const picker=el('input');picker.type='date';picker.value=day;picker.onchange=()=>{if(picker.value){day=picker.value;load();}};field(c,'見る日・登録する日',picker);}
  if(plan?.dismissal)c.append(el('p','下校じこく '+plan.dismissal,'muted'));
@@ -51,12 +50,13 @@ function render(){
 }
 function renderEditor(){
  const c=card(),details=el('details');details.open=!state.plan;details.append(el('summary','内容を登録・変更（保護者）'));c.append(details);
- const form=el('form'),hw=el('textarea'),bag=el('textarea'),time=el('input'),school=el('input');time.type='time';time.value=state.plan?.dismissal||'';school.type='checkbox';school.checked=state.plan?!!state.plan.is_school_day:true;
- hw.value=(state.plan?.tasks||[]).filter(t=>t.kind==='homework').map(t=>t.text).join('\n');bag.value=(state.plan?.tasks||[]).filter(t=>t.kind==='belonging').map(t=>t.text).join('\n');hw.maxLength=16000;bag.maxLength=16000;
+ const form=el('form'),hw=el('textarea'),bag=el('textarea'),time=el('input'),school=el('input');time.type='time';time.value=state.plan?.dismissal||'';school.type='checkbox';school.checked=state.plan?!!state.plan.is_school_day:![0,6].includes(new Date(day+'T12:00:00Z').getUTCDay());
+ hw.value=state.plan?state.plan.tasks.filter(t=>t.kind==='homework').map(t=>t.text).join('\n'):'漢字：\n計算：\n音読：';bag.value=(state.plan?.tasks||[]).filter(t=>t.kind==='belonging').map(t=>t.text).join('\n');hw.maxLength=16000;bag.maxLength=16000;
  field(form,'登校日',school);field(form,'宿題（1行に1つ）',hw);field(form,'持ち物（1行に1つ）',bag);field(form,'下校時刻（空欄でもOK）',time);
+ form.append(el('small','基本は月〜金が登校日です。土曜授業は登校日に、お休みはチェックを外して確定してください。宿題の項目名だけの行は登録されません。'));
  form.append(el('small','確定すると子どもの画面に表示されます。変更して再確定すると、その日のチェックは新しく始まります。以前の版と記録は残ります。'));
  const save=button('確認して確定する',async()=>{
-  const tasks=[...hw.value.split('\n').map(text=>({kind:'homework',text})),...bag.value.split('\n').map(text=>({kind:'belonging',text}))].filter(t=>t.text.trim()).map(t=>({...t,id:crypto.randomUUID()}));
+  const tasks=[...hw.value.split('\n').map(text=>({kind:'homework',text})),...bag.value.split('\n').map(text=>({kind:'belonging',text}))].filter(t=>t.text.trim()&&!/^(漢字|計算|音読)[：:]\s*$/.test(t.text.trim())).map(t=>({...t,id:crypto.randomUUID()}));
   if(tasks.length>80||tasks.some(t=>t.text.length>200))throw Error('項目は80件まで、1項目200文字以内で入力してください');
   if(state.plan&&!confirm('この日の内容を新しい版として確定します。チェックは新しく始まります。よろしいですか？'))return;
   await api('/confirm','POST',{day,expected_revision:state.plan?.revision||0,is_school_day:school.checked,dismissal:time.value||null,tasks});await load();

@@ -63,3 +63,6 @@ notification-center-dbに `school-preparation.sql` でschool_push_deliveries 1�
 本番の新しいバックアップ/通知Worker照合、実デプロイ、実機確認はまだ。AI提供元・画像所有権/既存時間割の接続・費用は未確認のまま接続しない。ランク/報酬は未決定、英語PR7は保留。つうちょう10/14補填は根拠不足で保留、おさいふは後回し。
 
 いいことPR5は00:28のデプロイ成功・既存通帳保持・保護者画面の0開始を利用者確認。PR6の一覧と旧APIのlegacy_api_retired応答も01:11に確認。子ども本人の実機権限確認は別途残る。
+
+
+2026-10-16 修正：backup-before.ps1の$homeがPowerShellの読み取り専用$HOMEと衝突し、エクスポート前に停止したとの利用者報告。$schoolHomeBackupPathへ統一。今回の失敗で本番DB/Workerの変更は実行されていない。修正版でバックアップ取得から再開する。

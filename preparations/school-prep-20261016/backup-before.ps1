@@ -3,15 +3,15 @@ try {
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $folder = Join-Path $env:USERPROFILE "wagaya-school-prep-$stamp"
     New-Item -ItemType Directory -Path $folder | Out-Null
-    $home = Join-Path $folder 'home-before.sql'
+    $schoolHomeBackupPath = Join-Path $folder 'home-before.sql'
     $notifications = Join-Path $folder 'notifications-before.sql'
     $verify = Join-Path $folder 'verify-backup.py'
     Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/sizuku-slowdays/kids-app/1c9d142a17f29226fc78d3eff8029b596aef0920/preparations/learning-20261015/verify-backup.py' -OutFile $verify
 
     Write-Host "`n[1/3] HOME backup"
-    npx.cmd wrangler d1 export fed5c0be-51b5-486f-935f-58678481f2a9 --remote --output "$home"
+    npx.cmd wrangler d1 export fed5c0be-51b5-486f-935f-58678481f2a9 --remote --output "$schoolHomeBackupPath"
     if ($LASTEXITCODE -ne 0) { throw 'HOME export failed.' }
-    py "$verify" "$home"
+    py "$verify" "$schoolHomeBackupPath"
     if ($LASTEXITCODE -ne 0) { throw 'HOME verification failed.' }
 
     Write-Host "`n[2/3] Notification backup"
@@ -42,9 +42,9 @@ try {
         finally { $sha.Dispose() }
     }
     $sourceMatches = (Get-NormalizedCodeHash $code) -eq (Get-NormalizedCodeHash ([System.IO.File]::ReadAllText($reference)))
-    Get-FileHash -LiteralPath $home,$notifications,$worker -Algorithm SHA256 |
+    Get-FileHash -LiteralPath $schoolHomeBackupPath,$notifications,$worker -Algorithm SHA256 |
         Format-List | Out-File (Join-Path $folder 'sha256.txt') -Encoding utf8
-    $manifest = [ordered]@{folder=$folder;home_before=$home;notifications_before=$notifications;worker_before=$worker;worker_matches_github=$sourceMatches;created_at=(Get-Date -Format o)}
+    $manifest = [ordered]@{folder=$folder;home_before=$schoolHomeBackupPath;notifications_before=$notifications;worker_before=$worker;worker_matches_github=$sourceMatches;created_at=(Get-Date -Format o)}
     $manifest | ConvertTo-Json | Out-File (Join-Path $folder 'manifest.json') -Encoding utf8
     if (!$sourceMatches) {
         throw "Backups saved, but live Worker differs from GitHub. STOP for code review. Folder: $folder"

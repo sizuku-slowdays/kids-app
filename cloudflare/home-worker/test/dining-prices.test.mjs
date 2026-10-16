@@ -29,22 +29,22 @@ test('HOME auth, household separation, persistent CRUD and concurrent saves pres
   const before=JSON.stringify((await db.prepare('SELECT * FROM users ORDER BY id').all()).results);
   const call=(who='mom',method='GET',body,household='h')=>mf.dispatchFetch('https://cetus.fun/wagaya/api/dining-prices?household='+household,{method,headers:{Origin:'https://cetus.fun','Content-Type':'application/json',...(who?{Cookie:'__Host-home_session='+tokens[who]}:{})},body:body?JSON.stringify(body):undefined});
   assert.equal((await call(null)).status,401);assert.equal((await call('other')).status,403);
-  const first=await (await call()).json();assert.equal(first.editable,true);assert.deepEqual(first.stores[0].courses.map(c=>c.prices),prices);
+  const first=await (await call()).json();assert.equal(first.editable,true);assert.equal(first.stores.length,3);assert.equal((await (await call()).json()).revision,first.revision);assert.equal(first.stores.find(s=>s.id==='nurubon-fukushige').courses[4].prices[2],null);assert.deepEqual(first.stores[0].courses.map(c=>c.prices),prices);
   assert.equal((await (await call('kid')).json()).editable,false);assert.equal((await call('kid','PUT',{revision:first.revision,stores:[]})).status,403);
-  const stores=structuredClone(first.stores);stores.push({id:'another',name:'別のお店',note:'税込',courses:[{id:'c',name:'コース',prices:[1000,900,800,500,0]}]});
-  assert.equal((await call('mom','PUT',{revision:first.revision,stores})).status,200);assert.equal((await (await call()).json()).stores.length,3);
+  const stores=structuredClone(first.stores);stores.find(s=>s.id==='nurubon-fukushige').drink_options[0].prices[0]=600;stores.find(s=>s.id==='nurubon-fukushige').courses[0].prices[2]=3718;stores.push({id:'another',name:'別のお店',note:'税込',courses:[{id:'c',name:'コース',prices:[1000,900,800,500,0]}]});
+  assert.equal((await call('mom','PUT',{revision:first.revision,stores})).status,200);assert.equal((await (await call()).json()).stores.length,4);
   assert.equal((await call('mom','PUT',{revision:first.revision,stores:[]})).status,409);
-  let latest=await (await call()).json();const bad=structuredClone(latest.stores);bad[0].courses[0].prices[0]=-1;assert.equal((await call('mom','PUT',{revision:latest.revision,stores:bad})).status,400);
-  const other=await (await call('other','GET',null,'other')).json();assert.equal(other.stores.length,2);assert.deepEqual(other.stores[0].courses.map(c=>c.prices),prices);
+  let latest=await (await call()).json();assert.equal(latest.stores.find(s=>s.id==='nurubon-fukushige').drink_options[0].prices[0],600);assert.equal(latest.stores.find(s=>s.id==='nurubon-fukushige').courses[0].prices[2],3718);const bad=structuredClone(latest.stores);bad[0].courses[0].prices[0]=-1;assert.equal((await call('mom','PUT',{revision:latest.revision,stores:bad})).status,400);
+  const other=await (await call('other','GET',null,'other')).json();assert.equal(other.stores.length,3);assert.deepEqual(other.stores[0].courses.map(c=>c.prices),prices);
   assert.equal((await call('mom','PUT',{revision:latest.revision,stores:[]})).status,200);assert.deepEqual((await (await call()).json()).stores,[]);
   // Existing custom buffet prices are appended to, backed up and never reset.
   await db.prepare("INSERT INTO groups VALUES('late','後からの家庭','household','mom',?)").bind(now).run();
   await db.prepare("INSERT INTO memberships VALUES('late','mom','owner')").run();await db.prepare("INSERT INTO group_apps VALUES('late','dining-prices')").run();
   const oldStores=[structuredClone(first.stores[0]),{id:'my-store',name:'保存済みの店',note:'残すメモ',courses:[]}];oldStores[0].courses[0].prices[0]=4001;
   await db.prepare("INSERT INTO dining_price_states VALUES('late',?,9,'mom','now')").bind(JSON.stringify(oldStores)).run();
-  const imported=await (await call('mom','GET',null,'late')).json();assert.equal(imported.stores.length,3);assert.deepEqual(imported.stores.slice(0,2),oldStores);assert.equal(imported.revision,10);
+  const imported=await (await call('mom','GET',null,'late')).json();assert.equal(imported.stores.length,4);assert.deepEqual(imported.stores.slice(0,2),oldStores);assert.equal(imported.revision,11);
   const backup=await db.prepare("SELECT stores_json,revision FROM dining_price_backups WHERE household_id='late'").first();assert.equal(backup.stores_json,JSON.stringify(oldStores));assert.equal(backup.revision,9);
-  const again=await (await call('mom','GET',null,'late')).json();assert.equal(again.revision,10);
+  const again=await (await call('mom','GET',null,'late')).json();assert.equal(again.revision,11);
   const restaurant=again.stores.find(s=>s.type==='order');assert.equal(restaurant.products.length,107);assert.equal(restaurant.products.reduce((n,p)=>n+p.variants.length,0),190);
   // Simulate an existing household from the previous release: preserve edited prices,
   // add only the kids plate, and do not recreate it after later deletion.
@@ -68,4 +68,5 @@ test('HOME auth, household separation, persistent CRUD and concurrent saves pres
   assert.equal((await mf.dispatchFetch('https://cetus.fun/wagaya/apps/dining-prices/',{redirect:'manual'})).status,303);
  }finally{await mf.dispose();}
 });
+
 

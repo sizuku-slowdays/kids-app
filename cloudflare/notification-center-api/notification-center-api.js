@@ -1184,6 +1184,7 @@ async function handleRequest(request, env) {
 
 
 
+  if(path==='/internal/school-prep/send')return schoolPreparationPush(request,env);
   if(path.startsWith('/api/home/'))return homeNotificationRoute(request,env,path);
   if (!authOk(request, env)) {
 
@@ -1992,4 +1993,39 @@ function legacySafeResponse(value){
    return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,legacySafeResponse(v)]).filter(([,v])=>v!==undefined));
  }
  return value;
+}
+
+// School completion messages use existing HOME subscriptions; legacy rules stay unchanged.
+async function schoolPreparationPush(request,env){
+ if(new URL(request.url).hostname!=='notification.internal'||request.method!=='POST')return json({error:'見つかりません'},request,env,404);
+ if(!env.HOME_AUTH)return json({error:'HOME_AUTHの接続を確認してください'},request,env,503);
+ const input=await request.json().catch(()=>null),delivery=String(input?.delivery_id||'');
+ if(!/^[a-zA-Z0-9_-]{1,100}$/.test(delivery))return json({error:'通知IDを確認してください'},request,env,400);
+ const checkUrl=new URL('https://notification-auth.internal/internal/school-prep/notification-check');checkUrl.searchParams.set('delivery',delivery);
+ const response=await env.HOME_AUTH.fetch(new Request(checkUrl));
+ if(!response.ok)return json({error:'学校準備のHOME対応を確認してください'},request,env,503);
+ const data=await response.json();
+ if(!data.allowed)return json({ok:true,protocol:'school-v1',cancelled:true,delivered:0},request,env);
+ if(!/^[a-zA-Z0-9_-]{1,100}$/.test(data.recipient_id||''))return json({error:'通知先を確認してください'},request,env,503);
+ const subscriptions=(await env.DB.prepare('SELECT s.*,h.home_user_id,h.home_session_id FROM push_subscriptions s JOIN home_notification_subscriptions h ON h.endpoint=s.endpoint WHERE s.enabled=1 AND h.home_user_id=?').bind(data.recipient_id).all()).results;
+ let delivered=0,failed=0;
+ for(const sub of subscriptions){
+  const liveUrl=new URL(checkUrl);liveUrl.searchParams.set('user',sub.home_user_id);liveUrl.searchParams.set('session',sub.home_session_id);
+  const liveResponse=await env.HOME_AUTH.fetch(new Request(liveUrl));if(!liveResponse.ok)continue;
+  const live=await liveResponse.json();if(!live.allowed||live.recipient_id!==sub.home_user_id)continue;
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare("INSERT OR IGNORE INTO school_push_deliveries VALUES(?,?,'pending',0,?)").bind(delivery,sub.endpoint,new Date().toISOString()).run();
+  const old=await env.DB.prepare('SELECT status FROM school_push_deliveries WHERE delivery_id=? AND endpoint=?').bind(delivery,sub.endpoint).first();
+  if(old?.status==='sent'){delivered++;continue;}
+  const claim=await env.DB.prepare("UPDATE school_push_deliveries SET status='sending',lease_until=? WHERE delivery_id=? AND endpoint=? AND status!='sent' AND lease_until<? RETURNING delivery_id").bind(now+90,delivery,sub.endpoint,now).first();
+  if(!claim){failed++;continue;}
+  try{
+   const result=await sendPush(sub,{title:'🎒 学校じゅんび',body:String(live.body||'準備状況が更新されました').slice(0,120),url:live.url,tag:'school-'+delivery,icon:'https://cetus.fun/wagaya/home-icon-192.png'},env);
+   if(!result.ok)throw Error('push_failed');
+   await env.DB.prepare("UPDATE school_push_deliveries SET status='sent',lease_until=0,updated_at=? WHERE delivery_id=? AND endpoint=?").bind(new Date().toISOString(),delivery,sub.endpoint).run();delivered++;
+  }catch{
+   await env.DB.prepare("UPDATE school_push_deliveries SET status='pending',lease_until=0,updated_at=? WHERE delivery_id=? AND endpoint=?").bind(new Date().toISOString(),delivery,sub.endpoint).run();failed++;
+  }
+ }
+ return json({ok:failed===0,protocol:'school-v1',delivered,failed},request,env,failed?503:200);
 }

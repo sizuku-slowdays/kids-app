@@ -122,3 +122,8 @@
 旧いいことWorkerの提示コードはGET/POST/DELETEのiikoto_records操作のみ、owner固定コード照合でHOME認証なし。DashboardのDB bindingはmama-bank-dbと利用者確認。旧記録を残し、新しいgood_deed_*台帳を0開始する方式を維持。10月16日00:17、旧DBのiikotoテーブル確認・最新home-dbエクスポートと整合性・両バックアップハッシュ保存がすべてOKとの利用者報告。本番移行は未実施。
 
 今回の統合は0018金融機能と0019いいことの両方を保持する。旧API保護・新画面の本番反映・実アカウント権限確認・旧リンク切替は残作業。旧DBやつうちょうへのリセットは実施しない。
+
+
+## 2026-10-16 学校じゅんび（準備）
+
+学校じゅんびは新しいhome-db/notification-center-dbバックアップ、現行通知Workerソース照合、通知専用SQL/Worker反映、HOME反映、前後データ照合・本人/保護者実機Push確認待ち。AI/ランク/報酬は保留、英語PR7は今回未統合。いいことの一覧/legacy_api_retiredは01:11に利用者確認済み。 詳細：[仕様・試験・導入ゲート](school-prep-20261016.md)。

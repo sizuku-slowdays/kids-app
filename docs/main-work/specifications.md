@@ -109,3 +109,8 @@ HOME修正 [76195b2](https://github.com/sizuku-slowdays/kids-app/commit/76195b24
 ## 2026-10-16 ごほうびプレゼント：本番反映・利用者確認済み
 
 PR9はHOMEへ統合済み（665da2e8537f64fcffa56cbf80fc38cc6659a470）。通知DB追加SQL・通知Worker更新完了、13:52のHOME Build成功（Version cd42c5d0-18c7-453f-836e-f1499317ca45）を利用者報告。13:55、最新バックアップとの前後照合はHOME・通知DBともすべてOK、既存データ・通知設定不変との結果。14:01、保護者への申請通知と承認後の加算の両方を利用者が確認し、問題なさそうと報告。これにより前述の本番反映・前後照合・基本実機確認待ちは解消。却下・複数端末・全ユーザー組合せの本番試験は未確認（権限・却下・再試行・重複はローカル試験済み）。別家庭共有・受渡し/精算・家計簿連携は引き続き未実装。
+
+
+## 2026-10-16 通帳表示・A4印刷：独立準備・本番待ち
+
+本人と同家庭保護者だけがbook APIを利用。姉妹ポイント共有とプレゼント申請許可は全履歴印刷の権限にしない。JST範囲・期間前繰越・julianday→rowid順の各取引後残高・読込時snapshotを計算し、台帳に書き込まない。 [PR10](https://github.com/sizuku-slowdays/kids-app/pull/10)、[固定版の仕様・検証・導入手順](https://github.com/sizuku-slowdays/kids-app/blob/0565653f263f4f7d9ce882edf02926a9dd535160/docs/main-work/passbook-book-20261016.md)。本番統合は最新home-dbバックアップの読み取り専用監査待ち。DB変更・通知Worker更新不要。

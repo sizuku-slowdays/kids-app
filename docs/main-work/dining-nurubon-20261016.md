@@ -15,3 +15,6 @@
 - 本番：GitHub統合前の実装・ローカル検証時点。Cloudflare Build成功、実iPhone確認、中高生料金の店舗確認は未確認。
 
 HOMEへマージ済み：[a5c8d17](https://github.com/sizuku-slowdays/kids-app/commit/a5c8d173c77a20c53125ee1897511f08c0a25a12)。本番Build/実機の確認待ち。
+
+
+2026-10-16 本番反映確認：GitHub Checksの「Workers Builds: home-worker」がa5c8d173c77a20c53125ee1897511f08c0a25a12に対してcompleted/success。Build ID 4e782d95-9fb6-4352-8dc4-d1bb4250255c。実iPhoneでの操作と中高生専用料金の店舗確認は引き続き未確認。

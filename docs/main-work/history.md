@@ -116,3 +116,6 @@ HOME実装版：[8a52939](https://github.com/sizuku-slowdays/kids-app/commit/8a5
 
 ## 2026-10-16 ヌルボン福重店・店舗間料金比較
 [実装・公式料金の確認記録](dining-nurubon-20261016.md)。[PR11](https://github.com/sizuku-slowdays/kids-app/pull/11)をHOMEへマージ（a5c8d173c77a20c53125ee1897511f08c0a25a12）。同じ7区分の参加人数からウエストは従来5区分へ合算。既存メニュー保持・追加前JSONを既存D1バックアップ表へ自動保存。新規DBマイグレーションなし。TypeScript/dry-run・HOME29テスト、390/1366px操作確認済み。本番Build成功/実iPhone/中高生の専用料金は未確認。URL：https://cetus.fun/wagaya/apps/dining-prices/?view=compare 。
+
+
+2026-10-16 本番反映確認：GitHub Checksの「Workers Builds: home-worker」がa5c8d173c77a20c53125ee1897511f08c0a25a12に対してcompleted/success。Build ID 4e782d95-9fb6-4352-8dc4-d1bb4250255c。実iPhoneでの操作と中高生専用料金の店舗確認は引き続き未確認。

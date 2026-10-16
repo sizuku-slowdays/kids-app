@@ -843,7 +843,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     requireValue(await appAllowed(env,s.user_id,"passbook"),403,"このアプリは利用できません");
     requireValue(["GET","HEAD"].includes(method),405,"この操作はできません");
     const file=path.replace(/^\/apps\/passbook\/?/,"")||"index.html";
-    requireValue(["index.html","app.js","style.css"].includes(file),404,"見つかりません");
+    requireValue(["index.html","app.js","style.css","book.html","book.js","book-core.js","book.css"].includes(file),404,"見つかりません");
     const assetUrl=new URL(url);assetUrl.pathname="/apps/passbook/"+file;
     const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
     const protectedHeaders=new Headers(response.headers);

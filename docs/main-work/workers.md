@@ -106,3 +106,8 @@ home-worker/home-db/PRIVATE_FILESを継続利用。0018で10表と報酬トリ�
 ## 2026-10-16 ごほうびプレゼント（本番未反映）
 
 HOMEの0021追加3表/2view、通知DBにgift_push_deliveries追加SQL、通知Workerの専用内部送信を準備。新Binding/Secret/Cron式なし。既存HOME Cronでは金融処理後に未送信を再試行。 [設計・テスト・導入ゲート](passbook-gifts-20261016.md)。
+
+
+## 2026-10-16 通帳表示・A4印刷（本番未反映）
+
+HOMEへ読み取り専用book APIと認証済み静的ページを準備。DBマイグレーション・通知Worker・Cron・Binding・Secret・R2変更なし。HOME Git Buildのみ反映待ち。 [設計・検証・導入手順](passbook-book-20261016.md)。

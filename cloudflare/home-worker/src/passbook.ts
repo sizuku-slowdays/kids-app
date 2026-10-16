@@ -1,3 +1,4 @@
+import { bookRoute } from './passbook-book';
 import { giftAccess, giftsRoute } from './passbook-gifts';
 import { financeRoute } from './passbook-finance';
 import { listRewards, rewardImage, rewardBody, raster } from "./passbook-reward-images";
@@ -56,6 +57,7 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
   }
   check(active||(admin&&imported&&method==='GET'),'残高・履歴の移行確認が終わるまで利用できません',409);
   if(path==='/gifts'||path.startsWith('/gifts/'))return reply(await giftsRoute(request,env as Env,household!,userId,readBody));
+  if(path==='/book'||path.startsWith('/book/'))return bookRoute(request,env,household!,userId);
   check(!giftOnly,'このアカウントではプレゼント申請と自分の申請状況だけを利用できます',403);
   if(path==='/finance'||path.startsWith('/finance/'))return reply(await financeRoute(request,env,household!,userId,admin,readBody));
   if(path==='/chores'||path.startsWith('/chores/'))return reply(await choreRoute(request,env,household!,userId,admin,readBody));

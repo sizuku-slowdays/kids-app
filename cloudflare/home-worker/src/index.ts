@@ -1,3 +1,4 @@
+import { giftNotificationCheck, deliverGiftNotifications } from './passbook-gifts';
 import { schoolRoute, schoolNotificationCheck } from './school-prep';
 import { runCashAutomation } from './passbook-finance';
 
@@ -235,6 +236,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   const url = new URL(request.url),
     path = url.pathname,
     method = request.method;
+  if (path === '/internal/passbook-gifts/notification-check') return giftNotificationCheck(request,env);
   if (path === '/internal/school-prep/notification-check') return schoolNotificationCheck(request,env);
   if (url.hostname === 'notification-auth.internal' && path === '/internal/notification-check' && method === 'GET') {
     const target=await env.DB.prepare('SELECT * FROM users WHERE id=? AND active=1').bind(url.searchParams.get('user')||'').first<User>();
@@ -957,6 +959,7 @@ export default {
   async scheduled(_event: ScheduledController, env: HomeEnv) {
     // Financial jobs retry hourly on JST day 1. Existing maintenance keeps its original schedule.
     try{await runCashAutomation(env,_event.scheduledTime);}catch{console.error(JSON.stringify({event:'passbook_financial_schedule_failed'}));}
+    try{await deliverGiftNotifications(env);}catch{console.error(JSON.stringify({event:'passbook_gift_notification_retry_failed'}));}
     if(_event.cron === '5 * * * *')return;
     const households=(await env.DB.prepare("SELECT a.household_id,(SELECT m.user_id FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.group_id=a.household_id AND m.role IN ('owner','admin') AND u.active=1 ORDER BY CASE m.role WHEN 'owner' THEN 0 ELSE 1 END LIMIT 1) actor FROM passbook_activation a").all<{household_id:string;actor:string|null}>()).results;
     for(const h of households)if(h.actor)await advanceChores(env,h.household_id,h.actor);

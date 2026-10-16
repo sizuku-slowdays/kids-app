@@ -1,9 +1,10 @@
+import { giftAccess, giftsRoute } from './passbook-gifts';
 import { financeRoute } from './passbook-finance';
 import { listRewards, rewardImage, rewardBody, raster } from "./passbook-reward-images";
 import { choreRoute } from "./passbook-chores";
 import { snapshot, importLegacy } from "./passbook-import";
 import { activatePassbook } from "./passbook-cutover";
-type Context = { DB: D1Database; LEGACY_DB?: D1Database; PRIVATE_FILES: R2Bucket; LEGACY_BANK_SERVICE?: Fetcher; LEGACY_CHORE_SERVICE?: Fetcher };
+type Context = { DB: D1Database; LEGACY_DB?: D1Database; PRIVATE_FILES: R2Bucket; NOTIFICATION_SERVICE?: Fetcher; LEGACY_BANK_SERVICE?: Fetcher; LEGACY_CHORE_SERVICE?: Fetcher };
 type Group = {id:string; name:string; role:string};
 const reply=(value:unknown,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
 function check(ok:unknown,message:string,status=400):asserts ok {if(!ok)throw Object.assign(new Error(message),{status});}
@@ -21,8 +22,10 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
   const own=await env.DB.prepare('SELECT id FROM children WHERE household_id=? AND user_id=?').bind(household,userId).first<{id:string}>();
   const imported=await env.DB.prepare('SELECT summary_json,snapshot_hash,backup_key FROM passbook_imports WHERE household_id=?').bind(household).first<{summary_json:string;snapshot_hash:string;backup_key:string}>();
   const settings=await env.DB.prepare('SELECT sibling_points_visible FROM passbook_settings WHERE household_id=?').bind(household).first<{sibling_points_visible:number}>();
-  const accounts=async()=> (await env.DB.prepare(`SELECT a.id,a.child_id,a.unit_id,c.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_entries e WHERE e.account_id=a.id),0) balance,COALESCE((SELECT SUM(r.cost) FROM passbook_requests r WHERE r.account_id=a.id AND r.status='pending'),0) pending FROM passbook_accounts a JOIN children c ON c.id=a.child_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR c.user_id=? OR (?=1 AND u.kind='points')) UNION ALL SELECT a.id,'user:'||a.owner_user_id child_id,a.unit_id,usr.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_adult_entries e WHERE e.account_id=a.id),0) balance,0 pending FROM passbook_adult_accounts a JOIN users usr ON usr.id=a.owner_user_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR a.owner_user_id=?) ORDER BY display_name,kind,code`).bind(household,admin?1:0,userId,settings?.sibling_points_visible||0,household,admin?1:0,userId).all()).results;
-  if(path===''&&method==='GET')return reply({household:group,admin,active,imported:admin&&Boolean(imported),own_child_id:own?.id,accounts:active||(admin&&imported)?await accounts():[],children:admin?(await env.DB.prepare('SELECT id,display_name FROM children WHERE household_id=?').bind(household).all()).results.concat([{id:'user:'+userId,display_name:'自分のつうちょう'}]):[],sibling_points_visible:Boolean(settings?.sibling_points_visible)});
+  const accounts=async()=> (await env.DB.prepare(`SELECT a.id,a.child_id,a.unit_id,c.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_entries e WHERE e.account_id=a.id),0) balance,COALESCE((SELECT SUM(r.cost) FROM passbook_requests r WHERE r.account_id=a.id AND r.status='pending'),0) pending FROM passbook_accounts a JOIN children c ON c.id=a.child_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR c.user_id=? OR (?=1 AND u.kind='points')) UNION ALL SELECT a.id,'user:'||a.owner_user_id child_id,a.unit_id,usr.display_name,u.name,u.code,u.kind,u.symbol,COALESCE((SELECT SUM(e.delta) FROM passbook_adult_entries e WHERE e.account_id=a.id),0) balance,0 pending FROM passbook_adult_accounts a JOIN users usr ON usr.id=a.owner_user_id JOIN passbook_units u ON u.id=a.unit_id WHERE a.household_id=? AND (?=1 OR a.owner_user_id=?) ORDER BY display_name,kind,code`).bind(household,admin?1:0,userId,own?(settings?.sibling_points_visible||0):0,household,admin?1:0,userId).all()).results;
+  const gift=path===''&&method==='GET'?await giftAccess(env.DB,household!,userId):null;
+  const giftOnly=!admin&&!own&&!await env.DB.prepare('SELECT 1 FROM passbook_adult_accounts WHERE household_id=? AND owner_user_id=?').bind(household,userId).first();
+  if(path===''&&method==='GET')return reply({household:group,admin,active,gift,gift_only:giftOnly,imported:admin&&Boolean(imported),own_child_id:own?.id,accounts:active||(admin&&imported)?await accounts():[],children:admin?(await env.DB.prepare('SELECT id,display_name FROM children WHERE household_id=?').bind(household).all()).results.concat([{id:'user:'+userId,display_name:'自分のつうちょう'}]):[],sibling_points_visible:Boolean(settings?.sibling_points_visible)});
   if(path==='/activation' && method==='POST'){
    check(admin && Boolean(await env.DB.prepare("SELECT 1 FROM users WHERE id=? AND platform_role='operator'").bind(userId).first()),'切替は運営管理者だけが行えます',403);
    check((await readBody(request)).confirmed===true,'残高と履歴の確認が必要です');
@@ -52,6 +55,8 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    return reply({configured:true,bank_updated_at:bank.updated_at,balances:parsed.balances,history_count:Array.isArray(parsed.history)?parsed.history.length:null,members,logs});
   }
   check(active||(admin&&imported&&method==='GET'),'残高・履歴の移行確認が終わるまで利用できません',409);
+  if(path==='/gifts'||path.startsWith('/gifts/'))return reply(await giftsRoute(request,env as Env,household!,userId,readBody));
+  check(!giftOnly,'このアカウントではプレゼント申請と自分の申請状況だけを利用できます',403);
   if(path==='/finance'||path.startsWith('/finance/'))return reply(await financeRoute(request,env,household!,userId,admin,readBody));
   if(path==='/chores'||path.startsWith('/chores/'))return reply(await choreRoute(request,env,household!,userId,admin,readBody));
   if(path==='/history'&&method==='GET'){
@@ -97,7 +102,7 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    check(['approved','rejected'].includes(String(data.status)),'操作を確認してください');const id=path.slice('/requests/'.length);const result=await env.DB.prepare("UPDATE passbook_requests SET status=?,resolved_by=?,resolved_at=? WHERE id=? AND household_id=? AND status='pending'").bind(data.status,userId,now,id,household).run();check(result.meta.changes>0,'この申請は処理済みか見つかりません',409);return reply({ok:true});
   }
   return reply({error:'見つかりません'},404);
- } catch(e){const err=e as Error &{status?:number};if(/passbook_allowance_active|passbook_allowance_plans.account_id/.test(err.message))return reply({error:'有効なお小遣い設定があります。先に既存の設定を確認してください'},409);if(/chore cash wallet missing/.test(err.message))return reply({error:'この人の現金通帳がありません。管理者の「お金の設定」から自分の現金通帳を作成して、未払いの完了登録を再試行してください'},409);if(/chore points wallet missing/.test(err.message))return reply({error:'この人のポイント通帳がありません。加算せずに止めました'},409);if(/chore changed|chore_days.chore_id|chore_days.household_id/.test(err.message))return reply({error:'登録済みか、当番が更新されています。開き直して履歴を確認してください'},409);if(pathErrorSafe(err))return reply({error:err.message},409);const known=/insufficient points|invalid reward|reward unavailable|UNIQUE constraint/.test(err.message);return reply({error:err.status?err.message:known?'ポイント不足・在庫切れ・申請済みのいずれかです':'つうちょうに接続できませんでした'},err.status||(known?409:500));}
+ } catch(e){const err=e as Error &{status?:number};if(/gift /.test(err.message)&&!err.status)return reply({error:'申請の対象・許可・保護者を確認してください。内容は加算されていません'},409);if(/passbook_allowance_active|passbook_allowance_plans.account_id/.test(err.message))return reply({error:'有効なお小遣い設定があります。先に既存の設定を確認してください'},409);if(/chore cash wallet missing/.test(err.message))return reply({error:'この人の現金通帳がありません。管理者の「お金の設定」から自分の現金通帳を作成して、未払いの完了登録を再試行してください'},409);if(/chore points wallet missing/.test(err.message))return reply({error:'この人のポイント通帳がありません。加算せずに止めました'},409);if(/chore changed|chore_days.chore_id|chore_days.household_id/.test(err.message))return reply({error:'登録済みか、当番が更新されています。開き直して履歴を確認してください'},409);if(pathErrorSafe(err))return reply({error:err.message},409);const known=/insufficient points|invalid reward|reward unavailable|UNIQUE constraint/.test(err.message);return reply({error:err.status?err.message:known?'ポイント不足・在庫切れ・申請済みのいずれかです':'つうちょうに接続できませんでした'},err.status||(known?409:500));}
 }
 
 

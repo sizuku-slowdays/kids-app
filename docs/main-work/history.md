@@ -106,3 +106,9 @@ PR9はHOMEへ統合済み（665da2e8537f64fcffa56cbf80fc38cc6659a470）。通知
 ## 2026-10-16 通帳表示・A4印刷：独立準備・本番待ち
 
 通帳表示/印刷を独立実装。28 HOMEテスト、127件/長文/長い氏名のChromium画面試験、A4横9ページPDFのレイアウト・画像目視確認済み。本番DB変更・Deployなし。 [PR10](https://github.com/sizuku-slowdays/kids-app/pull/10)、[固定版の仕様・検証・導入手順](https://github.com/sizuku-slowdays/kids-app/blob/0565653f263f4f7d9ce882edf02926a9dd535160/docs/main-work/passbook-book-20261016.md)。本番統合は最新home-dbバックアップの読み取り専用監査待ち。DB変更・通知Worker更新不要。
+
+
+## 2026-10-16 家系図の日付選択・スラッシュ表示
+生年月日・命日・関係の開始日/終了日にブラウザ標準date pickerの「📅 選ぶ」を追加。入力表示はYYYY/MM/DD、手入力の年/年月のみ・空欄も維持。API送信時は従来のハイフン形式へ変換し、既存保存データを更新しない。年齢表示はスラッシュ入力からも計算。DB/API/認証/R2変更なし。Chromiumで4項目のpicker、選択反映、スラッシュ正規化、既存値、年のみ、空欄、不正入力案内、保存形式、390px幅のはみ出しなし・選択欄46pxを確認。iOSの標準選択UIと本番Build成功は未確認。対象：family-tree/app.js,index.html,style.css。
+
+HOME実装版：[8a52939](https://github.com/sizuku-slowdays/kids-app/commit/8a52939400c0d23b7d69ac769c2aa1f85aef8608)。直前の日付エラー改善も継承。通帳印刷PR10は29956eaでHOMEへマージ済み、Build成功は未確認。

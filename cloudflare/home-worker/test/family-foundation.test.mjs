@@ -6,7 +6,7 @@ import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 
 test('family foundation: additive migration, invitations, concurrent use, revocation and financial isolation',async()=>{
  let ready=false;
- const mf=new Miniflare(convertV4MiniflareOptions({name:'family-foundation-test',modules:true,scriptPath:new URL('../.wrangler/test-build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'family-foundation'},serviceBindings:{ASSETS:()=>new Response('asset'),CALENDAR_SERVICE:()=>Response.json({protocol:ready?'multi-family-v1':'legacy'})}}));
+ const mf=new Miniflare(convertV4MiniflareOptions({name:'family-foundation-test',modules:true,scriptPath:new URL('../.wrangler/test-build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'family-foundation'},bindings:{FAMILY_INVITES_ENABLED:'1'},serviceBindings:{ASSETS:()=>new Response('asset'),CALENDAR_SERVICE:()=>Response.json({protocol:ready?'multi-family-v1':'legacy'})}}));
  try{
  const db=await mf.getD1Database('DB'),now=Math.floor(Date.now()/1000),cookies={};
  const migrate=async f=>{const sql=(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8')).replace(/^--.*$/gm,'');for(const s of sql.match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(s).run();};

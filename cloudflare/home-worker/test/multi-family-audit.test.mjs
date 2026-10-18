@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
-test('pre-migration: five-person household, sharing ownership, financial boundaries and creator-independent tree reads',async()=>{
+test('five-person household, sharing ownership, explicit guardian scopes, financial boundaries and creator-independent tree reads',async()=>{
  const mf=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:new URL('../.wrangler/test-build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'family-audit'},serviceBindings:{ASSETS:()=>Response.json([])}}));
  try{
  const db=await mf.getD1Database('DB'),now=Math.floor(Date.now()/1000),tokens={};
@@ -43,8 +43,8 @@ test('pre-migration: five-person household, sharing ownership, financial boundar
  const mom=await (await call('mom','/api/passbook?household=h')).json();assert.equal(mom.admin,true);assert.equal(mom.accounts[0].balance,123);
  const treeMom=await (await call('mom','/api/family-tree?household=h')).json(),treeGrandma=await (await call('grandma','/api/family-tree?household=h')).json();
  assert.deepEqual(treeMom.people.map(p=>p.id).sort(),['p-grandma','p-mom']);assert.deepEqual(treeMom.people,treeGrandma.people);
- // Existing broad adult learning permissions are a migration finding, not an intended new default.
- assert.equal((await call('grandma','/api/daily-kanji/family?household=h')).status,200);
+ // Adult membership alone no longer grants guardian access. Roles and saved progress remain unchanged.
+ assert.equal((await call('grandma','/api/daily-kanji/family?household=h')).status,403);
  assert.equal((await db.prepare("SELECT COUNT(*) n FROM passbook_accounts WHERE household_id IN ('b','s','r')").first()).n,0);
  assert.equal((await db.prepare("SELECT COUNT(*) n FROM memberships WHERE group_id='h'").first()).n,5);
  assert.equal((await db.prepare("SELECT SUM(delta) n FROM passbook_entries WHERE account_id='c1-cash'").first()).n,123);

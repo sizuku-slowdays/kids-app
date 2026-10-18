@@ -5,7 +5,7 @@ export async function householdPeople(env:PeopleEnv,userId:string,household:stri
  const membership=await env.DB.prepare("SELECT m.role,g.name,u.platform_role FROM memberships m JOIN groups g ON g.id=m.group_id JOIN users u ON u.id=m.user_id WHERE m.group_id=? AND m.user_id=? AND g.kind='household' AND u.active=1").bind(household,userId).first<{role:string;name:string;platform_role:string}>();
  peopleCheck(membership,'この家庭は利用できません',403);
  const rows=(await env.DB.prepare("SELECT u.id,u.display_name,COALESCE(n.nickname,'') nickname,COALESCE(a.age_kind,'unknown') age_kind,m.role FROM memberships m JOIN users u ON u.id=m.user_id LEFT JOIN home_member_attributes a ON a.group_id=m.group_id AND a.user_id=u.id LEFT JOIN home_person_names n ON n.user_id=u.id WHERE m.group_id=? AND u.active=1 ORDER BY u.created_at,u.id").bind(household).all<{id:string;display_name:string;nickname:string;age_kind:string;role:string}>()).results;
- return {membership,rows,configure:rows.find(u=>u.id===userId)?.age_kind!=='child'&&(['owner','admin'].includes(membership.role)||membership.platform_role==='operator'),adult:rows.find(u=>u.id===userId)?.age_kind==='adult'};
+ return {membership,rows,configure:rows.find(u=>u.id===userId)?.age_kind!=='child'&&['owner','admin'].includes(membership.role),adult:rows.find(u=>u.id===userId)?.age_kind==='adult'};
 }
 export async function peopleRoute(request:Request,env:PeopleEnv,userId:string,readBody:(r:Request)=>Promise<Record<string,unknown>>){
  try {
@@ -21,3 +21,4 @@ export async function peopleRoute(request:Request,env:PeopleEnv,userId:string,re
  return peopleReply({ok:true});
  }catch(e){return peopleReply({error:e instanceof Error?e.message:'処理できませんでした'},Number((e as {status?:number}).status)||500);}
 }
+

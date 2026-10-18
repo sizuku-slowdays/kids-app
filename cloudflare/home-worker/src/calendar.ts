@@ -1,7 +1,7 @@
 type CalendarEnv = Env & { CALENDAR_SERVICE?: Fetcher };
 type IdentityUser = { id: string; display_name: string; login_name: string; platform_role: string };
 export async function calendarIdentity(env: CalendarEnv, user: IdentityUser, request: Request) {
-  const groups = (await env.DB.prepare("SELECT g.id,g.name,m.role FROM groups g JOIN memberships m ON m.group_id=g.id WHERE g.kind='household' AND m.user_id=?").bind(user.id).all()).results;
+  const groups = (await env.DB.prepare("SELECT g.id,g.name,g.kind,m.role FROM groups g JOIN memberships m ON m.group_id=g.id JOIN group_apps a ON a.group_id=g.id AND a.app_id='calendar' WHERE m.user_id=?").bind(user.id).all()).results;
   const group = new URL(request.url).searchParams.get('group');
   if (group && !groups.some(g => g.id === group)) return Response.json({error:'この家庭のカレンダーは利用できません'},{status:403});
   const admin = user.platform_role === 'operator';
@@ -10,10 +10,10 @@ export async function calendarIdentity(env: CalendarEnv, user: IdentityUser, req
   let directory:unknown[]=[];
   if(internal){
     const installed=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='home_member_attributes'").first();
-    const rows=(await env.DB.prepare(installed?"SELECT u.id,u.display_name,COALESCE(n.nickname,'') nickname,m.group_id,m.role,COALESCE(a.age_kind,'unknown') age_kind FROM users u JOIN memberships m ON m.user_id=u.id JOIN groups g ON g.id=m.group_id LEFT JOIN home_member_attributes a ON a.user_id=u.id AND a.group_id=m.group_id LEFT JOIN home_person_names n ON n.user_id=u.id WHERE u.active=1 AND g.kind='household'":"SELECT u.id,u.display_name,'' nickname,m.group_id,m.role,'unknown' age_kind FROM users u JOIN memberships m ON m.user_id=u.id JOIN groups g ON g.id=m.group_id WHERE u.active=1 AND g.kind='household'").all()).results;
+    const rows=(await env.DB.prepare(installed?"SELECT u.id,u.display_name,COALESCE(n.nickname,'') nickname,m.group_id,g.kind group_kind,g.name group_name,m.role,CASE WHEN EXISTS(SELECT 1 FROM children c WHERE c.user_id=u.id) OR EXISTS(SELECT 1 FROM home_member_attributes ca WHERE ca.user_id=u.id AND ca.age_kind='child') THEN 'child' ELSE COALESCE(a.age_kind,'unknown') END age_kind FROM users u JOIN memberships m ON m.user_id=u.id JOIN groups g ON g.id=m.group_id LEFT JOIN home_member_attributes a ON a.user_id=u.id AND a.group_id=m.group_id LEFT JOIN home_person_names n ON n.user_id=u.id WHERE u.active=1 AND EXISTS(SELECT 1 FROM group_apps ga WHERE ga.group_id=g.id AND ga.app_id='calendar')":"SELECT u.id,u.display_name,'' nickname,m.group_id,g.kind group_kind,g.name group_name,m.role,'unknown' age_kind FROM users u JOIN memberships m ON m.user_id=u.id JOIN groups g ON g.id=m.group_id WHERE u.active=1 AND EXISTS(SELECT 1 FROM group_apps ga WHERE ga.group_id=g.id AND ga.app_id='calendar')").all()).results;
     directory=rows;
   }
-  return Response.json({user:{id:user.id,display_name:user.display_name,login_name:user.login_name},admin,groups,users,...(internal?{directory}: {})},{headers:{'Cache-Control':'private, no-store'}});
+  return Response.json({family_protocol:'multi-family-v1',user:{id:user.id,display_name:user.display_name,login_name:user.login_name},admin,groups,users,...(internal?{directory}: {})},{headers:{'Cache-Control':'private, no-store'}});
 }
 export async function calendarProxy(env: CalendarEnv, request: Request, userId: string) {
   const expected=request.headers.get('X-Calendar-User');
@@ -52,4 +52,5 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
   const headers = new Headers({'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
   return new Response(response.body,{status:response.status,headers});
 }
+
 

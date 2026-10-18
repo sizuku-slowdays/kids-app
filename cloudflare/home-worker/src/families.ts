@@ -1,6 +1,6 @@
 import {digest,randomToken} from './security';
 type Person={id:string;platform_role:string};
-type FamilyEnv={DB:D1Database;CALENDAR_SERVICE?:Fetcher};
+type FamilyEnv={DB:D1Database;CALENDAR_SERVICE?:Fetcher;FAMILY_INVITES_ENABLED?:string};
 type Invitation={id:string;purpose:string;group_id:string|null;expires_at:number;use_limit:number;use_count:number;revoked_at:number|null};
 const response=(v:unknown,status=200)=>Response.json(v,{status,headers:{'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer'}});
 export class FamilyFailure extends Error {constructor(message:string,public status=400){super(message);}}
@@ -8,7 +8,7 @@ function check(ok:unknown,message:string,status=400):asserts ok{if(!ok)throw new
 function text(v:unknown,max=80){check(typeof v==='string'&&v.trim().length>0&&v.trim().length<=max,'入力内容を確認してください');return v.trim();}
 const safeApps=new Set(['calendar','notification','family-tree','daily-kanji','good-deeds','school-prep','dining-prices']);
 export async function familyReady(env:FamilyEnv){
- if(!env.CALENDAR_SERVICE)return false;
+ if(env.FAMILY_INVITES_ENABLED!=='1'||!env.CALENDAR_SERVICE)return false;
  try{const r=await env.CALENDAR_SERVICE.fetch(new Request('https://calendar.internal/internal/family-readiness'));return r.ok&&(await r.json() as {protocol?:string}).protocol==='multi-family-v1';}catch{return false;}
 }
 async function eligible(db:D1Database,user:string){return !!await db.prepare("SELECT 1 FROM users WHERE id=? AND active=1 AND NOT EXISTS(SELECT 1 FROM children WHERE user_id=?) AND NOT EXISTS(SELECT 1 FROM home_member_attributes WHERE user_id=? AND age_kind='child')").bind(user,user,user).first();}

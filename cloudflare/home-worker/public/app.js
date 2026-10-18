@@ -168,6 +168,7 @@ function authScreen() {
 async function home() {
   me = await api("/api/me");
   apps = await api("/api/home");
+  root.classList.remove("home-editor");
   root.replaceChildren();
   const header = el("header"),
     title = el("div");
@@ -176,7 +177,8 @@ async function home() {
     el("h1", "わが家"),
     el("p", me.user.display_name + " さん", "muted"),
   );
-  header.append(title, button("⚙️ 設定", settings, "quiet"));
+  const actions=el("div",null,"home-actions");actions.append(button("HOMEを編集",()=>editHome().catch(showError),"quiet"),button("⚙️ 設定", settings, "quiet"));
+  header.append(title,actions);
   root.append(header);
   const visibleApps=apps.filter(a=>a.visible);
   const legacyHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy");
@@ -190,14 +192,9 @@ async function home() {
     ]) quick.append(appCard(app));
   }
   const favoriteApps=visibleApps.filter(a=>a.featured);
-  const learningApps=visibleApps.filter(a=>a.id==='daily-kanji'&&!a.featured);
-  const otherApps=visibleApps.filter(a=>!a.featured&&a.id!=='daily-kanji');
+  const otherApps=visibleApps.filter(a=>!a.featured);
   const simple=visibleApps.length===2&&favoriteApps.length===2&&visibleApps.some(a=>a.id==="calendar")&&visibleApps.some(a=>["kidney","kidney-grandma"].includes(a.id));
   if (visibleApps.length) {
-    if(learningApps.length){
-      const learning = appSection('まいにち少しずつ', 'まなぶ', 'home-app-list');
-      learningApps.forEach(app => learning.append(appCard(app)));
-    }
     if(favoriteApps.length){
     const featured = appSection('すぐ開く', simple ? '毎日使うアプリ' : 'よく使うアプリ', simple ? 'hero-grid grandpa-home' : 'hero-grid');
     favoriteApps.forEach(app => featured.append(appCard(app, true)));
@@ -279,78 +276,7 @@ function settings() {
       }),
     );
   }
-  root.append(el("h2", "HOMEに置くアプリ"));
-  if(apps.some(a=>a.id==="kidney")&&apps.some(a=>a.id==="calendar")){
-    root.append(button("じいちゃん用：2つだけにする",async()=>{
-      try{await api("/api/home/preset","PUT",{preset:"grandpa"});await home();}catch(e){showError(e);}
-    },"quiet"));
-  }
-  if(apps.some(a=>a.id==="kidney-grandma")&&apps.some(a=>a.id==="calendar")){
-    root.append(button("ばあちゃん用：2つだけにする",async()=>{
-      try{await api("/api/home/preset","PUT",{preset:"grandma"});await home();}catch(e){showError(e);}
-    },"quiet"),el("p","選んだ人のHOMEだけ、カレンダーと本人の食事チェックを表示します。あとから自由に戻せます。","muted"));
-  }
-
-  root.append(el("p", "「よく使う」にチェックすると上に表示します。↑ ↓ で順番を変更できます。", "muted"));
-  const appSettingsList=el("div");root.append(appSettingsList);
-  let orderSaving=false;
-  function renderAppSettings(){
-  appSettingsList.replaceChildren();
-  for (const [index,app] of apps.entries()) {
-    const row = el("div", null, "row"),
-      label = el("label", app.name),
-      input = el("input");
-    input.type = "checkbox";
-    input.id = "app-" + app.id;
-    input.checked = Boolean(app.visible);
-    label.htmlFor = input.id;
-    input.addEventListener("change", async () => {
-      input.disabled = true;
-      try {
-        await api("/api/home/" + app.id, "PUT", { visible: input.checked });
-        app.visible = input.checked ? 1 : 0;
-      } catch (e) {
-        input.checked = !input.checked;
-        showError(e);
-      } finally {
-        input.disabled = false;
-      }
-    });
-    const moves=el("div",null,"app-order-controls");
-    for(const [direction,text] of [[-1,"↑"],[1,"↓"]]){
-      const move=button(text,async()=>{
-        if(orderSaving)return;
-        const previous=[...apps],next=index+direction;
-        [apps[index],apps[next]]=[apps[next],apps[index]];
-        orderSaving=true;renderAppSettings();
-        try{await api("/api/home/order","PUT",{app_ids:apps.map(a=>a.id)});}
-        catch(e){apps=previous;showError(e);}
-        finally{orderSaving=false;renderAppSettings();}
-      },"quiet");
-      move.setAttribute("aria-label",app.name+(direction<0?"を上へ":"を下へ"));
-      move.disabled=orderSaving||index+direction<0||index+direction>=apps.length;
-      moves.append(move);
-    }
-    const options=el("div",null,"app-preference-options"),visibleLabel=el("label"),favoriteLabel=el("label"),favorite=el("input");
-    visibleLabel.append(input,document.createTextNode("表示"));
-    favorite.type="checkbox";favorite.checked=Boolean(app.featured);
-    favorite.setAttribute("aria-label",app.name+"をよく使うアプリにする");
-    favorite.disabled=orderSaving;
-    favorite.onchange=async()=>{
-      if(orderSaving)return;
-      const previous=app.featured;app.featured=favorite.checked?1:0;
-      orderSaving=true;renderAppSettings();
-      try{await api("/api/home/favorites","PUT",{app_ids:apps.filter(a=>a.featured).map(a=>a.id)});}
-      catch(e){app.featured=previous;showError(e);}
-      finally{orderSaving=false;renderAppSettings();}
-    };
-    favoriteLabel.append(favorite,document.createTextNode("よく使う"));options.append(visibleLabel,favoriteLabel);
-    input.disabled=orderSaving;
-    row.classList.add("app-settings-row");row.append(label,moves,options);
-    appSettingsList.append(row);
-  }
-  }
-  renderAppSettings();
+  root.append(el("h2","HOMEの表示"),button("HOMEを編集",()=>editHome().catch(showError),"quiet"),el("p","HOME画面からアプリを移動・非表示にできます。データは削除されません。","muted"));
   if (
     me.groups.some(
       (g) => g.kind === "household" && ["owner", "admin"].includes(g.role),
@@ -638,4 +564,71 @@ async function familyGroups(){
  if(state.groups.some(g=>g.kind==='household'&&['owner','admin'].includes(g.role))){const form=el('form'),name=field(form,'name','新しい共有グループ名'),b=el('button','共有グループを作成');b.disabled=!state.ready;form.append(b);form.addEventListener('submit',async e=>{e.preventDefault();b.disabled=true;try{await api('/api/families/groups','POST',{name:name.value,kind:'sharing'});await familyGroups();}catch(error){showError(error);b.disabled=false;}});root.append(form);}
  const invites=await api('/api/families/invitations');
  if(invites.length){const panel=el('section',null,'panel');panel.append(el('h2','発行した招待'));for(const i of invites){const row=el('div'),ended=i.revoked_at||i.use_count>=i.use_limit||i.expires_at<=Date.now()/1000;row.append(el('p',(i.purpose==='create_family'?'新しい家庭':i.purpose==='join_family'?'家庭への参加':'共有グループへの参加')+'：'+(i.revoked_at?'取り消し済み':i.use_count>=i.use_limit?'使用済み':i.expires_at<=Date.now()/1000?'期限切れ':'未使用')));if(!ended){const b=button('招待を取り消す',async()=>{try{await api('/api/families/invitations/'+encodeURIComponent(i.id),'DELETE');await familyGroups();}catch(error){showError(error);}},'quiet');b.disabled=!state.ready;row.append(b);}panel.append(row);}root.append(panel);}
+}
+
+
+// Pure order operation; shared by long-press dragging and the tap controls.
+function moveHomeLayout(items,id,section,beforeId=null){
+ if(!['favorite','list','hidden'].includes(section)||beforeId===id)return items;
+ const source=items.find(x=>x.id===id);if(!source)return items;
+ const next=items.filter(x=>x.id!==id),before=next.findIndex(x=>x.id===beforeId&&x.section===section);
+ let at=before;
+ if(at<0){const indices=next.map((x,i)=>x.section===section?i:-1).filter(i=>i>=0);at=indices.length?indices.at(-1)+1:next.length;}
+ next.splice(at,0,{...source,section});return next;
+}
+async function editHome(target=me.user.id){
+ const state=await api('/api/home/layout?user='+encodeURIComponent(target));
+ let items=state.apps.map(a=>({...a})),dirty=false,busy=false,operation=crypto.randomUUID(),menu=null,lastDrag=0;
+ const cleanups=new Set();
+ const cleanDrag=()=>{for(const fn of cleanups)fn();cleanups.clear();};
+ const names={favorite:'よく使うアプリ',list:'アプリ一覧',hidden:'非表示'};
+ root.classList.add('home-editor');
+ const move=(id,section,before)=>{if(busy)return;const next=moveHomeLayout(items,id,section,before);if(next===items)return;items=next;dirty=true;operation=crypto.randomUUID();menu=null;render();};
+ function render(){
+  cleanDrag();
+  root.replaceChildren();
+  const header=el('header'),actions=el('div',null,'home-actions');
+  header.append(el('h1','HOMEを編集'),actions);
+  const cancel=button('キャンセル',()=>{if(!dirty||confirm('保存していない変更を取り消しますか？')){cleanDrag();home().catch(showError);}},'quiet');
+  const save=button('編集完了',async()=>{
+   if(busy)return;busy=true;render();
+   try{await api('/api/home/layout?user='+encodeURIComponent(target),'PUT',{revision:state.revision,operation_id:operation,items:['favorite','list','hidden'].flatMap(section=>items.filter(a=>a.section===section).map(a=>({id:a.id,section})))});await home();}
+   catch(error){busy=false;render();showError(error);}
+  });save.disabled=busy;cancel.disabled=busy;actions.append(cancel,save);root.append(header);
+  if(state.children.length){const label=el('label','編集するHOME'),select=el('select');select.setAttribute('aria-label','編集するHOME');select.add(new Option(me.user.display_name+'（自分）',me.user.id));for(const c of state.children)select.add(new Option(c.display_name,c.id));select.value=target;select.disabled=busy;select.onchange=async()=>{if(dirty&&!confirm('保存していない変更を取り消して、別のHOMEを編集しますか？')){select.value=target;return;}try{cleanDrag();await editHome(select.value);}catch(error){select.value=target;showError(error);}};root.append(label,select);}
+  root.append(el('p',state.display_name+' さんのHOMEだけを変更します。','muted'),el('p','☰ を長押しして移動。タップでも移動先を選べます。非表示にしてもデータは残ります。','muted'));
+  const announce=el('p',busy?'保存しています…':dirty?'変更はまだ保存されていません':'表示設定を読み込みました','muted');announce.setAttribute('role','status');root.append(announce);
+  for(const section of ['favorite','list','hidden']){
+   const zone=el('section',null,'home-section layout-zone');zone.dataset.layoutSection=section;zone.append(el('h2',names[section]));
+   const grid=el('div',null,'home-app-list');zone.append(grid);
+   const list=items.filter(a=>a.section===section);if(!list.length)grid.append(el('p','ここに移動できます','muted layout-empty'));
+   for(const item of list){
+    const card=el('div',null,'home-card list-card layout-card');card.dataset.appId=item.id;
+    const copy=el('span',null,'card-copy');copy.append(el('strong',item.name));
+    const handle=button('☰',()=>{if(Date.now()-lastDrag<500||busy)return;menu=menu===item.id?null:item.id;render();root.querySelector('[data-menu-for="'+CSS.escape(item.id)+'"] button')?.focus();},'layout-handle quiet');handle.disabled=busy;handle.setAttribute('aria-label',item.name+'を移動（長押し、またはタップ）');handle.setAttribute('aria-expanded',String(menu===item.id));
+    card.append(el('span',item.icon,'card-icon'),copy,handle);grid.append(card);drag(handle,card,item,announce);
+    if(menu===item.id){
+     const controls=el('div',null,'layout-controls');controls.dataset.menuFor=item.id;controls.setAttribute('role','group');controls.setAttribute('aria-label',item.name+'の移動先');
+     for(const dest of ['favorite','list','hidden'])if(dest!==section)controls.append(button(names[dest]+'へ',()=>move(item.id,dest),'quiet'));
+     const others=list.filter(a=>a.id!==item.id);
+     if(others.length){controls.append(button('この欄の先頭へ',()=>move(item.id,section,others[0].id),'quiet'));const label=el('label','このアプリの前へ'),select=el('select');select.setAttribute('aria-label',item.name+'をどのアプリの前へ移動するか');select.add(new Option('移動先を選ぶ',''));for(const a of others)select.add(new Option(a.name,a.id));select.onchange=()=>{if(select.value)move(item.id,section,select.value);};controls.append(label,select,button('この欄の最後へ',()=>move(item.id,section),'quiet'));}
+     controls.append(button('閉じる',()=>{menu=null;render();},'quiet'));grid.append(controls);
+    }
+   }
+   root.append(zone);
+  }
+ }
+ function drag(handle,card,item,announce){
+  let pending=null,active=false,x=0,y=0,startX=0,startY=0,ghost=null,drop=null,frame=null;
+  function destination(){document.querySelectorAll('.layout-drop').forEach(n=>n.classList.remove('layout-drop'));const node=document.elementFromPoint(x,y),zone=node?.closest('[data-layout-section]');if(!zone){drop=null;return;}const target=node.closest('[data-app-id]');drop={section:zone.dataset.layoutSection,before:target?.dataset.appId||null};(target||zone).classList.add('layout-drop');}
+  function tick(){if(!active)return;ghost.style.left=(x+12)+'px';ghost.style.top=(y+12)+'px';if(y<90)window.scrollBy(0,-12);else if(y>innerHeight-90)window.scrollBy(0,12);destination();frame=requestAnimationFrame(tick);}
+  function clear(){clearTimeout(pending);pending=null;if(frame)cancelAnimationFrame(frame);frame=null;ghost?.remove();ghost=null;card.classList.remove('layout-dragging');document.querySelectorAll('.layout-drop').forEach(n=>n.classList.remove('layout-drop'));if(active)lastDrag=Date.now();active=false;}
+  handle.addEventListener('pointerdown',e=>{if(busy||e.button!==0)return;x=startX=e.clientX;y=startY=e.clientY;pending=setTimeout(()=>{pending=null;active=true;handle.setPointerCapture(e.pointerId);card.classList.add('layout-dragging');ghost=card.cloneNode(true);ghost.className='layout-ghost';ghost.setAttribute('aria-hidden','true');document.body.append(ghost);announce.textContent=item.name+'を移動中です';tick();},350);});
+  handle.addEventListener('pointermove',e=>{x=e.clientX;y=e.clientY;if(pending&&Math.hypot(x-startX,y-startY)>10){clearTimeout(pending);pending=null;}if(active)e.preventDefault();});
+  handle.addEventListener('pointerup',()=>{const chosen=active?drop:null;clear();if(chosen)move(item.id,chosen.section,chosen.before);});
+  cleanups.add(clear);
+  handle.addEventListener('pointercancel',clear);
+  handle.addEventListener('lostpointercapture',()=>{if(active)clear();});
+ }
+ render();
 }

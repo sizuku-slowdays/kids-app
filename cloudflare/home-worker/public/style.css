@@ -271,3 +271,16 @@ header .muted { margin:4px 0 0; }
 .family-screen label{overflow-wrap:anywhere}
 .family-screen section,.family-screen form{min-width:0}
 .family-screen input{max-width:100%;box-sizing:border-box}
+
+.home-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.home-editor header{position:sticky;top:0;background:#f6f4eff5;z-index:4;padding:10px 0}
+.home-editor h1{font-size:24px}.home-editor .home-app-list{gap:10px}
+.layout-zone{min-height:140px;border:2px dashed transparent}
+.layout-card{min-height:92px;position:relative;padding:14px;gap:8px}
+.layout-card .card-copy{min-width:0;overflow-wrap:anywhere}
+.layout-handle{min-width:48px;min-height:48px;padding:8px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.layout-empty{min-height:65px;padding:14px}.layout-controls{grid-column:1/-1;padding:12px;background:#e6f4ef;border-radius:14px;display:flex;gap:8px;flex-wrap:wrap}
+.layout-controls label,.layout-controls select{width:100%}.layout-drop{outline:3px solid #278a74;outline-offset:3px}
+.layout-dragging{opacity:.3;pointer-events:none}.layout-ghost{position:fixed;z-index:1000;pointer-events:none;background:white;color:#263e36;border:2px solid #278a74;border-radius:16px;box-shadow:0 6px 24px #263e3633;padding:12px;max-width:210px;display:flex;gap:8px;align-items:center}
+.layout-ghost button{display:none}.layout-ghost .card-icon{font-size:26px}
+@media(max-width:480px){.home-editor .home-app-list{grid-template-columns:1fr}.home-editor header{align-items:flex-start}.home-editor .home-actions{max-width:210px}}

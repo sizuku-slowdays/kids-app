@@ -36,7 +36,7 @@ export async function dailyKanjiRoute(request:Request,env:Env,user:string,readBo
  const group=groups.find(g=>g.id===(url.searchParams.get('household')||groups[0]?.id));peopleCheck(group,'この家庭のアプリは利用できません',403);
  const ctx=await householdPeople(env,user,group.id);
  const children=(await env.DB.prepare('SELECT c.id,c.user_id,c.display_name FROM children c JOIN memberships m ON m.user_id=c.user_id AND m.group_id=c.household_id JOIN users u ON u.id=c.user_id AND u.active=1 WHERE c.household_id=?').bind(group.id).all<{id:string;user_id:string;display_name:string}>()).results;
- const guardian=(ctx.configure||ctx.adult)&&!children.some(c=>c.user_id===user)&&ctx.rows.find(r=>r.id===user)?.age_kind!=='child';
+ const guardian=ctx.configure&&!children.some(c=>c.user_id===user)&&ctx.rows.find(r=>r.id===user)?.age_kind!=='child';
  if(path==='/family'&&request.method==='GET'){
   peopleCheck(guardian,'保護者だけが確認できます',403);
   const rows=[];for(const c of children){const s=await state(env,c.user_id,clock,false);rows.push({...c,profile:s.profile,mastered:s.mastery.length,today:s.today,history:s.history.slice(0,30)});}
@@ -69,3 +69,4 @@ export async function dailyKanjiRoute(request:Request,env:Env,user:string,readBo
  return peopleReply({error:'この操作はできません'},405);
  }catch(e){return peopleReply({error:e instanceof Error?e.message:'処理できませんでした'},Number((e as {status?:number}).status)||500);}
 }
+

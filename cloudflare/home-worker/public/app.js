@@ -61,8 +61,8 @@ async function api(path, method = "GET", body) {
   }
   return data;
 }
-function field(form, key, label, type = "text", autocomplete) {
-  const id = "field-" + key;
+function field(form, key, label, type = "text", autocomplete, idPrefix = "field") {
+  const id = idPrefix + "-" + key;
   form.append(el("label", label));
   const input = el("input");
   input.id = id;
@@ -522,21 +522,33 @@ async function joinFamily(){
  const labels={create_family:'新しいファミリーを作成',join_family:'招待されたファミリーへ参加',join_sharing:'共有グループへ参加'};
  root.append(el('h2',labels[details.purpose]),el('p','参加しただけで、通帳や他の家庭の個人情報が公開されることはありません。','muted'));
  let signedIn=null;try{signedIn=await api('/api/me');}catch{}
- const familyInput=form=>details.purpose==='create_family'?field(form,'household_name','新しいファミリー名'):null;
+ const joinField=(form,key,label,type='text',autocomplete)=>field(form,key,label,type,autocomplete,form.dataset.joinForm||'family-accept');
+ const familyInput=form=>details.purpose==='create_family'?joinField(form,'household_name','新しいファミリー名'):null;
  const finish=()=>location.replace('/groups');
  if(signedIn){
   const target=await api('/api/families/inspect','POST',{invitation:token});
   if(target.group)root.append(el('p','参加先：'+target.group.name));
   root.append(el('p',signedIn.user.display_name+' さんとして参加します。'));
-  const form=el('form'),name=familyInput(form),confirm=field(form,'confirmed','この招待で参加します','checkbox');
-  form.append(el('button','参加する'));form.addEventListener('submit',async e=>{e.preventDefault();const b=form.querySelector('button');b.disabled=true;try{await api('/api/families/accept','POST',{invitation:token,household_name:name?.value,confirmed:confirm.checked});finish();}catch(error){showError(error);}finally{b.disabled=false;}});root.append(form);return;
+  if(details.purpose==='create_family')root.append(el('p','このアカウントで新しいファミリーを作成します。別の人が利用する場合は、下のボタンから切り替えてください。','muted'));
+  const form=el('form'),name=familyInput(form),confirm=joinField(form,'confirmed','この招待で参加します','checkbox');
+  const submit=el('button','参加する');let working=false;
+  const switchAccount=button('別のアカウントで登録・ログイン',async()=>{
+   if(working)return;working=true;submit.disabled=switchAccount.disabled=true;
+   try{
+    const result=await fetch('/api/logout',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}',cache:'no-store'});
+    if(!result.ok&&result.status!==401)throw new Error('ログアウトできませんでした。もう一度お試しください');
+    await joinFamily();
+   }catch(error){showError(error);}finally{working=false;submit.disabled=switchAccount.disabled=false;}
+  },'quiet');
+  form.append(submit);form.addEventListener('submit',async e=>{e.preventDefault();if(working)return;working=true;submit.disabled=switchAccount.disabled=true;try{await api('/api/families/accept','POST',{invitation:token,household_name:name?.value,confirmed:confirm.checked});finish();}catch(error){showError(error);}finally{working=false;submit.disabled=switchAccount.disabled=false;}});
+  root.append(switchAccount,el('p','切り替えると、このブラウザからログアウトして新規登録・ログイン画面を開きます。招待URLはそのまま使います。','muted'),form);return;
  }
- const loginPanel=el('section',null,'panel'),login=el('form');loginPanel.append(el('h2','アカウントをお持ちの方'),login);
- const loginId=field(login,'login_name','ログインID','text','username'),loginPassword=field(login,'password','パスワード','password','current-password');
- login.append(el('button','ログインして参加内容を確認'));login.addEventListener('submit',async e=>{e.preventDefault();try{await api('/api/login','POST',{login_name:loginId.value,password:loginPassword.value,device_name:'この端末'});await joinFamily();}catch(error){showError(error);}});root.append(loginPanel);
- const panel=el('section',null,'panel'),form=el('form');panel.append(el('h2','初めて利用する方'),form);
- const name=field(form,'display_name','表示する名前'),id=field(form,'login_name','ログインID（英数字・_・-、3〜40文字）','text','username'),password=field(form,'password','パスワード（10文字以上）','password','new-password'),family=familyInput(form),confirm=field(form,'confirmed','招待を受けてアカウントを作成します','checkbox');
- form.append(el('button','登録して参加する'));form.addEventListener('submit',async e=>{e.preventDefault();const b=form.querySelector('button');b.disabled=true;try{await api('/api/register-family','POST',{invitation:token,display_name:name.value,login_name:id.value,password:password.value,household_name:family?.value,confirmed:confirm.checked,device_name:'この端末'});finish();}catch(error){showError(error);}finally{b.disabled=false;}});root.append(panel);
+ const loginPanel=el('section',null,'panel'),login=el('form');login.dataset.joinForm='family-login';loginPanel.append(el('h2','アカウントをお持ちの方'),login);
+ const loginId=joinField(login,'login_name','ログインID','text','username'),loginPassword=joinField(login,'password','パスワード','password','current-password');
+ login.append(el('button','ログインして参加内容を確認'));login.addEventListener('submit',async e=>{e.preventDefault();try{await api('/api/login','POST',{login_name:loginId.value,password:loginPassword.value,device_name:'この端末'});await joinFamily();}catch(error){showError(error);}});
+ const panel=el('section',null,'panel'),form=el('form');form.dataset.joinForm='family-register';panel.append(el('h2','アカウントがない方：新しく登録'),form);
+ const name=joinField(form,'display_name','表示する名前'),id=joinField(form,'login_name','ログインID（英数字・_・-、3〜40文字）','text','username'),password=joinField(form,'password','パスワード（10文字以上）','password','new-password'),family=familyInput(form),confirm=joinField(form,'confirmed','招待を受けてアカウントを作成します','checkbox');
+ form.append(el('button','登録して参加する'));form.addEventListener('submit',async e=>{e.preventDefault();const b=form.querySelector('button');b.disabled=true;try{await api('/api/register-family','POST',{invitation:token,display_name:name.value,login_name:id.value,password:password.value,household_name:family?.value,confirmed:confirm.checked,device_name:'この端末'});finish();}catch(error){showError(error);}finally{b.disabled=false;}});root.append(panel,loginPanel);
 }
 async function familyGroups(){
  root.classList.add('family-screen');

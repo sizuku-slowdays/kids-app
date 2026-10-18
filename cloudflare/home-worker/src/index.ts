@@ -1,3 +1,5 @@
+import {homeLayoutRoute} from './home-layout';
+import {FamilyFailure,familiesRoute,previewFamilyInvite,registerFamilyInvite} from './families';
 import { giftNotificationCheck, deliverGiftNotifications } from './passbook-gifts';
 import { schoolRoute, schoolNotificationCheck } from './school-prep';
 import { runCashAutomation } from './passbook-finance';
@@ -23,7 +25,7 @@ import {
   ITERATIONS,
 } from "./security";
 
-type HomeEnv = Env & { BOOTSTRAP_SECRET?: string };
+type HomeEnv = Env & { BOOTSTRAP_SECRET?: string; FAMILY_INVITES_ENABLED?:string };
 
 type User = {
   id: string;
@@ -197,7 +199,7 @@ async function ensureKidneyPeopleApps(env: HomeEnv) {
   await env.DB.batch([
     env.DB.prepare("UPDATE apps SET name='じいちゃん',icon='👴',path='/apps/kidney/?person=grandpa' WHERE id='kidney'"),
     env.DB.prepare("INSERT OR IGNORE INTO apps(id,name,icon,path,enabled,status,position,access_mode) VALUES('kidney-grandma','ばあちゃん','👵','/apps/kidney/?person=grandma',1,'ready',8,'group')"),
-    env.DB.prepare("INSERT OR IGNORE INTO group_apps(group_id,app_id) SELECT id,'kidney-grandma' FROM groups WHERE kind='household'"),
+    env.DB.prepare("INSERT OR IGNORE INTO group_apps(group_id,app_id) SELECT id,'kidney-grandma' FROM groups WHERE kind='household' AND NOT EXISTS(SELECT 1 FROM family_workspaces w WHERE w.group_id=groups.id)"),
   ]);
 }
 export async function canRead(
@@ -236,6 +238,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   const url = new URL(request.url),
     path = url.pathname,
     method = request.method;
+  if(url.hostname==='calendar-auth.internal'&&path==='/internal/family-readiness'&&method==='GET'){const ready=env.FAMILY_INVITES_ENABLED==='1'&&await env.DB.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='family_workspaces'").first();return json({protocol:ready?'multi-family-v1':null});}
   if (path === '/internal/passbook-gifts/notification-check') return giftNotificationCheck(request,env);
   if (path === '/internal/school-prep/notification-check') return schoolNotificationCheck(request,env);
   if (url.hostname === 'notification-auth.internal' && path === '/internal/notification-check' && method === 'GET') {
@@ -351,6 +354,21 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       ),
     });
   }
+  if(path==='/api/families/preview'&&method==='POST'){
+    await throttle(env,request,'family-preview');
+    return json(await previewFamilyInvite(env,(await body(request)).invitation));
+  }
+  if(path==='/api/register-family'&&method==='POST'){
+    await throttle(env,request,'register');
+    const data=await body(request);
+    requireValue(data.confirmed===true,400,'招待の種類と参加を確認してください');
+    await previewFamilyInvite(env,data.invitation);
+    requireValue(validPassword(data.password),400,'パスワードは10〜128文字です');
+    const id=crypto.randomUUID(),salt=randomToken();
+    try{await registerFamilyInvite(env,data,{id,login:loginName(data.login_name),display:name(data.display_name),salt,hash:passwordHash(data.password,salt),iterations:ITERATIONS});}
+    catch(e){if(/family invitation|UNIQUE constraint/.test(String(e)))throw new Failure(409,'招待は使用済み、またはログインIDが登録済みです。既存の方はログインして参加してください');throw e;}
+    return json({ok:true},201,{'Set-Cookie':await issueSession(env,id,name(data.device_name||'この端末'))});
+  }
   if (path === "/api/register" && method === "POST") {
     await throttle(env, request, "register");
     const data = await body(request);
@@ -460,6 +478,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if(path==='/api/families'||path.startsWith('/api/families/'))return familiesRoute(request,env,user,body);
     if(path==='/api/school-prep'||path.startsWith('/api/school-prep/')){
       requireValue(await appAllowed(env,user.id,'school-prep'),403,'このアプリは利用できません');
       return schoolRoute(request,env,user.id,body);
@@ -511,7 +530,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         .bind(now, s.id)
         .run();
       const groups = await env.DB.prepare(
-        "SELECT g.id,g.name,g.kind,m.role FROM groups g JOIN memberships m ON m.group_id=g.id WHERE m.user_id=?",
+        "SELECT g.id,g.name,g.kind,m.role,COALESCE(w.mode,'legacy') workspace_mode FROM groups g JOIN memberships m ON m.group_id=g.id LEFT JOIN family_workspaces w ON w.group_id=g.id WHERE m.user_id=?",
       )
         .bind(user.id)
         .all();
@@ -533,6 +552,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         "Set-Cookie": `${cookieName}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
       });
     }
+    if(path==="/api/home/layout")return homeLayoutRoute(request,env,user.id,body);
     if (path === "/api/home" && method === "GET") {
       await ensureKidneyPeopleApps(env);
       const result = await env.DB.prepare(
@@ -542,7 +562,8 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         .all();
       const preference=await env.DB.prepare("SELECT favorite_app_ids FROM home_preferences WHERE user_id=?").bind(user.id).first<{favorite_app_ids:string}>();
       const favorites:string[]=preference?JSON.parse(preference.favorite_app_ids):result.results.filter(a=>a.visible).slice(0,3).map(a=>String(a.id));
-      return json(result.results.map(a=>({...a,featured:favorites.includes(String(a.id))?1:0})));
+      const legacy=await env.DB.prepare("SELECT 1 FROM memberships m JOIN groups g ON g.id=m.group_id WHERE m.user_id=? AND g.kind='household' AND NOT EXISTS(SELECT 1 FROM family_workspaces w WHERE w.group_id=g.id)").bind(user.id).first();
+      return json(result.results.map(a=>({...a,...(!legacy&&a.id==='notification'?{path:'/apps/notification/',status:'ready'}:{}),featured:favorites.includes(String(a.id))?1:0})));
     }
     if (path === "/api/home/favorites" && method === "PUT") {
       const data=await body(request);
@@ -561,18 +582,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       if(allowed.length)await env.DB.batch(data.app_ids.map((id:string,position:number)=>env.DB.prepare("INSERT INTO user_apps(user_id,app_id,visible,position) VALUES(?,?,1,?) ON CONFLICT(user_id,app_id) DO UPDATE SET position=excluded.position").bind(user.id,id,position)));
       return json({ok:true});
     }
-    if (path === "/api/home/preset" && method === "PUT") {
-      const data=await body(request);
-      requireValue(["grandpa","grandma"].includes(String(data.preset)),400,"表示セットを確認してください");
-      const kidneyApp=data.preset==="grandma"?"kidney-grandma":"kidney";
-      requireValue(await appAllowed(env,user.id,kidneyApp) && await appAllowed(env,user.id,"calendar"),403,"この表示セットは利用できません");
-      const available=(await env.DB.prepare("SELECT id FROM apps WHERE enabled=1").all<{id:string}>()).results;
-      const allowed=[];
-      for(const app of available)if(await appAllowed(env,user.id,app.id))allowed.push(app.id);
-      await env.DB.batch(allowed.map(id=>env.DB.prepare("INSERT INTO user_apps(user_id,app_id,visible,position) VALUES(?,?,?,?) ON CONFLICT(user_id,app_id) DO UPDATE SET visible=excluded.visible,position=excluded.position").bind(user.id,id,["calendar",kidneyApp].includes(id)?1:0,id==="calendar"?0:id===kidneyApp?1:10)));
-      await env.DB.prepare("INSERT INTO home_preferences(user_id,favorite_app_ids) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET favorite_app_ids=excluded.favorite_app_ids").bind(user.id,JSON.stringify(["calendar",kidneyApp])).run();
-      return json({ok:true});
-    }
+    if(path==="/api/home/preset")throw new Failure(410,"HOMEの「HOMEを編集」から表示するアプリを選んでください。現在の表示設定は維持されています");
     if (path.startsWith("/api/home/") && method === "PUT") {
       const appId = path.slice("/api/home/".length);
       requireValue(
@@ -884,11 +894,21 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     protectedHeaders.set("Content-Security-Policy", headers["Content-Security-Policy"].replace("img-src 'self'", "img-src 'self' data: blob:"));
     return new Response(method === "HEAD" ? null : response.body, {status:response.status,headers:protectedHeaders});
   }
+  if(path==='/apps/notification'||path.startsWith('/apps/notification/')){
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
+    requireValue(await appAllowed(env,s.user_id,'notification'),403,'このアプリは利用できません');
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    if(path==='/apps/notification')return new Response(null,{status:303,headers:{...headers,Location:'/apps/notification/'}});
+    const file=path.replace(/^\/apps\/notification\/?/,'')||'index.html';requireValue(['index.html','app.js'].includes(file),404,'見つかりません');
+    const asset=new URL(url);asset.pathname='/apps/notification/'+file;const response=await env.ASSETS.fetch(new Request(asset,{method}));const h=new Headers(response.headers);for(const [k,v] of Object.entries(headers))h.set(k,v);return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:h});
+  }
   // Only this explicit asset allowlist is public. Protected app paths do not fall through to static files.
   const publicPaths = [
     "/login",
     "/setup",
     "/register",
+    "/join",
+    "/groups",
     "/app.js",
     "/style.css",
     "/manifest.webmanifest",
@@ -896,6 +916,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     "/home-icon-192.png",
     "/home-icon-512.png",
   ];
+  if(path==="/groups"&&!s)return new Response(null,{status:303,headers:{...headers,Location:"/login"}});
   if (!publicPaths.includes(path)) {
     if (!s)
       return new Response(null, {
@@ -907,7 +928,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   requireValue(["GET", "HEAD"].includes(method), 405, "この操作はできません");
   const assetUrl = new URL(url);
-  if (["/", "/login", "/setup", "/register"].includes(path))
+  if (["/", "/login", "/setup", "/register", "/join", "/groups"].includes(path))
     assetUrl.pathname = "/index.html";
   const response = await env.ASSETS.fetch(new Request(assetUrl, { method }));
   const resultHeaders = new Headers(response.headers);
@@ -926,7 +947,7 @@ export default {
       if (mounted) return mounted;
       return await route(request, env, (value) => { stage = value; });
     } catch (error) {
-      if (error instanceof Failure)
+      if (error instanceof Failure || error instanceof FamilyFailure)
         return json({ error: error.message }, error.status);
       // Never log request bodies, cookies, invitation tokens or names.
       console.error(

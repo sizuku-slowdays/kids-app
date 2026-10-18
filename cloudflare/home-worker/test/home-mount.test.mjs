@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile,readdir} from 'node:fs/promises';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 
 test('original wagaya URL serves HOME, sessions, app assets and redirects on the same origin',async()=>{
@@ -14,9 +14,9 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
   }}}));
  try {
   const db=await mf.getD1Database('DB');
-  for(const file of ['0001_foundation.sql','0003_muscle_bank.sql','0011_home_favorites.sql']){
+  for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort()){
    const sql=await readFile(new URL('../migrations/'+file,import.meta.url),'utf8');
-   for(const s of sql.replace(/^--.*$/gm,'').split(';').filter(s=>s.trim()))await db.prepare(s).run();
+   for(const s of sql.replace(/^--.*$/gm,'').match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(s).run();
   }
   async function call(path,{method='GET',body,cookie,origin='https://cetus.fun'}={}){
    return mf.dispatchFetch('https://cetus.fun/wagaya'+path,{method,redirect:'manual',
@@ -29,6 +29,8 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
   let r=await call('/');assert.equal(r.status,303);assert.equal(r.headers.get('Location'),'/wagaya/login');
   r=await call('/mama.html?source=installed');assert.equal(r.status,303);assert.equal(r.headers.get('Location'),'/wagaya/login');
   assert.equal((await call('/api/me')).status,401);
+  r=await call('/groups');assert.equal(r.status,303);assert.equal(r.headers.get('Location'),'/wagaya/login');
+  r=await call('/join');assert.equal(r.status,200);
   r=await call('/login');const html=await r.text();assert.equal(r.status,200);
   assert.match(html,/src="\/wagaya\/app.js"/);assert.match(html,/href="\/wagaya\/style.css"/);
   assert.match(html,/mount-pwa.js/);assert.doesNotMatch(html,/home-worker\.sslowdayss\.workers\.dev/);
@@ -36,6 +38,7 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
   assert.match(script,/api\("\/wagaya\/api\/me"\)/);
   assert.match(script,/location.replace\("\/wagaya\/"\)/);
   assert.match(script,/pathname.startsWith\('\/wagaya\/apps\/'\)/);
+  assert.match(script,/location.pathname === "\/wagaya\/join"/);assert.match(script,/new URL\('\/wagaya\/join'/);
   assert.match(script,/https:\/\/cetus.fun\/kids-app\//);assert.match(script,/キッズアプリ一覧/);assert.doesNotMatch(script,/old-home\.html/);
   const bootstrap={secret:'test-bootstrap-secret',household_name:'家族',display_name:'非公開の親',login_name:'mama',password:'test-password-123',device_name:'端末'};
   assert.equal((await call('/api/bootstrap',{method:'POST',body:bootstrap,origin:'https://evil.test'})).status,403);
@@ -55,3 +58,4 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
   assert.equal((await call('/api/me',{cookie})).status,401);
  } finally {await mf.dispose()}
 });
+

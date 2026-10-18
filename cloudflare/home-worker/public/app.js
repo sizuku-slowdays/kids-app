@@ -179,7 +179,8 @@ async function home() {
   header.append(title, button("⚙️ 設定", settings, "quiet"));
   root.append(header);
   const visibleApps=apps.filter(a=>a.visible);
-  const isMamaHome=me.groups.some(g=>g.kind==="household"&&["owner","admin"].includes(g.role));
+  const legacyHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy");
+  const isMamaHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy"&&["owner","admin"].includes(g.role));
   document.body.classList.toggle("mama-home",isMamaHome);
   if(isMamaHome){
     const quick=appSection("家計簿","すぐ入力・確認","money-quick-grid");
@@ -206,11 +207,13 @@ async function home() {
       const grid = appSection('一覧', 'アプリ', 'home-app-list');
       otherApps.forEach(app => grid.append(appCard(app)));
       }
+      if(legacyHome){
       const links = appSection('いつもの', 'からだパワー・お薬タイマー', 'home-app-list');
       for (const app of [
         {id:'karada',name:'からだパワー',icon:'🌈',path:'https://cetus.fun/karada_power/',status:'ready'},
         {id:'medicine',name:'いっぷんお薬タイマー',icon:'💊',path:'https://cetus.fun/kids-app/medicine-game.html',status:'ready'},
       ]) links.append(appCard(app));
+      }
     }
   }
   if (!visibleApps.length)
@@ -228,7 +231,7 @@ function settings() {
   root.replaceChildren();
   const header = el("header");
   header.append(el("h1", "設定"), button("HOMEへ", home, "quiet"));
-  root.append(header);
+  root.append(header,button("ファミリー・共有グループ",()=>{location.href="/groups";},"quiet"));
   const inviteGroups=me.groups.filter(g=>["owner","admin"].includes(g.role)&&(g.kind==="household"||me.user.platform_role==="operator"));
   if (inviteGroups.length) {
     root.append(el("h2", "大人の家族を招待"),el("p","おじいちゃん・おばあちゃんはこちら。子どもの登録は不要です。","muted"));
@@ -565,7 +568,9 @@ document.addEventListener("visibilitychange", () => {
 addEventListener("pageshow", (event) => {
   if (event.persisted) location.reload();
 });
-if (["/login", "/setup", "/register"].includes(location.pathname)) authScreen();
+if (location.pathname === "/join") joinFamily().catch(showError);
+else if(location.pathname === "/groups") familyGroups().catch(showError);
+else if (["/login", "/setup", "/register"].includes(location.pathname)) authScreen();
 else
   home().catch((e) => {
     if (e.message === "ログインしてください") location.replace("/login");
@@ -579,3 +584,58 @@ else
 
 
 
+
+
+// Invitation tokens stay in the URL fragment, never in query strings or analytics.
+async function joinFamily(){
+ root.classList.add('family-screen');
+ const token=location.hash.slice(1);
+ root.replaceChildren(el('h1','招待から参加'));
+ if(!/^[0-9a-f]{64}$/.test(token)){root.append(el('p','招待URLを確認してください。','error'));return;}
+ const details=await api('/api/families/preview','POST',{invitation:token});
+ const labels={create_family:'新しいファミリーを作成',join_family:'招待されたファミリーへ参加',join_sharing:'共有グループへ参加'};
+ root.append(el('h2',labels[details.purpose]),el('p','参加しただけで、通帳や他の家庭の個人情報が公開されることはありません。','muted'));
+ let signedIn=null;try{signedIn=await api('/api/me');}catch{}
+ const familyInput=form=>details.purpose==='create_family'?field(form,'household_name','新しいファミリー名'):null;
+ const finish=()=>location.replace('/groups');
+ if(signedIn){
+  const target=await api('/api/families/inspect','POST',{invitation:token});
+  if(target.group)root.append(el('p','参加先：'+target.group.name));
+  root.append(el('p',signedIn.user.display_name+' さんとして参加します。'));
+  const form=el('form'),name=familyInput(form),confirm=field(form,'confirmed','この招待で参加します','checkbox');
+  form.append(el('button','参加する'));form.addEventListener('submit',async e=>{e.preventDefault();const b=form.querySelector('button');b.disabled=true;try{await api('/api/families/accept','POST',{invitation:token,household_name:name?.value,confirmed:confirm.checked});finish();}catch(error){showError(error);}finally{b.disabled=false;}});root.append(form);return;
+ }
+ const loginPanel=el('section',null,'panel'),login=el('form');loginPanel.append(el('h2','アカウントをお持ちの方'),login);
+ const loginId=field(login,'login_name','ログインID','text','username'),loginPassword=field(login,'password','パスワード','password','current-password');
+ login.append(el('button','ログインして参加内容を確認'));login.addEventListener('submit',async e=>{e.preventDefault();try{await api('/api/login','POST',{login_name:loginId.value,password:loginPassword.value,device_name:'この端末'});await joinFamily();}catch(error){showError(error);}});root.append(loginPanel);
+ const panel=el('section',null,'panel'),form=el('form');panel.append(el('h2','初めて利用する方'),form);
+ const name=field(form,'display_name','表示する名前'),id=field(form,'login_name','ログインID（英数字・_・-、3〜40文字）','text','username'),password=field(form,'password','パスワード（10文字以上）','password','new-password'),family=familyInput(form),confirm=field(form,'confirmed','招待を受けてアカウントを作成します','checkbox');
+ form.append(el('button','登録して参加する'));form.addEventListener('submit',async e=>{e.preventDefault();const b=form.querySelector('button');b.disabled=true;try{await api('/api/register-family','POST',{invitation:token,display_name:name.value,login_name:id.value,password:password.value,household_name:family?.value,confirmed:confirm.checked,device_name:'この端末'});finish();}catch(error){showError(error);}finally{b.disabled=false;}});root.append(panel);
+}
+async function familyGroups(){
+ root.classList.add('family-screen');
+ const state=await api('/api/families');
+ root.replaceChildren(el('h1','ファミリー・共有グループ'),button('HOMEへ',()=>{location.href='/';},'quiet'));
+ if(!state.ready)root.append(el('p','準備中です。カレンダーの複数家庭対応を確認するまで、新しい招待・参加・グループ作成を停止しています。現在のご家族はこれまで通り利用できます。','muted'));
+ const inviteBox=el('section',null,'panel');
+ async function issue(purpose,group_id){try{const result=await api('/api/families/invitations','POST',{purpose,group_id});const url=new URL('/join',location.origin);url.hash=result.token;inviteBox.replaceChildren(el('h2','招待URL'),el('p','1回だけ利用できます。有効期限は7日です。URLはこの画面を閉じる前に控えてください。','muted'));const value=el('input');value.value=url.href;value.readOnly=true;value.setAttribute('aria-label','招待URL');inviteBox.append(value,button('コピー',async()=>{try{await navigator.clipboard.writeText(value.value);}catch{value.focus();value.select();}}));root.prepend(inviteBox);}catch(error){showError(error);}}
+ if(state.can_create_family_invite){const b=button('新しいファミリー作成用の招待URL',()=>issue('create_family'));b.disabled=!state.ready;root.append(b);}
+ for(const g of state.groups){
+  const info=await api('/api/families/groups/'+encodeURIComponent(g.id)),panel=el('section',null,'panel');
+  panel.append(el('h2',g.name),el('p',g.kind==='household'?'ファミリー':'共有グループ','muted'));
+  const list=el('ul');for(const member of info.members)list.append(el('li',member.display_name+(member.role==='owner'?'（管理者）':member.role==='admin'?'（共同管理者）':'')));panel.append(list);
+  if(info.can_manage){const b=button('メンバーを招待する',()=>issue(g.kind==='household'?'join_family':'join_sharing',g.id));b.disabled=!state.ready;panel.append(b);
+   if(g.workspace_mode==='restricted'){
+    const form=el('form');form.append(el('h3','利用するアプリ'));const labels={calendar:'カレンダー',notification:'通知','family-tree':'家系図','daily-kanji':'まいにち漢字3文字','good-deeds':'いいことポイント','school-prep':'学校準備','dining-prices':'外食料金'};
+    for(const app of info.app_choices){const label=el('label'),box=el('input');box.type='checkbox';box.value=app;box.checked=info.app_ids.includes(app);box.disabled=!state.ready;label.append(box,document.createTextNode(labels[app]||app));form.append(label);}
+    const save=el('button','利用アプリを保存');save.disabled=!state.ready;form.append(save);form.addEventListener('submit',async e=>{e.preventDefault();save.disabled=true;try{await api('/api/families/groups/'+encodeURIComponent(g.id)+'/apps','PUT',{app_ids:[...form.querySelectorAll('input:checked')].map(n=>n.value)});await familyGroups();}catch(error){showError(error);save.disabled=false;}});panel.append(form);
+   }
+  }else if(g.kind==='sharing'){
+   const leave=button('この共有グループから脱退',async()=>{if(!confirm('この共有グループから脱退しますか？再参加には新しい招待が必要です。'))return;try{await api('/api/families/groups/'+encodeURIComponent(g.id)+'/leave','POST',{});await familyGroups();}catch(error){showError(error);}},'quiet');leave.disabled=!state.ready;panel.append(leave);
+  }
+  root.append(panel);
+ }
+ if(state.groups.some(g=>g.kind==='household'&&['owner','admin'].includes(g.role))){const form=el('form'),name=field(form,'name','新しい共有グループ名'),b=el('button','共有グループを作成');b.disabled=!state.ready;form.append(b);form.addEventListener('submit',async e=>{e.preventDefault();b.disabled=true;try{await api('/api/families/groups','POST',{name:name.value,kind:'sharing'});await familyGroups();}catch(error){showError(error);b.disabled=false;}});root.append(form);}
+ const invites=await api('/api/families/invitations');
+ if(invites.length){const panel=el('section',null,'panel');panel.append(el('h2','発行した招待'));for(const i of invites){const row=el('div'),ended=i.revoked_at||i.use_count>=i.use_limit||i.expires_at<=Date.now()/1000;row.append(el('p',(i.purpose==='create_family'?'新しい家庭':i.purpose==='join_family'?'家庭への参加':'共有グループへの参加')+'：'+(i.revoked_at?'取り消し済み':i.use_count>=i.use_limit?'使用済み':i.expires_at<=Date.now()/1000?'期限切れ':'未使用')));if(!ended){const b=button('招待を取り消す',async()=>{try{await api('/api/families/invitations/'+encodeURIComponent(i.id),'DELETE');await familyGroups();}catch(error){showError(error);}},'quiet');b.disabled=!state.ready;row.append(b);}panel.append(row);}root.append(panel);}
+}

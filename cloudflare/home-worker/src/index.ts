@@ -1,3 +1,4 @@
+import {FamilyFailure,familiesRoute,previewFamilyInvite,registerFamilyInvite} from './families';
 import { giftNotificationCheck, deliverGiftNotifications } from './passbook-gifts';
 import { schoolRoute, schoolNotificationCheck } from './school-prep';
 import { runCashAutomation } from './passbook-finance';
@@ -197,7 +198,7 @@ async function ensureKidneyPeopleApps(env: HomeEnv) {
   await env.DB.batch([
     env.DB.prepare("UPDATE apps SET name='じいちゃん',icon='👴',path='/apps/kidney/?person=grandpa' WHERE id='kidney'"),
     env.DB.prepare("INSERT OR IGNORE INTO apps(id,name,icon,path,enabled,status,position,access_mode) VALUES('kidney-grandma','ばあちゃん','👵','/apps/kidney/?person=grandma',1,'ready',8,'group')"),
-    env.DB.prepare("INSERT OR IGNORE INTO group_apps(group_id,app_id) SELECT id,'kidney-grandma' FROM groups WHERE kind='household'"),
+    env.DB.prepare("INSERT OR IGNORE INTO group_apps(group_id,app_id) SELECT id,'kidney-grandma' FROM groups WHERE kind='household' AND NOT EXISTS(SELECT 1 FROM family_workspaces w WHERE w.group_id=groups.id)"),
   ]);
 }
 export async function canRead(
@@ -351,6 +352,21 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       ),
     });
   }
+  if(path==='/api/families/preview'&&method==='POST'){
+    await throttle(env,request,'family-preview');
+    return json(await previewFamilyInvite(env,(await body(request)).invitation));
+  }
+  if(path==='/api/register-family'&&method==='POST'){
+    await throttle(env,request,'register');
+    const data=await body(request);
+    requireValue(data.confirmed===true,400,'招待の種類と参加を確認してください');
+    await previewFamilyInvite(env,data.invitation);
+    requireValue(validPassword(data.password),400,'パスワードは10〜128文字です');
+    const id=crypto.randomUUID(),salt=randomToken();
+    try{await registerFamilyInvite(env,data,{id,login:loginName(data.login_name),display:name(data.display_name),salt,hash:passwordHash(data.password,salt),iterations:ITERATIONS});}
+    catch(e){if(/family invitation|UNIQUE constraint/.test(String(e)))throw new Failure(409,'招待は使用済み、またはログインIDが登録済みです。既存の方はログインして参加してください');throw e;}
+    return json({ok:true},201,{'Set-Cookie':await issueSession(env,id,name(data.device_name||'この端末'))});
+  }
   if (path === "/api/register" && method === "POST") {
     await throttle(env, request, "register");
     const data = await body(request);
@@ -460,6 +476,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if(path==='/api/families'||path.startsWith('/api/families/'))return familiesRoute(request,env,user,body);
     if(path==='/api/school-prep'||path.startsWith('/api/school-prep/')){
       requireValue(await appAllowed(env,user.id,'school-prep'),403,'このアプリは利用できません');
       return schoolRoute(request,env,user.id,body);
@@ -511,7 +528,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         .bind(now, s.id)
         .run();
       const groups = await env.DB.prepare(
-        "SELECT g.id,g.name,g.kind,m.role FROM groups g JOIN memberships m ON m.group_id=g.id WHERE m.user_id=?",
+        "SELECT g.id,g.name,g.kind,m.role,COALESCE(w.mode,'legacy') workspace_mode FROM groups g JOIN memberships m ON m.group_id=g.id LEFT JOIN family_workspaces w ON w.group_id=g.id WHERE m.user_id=?",
       )
         .bind(user.id)
         .all();
@@ -889,6 +906,8 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     "/login",
     "/setup",
     "/register",
+    "/join",
+    "/groups",
     "/app.js",
     "/style.css",
     "/manifest.webmanifest",
@@ -896,6 +915,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     "/home-icon-192.png",
     "/home-icon-512.png",
   ];
+  if(path==="/groups"&&!s)return new Response(null,{status:303,headers:{...headers,Location:"/login"}});
   if (!publicPaths.includes(path)) {
     if (!s)
       return new Response(null, {
@@ -907,7 +927,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   requireValue(["GET", "HEAD"].includes(method), 405, "この操作はできません");
   const assetUrl = new URL(url);
-  if (["/", "/login", "/setup", "/register"].includes(path))
+  if (["/", "/login", "/setup", "/register", "/join", "/groups"].includes(path))
     assetUrl.pathname = "/index.html";
   const response = await env.ASSETS.fetch(new Request(assetUrl, { method }));
   const resultHeaders = new Headers(response.headers);
@@ -926,7 +946,7 @@ export default {
       if (mounted) return mounted;
       return await route(request, env, (value) => { stage = value; });
     } catch (error) {
-      if (error instanceof Failure)
+      if (error instanceof Failure || error instanceof FamilyFailure)
         return json({ error: error.message }, error.status);
       // Never log request bodies, cookies, invitation tokens or names.
       console.error(

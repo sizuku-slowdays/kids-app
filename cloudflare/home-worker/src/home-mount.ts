@@ -1,7 +1,7 @@
 // Serve the existing HOME handler at cetus.fun/wagaya/, without a redirect or iframe.
 // Legacy HTML apps below /wagaya/ continue to reach the GitHub Pages origin.
 const prefix = "/wagaya";
-const internal = /^\/(?:api(?:\/|$)|media(?:\/|$)|apps(?:\/|$)|login(?:[?#]|$)|setup(?:[?#]|$)|register(?:[?#]|$)|(?:app\.js|style\.css|manifest\.webmanifest|home-icon-192\.png|home-icon-512\.png|icon\.svg)(?:[?#]|$)|(?:[?#]|$))/;
+const internal = /^\/(?:api(?:\/|$)|media(?:\/|$)|apps(?:\/|$)|login(?:[?#]|$)|setup(?:[?#]|$)|(?:register|join|groups)(?:[?#]|$)|(?:app\.js|style\.css|manifest\.webmanifest|home-icon-192\.png|home-icon-512\.png|icon\.svg)(?:[?#]|$)|(?:[?#]|$))/;
 function mountedPath(value: string) {
   return internal.test(value) ? prefix + value : value;
 }
@@ -51,7 +51,7 @@ export async function mountedHome(request: Request, dispatch: (request: Request)
     text = await response.text();
     // Only known HOME root paths in quoted literals/attributes are mounted.
     // External URLs and relative imports, legacy /wagaya links, user data and regexes stay intact.
-    text = text.replace(/(["'`])(\/(?:api|media|apps)(?:\/[^"'`\s<>]*)?|\/(?:login|setup|register|app\.js|style\.css|manifest\.webmanifest|home-icon-192\.png|home-icon-512\.png|icon\.svg)(?:[?#][^"'`\s<>]*)?|\/(?:[?#][^"'`\s<>]*)?)(?=["'`])/g,
+    text = text.replace(/(["'`])(\/(?:api|media|apps)(?:\/[^"'`\s<>]*)?|\/(?:login|setup|register|join|groups|app\.js|style\.css|manifest\.webmanifest|home-icon-192\.png|home-icon-512\.png|icon\.svg)(?:[?#][^"'`\s<>]*)?|\/(?:[?#][^"'`\s<>]*)?)(?=["'`])/g,
       (_match, quote: string, value: string) => quote + mountedPath(value));
     if (type.includes("html")) text = text.replace("</head>", '<script src="/wagaya/mount-pwa.js" defer></script></head>');
     if (type.includes("manifest+json")) {
@@ -65,4 +65,5 @@ export async function mountedHome(request: Request, dispatch: (request: Request)
   headers.delete("ETag");
   return new Response(text, {status:response.status,headers});
 }
+
 

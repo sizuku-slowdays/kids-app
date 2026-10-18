@@ -265,3 +265,9 @@ header .muted { margin:4px 0 0; }
   .mama-home .hero-card .card-copy small{display:none}
   .mama-home .list-card small{display:none}
 }
+
+/* Family management and invitation forms do not change other HOME forms. */
+.family-screen input[type="checkbox"]{width:24px;min-height:24px;margin:8px;vertical-align:middle}
+.family-screen label{overflow-wrap:anywhere}
+.family-screen section,.family-screen form{min-width:0}
+.family-screen input{max-width:100%;box-sizing:border-box}

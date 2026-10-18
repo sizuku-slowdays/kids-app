@@ -135,3 +135,7 @@ HOMEへ読み取り専用book APIと認証済み静的ページを準備。DBマ
 - 変更：src/dining-prices.ts、src/dining-nurubon.ts、public/apps/dining-prices/{app.js,calculator.js,index.html,style.css}、test/dining-{prices,nurubon}.test.mjs。
 - 検証：TypeScript、Wrangler dry-run、HOME関連29件合格。Chromium390/1366pxで人数変更/店舗切替/比較/飲み放題/確認待ち/価格保存/はみ出しなしを確認。既存ウエスト計算・うえすたん計算、認証/家庭分離/子どもの編集拒否、旧価格保持、追加前バックアップ、再追加防止、保存競合をローカルD1で確認。本番残高でテスト入金なし。
 - 本番：GitHub統合前の実装・ローカル検証時点。Cloudflare Build成功、実iPhone確認、中高生料金の店舗確認は未確認。
+
+
+## 2026-10-18 複数ファミリー改修：第1段階（本番未変更）
+[調査・権限表・移行計画・バックアップ手順](multi-family-20261018.md)。現在の5人は同じ1家庭のまま維持。HOME正本a5c8d17を調査。単一家庭のcalendar_config、漢字の大人=保護者判定、旧家計簿の共通パスワード、HOME固定リンク/自動アプリ付与を変更対象に整理。既存の通帳とプレゼントは別家庭/共有ownerからの直接APIを拒否することを合成5人＋別家庭＋sharingのローカルD1で確認。家系図APIに登録者フィルターはなく、祖母の実データが見えない原因は未特定。バックアップ監査Python3件とAPI再現1件が合格。独立ブランチ、監査・資料・テストのみ。実DBのID/role、バックアップ取得は未確認のため第2段階以降は未実装。移動・権限一括変更・デプロイなし。

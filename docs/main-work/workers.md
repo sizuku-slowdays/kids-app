@@ -171,3 +171,8 @@ home-worker内で処理。home-dbに0024の2表を追記。Worker/D1/R2/service 
 ## 2026-10-20 カレンダーの複数選択（本番未反映）
 
 calendar-workerにoptions sidecar、notification-center-apiに予約上限3500と能力確認を追加。home-workerはUIと旧Workerへの新配列保存の拒否。手動2Worker→HOME自動反映の順。新home-db migration/R2/Cron/bindings変更なし。本番未反映。 [設計・試験・導入手順](calendar-multi-20261020.md)。
+
+
+## 2026-10-21 学校じゅんび：子どもの日付選択
+
+home-workerの学校準備GETへcheckable_phasesを追加し、画面とPOST /checkで同じ日付判定を使用。過去日は本人のみチェック可。通知Worker/カレンダーWorker/Bindings/Cron/R2/DB schema/migrationの変更なし。既存の通知処理を使用する。

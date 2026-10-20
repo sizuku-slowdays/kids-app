@@ -70,6 +70,24 @@ test('school preparation: verified HOME identity, independent days/phases, versi
  assert.equal((await ok('','older')).checks.length,0);
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM learning_school_versions').first()).n,3);
  assert.ok((await db.prepare('SELECT COUNT(*) n FROM learning_school_checks WHERE revision=1').first()).n>0);
+ // Backdated work stays on its selected day and current revision, not today's record.
+ const yesterday=new Date(Date.parse(today+'T12:00:00Z')-86400000).toISOString().slice(0,10);
+ const oldDay={...plan,day:yesterday,tasks:[{id:'old-hw',kind:'homework',text:'前日の宿題'}]};
+ await ok('/confirm','mom','POST',oldDay,'older-child',yesterday);
+ const beforeToday=(await db.prepare('SELECT * FROM learning_school_checks WHERE school_day=?').bind(today).all()).results;
+ const late=mark('old-hw');
+ await ok('/check','older','POST',late,'older-child',yesterday);
+ await ok('/check','older','POST',late,'older-child',yesterday);
+ const pastState=await ok('','older','GET',undefined,'older-child',yesterday);
+ assert.equal(pastState.checks.find(c=>c.task_id==='old-hw').done,1);
+ assert.deepEqual(pastState.checkable_phases,['homework','night','morning']);
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM learning_school_receipts WHERE request_id=?').bind(late.request_id).first()).n,1);
+ assert.deepEqual((await db.prepare('SELECT * FROM learning_school_checks WHERE school_day=?').bind(today).all()).results,beforeToday);
+ assert.equal((await call('/check','younger','POST',late,'older-child',yesterday)).status,403);
+ assert.equal((await call('/check','foreign','POST',late,'older-child',yesterday)).status,403);
+ assert.equal((await call('/confirm','older','POST',{...oldDay,expected_revision:1},'older-child',yesterday)).status,403);
+ await ok('/check','older','POST',mark('old-hw','homework',false),'older-child',yesterday);
+ assert.equal((await ok('','older','GET',undefined,'older-child',yesterday)).checks[0].done,0);
  assert.deepEqual((await db.prepare('SELECT * FROM passbook_entries').all()).results,money);
  }finally{await mf.dispose();}
 });

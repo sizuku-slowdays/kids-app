@@ -43,6 +43,14 @@ test('HOME device identity, legacy subscriptions, and live authorization before 
  assert.equal((await api.subsForRecipient(env,'all')).length,1);assert.equal((await api.subsForRecipient(env,'home:mom')).length,1);
  assert.equal((await api.homeNotificationRoute(req('https://push.test/new'),env,'/api/home/subscribe')).status,200);assert.equal((await api.subsForRecipient(env,'all')).length,1);
  const untrusted=new Request('https://notification-center-api.sslowdayss.workers.dev/api/home/subscribe',{method:'POST'});assert.equal((await api.homeNotificationRoute(untrusted,env,'/api/home/subscribe')).status,404);
+
+ // A whole year of multi-timing daily rules must not be silently truncated at 500.
+ const occurrences=Array.from({length:501},(_,i)=>({date:new Date(Date.UTC(2027,0,1)+i*86400000).toISOString().slice(0,10),time:'09:00'}));
+ async function bulk(items){return context.worker.fetch(new Request('https://notification.internal/api/calendar-sync',{method:'POST',headers:{'X-App-Password':'test','Content-Type':'application/json'},body:JSON.stringify({source_id:'bulk',recipient:'home-all',occurrences:items})}),env,{});}
+ assert.equal((await (await bulk(occurrences)).json()).scheduled,501);
+ const rulesBefore=sqlite.prepare('SELECT COUNT(*) n FROM notification_rules').get().n;
+ assert.equal((await bulk(Array.from({length:3501},()=>occurrences[0]))).status,400);
+ assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM notification_rules').get().n,rulesBefore,'over-limit payload cannot delete existing rules');
  sqlite.close();
 });
 
@@ -55,3 +63,4 @@ test('new calendar IDs never fall back to all on an older notification worker',a
  const result=await context.sync(env,{id:'event',calendar_id:'calendar',notification_recipient:'home-all',notify_before:5});
  assert.equal(result.skipped,true);assert.deepEqual(requests,['https://notification.test/api/health']);
 });
+

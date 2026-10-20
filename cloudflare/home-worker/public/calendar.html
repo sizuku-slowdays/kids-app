@@ -527,6 +527,7 @@
   .calendar-home-link:hover { background: var(--mint-mid); }
   .calendar-home-link:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
   .calendar-notice { padding: 5px 12px; font-size: 11px; color: var(--text-sub); text-align: right; background: var(--surface); }
+.multi-choice{display:flex;flex-wrap:wrap;gap:8px}.multi-choice label{display:inline-flex!important;align-items:center;gap:8px;min-height:44px;padding:8px 10px!important;margin:0!important;border:1px solid var(--border,#dce6e2);border-radius:12px;cursor:pointer}.multi-choice input[type=checkbox]{width:20px!important;height:20px;min-width:20px;margin:0;flex:none}
 </style>
 </head>
 <body>
@@ -651,15 +652,8 @@
     <div class="frow"><label>カレンダー *</label><select id="ev-cal"></select></div>
     <div class="frow">
       <label>通知</label>
-      <select id="ev-notify" onchange="toggleNotifyRecipient()">
-        <option value="-1">通知なし</option>
-        <option value="0">開始時刻</option>
-        <option value="5">5分前</option>
-        <option value="10">10分前</option>
-        <option value="30">30分前</option>
-        <option value="60">1時間前</option>
-        <option value="1440">1日前</option>
-      </select>
+      <div id="ev-notify" class="multi-choice" role="group" aria-label="通知のタイミング"></div>
+      <small>複数選べます。例：1日前と30分前</small>
     </div>
     <div class="frow" id="ev-notify-recipient-row" style="display:none">
       <label>通知する相手</label>
@@ -793,7 +787,7 @@
         <input type="date" id="ev-recur-end-date">
       </div>
     </div>
-    <div class="frow"><label>誰の予定？</label><select id="ev-subject"></select></div>
+    <div class="frow"><label>誰の予定？</label><div id="ev-subject" class="multi-choice" role="group" aria-label="誰の予定？"></div><small>複数人を選べます。選択なしは「指定しない」です。</small></div>
     <div class="frow"><label>この予定を見られる人</label><select id="ev-audience" onchange="toggleAudience()"><option value="inherit">カレンダーの参加者全員</option><option value="adults">大人だけ</option><option value="members">指定メンバー</option><option value="self">自分だけ</option></select><div id="ev-members"></div><small>カレンダーの公開範囲を超えて共有されません。</small><p id="ev-private-notice" style="font-size:12px;color:var(--text-sub)"></p></div>
     <div class="frow"><label>メモ</label><textarea id="ev-desc" placeholder="詳細・メモ"></textarea></div>
     <div class="frow">
@@ -1254,7 +1248,7 @@ function openEvModal(ev, defaultDate) {
     document.getElementById('ev-title').value = ev.title;
     document.getElementById('ev-desc').value = ev.description || '';
     document.getElementById('ev-allday').checked = !!ev.all_day;
-    document.getElementById('ev-notify').value = ev.notify_before ?? -1;
+    setNotificationChoices(ev.notify_befores||(Number(ev.notify_before??-1)>=0?[Number(ev.notify_before)]:[]));
     document.getElementById('ev-notify-recipient').value = isHomeNotificationRecipient(ev.notification_recipient)?ev.notification_recipient:'home-all';
     setRecurrenceForm(ev); setListForm(ev); sel.value = ev.calendar_id;
     _endDateManual = true; _endTimeManual = true; // 編集時は自動補完しない
@@ -1262,7 +1256,7 @@ function openEvModal(ev, defaultDate) {
     else { const [sd, st] = ev.start_datetime.slice(0,16).split('T'), [ed, et] = ev.end_datetime.slice(0,16).split('T'); document.getElementById('ev-start-date').value = sd; document.getElementById('ev-start-time').value = st; document.getElementById('ev-end-date').value = ed; document.getElementById('ev-end-time').value = et; }
   } else {
     document.getElementById('ev-title').value = ''; document.getElementById('ev-desc').value = '';
-    document.getElementById('ev-allday').checked = false; document.getElementById('ev-notify').value = -1;
+    document.getElementById('ev-allday').checked = false; setNotificationChoices([]);
     document.getElementById('ev-notify-recipient').value = 'home-all';
     setRecurrenceForm({ recurrence_type: 'none' }); setListForm({ list_type: 'none' });
     _endDateManual = false; _endTimeManual = false;
@@ -1305,9 +1299,19 @@ async function connectCalendarNotifications(){
 }
 
 function toggleAllDay() { const checked = document.getElementById('ev-allday').checked; document.getElementById('ev-dt-row').style.display = checked ? 'none' : ''; document.getElementById('ev-d-row').style.display = checked ? '' : 'none'; document.getElementById('ev-notify').closest('.frow').style.display = checked ? 'none' : ''; toggleNotifyRecipient(); }
+function selectedNotificationMinutes(){return [...document.querySelectorAll('#ev-notify input[data-minutes]:checked')].map(c=>Number(c.dataset.minutes)).sort((a,b)=>a-b);}
+function setNotificationChoices(values){
+ const box=document.getElementById('ev-notify');box.replaceChildren();const selected=new Set(values);
+ const choices=new Map([[0,'開始時刻'],[5,'5分前'],[10,'10分前'],[30,'30分前'],[60,'1時間前'],[1440,'1日前']]);
+ for(const value of values)if(!choices.has(value))choices.set(value,value+'分前');
+ const none=document.createElement('input');none.type='checkbox';none.checked=!values.length;none.id='ev-notify-none';const label=document.createElement('label');label.append(none,document.createTextNode('通知なし'));box.append(label);
+ none.onchange=()=>{for(const c of box.querySelectorAll('input[data-minutes]'))c.checked=false;none.checked=true;toggleNotifyRecipient();};
+ for(const [value,text]of choices){const l=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.dataset.minutes=String(value);check.checked=selected.has(value);check.onchange=()=>{none.checked=selectedNotificationMinutes().length===0;toggleNotifyRecipient();};l.append(check,document.createTextNode(text));box.append(l);}
+}
+
 function toggleNotifyRecipient() {
   const allDay = document.getElementById('ev-allday').checked;
-  const enabled = parseInt(document.getElementById('ev-notify').value, 10) >= 0;
+  const enabled = selectedNotificationMinutes().length>0;
   document.getElementById('ev-notify-recipient-row').style.display = !allDay && enabled ? '' : 'none';
 }
 // ── 日時自動補完 ──────────────────────────────────────
@@ -1358,11 +1362,13 @@ async function saveEvent() {
   let start, end;
   if (allDay) { start = document.getElementById('ev-start-d').value; end = document.getElementById('ev-end-d').value; }
   else { const sd = document.getElementById('ev-start-date').value, st = document.getElementById('ev-start-time').value, ed = document.getElementById('ev-end-date').value, et = document.getElementById('ev-end-time').value; if (!sd || !st || !ed || !et) { alert('日付と時刻を入力してください'); return; } start = `${sd}T${st}`; end = `${ed}T${et}`; }
-  const cal = calendars.find(c => c.id === calId), notify_before = parseInt(document.getElementById('ev-notify').value), recurData = getRecurrenceData();
+  const cal = calendars.find(c => c.id === calId), notify_befores=allDay?[]:selectedNotificationMinutes(), notify_before=notify_befores[0]??-1, recurData = getRecurrenceData();
   const notification_recipient = document.getElementById('ev-notify-recipient').value;if(!notification_recipient){alert('通知先を選び直してください');return;}if(notify_before>=0&&cal?.notification_protocol!=='home-v1'){alert('カレンダーWorkerの更新後に通知を設定できます');return;}
   const body = { title, description: document.getElementById('ev-desc').value, start_datetime: start, end_datetime: end, all_day: allDay, calendar_id: calId, color: cal?.color || '#5b8dee', notify_before, notification_recipient, ...recurData, list_type: currentListType !== 'none' ? currentListType : null, list_items: currentListType !== 'none' ? getListItems() : null };
-  const audience=document.getElementById('ev-audience').value,subject=document.getElementById('ev-subject').value;
-  if(sharingData&&(eventVisibility||audience!=='inherit'||subject))body.visibility={audience,members:checkedMembers('ev-members'),subject_user_id:subject||null};
+  const audience=document.getElementById('ev-audience').value,subjects=checkedMembers('ev-subject'),subject=subjects[0]||'';
+  if((notify_befores.length>1||subjects.length>1)&&cal?.event_options_protocol!=='multi-v1'){alert('先にカレンダーWorkerの複数選択対応コードを反映してください');return;}
+  if(cal?.event_options_protocol==='multi-v1')body.notify_befores=notify_befores;
+  if(sharingData&&(eventVisibility||audience!=='inherit'||subject))body.visibility={audience,members:checkedMembers('ev-members'),subject_user_id:subject||null,...(cal?.event_options_protocol==='multi-v1'?{subject_user_ids:subjects}:{})};
   if(!sharingData&&(audience!=='inherit'||subject)){alert('先にカレンダーWorkerを更新してください');return;}
   const editId = document.getElementById('ev-id').value;
   try {
@@ -1402,7 +1408,7 @@ function memberChecks(target,users,selected=[]){const box=document.getElementByI
 function checkedMembers(target){return [...document.querySelectorAll('#'+target+' input:checked')].map(c=>c.value);}
 function calendarGroupChoices(){const base=document.getElementById('cal-household').value;for(const [id,list] of [['cal-offers',(sharingData?.groups||[]).filter(g=>g.id!==base&&!editingCalendar?.shares?.some(s=>s.group_id===g.id)).map(g=>({id:g.id,name:g.name}))],['cal-revokes',(editingCalendar?.shares||[]).map(s=>({id:s.group_id,name:s.name+(s.accepted?'（共有中）':'（承認待ち）')}))]]){memberChecks(id,list,[]);if(!list.length)document.getElementById(id).textContent='対象のグループはありません';}}
 function calendarMemberOptions(){const list=editingCalendar?.participants||(sharingData?.users||[]).filter(u=>u.group_ids?.includes(document.getElementById('cal-household').value));memberChecks('cal-members',list,editingCalendar?.visibility?.members||[]);memberChecks('cal-editors',list,editingCalendar?.visibility?.editors||[]);}
-function eventMemberOptions(v){const cal=calendars.find(c=>c.id===document.getElementById('ev-cal').value),users=cal?.participants||[];const select=document.getElementById('ev-subject');select.replaceChildren(new Option('指定しない',''));for(const u of users)select.add(new Option(u.name,u.id));select.value=v?.subject_user_id||'';memberChecks('ev-members',users,v?.members||[]);toggleAudience();}
+function eventMemberOptions(v){const cal=calendars.find(c=>c.id===document.getElementById('ev-cal').value),users=cal?.participants||[];memberChecks('ev-subject',users,v?.subject_user_ids||(v?.subject_user_id?[v.subject_user_id]:[]));memberChecks('ev-members',users,v?.members||[]);toggleAudience();}
 function toggleAudience(){const audience=document.getElementById('ev-audience').value;document.getElementById('ev-members').style.display=audience==='members'?'':'none';const cal=calendars.find(c=>c.id===document.getElementById('ev-cal').value);document.getElementById('ev-private-notice').textContent='通知先は、この予定を見られる人だけです。各端末で通知を受け取る設定が必要です。';refreshNotificationRecipients();}
 function openCalModal(id){if(!sharingData){alert('カレンダーWorkerの更新後に共有設定を利用できます');return;}editingCalendar=calendars.find(c=>c.id===id)||null;const cal=editingCalendar,v=cal?.visibility;document.getElementById('cal-overlay').classList.add('open');document.getElementById('cal-modal-title').textContent=cal?'カレンダーの設定':'カレンダーを追加';document.getElementById('cal-name').value=cal?.name||'';document.getElementById('cal-visibility').value=v?.mode||(cal?.is_shared?'household':'self');const groups=document.getElementById('cal-household');groups.replaceChildren();for(const g of sharingData.groups)groups.add(new Option(g.name+(g.kind==='sharing'?'（共有グループ）':'（ファミリー）'),g.id));groups.value=v?.household_id||(sharingData.groups.some(g=>g.id===homeConnection.household_id)?homeConnection.household_id:sharingData.groups[0]?.id)||'';groups.disabled=!!cal;document.getElementById('cal-posting').value=v?.editors.includes('*')?'*':v?.editors.length?'members':cal?.is_shared?'*':'self';calendarMemberOptions();calendarGroupChoices();selectedCalColor=cal?.color||PALETTE[calendars.length%PALETTE.length];const cp=document.getElementById('cal-color-picker');cp.innerHTML=PALETTE.map(c=>`<div class="color-swatch${c===selectedCalColor?' selected':''}" style="background:${c}" onclick="selectCalColor(this,'${c}')"></div>`).join('');}
 async function calendarOffers(){try{const offers=await api('/sharing/offers');if(!offers.length){alert('共有の招待はありません');return;}for(const offer of offers)if(confirm('「'+offer.name+'」をこの家庭と共有しますか？'))await api('/calendars/'+offer.calendar_id+'/accept','POST',{group_id:offer.group_id});await loadAll();}catch(e){alert(e.message);}}

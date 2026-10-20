@@ -28,3 +28,8 @@ export function nextSchoolDay(today, overrides=[]) {
   if(days.has(day)?days.get(day):![0,6].includes(date.getUTCDay()))return day;
  }
 }
+
+// Backdated checks record the actual operation time; future completion stays restricted.
+export function schoolCheckDayAllowed(day, phase, today, nextDay) {
+ return validDay(day) && ['homework','morning','night'].includes(phase) && (day<today || (phase==='night'?day===nextDay:day===today));
+}

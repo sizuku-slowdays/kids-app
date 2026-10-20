@@ -1,7 +1,7 @@
 import {mondayOf,parseWeekText,templateText,homeworkLines} from './weekly-core.js';
 const $=id=>document.getElementById(id),directory=new URL('./',location.href),endpoint=new URL('../../api/school-prep',directory),login=new URL('../../login',directory);
 const initial=new URL(location.href).searchParams;
-let household=initial.get('household')||'',child=initial.get('child')||'',phase=['homework','night','morning'].includes(initial.get('phase'))?initial.get('phase'):'homework',day=initial.get('day')||'',state,loadId=0,busy=false;
+let household=initial.get('household')||'',child=initial.get('child')||'',phase=['homework','night','morning'].includes(initial.get('phase'))?initial.get('phase'):'homework',day=initial.get('day')||'',state,loadId=0,busy=false,chosenDay=!!initial.get('day');
 const labels={homework:'宿題',night:'夜のじゅんび',morning:'朝のかくにん'};
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function button(text,fn,cls){const b=el('button',text,cls);b.type='button';b.onclick=async()=>{if(busy)return;busy=true;b.disabled=true;$('status').textContent='';try{await fn();}catch(e){$('status').textContent=e.message;}finally{busy=false;if(b.isConnected)b.disabled=false;}};return b;}
@@ -26,14 +26,16 @@ async function load(adjust=false){
 function card(){const c=el('section',undefined,'card');$('content').append(c);return c;}
 function render(){
  $('people').replaceChildren();$('tabs').replaceChildren();$('content').replaceChildren();
- if(state.groups.length>1){const select=el('select');for(const g of state.groups){const option=el('option',g.name);option.value=g.id;select.append(option);}select.value=household;select.setAttribute('aria-label','家庭');select.onchange=()=>{household=select.value;child='';day='';load(true);};$('people').append(select);}
- if(state.admin&&state.children.length>1){const select=el('select');select.setAttribute('aria-label','子ども');for(const c of state.children){const option=el('option',c.display_name);option.value=c.id;select.append(option);}select.value=child;select.onchange=()=>{child=select.value;day='';load(true);};$('people').append(select);}
+ if(state.groups.length>1){const select=el('select');for(const g of state.groups){const option=el('option',g.name);option.value=g.id;select.append(option);}select.value=household;select.setAttribute('aria-label','家庭');select.onchange=()=>{household=select.value;child='';day='';chosenDay=false;load(true);};$('people').append(select);}
+ if(state.admin&&state.children.length>1){const select=el('select');select.setAttribute('aria-label','子ども');for(const c of state.children){const option=el('option',c.display_name);option.value=c.id;select.append(option);}select.value=child;select.onchange=()=>{child=select.value;day='';chosenDay=false;load(true);};$('people').append(select);}
  else $('people').append(el('p',state.children.find(c=>c.id===child)?.display_name||'子どものHOMEアカウントを連携してください','person'));
- for(const [p,label] of Object.entries(labels)){const b=button(label,async()=>{phase=p;day=targetDay(p);await load();});b.setAttribute('aria-pressed',String(phase===p));$('tabs').append(b);}
+ for(const [p,label] of Object.entries(labels)){const b=button(label,async()=>{phase=p;if(!chosenDay)day=targetDay(p);await load();});b.setAttribute('aria-pressed',String(phase===p));$('tabs').append(b);}
  if(!child)return;
  const plan=state.plan,c=card();c.append(el('p',dateLabel(day)+(phase==='night'?' のもちもの':' の'+labels[phase]),'date'));
- const sub={homework:'きょうの宿題',night:'次の登校日のもちもの',morning:'きょう学校に持っていくもの'}[phase];c.append(el('h2',sub));
- if(state.admin){const picker=el('input');picker.type='date';picker.value=day;picker.onchange=()=>{if(picker.value){day=picker.value;load();}};field(c,'見る日・登録する日',picker);}
+ const sub={homework:day===state.today?'きょうの宿題':'この日の宿題',night:day===state.next_school_day?'次の登校日のもちもの':'この日のもちもの（夜）',morning:day===state.today?'きょう学校に持っていくもの':'この日のもちもの（朝）'}[phase];c.append(el('h2',sub));
+ const picker=el('input');picker.type='date';picker.value=day;picker.setAttribute('aria-label','見る日');picker.onchange=()=>{if(picker.value){day=picker.value;chosenDay=true;load();}};field(c,state.admin?'見る日・登録する日':'見る日（みるひ）',picker);
+ const dates=el('div',undefined,'row');
+ for(const [label,offset] of [['前の日',-1],['今日',0],['次の日',1]])dates.append(button(label,async()=>{day=offset?new Date(Date.parse(day+'T12:00:00Z')+offset*86400000).toISOString().slice(0,10):state.today;chosenDay=true;await load();}));c.append(dates);
  if(plan?.dismissal)c.append(el('p','下校じこく '+plan.dismissal,'muted'));
  if(!plan)c.append(el('p',state.admin?'この日はまだ登録していません。下の「内容を登録・変更」から入力できます。':'まだ内容がありません。おうちの人に登録してもらおう。','muted'));
  else if(!plan.is_school_day)c.append(el('p','この日は学校がお休みです。'));
@@ -42,7 +44,7 @@ function render(){
   for(const t of tasks){const row=el('div',undefined,'task'+(t.done?' done':''));row.append(el('span',t.text,'task-name'));
    const b=button(t.done?'できた！':phase==='night'?'用意した':phase==='morning'?'持った':'できた！',async()=>{
     const request_id=crypto.randomUUID();await api('/check','POST',{revision:plan.revision,task_id:t.id,phase,done:!t.done,request_id});await load();
-   },t.done?'stamp':'');b.disabled=state.admin||day!==targetDay(phase);b.setAttribute('aria-label',t.text+(t.done?'・完了を取り消す':'・完了にする'));b.setAttribute('aria-pressed',String(t.done));row.append(b);c.append(row);
+   },t.done?'stamp':'');b.disabled=state.admin||!state.checkable_phases?.includes(phase);b.setAttribute('aria-label',t.text+(t.done?'・完了を取り消す':'・完了にする'));b.setAttribute('aria-pressed',String(t.done));row.append(b);c.append(row);
   }
   if(!tasks.length)c.append(el('p','登録された項目はありません。','muted'));
   if(tasks.length&&tasks.every(t=>t.done))c.append(el('p','🌸 ぜんぶできたね！','cheer'));
@@ -136,4 +138,4 @@ function renderNotifications(){
  const a=el('a','端末登録を確認する（カレンダー）');a.href=new URL('../calendar/',directory).pathname;details.append(a);details.append(el('small','すでにHOMEカレンダーの通知が届く端末は再登録不要です。未登録ならカレンダーの「この端末で、自分として通知を受け取る」から登録できます。'));
  if(state.notifications.length){const list=el('ul',undefined,'notification-history');for(const n of state.notifications)list.append(el('li',dateLabel(n.school_day)+' '+labels[n.phase]+'：'+({sent:'送信済み',cancelled:'取消・権限変更で停止',pending:'送信待ち',sending:'送信中'})[n.status]));details.append(list);if(state.notifications.some(n=>n.status==='pending'))details.append(button('送信待ちをもう一度送る',async()=>{await api('/notifications/retry','POST',{});await load();}));}
 }
-$('reload').onclick=()=>load();document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.querySelector('details[open] form,details[open] textarea,details[open] input')){day='';load(true);}});load(!initial.get('day'));
+$('reload').onclick=()=>load();document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.querySelector('details[open] form,details[open] textarea,details[open] input')){if(!chosenDay)day='';load(!chosenDay);}});load(!initial.get('day'));

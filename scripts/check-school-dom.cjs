@@ -1,6 +1,6 @@
 const {createRequire}=require('node:module'),path=require('node:path'),fs=require('node:fs'),assert=require('node:assert/strict');
 const {JSDOM}=createRequire(process.env.SCHOOL_DOM_PACKAGE||path.join(__dirname,'../cloudflare/home-worker/package.json'))('jsdom');
-const source=fs.readFileSync(path.join(__dirname,'../cloudflare/home-worker/public/apps/school-prep/app.js'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../cloudflare/home-worker/public/apps/school-prep/app.js'),'utf8').replace(/^import .*?;\n/,'');
 const tick=()=>new Promise(r=>setTimeout(r,20));
 async function run(admin,blank=false){
  const dom=new JSDOM('<div id="status"></div><div id="people"></div><nav id="tabs"></nav><div id="content"></div><button id="reload"></button>',{url:'https://cetus.fun/wagaya/apps/school-prep/',runScripts:'outside-only'}),w=dom.window;
@@ -11,8 +11,9 @@ async function run(admin,blank=false){
  if(u.pathname.endsWith('/check'))checked.push({task_id:body.task_id,phase:body.phase,done:body.done?1:0});
  if(u.pathname.endsWith('/preferences'))prefs=body.notify_enabled;
  if(u.pathname.endsWith('/confirm'))revision++;
- return {status:200,ok:true,headers:{get:()=> 'application/json'},json:async()=>body?{ok:true}:{admin,groups:[{id:'h',name:'家庭'}],household_id:'h',children:admin?[{id:'child',display_name:'HOME-A'},{id:'other',display_name:'HOME-B'}]:[{id:'child',display_name:'HOME-A'}],selected:'child',today,next_school_day:tomorrow,day:u.searchParams.get('day')||today,plan:blank?null:{revision,is_school_day:1,dismissal:'14:30',tasks},checks:checked,days:[{school_day:tomorrow,is_school_day:1},{school_day:today,is_school_day:1}],summary:{school_days:1,completed:0},notify_enabled:prefs,notifications:[]}};
+ return {status:200,ok:true,headers:{get:()=> 'application/json'},json:async()=>body?{ok:true}:{admin,groups:[{id:'h',name:'家庭'}],household_id:'h',children:admin?[{id:'child',display_name:'HOME-A'},{id:'other',display_name:'HOME-B'}]:[{id:'child',display_name:'HOME-A'}],selected:'child',today,next_school_day:tomorrow,day:u.searchParams.get('day')||today,plan:blank?null:{revision,is_school_day:1,dismissal:'14:30',tasks},checks:checked,days:[{school_day:tomorrow,is_school_day:1},{school_day:today,is_school_day:1}],summary:{school_days:1,completed:0},notify_enabled:prefs,notifications:[],template:{revision:1,labels:['漢字','計算','音読']}}};
  };
+ Object.assign(w,await import(require('node:url').pathToFileURL(path.join(__dirname,'../cloudflare/home-worker/public/apps/school-prep/weekly-core.js')).href));
  w.eval(source);await tick();
  assert.ok(w.document.body.textContent.includes('HOME-A'));assert.equal(w.document.querySelectorAll('img').length,0);
  if(admin){

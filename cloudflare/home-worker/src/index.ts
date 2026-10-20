@@ -481,7 +481,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     if(path==='/api/families'||path.startsWith('/api/families/'))return familiesRoute(request,env,user,body);
     if(path==='/api/school-prep'||path.startsWith('/api/school-prep/')){
       requireValue(await appAllowed(env,user.id,'school-prep'),403,'このアプリは利用できません');
-      return schoolRoute(request,env,user.id,body);
+      return schoolRoute(request,env,user.id,r=>body(r,path==='/api/school-prep/week'?110000:16384));
     }
     if(path==='/api/good-deeds'||path.startsWith('/api/good-deeds/')){
       requireValue(await appAllowed(env,user.id,'good-deeds'),403,'このアプリは利用できません');
@@ -783,7 +783,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
     if(path==='/apps/school-prep')return new Response(null,{status:303,headers:{...headers,Location:'/apps/school-prep/'}});
     const file=path.slice('/apps/school-prep/'.length)||'index.html';
-    requireValue(['index.html','app.js','style.css'].includes(file),404,'見つかりません');
+    requireValue(['index.html','app.js','style.css','weekly-core.js','timetable-link.js'].includes(file),404,'見つかりません');
     const assetUrl=new URL(url);assetUrl.pathname='/apps/school-prep/'+file;
     const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
     const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);

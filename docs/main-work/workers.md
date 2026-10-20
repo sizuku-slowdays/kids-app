@@ -153,3 +153,7 @@ HOMEへ読み取り専用book APIと認証済み静的ページを準備。DBマ
 招待は `home-worker` の `FAMILY_INVITES_ENABLED` が `1` で、双方のWorkerが `multi-family-v1` を返す場合だけ有効。初期は未設定のまま。反映後照合と既存動作確認が済んでから、DashboardのSecretで有効化する。Gitの自動デプロイでSecretは変更しない。
 
 既存のHOME_AUTH/CALENDAR_SERVICE等のService bindingを使用し、新規のbindingやDBは不要。calendar-workerは手貼り運用のため、現在の全文をPCに保存して固定Git版と照合する。[手順](multi-family-20261018.md)。
+
+
+## 2026-10-20 学校テンプレート・週まとめ登録（本番未反映）
+home-worker内で処理。home-dbに0024の2表を追記。Worker/D1/R2/service binding/Cronの増設変更なし。calendar-workerとnotification-center-apiは更新不要。最新バックアップ確認後に既存Git連携で反映する。 [詳細](school-templates-20261020.md)。

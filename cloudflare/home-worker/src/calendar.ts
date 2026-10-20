@@ -39,10 +39,11 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
     }
   }
   if(['POST','PUT'].includes(request.method)){
-    const data=await request.clone().json().catch(()=>null) as {visibility?:unknown;notification_recipient?:string}|null;
-    if(data?.visibility!==undefined || data?.notification_recipient?.startsWith('home') || request.method==='PUT'&&path.startsWith('/calendars/')){
+    const data=await request.clone().json().catch(()=>null) as {visibility?:{subject_user_ids?:unknown};notification_recipient?:string;notify_befores?:unknown}|null;
+    if(data?.notify_befores!==undefined || data?.visibility!==undefined || data?.notification_recipient?.startsWith('home') || request.method==='PUT'&&path.startsWith('/calendars/')){
       const check=await env.CALENDAR_SERVICE.fetch(new Request('https://calendar.internal/home/status',{headers:outgoing}));
-      const state=check.ok?await check.json() as {acl_version?:string;notification_protocol?:string}:null;
+      const state=check.ok?await check.json() as {acl_version?:string;notification_protocol?:string;event_options_protocol?:string}:null;
+      if((data?.notify_befores!==undefined || data?.visibility?.subject_user_ids!==undefined)&&state?.event_options_protocol!=='multi-v1')return Response.json({error:'先にカレンダーWorkerの複数選択対応コードを反映してください'},{status:503});
       if(data?.notification_recipient?.startsWith('home') && state?.notification_protocol!=='home-v1')return Response.json({error:'先にカレンダーWorkerの通知対応コードを反映してください'},{status:503});
       if(state?.acl_version!=='20261011-participants-v1')return Response.json({error:'先にカレンダーWorkerの共有権限コードを反映してください'},{status:503,headers:{'Cache-Control':'private, no-store'}});
     }

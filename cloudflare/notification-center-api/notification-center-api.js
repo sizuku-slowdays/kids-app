@@ -1178,7 +1178,7 @@ async function handleRequest(request, env) {
 
     const p = toJstParts(new Date());
 
-    return json({ ok: true, jst: `${p.dateStr} ${p.timeStr}`, version: 3, home_notification_protocol:'home-v1' }, request, env);
+    return json({ ok: true, jst: `${p.dateStr} ${p.timeStr}`, version: 3, home_notification_protocol:'home-v1',calendar_multi_protocol:'multi-v1' }, request, env);
 
   }
 
@@ -1354,14 +1354,15 @@ async function handleRequest(request, env) {
 
     const title = isHomeNotificationRecipient(body.recipient)?'📅 カレンダーの予定':String(body.title || '家族カレンダー').trim().slice(0, 60);
 
-    const message = isHomeNotificationRecipient(body.recipient)?'予定の時間です':String(body.body || '').slice(0, 200);
+    const message = isHomeNotificationRecipient(body.recipient)?'予定のお知らせです':String(body.body || '').slice(0, 200);
 
     const recipient = pickRecipient(body.recipient);
     if(body.recipient && recipient!==body.recipient)return json({error:'通知先を確認してください'},request,env,400);
 
     const targetUrl = String(body.url || '/kanriapp/calendar.html').slice(0, 300);
 
-    const occurrences = Array.isArray(body.occurrences) ? body.occurrences.slice(0, 500) : [];
+    const occurrences = Array.isArray(body.occurrences) ? body.occurrences : [];
+    if(occurrences.length>3500)return json({error:'通知予約が上限を超えました'},request,env,400);
 
 
 

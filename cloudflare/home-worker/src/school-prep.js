@@ -1,3 +1,4 @@
+import {schoolTemplate,schoolWeekRoute} from './school-weekly.js';
 import {check,id,jstDay,validDay,validatePlan,taskPhaseAllowed,nextSchoolDay} from './school-core.js';
 const reply=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 const rows=async statement=>(await statement.all()).results;
@@ -76,6 +77,7 @@ export async function schoolRoute(request,env,user,readBody){
    await db.prepare('INSERT INTO learning_school_preferences VALUES(?,?,?,?) ON CONFLICT(household_id,user_id) DO UPDATE SET notify_enabled=excluded.notify_enabled,updated_at=excluded.updated_at').bind(h,user,b.notify_enabled?1:0,new Date().toISOString()).run();return reply({ok:true});
   }
   if(!child)return reply({admin,groups,household_id:h,children:[],selected:null,today,day,plan:null,checks:[],days:[],summary:{school_days:0,completed:0,window_size:30}});
+  if(path==='/template'||path==='/week')return await schoolWeekRoute({db,h,child,user,admin,url,path,method,request,readBody,reply});
   if(path==='/confirm'&&method==='POST'){
    check(admin,'確定は保護者が行います',403);const b=await readBody(request);check(!('user_id' in b)&&!('owner' in b),'利用者はHOMEから確認します');const tasks=validatePlan(b);check(b.day===day,'日付を確認してください');
    check(b.source_file_id===undefined||b.source_file_id===null,'画像の読み取りはまだ利用できません');
@@ -111,8 +113,8 @@ export async function schoolRoute(request,env,user,readBody){
    }
    const pref=admin?await db.prepare('SELECT notify_enabled FROM learning_school_preferences WHERE household_id=? AND user_id=?').bind(h,user).first():null;
    const notifications=admin?await rows(db.prepare('SELECT school_day,phase,status,last_reason FROM learning_school_deliveries WHERE household_id=? AND child_id=? AND recipient_id=? ORDER BY created_at DESC LIMIT 10').bind(h,child.id,user)):[];
-   return reply({admin,groups,household_id:h,children,selected:child.id,today,next_school_day:await nextDay(db,h,child.id,today),day,plan:plan?{...plan,tasks:JSON.parse(plan.tasks_json),tasks_json:undefined}:null,checks,days,summary:{school_days:past.length,completed:complete,window_size:30},notify_enabled:!!pref?.notify_enabled,notifications});
+   return reply({admin,groups,household_id:h,children,selected:child.id,today,next_school_day:await nextDay(db,h,child.id,today),day,plan:plan?{...plan,tasks:JSON.parse(plan.tasks_json),tasks_json:undefined}:null,checks,days,summary:{school_days:past.length,completed:complete,window_size:30},notify_enabled:!!pref?.notify_enabled,notifications,template:await schoolTemplate(db,h,child.id)});
   }
   return reply({error:'この操作はできません'},405);
- }catch(e){const status=Number(e.status)||500; if(status>=500)console.error({event:'school_request_failed',reason:/no such table/i.test(String(e))?'missing_table':'unexpected'});return reply({error:status>=500?'保存できませんでした。もう一度お試しください':e.message},status);}
+ }catch(e){const message=String(e);const status=Number(e.status)||(/school (?:template|import) conflict/.test(message)?409:/school (?:template|import) denied/.test(message)?403:500); if(status>=500)console.error({event:'school_request_failed',reason:/no such table/i.test(String(e))?'missing_table':'unexpected'});return reply({error:status>=500?'保存できませんでした。もう一度お試しください':status===409?'別の端末で更新されました。読み直して確認してください':status===403?'この操作は許可されていません':e.message},status);}
 }

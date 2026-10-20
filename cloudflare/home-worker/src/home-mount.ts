@@ -33,6 +33,15 @@ export async function mountedHome(request: Request, dispatch: (request: Request)
   });
   // Installed mama shortcuts retain this start URL; serve HOME there too.
   const homeEntry = path === "/index.html" || path === "/mama.html";
+  if(path==="/timetable.html" && request.method==="GET") {
+    const response=await fetch(request);
+    if(!response.ok || !(response.headers.get("Content-Type")||"").includes("text/html"))return response;
+    const headers=new Headers(response.headers);
+    headers.set("Cache-Control","private, no-store");
+    for(const key of ["Content-Length","Content-Encoding","ETag"])headers.delete(key);
+    const html=(await response.text()).replace("</body>",'<script type="module" src="/wagaya/apps/school-prep/timetable-link.js"></script></body>');
+    return new Response(html,{status:response.status,headers});
+  }
   if (!internal.test(path) && !homeEntry && path !== "/manifest.json") return fetch(request);
   const normalized = new URL(url);
   normalized.pathname = homeEntry ? "/" : path === "/manifest.json" ? "/manifest.webmanifest" : path;

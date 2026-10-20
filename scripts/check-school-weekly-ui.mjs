@@ -31,7 +31,7 @@ try{
  await page.reload();await page.locator('[data-daily-homework]').waitFor();assert.equal(await page.locator('[data-daily-homework]').inputValue(),'音読：\nさんすう：\nかん字：');
  await page.locator('[data-daily-homework]').fill('音読：当日のみ');assert.deepEqual(labels,['音読','さんすう','かん字']);
  const weekly=page.locator('details').filter({has:page.locator('summary',{hasText:'1週間分の宿題をまとめて登録'})});await weekly.locator('summary').click();
- await weekly.getByLabel('文字起こしした1週間分の文章',{exact:true}).fill('連絡事項は未分類\n月曜日\n漢字：10ページ\n火曜：音読：教科書');await weekly.getByRole('button',{name:'曜日に分けて確認する',exact:true}).click();await weekly.locator('.week-day').last().waitFor();
+ await weekly.getByLabel('文字起こしした1週間分の文章',{exact:true}).fill('連絡事項は未分類\n月曜日（19日）\n漢字：10ページ\n火曜日（20日）\n音読：教科書');await weekly.getByRole('button',{name:'曜日に分けて確認する',exact:true}).click();await weekly.locator('.week-day').last().waitFor();
  assert.equal(await weekly.locator('.week-day select').first().inputValue(),'skip');assert.equal(await weekly.getByLabel('未分類（ここに残した文章は保存しません）',{exact:true}).inputValue(),'連絡事項は未分類');
  await weekly.locator('.week-day select').first().selectOption('append');await weekly.getByRole('button',{name:'確認した日をまとめて保存',exact:true}).click();await page.getByText('未分類の文章を日別欄へ移すか、登録しないことを確認してください',{exact:true}).waitFor();assert.equal(saved.length,0);
  await weekly.getByLabel('残った未分類の文章は登録しないことを確認しました',{exact:true}).check();await weekly.getByRole('button',{name:'確認した日をまとめて保存',exact:true}).click();await page.getByText('週まとめ登録：2日分を保存しました。変更のない日はそのままです。',{exact:true}).waitFor();

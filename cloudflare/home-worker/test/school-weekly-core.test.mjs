@@ -16,3 +16,14 @@ test('task reconciliation preserves stable IDs, belongings and duplicate occurre
  const replace=reconcileTasks(old,['B','C'],'replace',()=>String(id++));assert.equal(replace[0].id,'b');assert.equal(replace[2].id,'bag');assert.notEqual(replace[1].id,'a');
  assert.equal(reconcileTasks(old,['A','A'],'append',()=>String(id++)).length,4);
 });
+
+test('OCR weekday followed by parenthesized date is validated against the selected week',()=>{
+ const input=['月曜日（19日）','火曜日（20日）','水曜日（21日）','木曜日（22日）','金曜日（23日）'].map((header,i)=>header+'\n漢字：練習'+i+'\n計算：問題'+i+'\n音読：例文'+i).join('\n');
+ const parsed=parseWeekText(input,'2026-10-19');assert.equal(parsed.unclassified,'');
+ for(let i=0;i<5;i++){assert.equal(parsed.days[i].text.split('\n').length,3);assert.match(parsed.days[i].text,new RegExp('練習'+i));assert.doesNotMatch(parsed.days[i].text,/曜日|19日|20日/);}
+ const wrong=parseWeekText(input,'2026-10-26');assert.ok(wrong.days.every(d=>d.text===''));assert.match(wrong.unclassified,/練習0/);assert.ok(wrong.warnings.length);
+ const other=parseWeekText('月曜日(10/19)：A\n火曜（2026/10/20）：B\n水曜日（22日）\n不一致の後続\n木曜日（22日）：D','2026-10-19');
+ assert.equal(other.days[0].text,'A');assert.equal(other.days[1].text,'B');assert.equal(other.days[2].text,'');assert.equal(other.days[3].text,'D');assert.match(other.unclassified,/不一致の後続/);
+ const boundary=parseWeekText('月曜日（28日）：A\n金曜日（1日）：B','2026-12-28');assert.equal(boundary.days[0].text,'A');assert.equal(boundary.days[4].text,'B');
+ assert.equal(parseWeekText('月曜日（2025/10/19）：別年','2026-10-19').days[0].text,'');
+});

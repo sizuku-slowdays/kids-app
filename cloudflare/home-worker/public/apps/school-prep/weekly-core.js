@@ -25,6 +25,13 @@ export function parseWeekText(input,monday){
   }
   line=line.replace(/\*\*/g,'');
   line=line.replace(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?=\s|[：:]|$)/i,word=>({mo:'月曜',tu:'火曜',we:'水曜',th:'木曜',fr:'金曜',sa:'土曜',su:'日曜'})[word.slice(0,2).toLowerCase()]);
+  // Common OCR form: 月曜日（19日）, 火曜(10/20), 水曜日（2026/10/21）.
+  // Resolve omitted month/year from the selected week, then use the same date check.
+  const suffix=line.match(/^([月火水木金土日])(?:曜日|曜)?\s*[（(]\s*(?:(?:(\d{4})[\/\-])?(\d{1,2})[\/\-])?(\d{1,2})日?\s*[）)]\s*[：:]?\s*([\s\S]*)$/);
+  if(suffix){
+   const target=dates['月火水木金土日'.indexOf(suffix[1])]||dates[0];
+   line=`${suffix[2]||target.slice(0,4)}/${suffix[3]||target.slice(5,7)}/${suffix[4]}(${suffix[1]})：${suffix[5]}`;
+  }
   const match=line.match(/^(?:(\d{4}[\/\-])?(\d{1,2})[\/\-](\d{1,2})\s*)?(?:[（(]([月火水木金土日])(?:曜日|曜)?[）)]|([月火水木金土日])(?:曜日|曜)(?=\s|[：:]|$)|([月火水木金土日])(?=\s*[：:]|$))\s*[：:]?\s*([\s\S]*)$/);
   // Bare single-character weekday headings are accepted only on their own line.
   const bare=/^[月火水木金土日]$/.test(line)?line:null;

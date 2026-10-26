@@ -186,3 +186,8 @@ home-workerの学校準備GETへcheckable_phasesを追加し、画面とPOST /ch
 ## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
 
 おしゃべり専用 wrangler.private-test.jsonc を追加。既定でrelease/登録/招待/URLはOFF、ダミーDB・試験期限0。専用Accessの署名付き本人検証を全経路へ追加。実Worker/D1/R2・既存HOME設定は変更していない。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。
+
+
+## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
+
+新規Worker/D1/R2は各 oshaberi。Worker AccessはこのWorkerのproduction/preview全URLのみ、本人メールのAllowポリシー1件。既存HOMEのWorker/DB/R2/routes/auth変更なし。実DB UUID・AUD・メール・秘密値はローカル設定にのみ渡す。prepare-windows-owner.ps1は固定コミットの取得・構文確認・架空4アカウントと閉じたconfigのローカル準備のみ。Wrangler/Cloudflare APIを呼ばず、Deploy/SQL適用は行わない。

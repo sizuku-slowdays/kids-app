@@ -254,3 +254,8 @@ notify_beforesとsubject_user_idsを予定単位で別保存し、旧notify_befo
 ## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
 
 おしゃべり画像はブラウザ縮小後の固定RGBA→サーバー生成PNG（写真384px/スタンプ256px、metadata chunkなし）へ変更。任意圧縮画像のデコードをWorkerから除く。非公開R2・毎回の写真承認・家庭/トークACLは維持。本人限定テスト用の架空4アカウントseedはオフライン生成のみ。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。
+
+
+## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
+
+本人限定試験は本人のCloudflare Accessに加えアプリ側JWT署名/issuer/AUD/email hash/host/期限を検証。Windows準備は新しい日時別フォルダに架空4アカウント・秘密値・PRIVATE計画を生成。release/登録/招待は0。秘密値をチャット/GitHubへ送らない。試験期限は準備時から7日で、期限切れは拒否。親子承認/利用時間/写真許可は初期閉鎖を維持。

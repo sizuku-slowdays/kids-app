@@ -347,3 +347,8 @@ HOME正本338aee5をGitHubで再取得し、AGENTS/台帳/既存wranglerを調�
 ## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
 
 おしゃべりの旧JS画像codecを開発ベースラインへ移し、新PNG生成、Access全経路gate、期限/本人/host制限、オフライン試験seed・再取込拒否を準備。npm test 10群・ブラウザ390/768/1280幅と写真承認一連を合成データで確認。画像処理単体Node CPU p95約11.77ms、Cloudflare CPU/実機は未確認。ブランチ feature/oshaberi-independent-20261026 / Draft PR #18。本番反映なし。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。
+
+
+## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
+
+GitHubで独立ブランチ02eec04とHOME正本338aee5を再取得し、HOME正本に変更がないことを確認。利用者が新oshaberiリソースとAccessを作成、本人ログイン後Hello Worldを確認。準備専用PowerShellを追加（Windows実行は利用者待ち）。実リソースへのアプリDeploy/SQL適用/実CPU測定はまだ未実施。秘密値/実名/実DB UUID/AUDを公開資料へ記載しない。

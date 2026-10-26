@@ -230,3 +230,8 @@
 ## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
 
 旧画像codecのFree CPU課題へ軽量PNG方式を実装、安定稼働の確定はまだ。新規の本人限定テストWorkerで全処理CPU・cold/最大画像/失敗再試行、実iPhone/Android/PWA、HEIC選択と384px判読性、Access認証を確認する。既存アカウントの共有無料枠使用量も未確認。URL/実リソース未作成、外部招待は無効。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。
+
+
+## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
+
+専用リソースの作成とAccess本人認証は確認済み。残作業：Windowsローカル準備、現行空DBとR2/Access設定の再照合、専用DB SQL/seed適用とSecrets設定、本人限定アプリDeploy、未認証拒否の実HTTP確認、実iPhone/Android写真承認とCloudflare Free CPU/error測定。外部招待・一般公開・有料化は未承認。既存HOMEは不変更。

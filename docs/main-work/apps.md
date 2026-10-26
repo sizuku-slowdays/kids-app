@@ -308,3 +308,8 @@ WindowsでのPC内テストがファイルパス不正で停止。アプリのDe
 ## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
 
 本人限定Cloudflare試験へ切替。Windowsの実行テストは利用者指示で停止。公開アプリ/外部招待は無効のまま。専用WorkerのGit接続準備を追加したが、接続・アプリDeploy・架空seedのremote適用は未実施。
+
+
+## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
+
+Cloudflare Workers Buildsが利用者報告とGitHubチェックで成功。本人限定アプリへの到達時、追加のJWT本人確認で403が発生。一般公開はしていない。専用DBの初期SQL/架空4アカウントはまだ未取込。

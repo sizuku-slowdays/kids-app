@@ -206,3 +206,8 @@ Cloudflare Access未認証リダイレクトと専用D1空確認は利用者の�
 ## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
 
 専用oshaberiに限りWorkers Buildsで独立featureブランチ/root cloudflare/oshaberiを使用する手順を準備。既定configのnameを専用Worker名へ合わせたが、既定URL/release/登録/招待0とダミーDBを維持。実試験用configは引数から別生成し、既存HOMEの設定/リソースへ触れない。
+
+
+## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
+
+Cloudflare Builds 6cd733c6-04aa-4ab2-abe6-cfa37ff1f1ef成功、実行コミット4d21f76、version 598b8879-a03a-408e-8a28-285ecb1ed506をGitHubチェックで確認。新Worker oshaberiのみ。既存HOME・SQL・R2・招待に変更なし。

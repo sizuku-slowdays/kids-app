@@ -367,3 +367,8 @@ GitHubで独立ブランチ02eec04とHOME正本338aee5を再取得し、HOME正�
 ## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
 
 利用者からWindowsのテストでspawn EPERMと保守会社シールド発動の報告。検知内容・因果関係は未確認。利用者の指示でPC内診断/テストを停止し、シールドに変更せずCloudflare本人限定実行へ切替。専用Git Builds向けconfig生成・回帰確認を追加。開発環境でnpm test 12件合格、Cloudflare実測と実機は未実施。
+
+
+## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
+
+2026-10-27 JST：本人限定アプリの初回Cloudflare Build成功を確認。利用者から追加本人gateの403報告。安全な段階コードを追加し、アプリ側全経路gate・署名・issuer・audience・期限・owner照合を緩めず原因調査。DB初期化前で既存HOME変更なし。

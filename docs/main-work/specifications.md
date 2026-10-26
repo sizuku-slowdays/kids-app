@@ -274,3 +274,8 @@ Node file URLをOSファイルパスへ変換するときはfileURLToPathを使�
 ## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
 
 configure-cloud-owner.mjsは専用origin/Access issuer/AUD/8日以内の明示的期限/専用DB UUIDを検証して.owner-cloud.jsoncを生成。本人限定gateと毎回の写真承認は維持。config生成だけではAPI/Deploy/DB変更を行わない。runtime Secretsと外部公開の制限を手順に明記。
+
+
+## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
+
+追加本人gateの全検証条件は維持したまま、失敗段階の固定確認コードを403本文に付与。ログはevent/reasonのみ、メール・JWT・claims・hash・例外本文を記録しない。OWNER/AUDIENCEなどの段階を識別して誤設定を解消するための診断。

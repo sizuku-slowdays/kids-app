@@ -182,3 +182,7 @@ home-workerの学校準備GETへcheckable_phasesを追加し、画面とPOST /ch
 
 新規Worker案 oshaberi-development-only、CHAT_DB/CHAT_FILES/ASSETSの専用bindingのみ。既存home-worker等の設定・実ID・routes・Cron・Service bindingは変更なし。workers_dev/previewとrelease/登録/招待フラグOFF、ゼロDB UUIDでローカル用。実リソース作成・本番Deploy・cleanup Cron有効化は未実施。
 
+
+## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
+
+おしゃべり専用 wrangler.private-test.jsonc を追加。既定でrelease/登録/招待/URLはOFF、ダミーDB・試験期限0。専用Accessの署名付き本人検証を全経路へ追加。実Worker/D1/R2・既存HOME設定は変更していない。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。

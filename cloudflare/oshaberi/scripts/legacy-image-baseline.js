@@ -1,6 +1,6 @@
 import jpeg from 'jpeg-js';
 import {PNG} from 'pngjs';
-import {ensure} from './security.js';
+import {ensure} from '../src/security.js';
 // Re-encode decoded pixels; never copy EXIF, PNG text chunks or original bytes to R2.
 export function sanitizeImage(bytes,kind){
  ensure(bytes.length<=2*1024*1024,'画像は2MBまでです',413);

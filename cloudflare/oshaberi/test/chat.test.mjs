@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
-import jpeg from 'jpeg-js';
+import {packPixels,PIXEL_MIME} from '../src/pixel-images.js';
 import {CONSENT_VERSION,hash} from '../src/security.js';
 const password='test-password-only-2026';
 async function fixture(){
@@ -62,8 +62,8 @@ test('separate guardian/child accounts, bilateral invitation, scoped chat, unrea
  assert.equal((await call(url+'/messages',ca,'POST',payload,{Origin:'https://other.test'})).status,403);
  assert.equal((await call(url+'/messages',ca,'POST',payload,{'X-Oshaberi':''})).status,403);
  assert.equal((await call(url+'/messages',ca,'POST',{kind:'photo',nonce:crypto.randomUUID()})).status,400,'no direct photo bypass');
- const pixels={width:4,height:4,data:Buffer.alloc(4*4*4,255)},jpg=jpeg.encode(pixels,80).data;
- async function upload(kind,talkId){const r=await mf.dispatchFetch('https://chat.test/api/media?'+new URLSearchParams({kind,label:'テスト画像',...(talkId?{talk:talkId}:{})}),{method:'POST',headers:{Cookie:ca.cookie,Origin:'https://chat.test','X-Oshaberi':'1','Content-Type':'image/jpeg'},body:jpg});assert.equal(r.status,200,await r.clone().text());return r.json();}
+ const pixels={width:4,height:4,data:Buffer.alloc(4*4*4,255)},jpg=packPixels(4,4,pixels.data);
+ async function upload(kind,talkId){const r=await mf.dispatchFetch('https://chat.test/api/media?'+new URLSearchParams({kind,label:'テスト画像',...(talkId?{talk:talkId}:{})}),{method:'POST',headers:{Cookie:ca.cookie,Origin:'https://chat.test','X-Oshaberi':'1','Content-Type':PIXEL_MIME},body:jpg});assert.equal(r.status,200,await r.clone().text());return r.json();}
  const photo=await upload('photo',friend.id);
  assert.equal((await call('/media/'+photo.id,cb)).status,404);
  assert.equal((await call('/media/'+photo.id+'?child='+cb.id,pb)).status,404);

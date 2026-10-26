@@ -3,3 +3,5 @@ node_modules/
 .wrangler/
 .dev.vars
 *.sql.backup
+*.PRIVATE.*
+.private-test-config.jsonc

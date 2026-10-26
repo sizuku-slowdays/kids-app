@@ -2,7 +2,7 @@
 
 HOMEとは別のWorker・D1・非公開R2で動く、保護者見守り型の1対1メッセージアプリ。**本番未公開・招待未有効化。既存HOME/DBへの変更なし。**
 
-[設計・DB・権限・保存期間・公開ゲート](docs/design.md) / [検証と残作業](docs/verification.md)
+[設計・DB・権限・保存期間・公開ゲート](docs/design.md) / [検証と残作業](docs/verification.md) / [無料画像方式・本人だけのスマホ試験](docs/free-images-private-test.md)
 
 ## 開発だけ実行
 

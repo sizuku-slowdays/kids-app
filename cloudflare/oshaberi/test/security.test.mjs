@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import jpeg from 'jpeg-js';
 import {PNG} from 'pngjs';
-import {sanitizeImage} from '../src/images.js';
+import {sanitizeImage} from '../scripts/legacy-image-baseline.js';
 import {timeAllowed,validateSchedule,same,passwordHash} from '../src/security.js';
 test('server-side JPEG/PNG decoding removes metadata and rejects unsafe files and dimensions',()=>{
  const raw=jpeg.encode({width:2,height:2,data:Buffer.alloc(16,255)},80).data;

@@ -1,5 +1,6 @@
 import {ensure,uid,token,hash,passwordHash,same,credentials,alias,validateSchedule,timeAllowed,body,limitedBytes,quota,DAY,CONSENT_VERSION,STANDARD_STAMPS} from './security.js';
-import {sanitizeImage} from './images.js';
+import {privateTestGate} from './private-test.js';
+import {pixelsToPng,PIXEL_MIME,MAX_PIXEL_BYTES} from './pixel-images.js';
 const json=(value,status=200,headers={})=>Response.json(value,{status,headers:{'Cache-Control':'no-store',...headers}});
 const all=async statement=>(await statement.all()).results;
 const record=(db,actor,action,target)=>db.prepare('INSERT INTO audit_events VALUES(?,?,?,?,?)').bind(uid(),actor,action,target,Date.now());
@@ -32,6 +33,7 @@ async function mediaAccess(db,a,m,requestedChild){
  ensure(false,'画像を表示できません',404);
 }
 async function route(req,env){
+ await privateTestGate(req,env);
  const db=env.CHAT_DB,u=new URL(req.url),p=u.pathname,method=req.method;
  ensure(env.RELEASE_ENABLED==='1','開発準備中です。本番公開はまだ行っていません。',503);
  if(!p.startsWith('/api/')&&!p.startsWith('/media/'))return env.ASSETS.fetch(req);
@@ -78,7 +80,7 @@ async function route(req,env){
    let valid=false;try{new Intl.DateTimeFormat('en',{timeZone:b.timezone}).format();valid=true;}catch{}ensure(valid,'タイムゾーンを確認してください');const schedule=validateSchedule(b.schedule);
    const r=await db.batch([db.prepare('UPDATE child_settings SET paused=?,photos_enabled=?,timezone=?,schedule_json=?,revision=revision+1 WHERE child_id=? AND revision=?').bind(+b.paused,+b.photos_enabled,b.timezone,JSON.stringify(schedule),child,b.revision),record(db,a.id,'child.settings',child)]);ensure(r[0].meta.changes===1,'設定が変わりました。読み直してください',409);return json({ok:true});
   }
-  if(op==='password'&&method==='POST'){const b=await body(req);credentials({login:'dummy',password:b.password});const salt=token();await db.batch([db.prepare('UPDATE accounts SET salt=?,password_hash=? WHERE id=?').bind(salt,await passwordHash(b.password,salt),child),db.prepare('UPDATE sessions SET revoked=1 WHERE account_id=?').bind(child),db.prepare("UPDATE child_settings SET paused=1,photos_enabled=0,schedule_json='[[],[],[],[],[],[],[]]',revision=revision+1 WHERE child_id=?").bind(child),record(db,a.id,'child.password_reset',child)]);return json({ok:true});}
+  if(op==='password'&&method==='POST'){const b=await body(req);credentials({login:'dummy',password:b.password});const salt=token();await db.batch([db.prepare('UPDATE accounts SET salt=?,password_hash=? WHERE id=?').bind(salt,await passwordHash(b.password,salt),child),db.prepare('UPDATE sessions SET revoked=1 WHERE account_id=?').bind(child),record(db,a.id,'child.password_reset',child)]);return json({ok:true});}
   if(op==='sessions'&&method==='GET')return json({sessions:await all(db.prepare('SELECT id,device,created_at,expires_at,revoked FROM sessions WHERE account_id=? ORDER BY created_at DESC').bind(child))});
   if(op==='sessions'&&method==='DELETE'){const b=await body(req);await db.batch([db.prepare('UPDATE sessions SET revoked=1 WHERE id=? AND account_id=?').bind(b.session_id,child),record(db,a.id,'session.revoked',b.session_id)]);return json({ok:true});}
   if(op==='delete'&&method==='POST'){const b=await body(req);ensure(b.confirm===true,'削除の確認が必要です');await requirePassword(db,a,b.password);await eraseChild(db,a,child);return json({ok:true});}
@@ -141,11 +143,11 @@ async function route(req,env){
  if(p==='/api/media'&&method==='POST'){
   ensure(a.role==='child','子どもの画面から登録してください',403);const s=await childAvailable(db,a.id),kind=u.searchParams.get('kind');ensure(['photo','stamp'].includes(kind),'画像の種類を確認してください');
   const friendship=u.searchParams.get('talk');if(kind==='photo'){ensure(s.photos_enabled,'写真はおうちの人が許可してから使えます',403);await conversation(db,a,friendship);}
-  await quota(db,'upload:'+a.id,10,DAY);ensure(['image/jpeg','image/png'].includes(req.headers.get('Content-Type')),'JPEGかPNGを選んでください');
-  const normalized=sanitizeImage(await limitedBytes(req,2*1024*1024),kind),id=uid(),key='private/'+uid()+'.jpg',label=alias(u.searchParams.get('label')||'画像');
+  await quota(db,'upload:'+a.id,10,DAY);ensure(req.headers.get('Content-Type')===PIXEL_MIME,'写真を選び直してください。安全な画像データに変換します');
+  const normalized=pixelsToPng(await limitedBytes(req,MAX_PIXEL_BYTES),kind),id=uid(),key='private/'+uid()+'.png',label=alias(u.searchParams.get('label')||'画像');
   // Pending row precedes R2 write; failure remains inaccessible and is collected by cleanup.
   await db.prepare('INSERT INTO media VALUES(?,?,?,?,?,?,\'pending\',?,?,?,?,?,NULL)').bind(id,a.id,kind==='photo'?friendship:null,kind,label,key,normalized.width,normalized.height,normalized.bytes.length,Date.now(),Date.now()+3*DAY).run();
-  try{await env.CHAT_FILES.put(key,normalized.bytes,{httpMetadata:{contentType:'image/jpeg'}});}catch{await db.prepare("UPDATE media SET status='deleted',expires_at=0 WHERE id=?").bind(id).run();ensure(false,'画像を保存できませんでした。もう一度ためしてください',503);}return json({id,status:'pending'});
+  try{await env.CHAT_FILES.put(key,normalized.bytes,{httpMetadata:{contentType:'image/png'}});}catch{await db.prepare("UPDATE media SET status='deleted',expires_at=0 WHERE id=?").bind(id).run();ensure(false,'画像を保存できませんでした。もう一度ためしてください',503);}return json({id,status:'pending'});
  }
  if(p==='/api/media'&&method==='GET'){
   const child=a.role==='child'?a.id:u.searchParams.get('child');if(a.role==='guardian')await manages(db,a,child);else await childAvailable(db,child);
@@ -166,7 +168,7 @@ async function route(req,env){
  }
  m=p.match(/^\/media\/([^/]+)$/);if(m&&method==='GET'){
   const media=await db.prepare('SELECT * FROM media WHERE id=?').bind(m[1]).first();await mediaAccess(db,a,media,u.searchParams.get('child'));
-  const object=await env.CHAT_FILES.get(media.object_key);ensure(object,'画像がありません',404);return new Response(object.body,{headers:{'Content-Type':'image/jpeg','Cache-Control':'private, no-store','Content-Disposition':'inline; filename="image.jpg"','X-Content-Type-Options':'nosniff'}});
+  const object=await env.CHAT_FILES.get(media.object_key);ensure(object,'画像がありません',404);return new Response(object.body,{headers:{'Content-Type':object.httpMetadata?.contentType==='image/png'?'image/png':'image/jpeg','Cache-Control':'private, no-store','Content-Disposition':'inline; filename="image.jpg"','X-Content-Type-Options':'nosniff'}});
  }
  if(p==='/api/audit'&&method==='GET'){guardian(a);return json({events:await all(db.prepare('SELECT action,target_id,created_at FROM audit_events WHERE actor_id=? ORDER BY created_at DESC LIMIT 100').bind(a.id))});}
  return json({error:'見つかりません'},404);
@@ -194,6 +196,6 @@ export async function cleanup(env){
 
 }
 export default {
- async fetch(req,env){let response;try{response=await route(req,env);}catch(e){const status=Number(e.status)||500;if(status>=500)console.error({event:'oshaberi_request_failed',reason:'internal'});response=json({error:status>=500?'保存できませんでした。もう一度ためしてください':e.message},status);}const headers=new Headers(response.headers);headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','no-referrer');headers.set('X-Frame-Options','DENY');headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=()');return new Response(response.body,{status:response.status,headers});},
+ async fetch(req,env){let response;try{response=await route(req,env);}catch(e){const status=Number(e.status)||500;if(status>=500)console.error({event:'oshaberi_request_failed',reason:'internal'});response=json({error:status>=500?'保存できませんでした。もう一度ためしてください':e.message},status);}const headers=new Headers(response.headers);if(env.PRIVATE_TEST_MODE==='1'){headers.set('Cache-Control','no-store');headers.set('X-Robots-Tag','noindex, nofollow, noarchive');}headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','no-referrer');headers.set('X-Frame-Options','DENY');headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=()');return new Response(response.body,{status:response.status,headers});},
  async scheduled(_event,env){if(env.RELEASE_ENABLED==='1')await cleanup(env);}
 };

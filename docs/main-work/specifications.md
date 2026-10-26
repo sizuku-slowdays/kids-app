@@ -250,3 +250,7 @@ notify_beforesとsubject_user_idsを予定単位で別保存し、旧notify_befo
 
 おしゃべりはHOME cookie・認証・DB/R2と分離。guardian_childrenによる本人対応、双方承認後のfriendshipsだけ閲覧/送信、保護者GETは既読に影響しない。写真は非公開pending→自分の保護者承認→message発行。画像はサーバー再生成、期限・失効・R2配信をAPI認可。時間/レート/削除/復旧を実装。 [設計・15表・権限・保存期間](../../cloudflare/oshaberi/docs/design.md)。
 
+
+## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
+
+おしゃべり画像はブラウザ縮小後の固定RGBA→サーバー生成PNG（写真384px/スタンプ256px、metadata chunkなし）へ変更。任意圧縮画像のデコードをWorkerから除く。非公開R2・毎回の写真承認・家庭/トークACLは維持。本人限定テスト用の架空4アカウントseedはオフライン生成のみ。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。

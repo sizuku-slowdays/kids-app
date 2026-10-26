@@ -1,0 +1,17 @@
+{
+ "$schema":"node_modules/wrangler/config-schema.json",
+ "name":"oshaberi-owner-test", "main":"src/index.js",
+ "compatibility_date":"2026-10-01", "compatibility_flags":["nodejs_compat"],
+ "workers_dev":false, "preview_urls":false,
+ "assets":{"directory":"public","binding":"ASSETS","run_worker_first":true},
+ "vars":{
+  "RELEASE_ENABLED":"0", "REGISTRATION_ENABLED":"0", "INVITATIONS_ENABLED":"0",
+  "PRIVATE_TEST_MODE":"1", "PRIVATE_TEST_ORIGIN":"https://NOT-CONFIGURED.invalid",
+  "ACCESS_ISSUER":"", "ACCESS_AUD":"", "TEST_EXPIRES_AT":"0"
+ },
+ "d1_databases":[{"binding":"CHAT_DB","database_name":"oshaberi-owner-test","database_id":"00000000-0000-0000-0000-000000000000","migrations_dir":"migrations"}],
+ "r2_buckets":[{"binding":"CHAT_FILES","bucket_name":"oshaberi-owner-test"}]
+ // Owner approval required before provisioning or enabling URL.
+ // Secrets: RATE_SECRET, TEST_OWNER_EMAIL_SHA256.
+ // Access allow-policy: owner identity only, this Worker only, never all Workers.
+}

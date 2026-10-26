@@ -343,3 +343,7 @@ HOME正本02a53ddを再取得して対象ソースとローカルの一致を確
 
 HOME正本338aee5をGitHubで再取得し、AGENTS/台帳/既存wranglerを調査。独立フォルダのみ新規実装し、既存HOME runtime/config/migrations/public一覧には変更なし。新D1 SQLはローカル専用。5テスト群と実Worker/D1/R2を使う合成ブラウザ試験、390/768/1280幅、双方承認・他人ID拒否・親既読不変・画像承認/配信/失効・期限削除を検証。npm本番依存audit報告0。設計・運用ゲート・ライセンス同梱。本番変更/実招待送付/費用発生操作なし。
 
+
+## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
+
+おしゃべりの旧JS画像codecを開発ベースラインへ移し、新PNG生成、Access全経路gate、期限/本人/host制限、オフライン試験seed・再取込拒否を準備。npm test 10群・ブラウザ390/768/1280幅と写真承認一連を合成データで確認。画像処理単体Node CPU p95約11.77ms、Cloudflare CPU/実機は未確認。ブランチ feature/oshaberi-independent-20261026 / Draft PR #18。本番反映なし。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。

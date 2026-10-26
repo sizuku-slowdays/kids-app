@@ -226,3 +226,7 @@
 
 おしゃべり：独立ローカル開発版、公開/招待有効化は利用者確認待ち。実iPhone/Android/PWA、Cloudflare画像CPU/メモリ、ドメイン/運営者・窓口/保存期間・保護者同意の最終確認、専用D1/R2/Worker作成とbackup/restore/Cron削除の実運用確認を残す。合成1200x900画像はNode CPU約251msでFreeの10ms内とは確認できず、安全処理を省略して公開しない。既存HOME変更なし。 [検証・残作業](../../cloudflare/oshaberi/docs/verification.md)。
 
+
+## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
+
+旧画像codecのFree CPU課題へ軽量PNG方式を実装、安定稼働の確定はまだ。新規の本人限定テストWorkerで全処理CPU・cold/最大画像/失敗再試行、実iPhone/Android/PWA、HEIC選択と384px判読性、Access認証を確認する。既存アカウントの共有無料枠使用量も未確認。URL/実リソース未作成、外部招待は無効。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。

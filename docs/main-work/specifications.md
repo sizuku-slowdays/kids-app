@@ -259,3 +259,8 @@ notify_beforesとsubject_user_idsを予定単位で別保存し、旧notify_befo
 ## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
 
 本人限定試験は本人のCloudflare Accessに加えアプリ側JWT署名/issuer/AUD/email hash/host/期限を検証。Windows準備は新しい日時別フォルダに架空4アカウント・秘密値・PRIVATE計画を生成。release/登録/招待は0。秘密値をチャット/GitHubへ送らない。試験期限は準備時から7日で、期限切れは拒否。親子承認/利用時間/写真許可は初期閉鎖を維持。
+
+
+## 2026-10-26 おしゃべり：読み取り専用導入前確認
+
+Windows確認はPRIVATE計画と閉じたconfigを照合し、route/services/triggers混入・期限切れ・専用binding不一致を拒否。依存導入/ローカル試験中はプロセス内のCloudflare認証環境変数を一時的に外し、成功/失敗後に復元する。秘密値を出力しない。npm ci --ignore-scriptsとnpm test（buildはdry-run）を用いる。

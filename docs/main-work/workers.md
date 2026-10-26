@@ -191,3 +191,8 @@ home-workerの学校準備GETへcheckable_phasesを追加し、画面とPOST /ch
 ## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
 
 新規Worker/D1/R2は各 oshaberi。Worker AccessはこのWorkerのproduction/preview全URLのみ、本人メールのAllowポリシー1件。既存HOMEのWorker/DB/R2/routes/auth変更なし。実DB UUID・AUD・メール・秘密値はローカル設定にのみ渡す。prepare-windows-owner.ps1は固定コミットの取得・構文確認・架空4アカウントと閉じたconfigのローカル準備のみ。Wrangler/Cloudflare APIを呼ばず、Deploy/SQL適用は行わない。
+
+
+## 2026-10-26 おしゃべり：読み取り専用導入前確認
+
+check-windows-owner.ps1は指定専用D1の名前/UUIDをGET照合した後、sqlite_masterへSELECT COUNTのみ実行。既存HOMEのDBには問い合わせない。別のHTTPクライアントでCookieなしAccessリダイレクトを検証する。R2 API/Worker変更/SQL適用/Deployなし。

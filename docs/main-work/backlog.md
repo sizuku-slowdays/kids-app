@@ -235,3 +235,8 @@
 ## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
 
 専用リソースの作成とAccess本人認証は確認済み。残作業：Windowsローカル準備、現行空DBとR2/Access設定の再照合、専用DB SQL/seed適用とSecrets設定、本人限定アプリDeploy、未認証拒否の実HTTP確認、実iPhone/Android写真承認とCloudflare Free CPU/error測定。外部招待・一般公開・有料化は未承認。既存HOMEは不変更。
+
+
+## 2026-10-26 おしゃべり：読み取り専用導入前確認
+
+次段階のWindows確認結果待ち。R2 APIの非公開確認とWorker APIへの更新権限はこの確認では取得しない。専用D1空確認/匿名Access拒否/ローカル試験成功後に、専用DBへの安全なSQL適用と本人限定Deploy手順を進める。実Free CPU/実機は未確認。

@@ -352,3 +352,8 @@ HOME正本338aee5をGitHubで再取得し、AGENTS/台帳/既存wranglerを調�
 ## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
 
 GitHubで独立ブランチ02eec04とHOME正本338aee5を再取得し、HOME正本に変更がないことを確認。利用者が新oshaberiリソースとAccessを作成、本人ログイン後Hello Worldを確認。準備専用PowerShellを追加（Windows実行は利用者待ち）。実リソースへのアプリDeploy/SQL適用/実CPU測定はまだ未実施。秘密値/実名/実DB UUID/AUDを公開資料へ記載しない。
+
+
+## 2026-10-26 おしゃべり：読み取り専用導入前確認
+
+利用者よりPC内準備RESULT: LOCAL PREPARATION ALL OKを受領。続く読み取り専用Cloudflare確認とローカル依存/ビルド/試験をまとめたcheck-windows-owner.ps1を独立ブランチに追加。Windows実行結果は利用者待ち。現段階でDeploy・schema・seed・招待・HOME変更なし。

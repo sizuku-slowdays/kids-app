@@ -372,3 +372,8 @@ GitHubで独立ブランチ02eec04とHOME正本338aee5を再取得し、HOME正�
 ## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
 
 2026-10-27 JST：本人限定アプリの初回Cloudflare Build成功を確認。利用者から追加本人gateの403報告。安全な段階コードを追加し、アプリ側全経路gate・署名・issuer・audience・期限・owner照合を緩めず原因調査。DB初期化前で既存HOME変更なし。
+
+
+## 2026-10-27 おしゃべり：Workers公開鍵取得修正
+
+2026-10-27 JST：KEY_FETCH報告から公開鍵の公開endpointは200/RSA2鍵であることを確認。Workersではredirect:errorをRequest生成時に拒否する仕様が原因と特定しmanualへ修正。テストで正常取得時だけasset到達し、転送/HTTP失敗時は未到達を確認。DB取込は未実施。

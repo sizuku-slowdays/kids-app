@@ -4,7 +4,8 @@ import {ensure,hash} from './security.js';
 const keys=new Map(),documents=new Map();
 async function accessKeys(issuer){
  const cached=documents.get(issuer);if(cached&&cached.until>Date.now())return cached.promise;
- const promise=(async()=>{const r=await fetch(issuer+'/cdn-cgi/access/certs',{redirect:'error',signal:AbortSignal.timeout(5000)});ensure(r.ok,'認証鍵を確認できません',403);const text=await r.text();ensure(text.length<64000,'認証鍵を確認できません',403);const document=JSON.parse(text);ensure(Array.isArray(document.keys)&&document.keys.length<=10);return document;})();
+ // Workers supports manual/follow, not redirect:error. Reject redirects through r.ok.
+ const promise=(async()=>{const r=await fetch(issuer+'/cdn-cgi/access/certs',{redirect:'manual',signal:AbortSignal.timeout(5000)});ensure(r.ok,'認証鍵を確認できません',403);const text=await r.text();ensure(text.length<64000,'認証鍵を確認できません',403);const document=JSON.parse(text);ensure(Array.isArray(document.keys)&&document.keys.length<=10);return document;})();
  documents.set(issuer,{until:Date.now()+60000,promise});return promise;
 }
 const bytes=s=>{ensure(typeof s==='string'&&/^[A-Za-z0-9_-]+$/.test(s),'テスト環境の認証が必要です',403);return Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));};

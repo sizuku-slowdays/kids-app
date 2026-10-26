@@ -211,3 +211,8 @@ Cloudflare Access未認証リダイレクトと専用D1空確認は利用者の�
 ## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
 
 Cloudflare Builds 6cd733c6-04aa-4ab2-abe6-cfa37ff1f1ef成功、実行コミット4d21f76、version 598b8879-a03a-408e-8a28-285ecb1ed506をGitHubチェックで確認。新Worker oshaberiのみ。既存HOME・SQL・R2・招待に変更なし。
+
+
+## 2026-10-27 おしゃべり：Workers公開鍵取得修正
+
+新Worker oshaberiの公開鍵取得オプションのみ修正。Cloudflare公式Request仕様でredirect:error非対応を確認。URL・Access設定・DB・R2・登録/招待・既存HOMEの変更なし。

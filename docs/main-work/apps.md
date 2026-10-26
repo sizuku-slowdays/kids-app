@@ -313,3 +313,8 @@ WindowsでのPC内テストがファイルパス不正で停止。アプリのDe
 ## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
 
 Cloudflare Workers Buildsが利用者報告とGitHubチェックで成功。本人限定アプリへの到達時、追加のJWT本人確認で403が発生。一般公開はしていない。専用DBの初期SQL/架空4アカウントはまだ未取込。
+
+
+## 2026-10-27 おしゃべり：Workers公開鍵取得修正
+
+本人gateのKEY_FETCHはWorkers非対応redirect:errorが原因と特定。manualへ変更し、正常な公開鍵取得を通しつつリダイレクト/HTTP失敗時は拒否する。Cloudflare反映後の本人再確認待ち。

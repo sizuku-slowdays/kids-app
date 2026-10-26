@@ -279,3 +279,8 @@ configure-cloud-owner.mjsは専用origin/Access issuer/AUD/8日以内の明示�
 ## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
 
 追加本人gateの全検証条件は維持したまま、失敗段階の固定確認コードを403本文に付与。ログはevent/reasonのみ、メール・JWT・claims・hash・例外本文を記録しない。OWNER/AUDIENCEなどの段階を識別して誤設定を解消するための診断。
+
+
+## 2026-10-27 おしゃべり：Workers公開鍵取得修正
+
+固定issuerの公開鍵取得をredirect:manualとし、2xx以外を拒否する。転送先へ自動追従しない。署名/issuer/audience/期限/本人ハッシュの検証は維持。実Workers runtimeで取得成功と302/503拒否を確認する回帰試験を追加。

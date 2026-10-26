@@ -1,6 +1,6 @@
 {
  "$schema":"node_modules/wrangler/config-schema.json",
- "name":"oshaberi-development-only", "main":"src/index.js",
+ "name":"oshaberi", "main":"src/index.js",
  "compatibility_date":"2026-10-01", "compatibility_flags":["nodejs_compat"],
  "workers_dev":false, "preview_urls":false,
  "assets":{"directory":"public","binding":"ASSETS","run_worker_first":true},

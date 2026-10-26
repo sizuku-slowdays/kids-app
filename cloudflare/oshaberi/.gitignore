@@ -5,3 +5,4 @@ node_modules/
 *.sql.backup
 *.PRIVATE.*
 .private-test-config.jsonc
+.owner-cloud.jsonc

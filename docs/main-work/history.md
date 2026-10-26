@@ -362,3 +362,8 @@ GitHubで独立ブランチ02eec04とHOME正本338aee5を再取得し、HOME正�
 ## 2026-10-26 おしゃべり：Windowsテストパス修正
 
 利用者のWindowsエラー C:\\C:\\Users... ENOENTで原因を特定。chat/release-guard/owner-fixture/browser-qaのローカルファイルURL処理をfileURLToPathへ修正。Windows/POSIXのURL変換回帰テストを追加。確認スクリプトへSkipInstallを追加。アプリ本体と本番データの変更なし。
+
+
+## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
+
+利用者からWindowsのテストでspawn EPERMと保守会社シールド発動の報告。検知内容・因果関係は未確認。利用者の指示でPC内診断/テストを停止し、シールドに変更せずCloudflare本人限定実行へ切替。専用Git Builds向けconfig生成・回帰確認を追加。開発環境でnpm test 12件合格、Cloudflare実測と実機は未実施。

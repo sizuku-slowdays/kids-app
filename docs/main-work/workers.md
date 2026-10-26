@@ -201,3 +201,8 @@ check-windows-owner.ps1は指定専用D1の名前/UUIDをGET照合した後、sq
 ## 2026-10-26 おしゃべり：Windowsテストパス修正
 
 Cloudflare Access未認証リダイレクトと専用D1空確認は利用者の確認スクリプトで通過、ローカルテスト段階で停止。Worker runtime/Bindings/R2/DB schemaに変更なし。再試験はSkipInstallで導入済み依存を使用可能。
+
+
+## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
+
+専用oshaberiに限りWorkers Buildsで独立featureブランチ/root cloudflare/oshaberiを使用する手順を準備。既定configのnameを専用Worker名へ合わせたが、既定URL/release/登録/招待0とダミーDBを維持。実試験用configは引数から別生成し、既存HOMEの設定/リソースへ触れない。

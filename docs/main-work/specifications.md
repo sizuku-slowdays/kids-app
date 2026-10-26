@@ -269,3 +269,8 @@ Windows確認はPRIVATE計画と閉じたconfigを照合し、route/services/tri
 ## 2026-10-26 おしゃべり：Windowsテストパス修正
 
 Node file URLをOSファイルパスへ変換するときはfileURLToPathを使用。URL.pathnameをMiniflare scriptPathやexecFileSyncへ渡さない。HTTP URLのpathname処理には変更なし。ドライブ文字・空白・日本語の回帰確認を追加。
+
+
+## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
+
+configure-cloud-owner.mjsは専用origin/Access issuer/AUD/8日以内の明示的期限/専用DB UUIDを検証して.owner-cloud.jsoncを生成。本人限定gateと毎回の写真承認は維持。config生成だけではAPI/Deploy/DB変更を行わない。runtime Secretsと外部公開の制限を手順に明記。

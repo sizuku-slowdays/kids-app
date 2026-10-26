@@ -176,3 +176,9 @@ calendar-workerにoptions sidecar、notification-center-apiに予約上限3500�
 ## 2026-10-21 学校じゅんび：子どもの日付選択
 
 home-workerの学校準備GETへcheckable_phasesを追加し、画面とPOST /checkで同じ日付判定を使用。過去日は本人のみチェック可。通知Worker/カレンダーWorker/Bindings/Cron/R2/DB schema/migrationの変更なし。既存の通知処理を使用する。
+
+
+## 2026-10-26 おしゃべり：独立開発・本番未公開
+
+新規Worker案 oshaberi-development-only、CHAT_DB/CHAT_FILES/ASSETSの専用bindingのみ。既存home-worker等の設定・実ID・routes・Cron・Service bindingは変更なし。workers_dev/previewとrelease/登録/招待フラグOFF、ゼロDB UUIDでローカル用。実リソース作成・本番Deploy・cleanup Cron有効化は未実施。
+

@@ -1,0 +1,19 @@
+{
+  "name": "oshaberi-private-development",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "build": "esbuild src/qr-entry.js --bundle --format=esm --minify --outfile=public/qr.js && wrangler deploy --dry-run --outdir .build",
+    "test": "npm run build && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "jpeg-js": "0.4.4",
+    "pngjs": "7.0.0",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "miniflare": "5.20260930.0-alpha",
+    "wrangler": "4.145.0"
+  }
+}

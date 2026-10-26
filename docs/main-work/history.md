@@ -377,3 +377,8 @@ GitHubで独立ブランチ02eec04とHOME正本338aee5を再取得し、HOME正�
 ## 2026-10-27 おしゃべり：Workers公開鍵取得修正
 
 2026-10-27 JST：KEY_FETCH報告から公開鍵の公開endpointは200/RSA2鍵であることを確認。Workersではredirect:errorをRequest生成時に拒否する仕様が原因と特定しmanualへ修正。テストで正常取得時だけasset到達し、転送/HTTP失敗時は未到達を確認。DB取込は未実施。
+
+
+## 2026-10-27 おしゃべり：架空DB取込確認・アカウント切替修正
+
+本人の読み取り報告で専用架空DB件数と外部キー正常を確認。integrity_checkは権限拒否で未検査。null.roleに対してログアウト中の古いfriends応答、複数me応答の逆転、focus競合、別保護者への子選択持ち越しを防止。実app.jsを評価する4回帰試験を追加し、既存API/画像/Accessを含む17試験が開発環境で合格。追加ブラウザ試験はChromium不在で起動できず、実ブラウザ再確認は未実施。Windowsのシールド/ローカル試験は再開しない。本修正のCloudflare Build結果と利用者再確認は未確認。

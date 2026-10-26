@@ -216,3 +216,8 @@ Cloudflare Builds 6cd733c6-04aa-4ab2-abe6-cfa37ff1f1ef成功、実行コミッ�
 ## 2026-10-27 おしゃべり：Workers公開鍵取得修正
 
 新Worker oshaberiの公開鍵取得オプションのみ修正。Cloudflare公式Request仕様でredirect:error非対応を確認。URL・Access設定・DB・R2・登録/招待・既存HOMEの変更なし。
+
+
+## 2026-10-27 おしゃべり：架空DB取込確認・アカウント切替修正
+
+利用者が専用oshaberi D1に初期schemaと架空親子seedを適用。読み取り結果は4 accounts（guardian2/child2）、families2、guardian_children2、closed settings2、pending friendship1、messages/invitations0、foreign_key_check0件。RESTのintegrity_checkはHTTP400 code7500 SQLITE_AUTHで拒否され、完全な整合性検査済みとは扱わない。本修正はpublic/app.jsと試験/資料のみ。Worker認証/API/SQL/R2/写真承認/既存HOMEにコード変更なし。

@@ -260,3 +260,8 @@ Windows実行エンジン起動を繰り返さない。専用WorkerのGit接続/
 ## 2026-10-27 おしゃべり：Workers公開鍵取得修正
 
 KEY_FETCHのWorkers非対応オプションを修正。Cloudflare自動反映後の本人ログイン画面表示を確認する。PCテスト再開やシールド変更は不要。その後に架空DB取込・権限/写真承認・実Free CPUの確認を行う。
+
+
+## 2026-10-27 おしゃべり：架空DB取込確認・アカウント切替修正
+
+本人限定URL・架空親子ログインと初期DB取込は利用者報告済み。null.role対策の自動Buildと画面更新後の切替再確認、写真の承認前非表示/承認後配信、実iPhone/Android/PWA、Free CPU/error計測を継続。integrity_checkはRESTで拒否、検査済みとはしない。外部招待/一般公開/有料化は未承認。既存HOME不変更。

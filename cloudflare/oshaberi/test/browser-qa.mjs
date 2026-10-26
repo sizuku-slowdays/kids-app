@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 // Isolated D1/R2 + four browser contexts; all names and messages are synthetic.
 import {readFile,mkdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {CONSENT_VERSION} from '../src/security.js';
 const {chromium}=await import(process.env.WAGAYA_PLAYWRIGHT_MODULE||'playwright');
 const publicRoot=new URL('../public/',import.meta.url);
-const mf=new Miniflare(convertV4MiniflareOptions({name:'chat-ui-test',modules:true,scriptPath:new URL('../.build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{CHAT_DB:'browser-isolated'},r2Buckets:{CHAT_FILES:'browser-private'},bindings:{RELEASE_ENABLED:'1',REGISTRATION_ENABLED:'1',INVITATIONS_ENABLED:'1',RATE_SECRET:'local-test-only-secret',BOOTSTRAP_CODE:'local-test-code'},serviceBindings:{ASSETS:async req=>{const path=new URL(req.url).pathname;const name=path==='/'?'index.html':path.slice(1);try{const bytes=await readFile(new URL(name,publicRoot));return new Response(bytes,{headers:{'Content-Type':name.endsWith('.js')?'application/javascript':name.endsWith('.css')?'text/css':name.endsWith('.svg')?'image/svg+xml':'text/html'}});}catch{return new Response('missing',{status:404});}}}}));
+const mf=new Miniflare(convertV4MiniflareOptions({name:'chat-ui-test',modules:true,scriptPath:fileURLToPath(new URL('../.build/index.js',import.meta.url)),compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{CHAT_DB:'browser-isolated'},r2Buckets:{CHAT_FILES:'browser-private'},bindings:{RELEASE_ENABLED:'1',REGISTRATION_ENABLED:'1',INVITATIONS_ENABLED:'1',RATE_SECRET:'local-test-only-secret',BOOTSTRAP_CODE:'local-test-code'},serviceBindings:{ASSETS:async req=>{const path=new URL(req.url).pathname;const name=path==='/'?'index.html':path.slice(1);try{const bytes=await readFile(new URL(name,publicRoot));return new Response(bytes,{headers:{'Content-Type':name.endsWith('.js')?'application/javascript':name.endsWith('.css')?'text/css':name.endsWith('.svg')?'image/svg+xml':'text/html'}});}catch{return new Response('missing',{status:404});}}}}));
 const browser=await chromium.launch({headless:true,executablePath:process.env.WAGAYA_CHROMIUM_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-zygote']});
 try{
  const db=await mf.getD1Database('CHAT_DB');const sql=(await readFile(new URL('../migrations/0001_chat.sql',import.meta.url),'utf8')).replace(/^--.*$/gm,'');for(const s of sql.match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(s).run();

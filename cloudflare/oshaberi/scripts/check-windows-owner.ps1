@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Folder,
-    [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{32}$')][string]$AccountId
+    [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{32}$')][string]$AccountId,
+    [switch]$SkipInstall
 )
 # READ-ONLY Cloudflare checks plus LOCAL build/tests. Never deploys/imports.
 $ErrorActionPreference = 'Stop'
@@ -41,7 +42,7 @@ try {
     $query = Invoke-RestMethod -Method Post -Uri ($databaseUrl + '/query') -Headers $apiHeaders -ContentType 'application/json' -Body $readQuery
     if (!$query.success -or @($query.result).Count -ne 1 -or !$query.result[0].success -or @($query.result[0].results).Count -ne 1 -or [int]$query.result[0].results[0].n -ne 0 -or [int]$query.result[0].meta.rows_written -ne 0) { throw 'The dedicated DB is not empty or its read-only check failed. Do not import.' }
     Remove-Variable apiHeaders -ErrorAction SilentlyContinue
-    Write-Host '[3/4] Install pinned local dependencies (may take several minutes)'
+    Write-Host '[3/4] Prepare pinned local dependencies'
     $stage = 'local dependency installation'
     $savedEnvironment = @{}
     $environmentNames = @('CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_API_KEY', 'CLOUDFLARE_EMAIL', 'CLOUDFLARE_ACCOUNT_ID', 'WRANGLER_SEND_METRICS')
@@ -50,8 +51,13 @@ try {
         $env:WRANGLER_SEND_METRICS = 'false'
         Push-Location -LiteralPath $plan.app
         try {
-            & npm.cmd ci --ignore-scripts --no-audit --no-fund
-            if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+            if ($SkipInstall) {
+                if (!(Test-Path -LiteralPath 'node_modules\wrangler\package.json')) { throw 'Dependencies are missing. Run without SkipInstall.' }
+                Write-Host 'Using already-installed dependencies.'
+            } else {
+                & npm.cmd ci --ignore-scripts --no-audit --no-fund
+                if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+            }
             Write-Host '[4/4] LOCAL build and isolated tests (dry-run only)'
             $stage = 'local build/tests'
             & npm.cmd test

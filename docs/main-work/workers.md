@@ -196,3 +196,8 @@ home-workerの学校準備GETへcheckable_phasesを追加し、画面とPOST /ch
 ## 2026-10-26 おしゃべり：読み取り専用導入前確認
 
 check-windows-owner.ps1は指定専用D1の名前/UUIDをGET照合した後、sqlite_masterへSELECT COUNTのみ実行。既存HOMEのDBには問い合わせない。別のHTTPクライアントでCookieなしAccessリダイレクトを検証する。R2 API/Worker変更/SQL適用/Deployなし。
+
+
+## 2026-10-26 おしゃべり：Windowsテストパス修正
+
+Cloudflare Access未認証リダイレクトと専用D1空確認は利用者の確認スクリプトで通過、ローカルテスト段階で停止。Worker runtime/Bindings/R2/DB schemaに変更なし。再試験はSkipInstallで導入済み依存を使用可能。

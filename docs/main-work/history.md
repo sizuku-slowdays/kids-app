@@ -357,3 +357,8 @@ GitHubで独立ブランチ02eec04とHOME正本338aee5を再取得し、HOME正�
 ## 2026-10-26 おしゃべり：読み取り専用導入前確認
 
 利用者よりPC内準備RESULT: LOCAL PREPARATION ALL OKを受領。続く読み取り専用Cloudflare確認とローカル依存/ビルド/試験をまとめたcheck-windows-owner.ps1を独立ブランチに追加。Windows実行結果は利用者待ち。現段階でDeploy・schema・seed・招待・HOME変更なし。
+
+
+## 2026-10-26 おしゃべり：Windowsテストパス修正
+
+利用者のWindowsエラー C:\\C:\\Users... ENOENTで原因を特定。chat/release-guard/owner-fixture/browser-qaのローカルファイルURL処理をfileURLToPathへ修正。Windows/POSIXのURL変換回帰テストを追加。確認スクリプトへSkipInstallを追加。アプリ本体と本番データの変更なし。

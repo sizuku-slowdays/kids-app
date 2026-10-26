@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -6,7 +7,7 @@ import {packPixels,PIXEL_MIME} from '../src/pixel-images.js';
 import {CONSENT_VERSION,hash} from '../src/security.js';
 const password='test-password-only-2026';
 async function fixture(){
- const mf=new Miniflare(convertV4MiniflareOptions({name:'oshaberi-local-test',modules:true,scriptPath:new URL('../.build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{CHAT_DB:'isolated-chat-db'},r2Buckets:{CHAT_FILES:'isolated-chat-r2'},bindings:{RELEASE_ENABLED:'1',REGISTRATION_ENABLED:'1',INVITATIONS_ENABLED:'1',RATE_SECRET:'local-test-only-secret',BOOTSTRAP_CODE:'local-test-only-code'},serviceBindings:{ASSETS:()=>new Response('local fixture')}}));
+ const mf=new Miniflare(convertV4MiniflareOptions({name:'oshaberi-local-test',modules:true,scriptPath:fileURLToPath(new URL('../.build/index.js',import.meta.url)),compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{CHAT_DB:'isolated-chat-db'},r2Buckets:{CHAT_FILES:'isolated-chat-r2'},bindings:{RELEASE_ENABLED:'1',REGISTRATION_ENABLED:'1',INVITATIONS_ENABLED:'1',RATE_SECRET:'local-test-only-secret',BOOTSTRAP_CODE:'local-test-only-code'},serviceBindings:{ASSETS:()=>new Response('local fixture')}}));
  const db=await mf.getD1Database('CHAT_DB');const sql=await readFile(new URL('../migrations/0001_chat.sql',import.meta.url),'utf8');
  for(const s of sql.replace(/^--.*$/gm,'').match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(s).run();
  let ip=0;
@@ -116,5 +117,5 @@ test('safe deletion, expiry cleanup, auth throttling and default release locks',
  await mf.getWorker().then(w=>w.scheduled({cron:'local-test'}));
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM accounts').first()).n,0,'expired deleted account shells are physically purged');
  }finally{await mf.dispose();}
- const disabled=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:new URL('../.build/index.js',import.meta.url).pathname,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],bindings:{RELEASE_ENABLED:'0'}}));try{assert.equal((await disabled.dispatchFetch('https://chat.test/api/info')).status,503);assert.equal((await disabled.dispatchFetch('https://chat.test/')).status,503);}finally{await disabled.dispose();}
+ const disabled=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:fileURLToPath(new URL('../.build/index.js',import.meta.url)),compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],bindings:{RELEASE_ENABLED:'0'}}));try{assert.equal((await disabled.dispatchFetch('https://chat.test/api/info')).status,503);assert.equal((await disabled.dispatchFetch('https://chat.test/')).status,503);}finally{await disabled.dispose();}
 });

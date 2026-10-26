@@ -264,3 +264,8 @@ notify_beforesとsubject_user_idsを予定単位で別保存し、旧notify_befo
 ## 2026-10-26 おしゃべり：読み取り専用導入前確認
 
 Windows確認はPRIVATE計画と閉じたconfigを照合し、route/services/triggers混入・期限切れ・専用binding不一致を拒否。依存導入/ローカル試験中はプロセス内のCloudflare認証環境変数を一時的に外し、成功/失敗後に復元する。秘密値を出力しない。npm ci --ignore-scriptsとnpm test（buildはdry-run）を用いる。
+
+
+## 2026-10-26 おしゃべり：Windowsテストパス修正
+
+Node file URLをOSファイルパスへ変換するときはfileURLToPathを使用。URL.pathnameをMiniflare scriptPathやexecFileSyncへ渡さない。HTTP URLのpathname処理には変更なし。ドライブ文字・空白・日本語の回帰確認を追加。

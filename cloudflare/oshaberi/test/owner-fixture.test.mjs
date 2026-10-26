@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,mkdtemp,rm} from 'node:fs/promises';
@@ -10,7 +11,7 @@ test('offline four-account fixture keeps approvals and safety settings closed; r
  const root=await mkdtemp(join(tmpdir(),'oshaberi-fixture-')),folder=join(root,'private');
  const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:'export default {fetch(){return new Response("fixture")}}',d1Databases:{CHAT_DB:'synthetic-only'}}));
  try{
- execFileSync(process.execPath,[new URL('../scripts/prepare-owner-test.mjs',import.meta.url).pathname,folder]);
+ execFileSync(process.execPath,[fileURLToPath(new URL('../scripts/prepare-owner-test.mjs',import.meta.url)),folder]);
  const secrets=JSON.parse(await readFile(join(folder,'owner-test-credentials.PRIVATE.json'),'utf8'));
  const db=await mf.getD1Database('CHAT_DB'),schema=await readFile(new URL('../migrations/0001_chat.sql',import.meta.url),'utf8');
  for(const s of schema.replace(/^--.*$/gm,'').match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(s).run();

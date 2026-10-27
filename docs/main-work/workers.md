@@ -226,3 +226,8 @@ Cloudflare Builds 6cd733c6-04aa-4ab2-abe6-cfa37ff1f1ef成功、実行コミッ�
 ## 2026-10-27 おしゃべり：画面復帰時の入力保持と実測報告
 
 前回5c1efd1のWorkers Builds成功をGitHubチェックで確認。利用者のMetrics画像は直近30分331 invocations、Errors0、CPUカード4ms、現行版Median CPU1.44ms。ただし現行版invocationsは2件で、旧版を含む集計。個別写真APIのCPU、最大画像/同時実行/コールド時のFree安定性は未確認。本修正はpublic/app.js・回帰試験・管理資料のみ。DB/R2/Worker認証/API/外部招待/既存HOMEは変更しない。
+
+
+## 2026-10-27 おしゃべり：利用時間のまとめ入力
+
+本改修はpublic/app.js、UI回帰試験、管理台帳のみ。D1 schema/保存API/認証/非公開R2/Cron/登録/招待/既存HOMEの変更なし。利用者の写真POSTログはoutcome ok、HTTP200、cpuTimeMs2、wallTimeMs48。単発の報告であり最大画像・連続・cold時の無料枠安定性は未確認。

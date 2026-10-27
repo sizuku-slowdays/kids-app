@@ -61,6 +61,9 @@ async function parentView(){
 function settingsForm(parent){const child=me.children.find(c=>c.id===selected),paused=input(parent,'メッセージを一時停止する','checkbox'),photos=input(parent,'毎回承認の写真送信を許可する','checkbox');paused.checked=!!child.paused;photos.checked=!!child.photos_enabled;
  const tz=input(parent,'タイムゾーン');tz.value=child.timezone;parent.append(el('small','利用時間外は、子どもの送信とトーク閲覧ができません。保護者はいつでも管理できます。未設定の曜日はお休みです。初期画面は1日1つの時間帯を編集します。'));
  const schedule=JSON.parse(child.schedule_json),rows=[];
+ const bulk=el('div',undefined,'notice');bulk.append(el('h3','時間をまとめて入力'));const bulkFrom=input(bulk,'まとめて入力する開始時刻','time'),bulkTo=input(bulk,'まとめて入力する終了時刻','time');const bulkActions=el('div',undefined,'row');
+ const copyHours=days=>{const valid=/^(?:[01]\d|2[0-3]):[0-5]\d$/;if(!valid.test(bulkFrom.value)||!valid.test(bulkTo.value))throw Error('まとめて入力する開始時刻と終了時刻を選んでください');if(bulkFrom.value>=bulkTo.value)throw Error('終了時刻は開始時刻より後にしてください');for(const day of days){rows[day][0].value=bulkFrom.value;rows[day][1].value=bulkTo.value;}};
+ bulkActions.append(btn('毎日に反映',()=>copyHours([0,1,2,3,4,5,6])),btn('平日（月〜金）に反映',()=>copyHours([1,2,3,4,5])),btn('土日に反映',()=>copyHours([0,6])));bulk.append(bulkActions,el('small','下の曜日の欄へコピーします。曜日ごとの調整もできます。最後に「この子の設定を保存」を押してください。'));parent.append(bulk);
  for(const [d,label] of ['日','月','火','水','木','金','土'].entries()){
   const row=el('div',undefined,'time-row'),from=el('input'),to=el('input');from.type=to.type='time';from.setAttribute('aria-label',label+'曜日の開始');to.setAttribute('aria-label',label+'曜日の終了');
   if(schedule[d]?.[0]){const fmt=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');from.value=fmt(schedule[d][0][0]);to.value=schedule[d][0][1]===1440?'23:59':fmt(schedule[d][0][1]);}

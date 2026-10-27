@@ -176,3 +176,58 @@ calendar-workerにoptions sidecar、notification-center-apiに予約上限3500�
 ## 2026-10-21 学校じゅんび：子どもの日付選択
 
 home-workerの学校準備GETへcheckable_phasesを追加し、画面とPOST /checkで同じ日付判定を使用。過去日は本人のみチェック可。通知Worker/カレンダーWorker/Bindings/Cron/R2/DB schema/migrationの変更なし。既存の通知処理を使用する。
+
+
+## 2026-10-26 おしゃべり：独立開発・本番未公開
+
+新規Worker案 oshaberi-development-only、CHAT_DB/CHAT_FILES/ASSETSの専用bindingのみ。既存home-worker等の設定・実ID・routes・Cron・Service bindingは変更なし。workers_dev/previewとrelease/登録/招待フラグOFF、ゼロDB UUIDでローカル用。実リソース作成・本番Deploy・cleanup Cron有効化は未実施。
+
+
+## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
+
+おしゃべり専用 wrangler.private-test.jsonc を追加。既定でrelease/登録/招待/URLはOFF、ダミーDB・試験期限0。専用Accessの署名付き本人検証を全経路へ追加。実Worker/D1/R2・既存HOME設定は変更していない。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。
+
+
+## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
+
+新規Worker/D1/R2は各 oshaberi。Worker AccessはこのWorkerのproduction/preview全URLのみ、本人メールのAllowポリシー1件。既存HOMEのWorker/DB/R2/routes/auth変更なし。実DB UUID・AUD・メール・秘密値はローカル設定にのみ渡す。prepare-windows-owner.ps1は固定コミットの取得・構文確認・架空4アカウントと閉じたconfigのローカル準備のみ。Wrangler/Cloudflare APIを呼ばず、Deploy/SQL適用は行わない。
+
+
+## 2026-10-26 おしゃべり：読み取り専用導入前確認
+
+check-windows-owner.ps1は指定専用D1の名前/UUIDをGET照合した後、sqlite_masterへSELECT COUNTのみ実行。既存HOMEのDBには問い合わせない。別のHTTPクライアントでCookieなしAccessリダイレクトを検証する。R2 API/Worker変更/SQL適用/Deployなし。
+
+
+## 2026-10-26 おしゃべり：Windowsテストパス修正
+
+Cloudflare Access未認証リダイレクトと専用D1空確認は利用者の確認スクリプトで通過、ローカルテスト段階で停止。Worker runtime/Bindings/R2/DB schemaに変更なし。再試験はSkipInstallで導入済み依存を使用可能。
+
+
+## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
+
+専用oshaberiに限りWorkers Buildsで独立featureブランチ/root cloudflare/oshaberiを使用する手順を準備。既定configのnameを専用Worker名へ合わせたが、既定URL/release/登録/招待0とダミーDBを維持。実試験用configは引数から別生成し、既存HOMEの設定/リソースへ触れない。
+
+
+## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
+
+Cloudflare Builds 6cd733c6-04aa-4ab2-abe6-cfa37ff1f1ef成功、実行コミット4d21f76、version 598b8879-a03a-408e-8a28-285ecb1ed506をGitHubチェックで確認。新Worker oshaberiのみ。既存HOME・SQL・R2・招待に変更なし。
+
+
+## 2026-10-27 おしゃべり：Workers公開鍵取得修正
+
+新Worker oshaberiの公開鍵取得オプションのみ修正。Cloudflare公式Request仕様でredirect:error非対応を確認。URL・Access設定・DB・R2・登録/招待・既存HOMEの変更なし。
+
+
+## 2026-10-27 おしゃべり：架空DB取込確認・アカウント切替修正
+
+利用者が専用oshaberi D1に初期schemaと架空親子seedを適用。読み取り結果は4 accounts（guardian2/child2）、families2、guardian_children2、closed settings2、pending friendship1、messages/invitations0、foreign_key_check0件。RESTのintegrity_checkはHTTP400 code7500 SQLITE_AUTHで拒否され、完全な整合性検査済みとは扱わない。本修正はpublic/app.jsと試験/資料のみ。Worker認証/API/SQL/R2/写真承認/既存HOMEにコード変更なし。
+
+
+## 2026-10-27 おしゃべり：画面復帰時の入力保持と実測報告
+
+前回5c1efd1のWorkers Builds成功をGitHubチェックで確認。利用者のMetrics画像は直近30分331 invocations、Errors0、CPUカード4ms、現行版Median CPU1.44ms。ただし現行版invocationsは2件で、旧版を含む集計。個別写真APIのCPU、最大画像/同時実行/コールド時のFree安定性は未確認。本修正はpublic/app.js・回帰試験・管理資料のみ。DB/R2/Worker認証/API/外部招待/既存HOMEは変更しない。
+
+
+## 2026-10-27 おしゃべり：利用時間のまとめ入力
+
+本改修はpublic/app.js、UI回帰試験、管理台帳のみ。D1 schema/保存API/認証/非公開R2/Cron/登録/招待/既存HOMEの変更なし。利用者の写真POSTログはoutcome ok、HTTP200、cpuTimeMs2、wallTimeMs48。単発の報告であり最大画像・連続・cold時の無料枠安定性は未確認。

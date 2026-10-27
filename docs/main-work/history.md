@@ -337,3 +337,58 @@ HOME編集を長押し/マウス/タップ操作へ変更し、本人/許可さ�
 HOME正本02a53ddを再取得して対象ソースとローカルの一致を確認。子どもの日付欄の非表示とPOST当日制限を修正。対象：学校app.js/school-core.js/school-prep.js、日付単体/既存API統合試験と合成ブラウザ試験。DB移行・既存行一括更新なし。本番反映前の記録であり、Deploy/実iPhone確認は未確認。
 
 検証結果：HOMEのNode統合・単体41件、TypeScript、Wrangler dry-run合格。合成Chromiumで390/768/1280幅、過去日の完了/取消、タブ・画面復帰時の日付維持、未来チェック停止、保護者の既存編集UIを確認。本番の実データを使用した試験入出金やチェック操作は行っていない。
+
+
+## 2026-10-26 おしゃべり：独立開発・本番未公開
+
+HOME正本338aee5をGitHubで再取得し、AGENTS/台帳/既存wranglerを調査。独立フォルダのみ新規実装し、既存HOME runtime/config/migrations/public一覧には変更なし。新D1 SQLはローカル専用。5テスト群と実Worker/D1/R2を使う合成ブラウザ試験、390/768/1280幅、双方承認・他人ID拒否・親既読不変・画像承認/配信/失効・期限削除を検証。npm本番依存audit報告0。設計・運用ゲート・ライセンス同梱。本番変更/実招待送付/費用発生操作なし。
+
+
+## 2026-10-26 おしゃべり：無料画像方式と本人限定試験の準備
+
+おしゃべりの旧JS画像codecを開発ベースラインへ移し、新PNG生成、Access全経路gate、期限/本人/host制限、オフライン試験seed・再取込拒否を準備。npm test 10群・ブラウザ390/768/1280幅と写真承認一連を合成データで確認。画像処理単体Node CPU p95約11.77ms、Cloudflare CPU/実機は未確認。ブランチ feature/oshaberi-independent-20261026 / Draft PR #18。本番反映なし。 [詳細調査・費用・実機手順](../../cloudflare/oshaberi/docs/free-images-private-test.md)。
+
+
+## 2026-10-26 おしゃべり：本人限定リソース確認・Windows準備
+
+GitHubで独立ブランチ02eec04とHOME正本338aee5を再取得し、HOME正本に変更がないことを確認。利用者が新oshaberiリソースとAccessを作成、本人ログイン後Hello Worldを確認。準備専用PowerShellを追加（Windows実行は利用者待ち）。実リソースへのアプリDeploy/SQL適用/実CPU測定はまだ未実施。秘密値/実名/実DB UUID/AUDを公開資料へ記載しない。
+
+
+## 2026-10-26 おしゃべり：読み取り専用導入前確認
+
+利用者よりPC内準備RESULT: LOCAL PREPARATION ALL OKを受領。続く読み取り専用Cloudflare確認とローカル依存/ビルド/試験をまとめたcheck-windows-owner.ps1を独立ブランチに追加。Windows実行結果は利用者待ち。現段階でDeploy・schema・seed・招待・HOME変更なし。
+
+
+## 2026-10-26 おしゃべり：Windowsテストパス修正
+
+利用者のWindowsエラー C:\\C:\\Users... ENOENTで原因を特定。chat/release-guard/owner-fixture/browser-qaのローカルファイルURL処理をfileURLToPathへ修正。Windows/POSIXのURL変換回帰テストを追加。確認スクリプトへSkipInstallを追加。アプリ本体と本番データの変更なし。
+
+
+## 2026-10-26 おしゃべり：Cloudflare本人限定実行へ切替
+
+利用者からWindowsのテストでspawn EPERMと保守会社シールド発動の報告。検知内容・因果関係は未確認。利用者の指示でPC内診断/テストを停止し、シールドに変更せずCloudflare本人限定実行へ切替。専用Git Builds向けconfig生成・回帰確認を追加。開発環境でnpm test 12件合格、Cloudflare実測と実機は未実施。
+
+
+## 2026-10-27 おしゃべり：初回Build確認と本人gate診断
+
+2026-10-27 JST：本人限定アプリの初回Cloudflare Build成功を確認。利用者から追加本人gateの403報告。安全な段階コードを追加し、アプリ側全経路gate・署名・issuer・audience・期限・owner照合を緩めず原因調査。DB初期化前で既存HOME変更なし。
+
+
+## 2026-10-27 おしゃべり：Workers公開鍵取得修正
+
+2026-10-27 JST：KEY_FETCH報告から公開鍵の公開endpointは200/RSA2鍵であることを確認。Workersではredirect:errorをRequest生成時に拒否する仕様が原因と特定しmanualへ修正。テストで正常取得時だけasset到達し、転送/HTTP失敗時は未到達を確認。DB取込は未実施。
+
+
+## 2026-10-27 おしゃべり：架空DB取込確認・アカウント切替修正
+
+本人の読み取り報告で専用架空DB件数と外部キー正常を確認。integrity_checkは権限拒否で未検査。null.roleに対してログアウト中の古いfriends応答、複数me応答の逆転、focus競合、別保護者への子選択持ち越しを防止。実app.jsを評価する4回帰試験を追加し、既存API/画像/Accessを含む17試験が開発環境で合格。追加ブラウザ試験はChromium不在で起動できず、実ブラウザ再確認は未実施。Windowsのシールド/ローカル試験は再開しない。本修正のCloudflare Build結果と利用者再確認は未確認。
+
+
+## 2026-10-27 おしゃべり：画面復帰時の入力保持と実測報告
+
+原因はvisibilitychangeのたびにstartでトークとDOMを初期化していたこと。resumeを追加し、同一本人では画面を保持して必要な一覧のみ更新する。実app.jsを評価する回帰試験で下書き・画像選択・スクロール・設定入力保持、他アカウント切替と時間外の旧トーク破棄を確認。既存Access/API/画像/認可を含む21件が開発環境で合格。実ブラウザ再試験はChromium入手が失敗し未実施。本人の写真承認後配信とMetricsエラー0を記録。本修正のCloudflare自動反映と利用者の復帰再確認はまだ未確認。
+
+
+## 2026-10-27 おしゃべり：利用時間のまとめ入力
+
+73e5c91のBuild成功をGitHubで確認。利用者が画面復帰改善、iPhone写真の承認後配信、承認前/却下後非配信、利用停止/再開、曜日別時間外制限の正常動作を報告。毎曜日の入力が面倒との指摘へまとめ入力3区分を追加。実app.jsの回帰試験4件を追加し、既存API/Access/画像/時間制限を含む25件が開発環境で合格。全曜日コピー・平日/土日分離・曜日個別調整・保存前無書込・不正値時無変更・復帰時入力保持を確認。実ブラウザ/実端末の新UI確認と本修正Buildはまだ未確認。

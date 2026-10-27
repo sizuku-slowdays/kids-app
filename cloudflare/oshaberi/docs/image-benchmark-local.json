@@ -1,0 +1,23 @@
+{
+  "warning": "Local Node only; Free Worker acceptance still requires Cloudflare CPU measurement including auth, rate limit, R2 and DB.",
+  "results": [
+    {
+      "name": "new PNG pixels 384x384 noise",
+      "runs": 50,
+      "first_wall_ms": 6.75,
+      "wall_p50_ms": 2.47,
+      "wall_p95_ms": 5.12,
+      "cpu_p95_ms": 11.77,
+      "output_bytes": 590321
+    },
+    {
+      "name": "old JPEG decode/re-encode 384x384 noise",
+      "runs": 5,
+      "first_wall_ms": 95.57,
+      "wall_p50_ms": 64.55,
+      "wall_p95_ms": 95.57,
+      "cpu_p95_ms": 178.57,
+      "output_bytes": 206183
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+node_modules/
+.build/
+.wrangler/
+.dev.vars
+*.sql.backup
+*.PRIVATE.*
+.private-test-config.jsonc
+.owner-cloud.jsonc

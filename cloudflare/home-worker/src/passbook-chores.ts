@@ -1,3 +1,4 @@
+import { choreDay, choreRecordList, completeChoreRecord } from './passbook-chore-records';
 type Context={DB:D1Database;LEGACY_DB?:D1Database;PRIVATE_FILES:R2Bucket};
 type Chore={id:string;household_id:string;name:string;icon:string;points:number;money:number;point_unit_id:string;rotation_json:string;next_target:string|null;next_date:string;enabled:number;sort_order:number;revision:number};
 function fail(message:string,status=400):never {throw Object.assign(Error(message),{status})}
@@ -15,7 +16,7 @@ export async function choreRoute(request:Request,env:Context,h:string,user:strin
  const owner=await env.DB.prepare("SELECT user_id FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.group_id=? AND m.role IN ('owner','admin') AND u.active=1 ORDER BY CASE m.role WHEN 'owner' THEN 0 ELSE 1 END LIMIT 1").bind(h).first<{user_id:string}>();
  if(!owner)fail('家庭の管理者を確認してください',409);
  await advanceChores(env,h,owner.user_id);
- if(path===''&&method==='GET')return {today:japanDay(),people,imported:Boolean(await env.DB.prepare('SELECT 1 FROM passbook_chore_imports WHERE household_id=?').bind(h).first()),can_import:admin&&operator&&Boolean(await env.DB.prepare('SELECT 1 FROM passbook_imports WHERE household_id=?').bind(h).first()),chores:(await env.DB.prepare('SELECT * FROM passbook_chores WHERE household_id=? AND (?=1 OR enabled=1) ORDER BY sort_order,name').bind(h,admin?1:0).all()).results,done:(await env.DB.prepare("SELECT chore_id,target,day FROM passbook_chore_days WHERE household_id=? AND day=? AND kind='complete'").bind(h,japanDay()).all()).results};
+ if(path===''&&method==='GET')return {today:japanDay(),people,imported:Boolean(await env.DB.prepare('SELECT 1 FROM passbook_chore_imports WHERE household_id=?').bind(h).first()),can_import:admin&&operator&&Boolean(await env.DB.prepare('SELECT 1 FROM passbook_imports WHERE household_id=?').bind(h).first()),chores:(await env.DB.prepare('SELECT * FROM passbook_chores WHERE household_id=? AND (?=1 OR enabled=1) ORDER BY sort_order,name').bind(h,admin?1:0).all()).results,...await choreRecordList(env.DB,h,choreDay(url.searchParams.get('day')),admin)};
  if(!admin)fail('完了登録と当番の設定は管理者だけが行えます',403);
  if(path==='/import'&&method==='POST'){
   if(!operator)fail('引き継ぎは運営管理者だけが行えます',403);
@@ -37,6 +38,8 @@ export async function choreRoute(request:Request,env:Context,h:string,user:strin
   stmts.unshift(env.DB.prepare('INSERT INTO passbook_chore_imports VALUES (?,?,?,?)').bind(h,key,user,now));await env.DB.batch(stmts);return {ok:true,count:chores.results.length};
  }
  const data=await body(request);
+ if(path==='/records'&&method==='POST')return completeChoreRecord(env,h,user,data,people);
+ if(path==='/records/retry'&&method==='POST')return completeChoreRecord(env,h,user,data,people,true);
  if(path==='/complete'&&method==='POST'){
   const chore=String(data.chore_id||''),target=String(data.target||''),event=String(data.event_id||''),today=japanDay();if(event.length<8||event.length>100||!people.some(p=>p.id===target))fail('完了した人を選んでください');
   const old=await env.DB.prepare("SELECT chore_id,target FROM passbook_chore_days WHERE household_id=? AND event_id=? AND kind='complete'").bind(h,event).first<{chore_id:string;target:string}>();if(old){if(old.chore_id!==chore||old.target!==target)fail('登録内容が一致しません',409);return {ok:true,already_recorded:true};}

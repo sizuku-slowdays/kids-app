@@ -14,7 +14,7 @@ test('cash tools: permissions, wallet atomicity, allowance retries, daily compou
  const mf=new Miniflare(convertV4MiniflareOptions({name:'cash-test',modules:true,scriptPath:join(folder,'worker.js'),compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'cash'},r2Buckets:['PRIVATE_FILES'],serviceBindings:{ASSETS:()=>new Response('asset')}}));
  try{
  const db=await mf.getD1Database('DB');
- for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&!f.startsWith('0018_')).sort()){
+ for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&!f.startsWith('0018_')&&!f.startsWith('0025_')).sort()){
  const sql=(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8')).replace(/^--.*$/gm,'');for(const s of sql.match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(s).run();}
  const now=Math.floor(Date.now()/1000),cookies={};for(const [i,n]of ['mom','child','sibling','other'].entries()){
  await db.prepare("INSERT INTO users(id,login_name,display_name,password_salt,password_hash,password_iterations,platform_role,created_at) VALUES (?,?,?,'s','h',1,'user',?)").bind(n,n,n,now).run();const token=String(i+1).repeat(64);cookies[n]='__Host-home_session='+token;await db.prepare("INSERT INTO sessions(id,token_hash,user_id,device_name,created_at,last_seen_at,expires_at) VALUES (?,?,?,'test',?,?,?)").bind(n,createHash('sha256').update(token).digest('hex'),n,now,now,now+10000).run();}
@@ -31,6 +31,9 @@ test('cash tools: permissions, wallet atomicity, allowance retries, daily compou
  for(const stmt of upgrade.match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(stmt).run();
  const afterUpgrade=await db.batch(tables.map(t=>db.prepare('SELECT * FROM '+t+' ORDER BY rowid')));
  for(let i=0;i<tables.length;i++)assert.deepEqual(afterUpgrade[i].results,beforeUpgrade[i].results,'existing records changed in '+tables[i]);
+ // Later additive migrations depend on the cash-tool tables; preserve production order.
+ const repeats=(await readFile(new URL('../migrations/0025_passbook_chore_records.sql',import.meta.url),'utf8')).replace(/^--.*$/gm,'');
+ for(const stmt of repeats.match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(stmt).run();
  const balance=async a=>(await db.prepare('SELECT COALESCE(SUM(delta),0) n FROM passbook_entries WHERE account_id=?').bind(a).first()).n;
  async function call(path,method='GET',body,who='mom'){const r=await mf.dispatchFetch('https://home.test/api/passbook'+path+(path.includes('?')?'&':'?')+'household=h',{method,headers:{Cookie:cookies[who],Origin:'https://home.test',...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};}
  const ok=async(...args)=>{const r=await call(...args);assert.equal(r.status,200,JSON.stringify(r));return r.data;};

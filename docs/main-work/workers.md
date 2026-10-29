@@ -181,3 +181,8 @@ home-workerの学校準備GETへcheckable_phasesを追加し、画面とPOST /ch
 ## 2026-10-28 つうちょう：複数人・複数回・過去日のお手伝い（本番未反映）
 
 home-worker内のつうちょうUI/APIとhome-db用0025 migrationを準備。追加はpassbook_chore_records/record_paymentsの2表とガード/加算トリガー。既存行・既存トリガー定義を保持。旧新API間の登録番号再利用を追加ガードで拒否。既存Cron/通知Worker/カレンダー/Service binding/R2/URLは変更しない。本番DB・Deploy未実施。[設計・試験・バックアップ手順](passbook-repeat-20261028.md)。
+
+
+## 2026-10-29 つうちょう：付与履歴の取り消し
+
+home-workerの履歴GETに取消状態と操作可否を追加し、POST /api/passbook/entries/reverseを追加。既存D1台帳・一意制約を使用。schema/migration/Cron/Bindings/R2変更なし。 [操作・設計・確認手順](passbook-reversals-20261029.md)。

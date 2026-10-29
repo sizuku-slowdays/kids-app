@@ -1,3 +1,4 @@
+import { entryHistory, reverseEntry } from './passbook-reversals';
 import { bookRoute } from './passbook-book';
 import { giftAccess, giftsRoute } from './passbook-gifts';
 import { financeRoute } from './passbook-finance';
@@ -65,8 +66,7 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
    const account=url.searchParams.get('account');check((await accounts()).some(a=>a.id===account),'この履歴は見られません',403);
    const before=url.searchParams.get('before');
    const adult=Boolean(await env.DB.prepare('SELECT 1 FROM passbook_adult_accounts WHERE id=? AND household_id=?').bind(account,household).first());
-   const ledger=adult?'passbook_adult_entries':'passbook_entries';
-   const result=await env.DB.prepare(`SELECT id,delta,memo,occurred_at,created_at FROM ${ledger} WHERE account_id=? AND (? IS NULL OR (occurred_at,rowid)<(SELECT occurred_at,rowid FROM ${ledger} WHERE id=? AND account_id=?)) ORDER BY occurred_at DESC,rowid DESC LIMIT 50`).bind(account,before,before,account).all();return reply(result.results);
+   return reply(await entryHistory(env.DB,account!,household!,adult,admin,before));
   }
   if(path==='/rewards'&&method==='GET')return reply(await listRewards(env,household!,admin));
   const imageMatch=path.match(/^\/rewards\/([^/]+)\/image$/);if(imageMatch&&['GET','HEAD'].includes(method))return await rewardImage(request,env,household!,admin,decodeURIComponent(imageMatch[1]));
@@ -83,6 +83,10 @@ export async function passbookRoute(request:Request,env:Context,userId:string,re
   check(admin,'管理者だけが操作できます',403);
   if(path==='/settings'&&method==='PUT'){
    check(typeof data.sibling_points_visible==='boolean','設定を確認してください');await env.DB.prepare('INSERT INTO passbook_settings VALUES (?,?) ON CONFLICT(household_id) DO UPDATE SET sibling_points_visible=excluded.sibling_points_visible').bind(household,data.sibling_points_visible?1:0).run();return reply({ok:true});
+  }
+  if(path==='/entries/reverse'&&method==='POST'){
+   const account=str(data.account_id),entry=str(data.entry_id),reason=str(data.reason);check((await accounts()).some(a=>a.id===account),'通帳が見つかりません',404);
+   return reply(await reverseEntry(env.DB,household!,userId,account,entry,reason));
   }
   if(path==='/entries'&&method==='POST'){
    const account=str(data.account_id),delta=integer(data.delta),event=str(data.event_id);check(delta!==0,'0は登録できません');check((await accounts()).some(a=>a.id===account),'通帳が見つかりません',404);

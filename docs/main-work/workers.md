@@ -186,3 +186,8 @@ home-worker内のつうちょうUI/APIとhome-db用0025 migrationを準備。追
 ## 2026-10-29 つうちょう：付与履歴の取り消し
 
 home-workerの履歴GETに取消状態と操作可否を追加し、POST /api/passbook/entries/reverseを追加。既存D1台帳・一意制約を使用。schema/migration/Cron/Bindings/R2変更なし。 [操作・設計・確認手順](passbook-reversals-20261029.md)。
+
+
+## 2026-10-29 からだカレンダーの入口
+
+home-workerのpublic/app.jsの既存固定リンク欄のみ変更。calendar-worker、HOME/API認証、D1/R2/Cron/Bindings/URLに変更なし。既存の簡易HOMEと新規ファミリーへの表示条件は維持。

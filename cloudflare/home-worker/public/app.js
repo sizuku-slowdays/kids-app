@@ -205,9 +205,10 @@ async function home() {
       otherApps.forEach(app => grid.append(appCard(app)));
       }
       if(legacyHome){
-      const links = appSection('いつもの', 'からだパワー・お薬タイマー', 'home-app-list');
+      const links = appSection('いつもの', 'からだ・お薬', 'home-app-list');
       for (const app of [
         {id:'karada',name:'からだパワー',icon:'🌈',path:'https://cetus.fun/karada_power/',status:'ready'},
+        {id:'karada-calendar',name:'からだカレンダー',icon:'🌸',path:'https://cetus.fun/kanriapp/karada_calendar.html',status:'ready'},
         {id:'medicine',name:'いっぷんお薬タイマー',icon:'💊',path:'https://cetus.fun/kids-app/medicine-game.html',status:'ready'},
       ]) links.append(appCard(app));
       }

@@ -208,7 +208,6 @@ async function home() {
       const links = appSection('いつもの', 'からだ・お薬', 'home-app-list');
       for (const app of [
         {id:'karada',name:'からだパワー',icon:'🌈',path:'https://cetus.fun/karada_power/',status:'ready'},
-        {id:'karada-calendar',name:'からだカレンダー',icon:'🌸',path:'https://cetus.fun/kanriapp/karada_calendar.html',status:'ready'},
         {id:'medicine',name:'いっぷんお薬タイマー',icon:'💊',path:'https://cetus.fun/kids-app/medicine-game.html',status:'ready'},
       ]) links.append(appCard(app));
       }
@@ -565,7 +564,7 @@ async function familyGroups(){
   const list=el('ul');for(const member of info.members)list.append(el('li',member.display_name+(member.role==='owner'?'（管理者）':member.role==='admin'?'（共同管理者）':'')));panel.append(list);
   if(info.can_manage){const b=button('メンバーを招待する',()=>issue(g.kind==='household'?'join_family':'join_sharing',g.id));b.disabled=!state.ready;panel.append(b);
    if(g.workspace_mode==='restricted'){
-    const form=el('form');form.append(el('h3','利用するアプリ'));const labels={calendar:'カレンダー',notification:'通知','family-tree':'家系図','daily-kanji':'まいにち漢字3文字','good-deeds':'いいことポイント','school-prep':'学校準備','dining-prices':'外食料金'};
+    const form=el('form');form.append(el('h3','利用するアプリ'));const labels={calendar:'カレンダー',notification:'通知','family-tree':'家系図','daily-kanji':'まいにち漢字3文字','good-deeds':'いいことポイント','school-prep':'学校準備','dining-prices':'外食料金','body-calendar':'からだカレンダー'};
     for(const app of info.app_choices){const label=el('label'),box=el('input');box.type='checkbox';box.value=app;box.checked=info.app_ids.includes(app);box.disabled=!state.ready;label.append(box,document.createTextNode(labels[app]||app));form.append(label);}
     const save=el('button','利用アプリを保存');save.disabled=!state.ready;form.append(save);form.addEventListener('submit',async e=>{e.preventDefault();save.disabled=true;try{await api('/api/families/groups/'+encodeURIComponent(g.id)+'/apps','PUT',{app_ids:[...form.querySelectorAll('input:checked')].map(n=>n.value)});await familyGroups();}catch(error){showError(error);save.disabled=false;}});panel.append(form);
    }
@@ -645,3 +644,4 @@ async function editHome(target=me.user.id){
  }
  render();
 }
+

@@ -11,7 +11,7 @@ test('family foundation: additive migration, invitations, concurrent use, revoca
  const db=await mf.getD1Database('DB'),now=Math.floor(Date.now()/1000),cookies={};
  const migrate=async f=>{const sql=(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8')).replace(/^--.*$/gm,'');for(const s of sql.match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(s).run();};
  const files=(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();
- for(const f of files.filter(f=>!f.startsWith('0022')))await migrate(f);
+ for(const f of files.filter(f=>!f.startsWith('0022')&&!f.startsWith('0026')))await migrate(f);
  for(const [i,u] of ['mom','grandma','kid','brother','sister','relative','outsider'].entries()){
   await db.prepare("INSERT INTO users(id,login_name,display_name,password_salt,password_hash,password_iterations,created_at,platform_role) VALUES(?,?,?,'s','h',1,?,?)").bind(u,u,'NAME-'+u,now,u==='mom'?'operator':'user').run();
   const token=String(i+1).repeat(64);cookies[u]='__Host-home_session='+token;await db.prepare("INSERT INTO sessions VALUES(?,?,?,'fixture',?,?,?,NULL)").bind(u,createHash('sha256').update(token).digest('hex'),u,now,now,now+3600).run();
@@ -24,6 +24,10 @@ test('family foundation: additive migration, invitations, concurrent use, revoca
  for(const t of oldTables)before[t]=JSON.stringify((await db.prepare('SELECT * FROM "'+t+'" ORDER BY rowid').all()).results);
  await migrate(files.find(f=>f.startsWith('0022')));
  for(const t of oldTables)assert.equal(JSON.stringify((await db.prepare('SELECT * FROM "'+t+'" ORDER BY rowid').all()).results),before[t],'migration preserves '+t);
+ await migrate(files.find(f=>f.startsWith('0026')));
+ // New per-user app preferences also advance existing home_layout_versions triggers.
+ // Preserve the 0022 assertion above; compare later family operations to the fully upgraded app catalog.
+ for(const t of oldTables){const current=JSON.stringify((await db.prepare('SELECT * FROM "'+t+'" ORDER BY rowid').all()).results);if(!['apps','group_apps','user_apps','home_layout_versions'].includes(t))assert.equal(current,before[t],'body app registration preserves '+t);before[t]=current;}
  async function call(path='',who='mom',method='GET',body){const r=await mf.dispatchFetch('https://cetus.fun/wagaya/api/families'+path,{method,headers:{Origin:'https://cetus.fun',...(who?{Cookie:cookies[who]}:{}),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};}
  async function ok(...args){const r=await call(...args);assert.ok(r.status===200||r.status===201,JSON.stringify(r));return r.data;}
  const count=async table=>(await db.prepare('SELECT COUNT(*) n FROM '+table).first()).n;

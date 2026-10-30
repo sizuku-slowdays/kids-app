@@ -6,7 +6,7 @@ const response=(v:unknown,status=200)=>Response.json(v,{status,headers:{'Cache-C
 export class FamilyFailure extends Error {constructor(message:string,public status=400){super(message);}}
 function check(ok:unknown,message:string,status=400):asserts ok{if(!ok)throw new FamilyFailure(message,status);}
 function text(v:unknown,max=80){check(typeof v==='string'&&v.trim().length>0&&v.trim().length<=max,'入力内容を確認してください');return v.trim();}
-const safeApps=new Set(['calendar','notification','family-tree','daily-kanji','good-deeds','school-prep','dining-prices']);
+const safeApps=new Set(['calendar','notification','family-tree','daily-kanji','good-deeds','school-prep','dining-prices','body-calendar']);
 export async function familyReady(env:FamilyEnv){
  if(env.FAMILY_INVITES_ENABLED!=='1'||!env.CALENDAR_SERVICE)return false;
  try{const r=await env.CALENDAR_SERVICE.fetch(new Request('https://calendar.internal/internal/family-readiness'));return r.ok&&(await r.json() as {protocol?:string}).protocol==='multi-family-v1';}catch{return false;}
@@ -107,3 +107,4 @@ export async function familiesRoute(request:Request,env:FamilyEnv,user:Person,re
  return response({error:'見つかりません'},404);
  }catch(error){const e=error as Error&{status?:number};return response({error:e.status?e.message:/family invitation/.test(e.message)?'招待が無効・使用済み・期限切れ、または発行者の権限が変更されています':'処理できませんでした。内容を控えて再試行してください'},e.status||(/family invitation|UNIQUE constraint/.test(e.message)?409:500));}
 }
+

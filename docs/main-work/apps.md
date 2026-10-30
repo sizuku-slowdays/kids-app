@@ -293,3 +293,8 @@ HOME下部の「以前のHOME」を「🎮 キッズアプリ一覧」に変更�
 ## 2026-10-29 からだカレンダーの入口
 
 既存ファミリーのHOME下部「いつもの／からだ・お薬」に、🌸からだカレンダーへの入口を追加。リンク先は https://cetus.fun/kanriapp/karada_calendar.html 。現行の別ログインを使用する。
+
+
+## 2026-10-30 からだカレンダーのHOME本人連携（本番未反映）
+
+からだカレンダーのHOME版を独立ブランチで実装。本番未反映。予定URL https://cetus.fun/wagaya/apps/body-calendar/ 。既存本人の明示連携と新しいHOME利用者の専用記録先を作成できる。 [設計・試験・反映手順](body-calendar-home-integration-20261030.md)。

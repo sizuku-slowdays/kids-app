@@ -125,3 +125,8 @@ HOME実装版：[8a52939](https://github.com/sizuku-slowdays/kids-app/commit/8a5
 [調査・権限表・移行計画・バックアップ手順](multi-family-20261018.md)。現在の5人は同じ1家庭のまま維持。HOME正本a5c8d17を調査。単一家庭のcalendar_config、漢字の大人=保護者判定、旧家計簿の共通パスワード、HOME固定リンク/自動アプリ付与を変更対象に整理。既存の通帳とプレゼントは別家庭/共有ownerからの直接APIを拒否することを合成5人＋別家庭＋sharingのローカルD1で確認。家系図APIに登録者フィルターはなく、祖母の実データが見えない原因は未特定。バックアップ監査Python3件とAPI再現1件が合格。独立ブランチ、監査・資料・テストのみ。実DBのID/role、バックアップ取得は未確認のため第2段階以降は未実装。移動・権限一括変更・デプロイなし。
 
 追跡：[Draft PR12](https://github.com/sizuku-slowdays/kids-app/pull/12)、準備版123cf9004be044aec37ccca533b42017d54524fe。現在は実DBバックアップ監査の確認待ち。
+
+
+## 2026-10-30 からだカレンダーの操作不具合とHOME連携
+
+main a030305を基準に不具合を調査・修正。画面VM4件、実calendar-worker＋合成DB1件、JS構文、匿名schema監査Python2件が合格。本番の健康記録/お願い/ユーザー/残高は変更していない。実機保存と新規HOME連携は未確認。 [原因・検証・未完了設計](body-calendar-home-20261030.md)。

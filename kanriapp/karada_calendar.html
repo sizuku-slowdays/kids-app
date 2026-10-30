@@ -281,6 +281,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+input[type="date"] { min-width: 0; max-width: 100%; width: 100%; -webkit-appearance: none; }
 /* モーダル */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(60,20,80,.35);
@@ -290,7 +291,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 .modal {
   background: #fff; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px;
   padding: 20px 20px max(20px,env(safe-area-inset-bottom));
-  max-height: 90vh; overflow-y: auto;
+  max-height: 90dvh; overflow-y: auto; overflow-x: hidden; min-width: 0;
 }
 .modal-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .hidden { display: none !important; }
@@ -409,10 +410,21 @@ async function api(method, path, body) {
   if (state.token) opts.headers['Authorization'] = 'Bearer ' + state.token;
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(API + path, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || res.status);
+  let data;
+  try { data = await res.json(); } catch { throw new Error('応答を読み取れませんでした（HTTP '+res.status+'）。保存結果を履歴で確認してください。'); }
+  if (!res.ok) throw new Error((data.error || '通信エラー')+'（HTTP '+res.status+'）');
   return data;
 }
+
+function showActionError(error) {
+  const overlay=document.getElementById('modal-overlay');
+  const target=!overlay.classList.contains('hidden')?document.getElementById('modal-body'):document.getElementById('content');
+  let message=target.querySelector('[data-action-error]');
+  if(!message){message=document.createElement('p');message.dataset.actionError='1';message.className='banner warn';message.setAttribute('role','alert');target.prepend(message);}
+  message.textContent=error.message||'操作できませんでした。もう一度確認してください。';
+  message.scrollIntoView?.({block:'nearest'});
+}
+window.addEventListener('unhandledrejection',event=>{showActionError(event.reason instanceof Error?event.reason:new Error('操作に失敗しました。画面を更新して確認してください。'));event.preventDefault();});
 
 // ══════════════════════════════════
 // SHA-256（ブラウザ）
@@ -430,7 +442,7 @@ const fmtDate = d => {
   const dt = typeof d === 'string' ? new Date(d) : d;
   return `${dt.getMonth()+1}月${dt.getDate()}日`;
 };
-const today = () => new Date().toISOString().slice(0,10);
+const today = () => new Date(Date.now()+9*3600000).toISOString().slice(0,10);
 const daysBetween = (a, b) => Math.round((new Date(b)-new Date(a))/86400000);
 
 // ══════════════════════════════════
@@ -500,7 +512,7 @@ document.getElementById('setup-btn').addEventListener('click', async () => {
   if (pw.length < 4) { errEl.textContent = '4文字以上にしてね'; return; }
   if (pw !== pw2) { errEl.textContent = 'パスワードが一致しないよ'; return; }
   try {
-    await api('POST', '/api/setup', { username, password: pw });
+    await api('POST', '/karada/setup', { username, password: pw });
     errEl.textContent = '';
     alert(`${username} のパスワードを設定したよ！ログインしてね。`);
     showLoginScreen();
@@ -523,7 +535,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.user = saved.user;
     // サーバー確認
     try {
-      const me = await api('GET', '/api/me');
+      const me = await api('GET', '/karada/me');
       state.user = { id: me.id, username: me.username, displayName: me.displayName, role: me.role };
       saveAuth(state.token, state.user);
       showApp();
@@ -548,7 +560,7 @@ function showApp() {
 
   // ナビ構築
   buildNav();
-  loadData().then(() => renderTab(state.tab));
+  loadData().then(() => renderTab(state.tab)).catch(showActionError);
 }
 
 function buildNav() {
@@ -580,10 +592,10 @@ function buildNav() {
 async function loadData() {
   try {
     const [records, predict, inventory, favorites] = await Promise.all([
-      api('GET', '/api/records'),
-      api('GET', '/api/predict'),
-      api('GET', '/api/inventory'),
-      api('GET', '/api/favorites'),
+      api('GET', '/karada/records'),
+      api('GET', '/karada/predict'),
+      api('GET', '/karada/inventory'),
+      api('GET', '/karada/favorites'),
     ]);
     state.records = records;
     state.predict = predict;
@@ -592,21 +604,22 @@ async function loadData() {
 
     if (state.user.role === 'mama') {
       const [requests, allUsers] = await Promise.all([
-        api('GET', '/api/requests'),
-        api('GET', '/api/users'),
+        api('GET', '/karada/requests'),
+        api('GET', '/karada/users'),
       ]);
       state.requests = requests;
       state.allUsers = allUsers;
     }
   } catch(e) {
-    console.error('loadData', e);
+    showActionError(new Error('記録の読み込みに失敗しました。記録なしとは限りません。'+e.message));
+    throw e;
   }
 }
 
 function renderTab(tab) {
   const content = document.getElementById('content');
   switch(tab) {
-    case 'home':     content.innerHTML = renderHome(); break;
+    case 'home':     content.innerHTML = renderHome(); document.getElementById('add-record-home')?.addEventListener('click', () => openRecordModal()); break;
     case 'calendar': content.innerHTML = renderCalendar(); bindCalendarEvents(); break;
     case 'records':  content.innerHTML = renderRecords(); bindRecordEvents(); break;
     case 'request':  content.innerHTML = renderRequest(); bindRequestEvents(); break;
@@ -697,9 +710,6 @@ function renderHome() {
     <button class="btn btn-primary btn-block mt8" id="add-record-home">きろくを追加する ✏️</button>
   `;
 
-  setTimeout(() => {
-    document.getElementById('add-record-home')?.addEventListener('click', openRecordModal);
-  }, 0);
   return html;
 }
 
@@ -850,7 +860,7 @@ function bindRecordEvents() {
   document.querySelectorAll('[data-del]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('このきろくを消す？')) return;
-      await api('DELETE', `/api/records/${btn.dataset.del}`);
+      await api('DELETE', `/karada/records/${btn.dataset.del}`);
       await loadData(); renderTab('records');
     });
   });
@@ -920,21 +930,24 @@ function openRecordModal(rec) {
   const getChipVal = group => document.querySelector(`.chip[data-group="${group}"].selected`)?.dataset.val || null;
 
   document.getElementById('m-cancel').addEventListener('click', closeModal);
-  document.getElementById('m-save').addEventListener('click', async () => {
-    const body = {
-      start_date: document.getElementById('m-start').value,
-      end_date:   document.getElementById('m-end').value || null,
-      flow_level: getChipVal('flow'),
-      pain_level: getChipVal('pain'),
-      mood:       getChipVal('mood'),
-      memo:       document.getElementById('m-memo').value.trim() || null,
-    };
-    if (!body.start_date) { alert('はじまった日を選んでね！'); return; }
-    if (isEdit) await api('PUT', `/api/records/${state.editingRecord.id}`, body);
-    else await api('POST', '/api/records', body);
-    closeModal();
-    await loadData();
-    renderTab('records');
+  document.getElementById('m-save').addEventListener('click', async event => {
+    const button=event.currentTarget;if(button.disabled)return;button.disabled=true;
+    try {
+      const body = {
+        start_date: document.getElementById('m-start').value,
+        end_date: document.getElementById('m-end').value || null,
+        flow_level: getChipVal('flow'), pain_level: getChipVal('pain'), mood: getChipVal('mood'),
+        memo: document.getElementById('m-memo').value.trim() || null,
+      };
+      if (!body.start_date) throw new Error('はじまった日を選んでね！');
+      if (body.end_date && body.end_date<body.start_date) throw new Error('おわった日は、はじまった日以降を選んでね。');
+      if (isEdit) await api('PUT', `/karada/records/${state.editingRecord.id}`, body);
+      else await api('POST', '/karada/records', body);
+      closeModal();
+      try { await loadData(); state.tab='records'; buildNav(); renderTab('records'); }
+      catch { showActionError(new Error('保存はできましたが、一覧の読み直しに失敗しました。再登録せず画面を更新してください。')); }
+    } catch(error) { showActionError(error); }
+    finally { button.disabled=false; }
   });
 
   document.getElementById('modal-overlay').classList.remove('hidden');
@@ -998,20 +1011,22 @@ function bindRequestEvents() {
     });
   });
 
-  document.getElementById('req-send')?.addEventListener('click', async () => {
-    const body = {
-      day_pad:    Number(document.getElementById('req-day_pad').value),
-      night_pad:  Number(document.getElementById('req-night_pad').value),
-      heavy_pad:  Number(document.getElementById('req-heavy_pad').value),
-      liner:      Number(document.getElementById('req-liner').value),
-      painkiller: Number(document.getElementById('req-painkiller').value),
-      memo:       document.getElementById('req-memo').value.trim(),
-      urgency:    document.querySelector('.chip[data-group="urgency"].selected')?.dataset.val || 'sometime',
-    };
-    await api('POST', '/api/requests', body);
-    alert('おくったよ！ 🌸 ママが確認するね。');
-    document.getElementById('content').innerHTML = renderRequest();
-    bindRequestEvents();
+  document.getElementById('req-send')?.addEventListener('click', async event => {
+    const button=event.currentTarget;if(button.disabled)return;button.disabled=true;
+    try {
+      const body={};
+      for(const key of ['day_pad','night_pad','heavy_pad','liner','painkiller']) {
+        const value=Number(document.getElementById('req-'+key).value);
+        if(!Number.isInteger(value)||value<0||value>(key==='painkiller'?30:99))throw new Error('枚数・錠数を確認してね。');
+        body[key]=value;
+      }
+      body.memo=document.getElementById('req-memo').value.trim();
+      body.urgency=document.querySelector('.chip[data-group="urgency"].selected')?.dataset.val || 'sometime';
+      await api('POST','/karada/requests',body);
+      document.getElementById('content').innerHTML=renderRequest();bindRequestEvents();
+      alert('おくったよ！ 🌸 管理画面のおねがいリストで確認できるよ。');
+    } catch(error) { showActionError(error); }
+    finally { button.disabled=false; }
   });
 }
 
@@ -1047,12 +1062,12 @@ function bindFavEvents() {
   document.getElementById('fav-add')?.addEventListener('click', async () => {
     const memo = document.getElementById('fav-input').value.trim();
     if (!memo) return;
-    await api('POST', '/api/favorites', { memo });
+    await api('POST', '/karada/favorites', { memo });
     await loadData(); renderTab('favorites');
   });
   document.querySelectorAll('[data-fav-del]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      await api('DELETE', `/api/favorites/${btn.dataset.favDel}`);
+      await api('DELETE', `/karada/favorites/${btn.dataset.favDel}`);
       await loadData(); renderTab('favorites');
     });
   });
@@ -1146,7 +1161,7 @@ function bindMamaEvents() {
   // 既読
   document.querySelectorAll('[data-read]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      await api('PUT', `/api/requests/${btn.dataset.read}/read`);
+      await api('PUT', `/karada/requests/${btn.dataset.read}/read`);
       await loadData(); renderTab('mama');
     });
   });
@@ -1157,7 +1172,7 @@ function bindMamaEvents() {
       item_key: item.item_key,
       quantity: Number(document.getElementById(`inv-${item.item_key}`)?.value || 0),
     }));
-    await api('PUT', '/api/inventory', updates);
+    await api('PUT', '/karada/inventory', updates);
     await loadData(); renderTab('mama');
     alert('在庫を更新したよ！');
   });
@@ -1170,8 +1185,8 @@ function bindMamaEvents() {
       const userId = chip.dataset.val;
       const area = document.getElementById('child-records-area');
       area.innerHTML = '<div class="spinner"></div>';
-      const records = await api('GET', `/api/records?userId=${userId}`);
-      const predict = await api('GET', `/api/predict?userId=${userId}`);
+      const records = await api('GET', `/karada/records?userId=${userId}`);
+      const predict = await api('GET', `/karada/predict?userId=${userId}`);
       if (!records.length) { area.innerHTML = '<div style="color:var(--text-m);">まだきろくなし</div>'; return; }
       let html = '';
       if (predict.hasData) {
@@ -1202,3 +1217,4 @@ document.getElementById('user-badge')?.addEventListener('touchend', () => clearT
 </script>
 </body>
 </html>
+

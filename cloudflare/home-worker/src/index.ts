@@ -771,7 +771,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
     if(path==='/apps/dining-prices')return new Response(null,{status:303,headers:{...headers,Location:'/apps/dining-prices/'}});
     const file=path.slice('/apps/dining-prices/'.length)||'index.html';
-    requireValue(['index.html','app.js','calculator.js','order.js','style.css'].includes(file),404,'見つかりません');
+    requireValue(['index.html','app.js','calculator.js','order.js','plates.js','style.css'].includes(file),404,'見つかりません');
     const assetUrl=new URL(url);assetUrl.pathname='/apps/dining-prices/'+file;
     const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
     const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);

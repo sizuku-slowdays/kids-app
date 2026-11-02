@@ -130,3 +130,7 @@ HOME実装版：[8a52939](https://github.com/sizuku-slowdays/kids-app/commit/8a5
 - 独立した統合版でTypeScript・Worker dry-run、API/画面・家族基盤・HOME配置・食べ放題/お皿計算23件、バックアップ照合Python2件が合格。
 - HOME本番：Cloudflare Build `4d955da2-0b37-4cb3-b5a3-0c02aef18b3b` successをGitHub Checksで確認。Version `d3d39032-8477-4b90-9c4a-4a32408504e9`。
 - 次：prepare-body-home.ps1のverifyで最新beforeとafterを照合。HOMEは0026のみ適用した期待値、calendarは追加6表のみ・旧行/定義保持を確認する。照合前は連携/新規記録/プロフィール作成を待つ。照合結果と実機・旧本人3人の明示連携は未確認。既存の2件の記録を誰へ引き継ぐかは推測しない。
+
+
+### 2026-11-02：からだカレンダー反映後の既存データ照合OK（利用者報告）
+最新の反映直前バックアップを用いたverifyの結果を利用者から受領：`RESULT: EXISTING DATA ALL OK`。HOMEは0026適用後の期待値と一致、calendarは追加6表以外の既存行・定義を保持する照合が合格。これはローカル照合結果の利用者報告であり、サーバー側で個人データを取得したものではない。HOME本番版fecf739469d32276deed1dccb43b9b86d502a7deの利用開始へ進める。次は保護者HOMEの「設定」→対象本人→「既存アカウントを連携」で旧本人を明示選択して引き継ぐ。本人の対応関係・連携操作・実機での記録保存/お願い送信は利用者確認待ち。既存記録がある本人に「新しく利用開始」を選ぶ案内はしない。

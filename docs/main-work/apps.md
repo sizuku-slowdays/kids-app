@@ -217,3 +217,11 @@ HOME実装版：[8a52939](https://github.com/sizuku-slowdays/kids-app/commit/8a5
 - 検証：単体4件合格。Chromiumで計算・復元・欠損/不正入力・行追加/削除確認・家庭切替・枚数リセット・320/390/768/1280px・既存食べ放題計算・保存不可時を確認、JSエラーなし。
 - 本番反映：HOME Cloudflare Build `071cf993-4706-4e44-8e17-fddf94413b61` がsuccess。Version `8d21004e-1b2d-4ab1-9191-bc54fbc91da2`。ログイン画面への認証転送も確認。
 - 実ユーザーでログイン後の本番画面とiPhone実機は未確認。からだカレンダーHOME連携は利用者指示で保留継続。
+
+
+### 2026-11-02：からだカレンダーHOME連携を本番反映、利用前照合待ち
+- HOME正本 `feat/home-auth-foundation` の統合コミット：`fecf739469d32276deed1dccb43b9b86d502a7de`。既存の回転寿司お皿計算を保持し、からだカレンダー実装 `9a4be6391ad24253fa6b07fa63c9a11b8525aad4` を統合。入口 `/wagaya/apps/body-calendar/`、HOME本人連携と新規利用開始、家庭別権限・記録・お願い・在庫を実装。
+- 利用者報告：最新home/calendarバックアップと実DBコピーでの予行確認が成功、calendar追加6表の適用結果がCALENDAR SCHEMA READY、calendar-worker新版のDeploy完了。本番データ自体・SQL・パスワードは受領していない。
+- 独立した統合版でTypeScript・Worker dry-run、API/画面・家族基盤・HOME配置・食べ放題/お皿計算23件、バックアップ照合Python2件が合格。
+- HOME本番：Cloudflare Build `4d955da2-0b37-4cb3-b5a3-0c02aef18b3b` successをGitHub Checksで確認。Version `d3d39032-8477-4b90-9c4a-4a32408504e9`。
+- 次：prepare-body-home.ps1のverifyで最新beforeとafterを照合。HOMEは0026のみ適用した期待値、calendarは追加6表のみ・旧行/定義保持を確認する。照合前は連携/新規記録/プロフィール作成を待つ。照合結果と実機・旧本人3人の明示連携は未確認。既存の2件の記録を誰へ引き継ぐかは推測しない。

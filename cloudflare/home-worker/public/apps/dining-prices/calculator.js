@@ -22,3 +22,11 @@ export function calculateOrder(products,quantities){
  const lines=[];for(const p of products)if(!p.hidden)for(const v of p.variants){const key=orderKey(p,v),qty=quantities[key]||0;if(!Number.isSafeInteger(qty)||qty<0||qty>1000000||!Number.isSafeInteger(v.price)||v.price<0)throw Error('個数・料金を確認してください');if(qty)lines.push({key,product:p,variant:v,quantity:qty,subtotal:qty*v.price});}
  const total=lines.reduce((s,l)=>s+l.subtotal,0);if(!Number.isSafeInteger(total))throw Error('個数が大きすぎます');return {lines,total,quantity:lines.reduce((s,l)=>s+l.quantity,0)};
 }
+
+
+// User-provided West coupon rates; round the displayed total to the nearest yen.
+export function westPaymentEstimates(store,total){
+ if(store?.id!=='west-hashimoto'||total===null)return null;
+ if(!Number.isSafeInteger(total)||total<0)throw Error('合計金額を確認してください');
+ return {cash:Math.round(total*90/100),other:Math.round(total*95/100)};
+}

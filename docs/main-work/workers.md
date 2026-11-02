@@ -209,3 +209,10 @@ HOMEにbody-calendarの認証/プロキシ/保護された画面、calendar-work
 HOME Workerに本人専用household-budget APIと保護アセット、既定OFFの月次予定生成を追加。0027は追加テーブルだけ。旧mama-bank-apiの家計経路停止は任意フラグで準備、未適用。
 
 開発ブランチ `feature/budget-renewal-20261102`。本番DB変更・マージ・本番デプロイは利用者のレビューと許可待ち。[調査・設計・テスト・移行確認](budget-renewal-20261102.md)。
+
+
+## 2026-11-02 家計簿×HOMEカレンダー（開発・許可待ち）
+
+HOMEに0028同期キューと投影、通知Workerに本人job照会/安定rule IDの同期を追加。calendar-worker/DBは変更しない。既存Bindings/Cronを再利用。連携flagは既定OFF、本番設定なし。
+
+`feature/budget-renewal-20261102`。[調査・設計・検証・反映前確認](budget-calendar-integration-20261102.md)。マージ・本番DB変更・デプロイは未実施。

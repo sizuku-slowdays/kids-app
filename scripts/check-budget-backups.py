@@ -21,8 +21,9 @@ def compare(a,b):
 def check(before,migration,after=None,legacy_before=None,legacy_after=None):
  db,meta=load(before);restore=sqlite3.connect(':memory:');restore.executescript('\n'.join(db.iterdump()));issues=compare(db,restore)
  if issues:raise ValueError('restore rehearsal')
- db.executescript(Path(migration).read_text(encoding='utf-8-sig'))
- for name in ['budget_states','budget_operations']:
+ for step in migration if isinstance(migration,(list,tuple)) else [migration]:db.executescript(Path(step).read_text(encoding='utf-8-sig'))
+ for name in ['budget_states','budget_operations','budget_calendar_outbox','budget_notification_sources']:
+  if name not in tables(db):continue
   if db.execute('SELECT COUNT(*) FROM '+name).fetchone()[0]:raise ValueError('new tables not empty')
  if after:
   actual,_=load(after);issues+=compare(db,actual)
@@ -33,7 +34,8 @@ def check(before,migration,after=None,legacy_before=None,legacy_after=None):
    actual,_=load(legacy_after);issues+=compare(old,actual)
  return {'ok':not issues,'backup':meta,'restore_rehearsal':'ok','issues':issues,'production_changed':False}
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('--before',required=True);p.add_argument('--migration',required=True);p.add_argument('--after');p.add_argument('--legacy-before');p.add_argument('--legacy-after');a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--before',required=True);p.add_argument('--migration',required=True,action='append');p.add_argument('--after');p.add_argument('--legacy-before');p.add_argument('--legacy-after');a=p.parse_args()
  try:
   result=check(a.before,a.migration,a.after,a.legacy_before,a.legacy_after);print(json.dumps(result,indent=2));print('RESULT: BACKUP AND DATA OK' if result['ok'] else 'RESULT: STOP');raise SystemExit(0 if result['ok'] else 1)
  except (OSError,UnicodeError,sqlite3.Error,ValueError):print('RESULT: STOP (offline backup/schema validation)');raise SystemExit(1)
+

@@ -6,6 +6,7 @@
     "strict": true,
     "resolveJsonModule": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "lib": ["ES2022"],
     "types": ["./worker-configuration.d.ts", "node"],
     "skipLibCheck": true

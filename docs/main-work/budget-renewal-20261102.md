@@ -96,3 +96,8 @@
 再検証：`cloudflare/home-worker`で`npm ci`、`npm run check`、`npx wrangler deploy --dry-run --outdir .wrangler/test-build`の後、`node --test --test-concurrency=1 test/budget-core.test.mjs test/budget-api.test.mjs test/budget-legacy-gate.test.mjs test/home-layout.test.mjs test/family-foundation.test.mjs`。リポジトリのルートから`python scripts/test_check_budget_backups.py`。
 
 画面試験：PlaywrightとChromiumを用意し、リポジトリのルートから`node scripts/check-budget-ui.mjs`。必要に応じて`BUDGET_PLAYWRIGHT_MODULE`（Playwrightのモジュールパス）、`BUDGET_CHROMIUM`（ブラウザ実行ファイル）、`BUDGET_FONT_ROOT`（任意の日本語フォント）を指定する。試験は合成ユーザー/残高のローカルDBを作り、本番へ通信しない。
+
+
+## 追加：本人専用カレンダー連携（開発のみ）
+
+入金・振替予定、固定費/カード引落のカレンダー投影と既存HOME通知経路を追加。[調査・設計・検証・本番前確認](budget-calendar-integration-20261102.md)。本番未反映、0028追加migrationと通知Worker対応も未適用。本人限定・金銭確定の分離・本番許可待ちを維持。

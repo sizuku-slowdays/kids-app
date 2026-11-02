@@ -1184,6 +1184,7 @@ async function handleRequest(request, env) {
 
 
 
+  if(path==='/internal/budget-calendar/sync')return syncBudgetCalendarNotification(request,env);
   if(path==='/internal/school-prep/send')return schoolPreparationPush(request,env);
   if(path==='/internal/passbook-gifts/send')return passbookGiftPush(request,env);
   if(path.startsWith('/api/home/'))return homeNotificationRoute(request,env,path);
@@ -1979,6 +1980,8 @@ async function checkHomeCalendarDelivery(env,rule,userId,sessionId){
  if(!env.HOME_AUTH||!userId||!sessionId||!String(rule.external_key||'').startsWith('cal_'))return {allowed:false};
  const url=new URL('https://notification-auth.internal/internal/notification-check');
  url.searchParams.set('session',sessionId);url.searchParams.set('user',userId);url.searchParams.set('event',String(rule.external_key).slice(4));
+ let metadata=rule.texts;try{if(typeof metadata==='string')metadata=JSON.parse(metadata);}catch{}
+ if(String(rule.external_key).startsWith('cal_bg'))url.searchParams.set('version',String(metadata?.__budget_version||''));
  const response=await env.HOME_AUTH.fetch(new Request(url));return response.ok?response.json():{allowed:false};
 }
 
@@ -2064,4 +2067,30 @@ async function passbookGiftPush(request,env){
   }
  }
  return json({ok:failed===0,protocol:'gift-v1',delivered,failed},request,env,failed?503:200);
+}
+
+
+// HOME budget projection: one stable rule per source. Existing subscription,
+// session recheck, Web Push and delivery logs remain authoritative.
+async function syncBudgetCalendarNotification(request,env){
+ if(new URL(request.url).hostname!=='notification.internal'||request.method!=='POST')return json({error:'見つかりません'},request,env,404);
+ if(!env.HOME_AUTH)return json({error:'HOME接続を確認してください'},request,env,503);
+ const input=await request.json().catch(()=>null);
+ if(typeof input?.job!=='string'||!/^[a-f0-9-]{36}$/.test(input.job))return json({error:'操作番号を確認してください'},request,env,400);
+ const check=new URL('https://notification-auth.internal/internal/budget-calendar/job');check.searchParams.set('job',input.job);
+ const verified=await env.HOME_AUTH.fetch(new Request(check));
+ if(!verified.ok)return json({error:'予約が更新されたか連携が停止しています'},request,env,409);
+ const p=await verified.json();
+ if(!/^bg[a-f0-9]{32}$/.test(p.source_id)||!Number.isSafeInteger(p.version)||p.version<1||(!isHomeNotificationRecipient(p.recipient)||p.recipient==='home-all')||!Array.isArray(p.occurrences)||p.occurrences.length>1)return json({error:'HOMEの対応コードを確認してください'},request,env,503);
+ const at=p.occurrences[0];if(at&&(!/^\d{4}-\d{2}-\d{2}$/.test(at.date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(at.time)))return json({error:'通知日を確認してください'},request,env,400);
+ await env.DB.prepare('CREATE TABLE IF NOT EXISTS budget_notification_sources (source_id TEXT PRIMARY KEY,version INTEGER NOT NULL,job_token TEXT NOT NULL,rule_id INTEGER UNIQUE)').run();
+ const external='cal_'+p.source_id;
+ await env.DB.batch([
+  env.DB.prepare('INSERT OR IGNORE INTO budget_notification_sources VALUES(?,0,?,NULL)').bind(p.source_id,''),
+  env.DB.prepare("INSERT INTO notification_rules(title,body,recipient,url,external_key,texts,repeat_type,time,once_date,enabled,track_completion) SELECT '家計の予定','予定を確認してください','all','/wagaya/apps/household-budget/',?,NULL,'once','09:00','2000-01-01',0,0 WHERE EXISTS(SELECT 1 FROM budget_notification_sources WHERE source_id=? AND rule_id IS NULL)").bind(external,p.source_id),
+  env.DB.prepare('UPDATE budget_notification_sources SET rule_id=(SELECT id FROM notification_rules WHERE external_key=? ORDER BY id LIMIT 1) WHERE source_id=? AND rule_id IS NULL').bind(external,p.source_id),
+  env.DB.prepare('UPDATE budget_notification_sources SET version=?,job_token=? WHERE source_id=? AND version<?').bind(p.version,input.job,p.source_id,p.version),
+  env.DB.prepare("UPDATE notification_rules SET enabled=?,time=?,once_date=?,texts=? WHERE id=(SELECT rule_id FROM budget_notification_sources WHERE source_id=? AND version=? AND job_token=?)").bind(at?1:0,at?.time||'09:00',at?.date||'2000-01-01',JSON.stringify({__home_calendar_recipient:p.recipient,__budget_version:p.version}),p.source_id,p.version,input.job)
+ ]);
+ return json({protocol:'budget-calendar-v1',version:p.version},request,env);
 }

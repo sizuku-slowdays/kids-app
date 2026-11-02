@@ -1,3 +1,4 @@
+import {bodyIdentity,bodyProxy} from './body-calendar';
 import {homeLayoutRoute} from './home-layout';
 import {FamilyFailure,familiesRoute,previewFamilyInvite,registerFamilyInvite} from './families';
 import { giftNotificationCheck, deliverGiftNotifications } from './passbook-gifts';
@@ -505,6 +506,14 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       if(path==='/api/notifications/identity' && url.hostname==='notification-auth.internal' && method==='GET')return json({user:{id:user.id,display_name:user.display_name},session_id:s.id});
       return notificationProxy(request,env);
     }
+    if(path==='/api/body-calendar/identity'&&method==='GET'&&url.hostname==='body-auth.internal'){
+      requireValue(await appAllowed(env,user.id,'body-calendar'),403,'このアプリは利用できません');
+      return bodyIdentity(env,user,request);
+    }
+    if(path==='/api/body-calendar'||path.startsWith('/api/body-calendar/')){
+      requireValue(await appAllowed(env,user.id,'body-calendar'),403,'このアプリは利用できません');
+      return bodyProxy(env,request,user.id);
+    }
     if (path === "/api/calendar/identity" && method === "GET") {
       requireValue(await appAllowed(env,user.id,"calendar"),403,"このアプリは利用できません");
       return calendarIdentity(env,user,request);
@@ -765,6 +774,18 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   if (path.startsWith("/api/") || path.startsWith("/media/"))
     throw new Failure(404, "見つかりません");
+  if(path==='/apps/body-calendar'||path.startsWith('/apps/body-calendar/')){
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
+    requireValue(await appAllowed(env,s.user_id,'body-calendar'),403,'このアプリは利用できません');
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    if(path==='/apps/body-calendar')return new Response(null,{status:303,headers:{...headers,Location:'/apps/body-calendar/'}});
+    const file=path.slice('/apps/body-calendar/'.length)||'index.html';
+    requireValue(['index.html','app.js','style.css'].includes(file),404,'見つかりません');
+    const assetUrl=new URL(url);assetUrl.pathname='/apps/body-calendar/'+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
   if(path==='/apps/dining-prices'||path.startsWith('/apps/dining-prices/')){
     if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
     requireValue(await appAllowed(env,s.user_id,'dining-prices'),403,'このアプリは利用できません');
@@ -993,6 +1014,7 @@ export default {
     ]);
   },
 } satisfies ExportedHandler<HomeEnv>;
+
 
 
 

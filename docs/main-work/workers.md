@@ -191,3 +191,14 @@ home-workerの履歴GETに取消状態と操作可否を追加し、POST /api/pa
 ## 2026-10-29 からだカレンダーの入口
 
 home-workerのpublic/app.jsの既存固定リンク欄のみ変更。calendar-worker、HOME/API認証、D1/R2/Cron/Bindings/URLに変更なし。既存の簡易HOMEと新規ファミリーへの表示条件は維持。
+
+
+## 2026-10-30 からだカレンダーのHOME本人連携（本番未反映）
+
+HOMEにbody-calendarの認証/プロキシ/保護された画面、calendar-workerに/home-karadaを追加。既存CALENDAR_SERVICE/HOME_AUTHを使用。calendar-dbに追加6表、home-dbは0026のアプリ登録/初期表示のみ。新Binding/R2/Cron/Secretなし。 [設計・試験・反映手順](body-calendar-home-integration-20261030.md)。
+
+
+### 2026-11-02：からだカレンダーHOME連携の反映開始
+利用者が最新のhome-db/calendar-dbバックアップ取得・実バックアップでの移行予行確認の成功、calendar-db追加6表の適用、固定版9a4be6391ad24253fa6b07fa63c9a11b8525aad4のcalendar-workerへのDeploy完了を報告。HOMEへ同版の機能を統合し、既存の回転寿司お皿計算を保持。本番のHOME自動Build成功と、追加SQL適用後の既存データ照合・本人を明示した旧アカウント連携・実機確認は未確認。照合前は新規記録・プロフィール作成・本人連携を行わない。
+
+統合版の再検証：TypeScript・Worker dry-run、からだカレンダーAPI/画面・家族招待・HOME並び順・食べ放題/お皿計算の23件、バックアップ照合Python2件が合格。HOME Buildと利用開始前照合は次の段階。

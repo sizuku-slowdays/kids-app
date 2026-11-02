@@ -1,0 +1,7 @@
+// Offline consistency check for the owner's private export. Never writes to a database.
+import {readFile} from 'node:fs/promises';import {createHash} from 'node:crypto';
+import {newBudget,applyBudgetCommand} from '../cloudflare/home-worker/src/budget-core.js';
+export function replayBudgetAudit(backup){let state=newBudget(),revision=0;const hash=x=>createHash('sha256').update(typeof x==='string'?x:JSON.stringify(x)).digest('hex');
+ for(const op of backup.audit){if(op.before_revision!==revision||hash(state)!==op.before_hash)throw Error('audit_chain_mismatch');const command=JSON.parse(op.command_json);if(hash(command)!==op.request_hash)throw Error('request_hash_mismatch');state=applyBudgetCommand(state,command,{today:op.as_of,eventId:op.event_id,importHash:command.type==='import'?hash(command.data.snapshot):undefined});if(hash(state)!==op.after_hash)throw Error('state_hash_mismatch');revision=op.after_revision;}
+ if(revision!==backup.revision||hash(state)!==hash(backup.state))throw Error('export_state_mismatch');return {ok:true,revision,operations:backup.audit.length};}
+if(process.argv[1]&&new URL(import.meta.url).pathname===process.argv[1]){try{const result=replayBudgetAudit(JSON.parse(await readFile(process.argv[2],'utf8')));console.log(JSON.stringify(result));console.log('RESULT: AUDIT REPLAY OK');}catch{console.log('RESULT: STOP (offline audit verification)');process.exitCode=1;}}

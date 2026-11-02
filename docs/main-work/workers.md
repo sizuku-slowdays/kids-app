@@ -202,3 +202,10 @@ HOMEにbody-calendarの認証/プロキシ/保護された画面、calendar-work
 利用者が最新のhome-db/calendar-dbバックアップ取得・実バックアップでの移行予行確認の成功、calendar-db追加6表の適用、固定版9a4be6391ad24253fa6b07fa63c9a11b8525aad4のcalendar-workerへのDeploy完了を報告。HOMEへ同版の機能を統合し、既存の回転寿司お皿計算を保持。本番のHOME自動Build成功と、追加SQL適用後の既存データ照合・本人を明示した旧アカウント連携・実機確認は未確認。照合前は新規記録・プロフィール作成・本人連携を行わない。
 
 統合版の再検証：TypeScript・Worker dry-run、からだカレンダーAPI/画面・家族招待・HOME並び順・食べ放題/お皿計算の23件、バックアップ照合Python2件が合格。HOME Buildと利用開始前照合は次の段階。
+
+
+## 2026-11-02 家計管理リニューアル（開発のみ）
+
+HOME Workerに本人専用household-budget APIと保護アセット、既定OFFの月次予定生成を追加。0027は追加テーブルだけ。旧mama-bank-apiの家計経路停止は任意フラグで準備、未適用。
+
+開発ブランチ `feature/budget-renewal-20261102`。本番DB変更・マージ・本番デプロイは利用者のレビューと許可待ち。[調査・設計・テスト・移行確認](budget-renewal-20261102.md)。

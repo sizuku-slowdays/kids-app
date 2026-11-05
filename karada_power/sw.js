@@ -1,5 +1,5 @@
-const CACHE='karada-power-prod-v15.21';
-const ASSETS=['/karada_power/','/karada_power/index.html','/karada_power/style.css?v=15.21','/karada_power/app.js?v=15.21','/karada_power/data.js?v=15.21','/karada_power/manifest.webmanifest?v=15.21','/karada_power/icon-180.png','/karada_power/icon-192.png','/karada_power/icon-512.png'];
+const CACHE='karada-power-prod-v15.23';
+const ASSETS=['/karada_power/','/karada_power/index.html','/karada_power/style.css?v=15.23','/karada_power/app.js?v=15.23','/karada_power/data.js?v=15.23','/karada_power/manifest.webmanifest?v=15.23','/karada_power/icon-180.png','/karada_power/icon-192.png','/karada_power/icon-512.png'];
 
 self.addEventListener('install', event => {
   self.skipWaiting();

@@ -203,6 +203,12 @@
   </header>
 
   <main class="app">
+    <section class="card" aria-labelledby="todaySpendingTitle">
+      <h2 id="todaySpendingTitle" style="margin:0;font-size:1rem">今日使った金額</h2>
+      <p id="todaySpendingAmount" style="font-size:1.8rem;font-weight:800;margin:4px 0" aria-live="polite">0円</p>
+      <p id="todaySpendingDetail" class="settle-hint"></p>
+      <p class="settle-hint">登録済みの支出・立替を合計します。カードも使った日で集計。未登録のレシートは含みません。</p>
+    </section>
 
 
     <section class="card" id="fixedCard">
@@ -543,8 +549,18 @@
       }catch(e){ return []; }
     }
 
+    function renderTodaySpending(){
+      const date=todayString(),rows=mergeEntries([],loadEntries(),loadDeletedIds())
+        .filter(e=>e.date===date&&['expense','advance'].includes(e.type)&&!e.void&&!e.deletedAt);
+      const total=rows.reduce((sum,e)=>sum+(Number.isFinite(Number(e.amount))?Number(e.amount):0),0);
+      const count=new Set(rows.map(e=>e.receiptId||e.id)).size;
+      $("todaySpendingAmount").textContent=total.toLocaleString("ja-JP")+"円";
+      $("todaySpendingDetail").textContent=date+"・"+count+"取引（この端末に読み込まれた記録）";
+    }
+
     function saveEntries(list){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      renderTodaySpending();
     }
 
     function loadDeletedIds(){
@@ -982,6 +998,11 @@
     /* ── 初期化 ── */
     function init(){
       $("date").value = todayString();
+      renderTodaySpending();
+      window.addEventListener("storage",renderTodaySpending);
+      window.addEventListener("focus",renderTodaySpending);
+      document.addEventListener("visibilitychange",()=>{if(!document.hidden)renderTodaySpending()});
+      setInterval(()=>{if(!document.hidden)renderTodaySpending()},60000);
       refreshCounterparties();
       initFixed();
       buildCategoryButtons();

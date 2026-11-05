@@ -290,10 +290,14 @@ function schoolFindFood(name){
  return FOODS.find(f=>f.name===q)||FOODS.find(f=>(f.recipe_tags||'').split(',').includes(q))||FOODS.find(f=>f.name.includes(q)||q.includes(f.name));
 }
 function schoolLunchVirtualFood(title){
- const direct=schoolFindFood(title);
- if(direct)return {...direct,id:'school:'+title,name:title,reading:title,schoolLunch:true};
+ const exact=FOODS.find(f=>f.name===title);
+ if(exact)return {...exact,id:'school:'+title,name:title,reading:title,schoolLunch:true};
  const recipe=SCHOOL_RECIPES.find(r=>r.title===title);
- if(!recipe)return {id:'school:'+title,name:title,reading:title,emoji:'🏫',head_power:0,sparkle_power:0,muscle_power:0,bone_power:0,immunity_power:0,schoolLunch:true};
+ if(!recipe){
+   const direct=schoolFindFood(title);
+   if(direct)return {...direct,id:'school:'+title,name:title,reading:title,schoolLunch:true};
+   return {id:'school:'+title,name:title,reading:title,emoji:'🏫',head_power:0,sparkle_power:0,muscle_power:0,bone_power:0,immunity_power:0,schoolLunch:true};
+ }
  const fs=recipe.ingredients.map(schoolFindFood).filter(Boolean);
  const v={id:'school:'+title,name:title,reading:title,emoji:'🏫',schoolLunch:true,schoolIngredients:recipe.ingredients};
  powers.forEach(p=>{
@@ -371,7 +375,7 @@ function schoolThreeColorForTitle(title){
   const out={red:new Set(),yellow:new Set(),green:new Set()};
   const add=name=>{
     const f=schoolFindFood(name),key=schoolThreeColorKey(f,name);
-    if(key)out[key].add((f&&f.reading)||name);
+    if(key)out[key].add((f&&f.name)||name);
   };
   const recipe=SCHOOL_RECIPES.find(r=>r.title===title),direct=schoolFindFood(title);
   if(recipe)recipe.ingredients.forEach(add);
@@ -415,7 +419,7 @@ function renderSchoolLunchForRecord(){
       const checked=done.has(title),warn=title.includes('アーモンド');
       return `<button class="school-lunch-item ${checked?'eaten':''} ${warn?'ingredient-alert':''}" data-record-school-eat="${title.replace(/"/g,'&quot;')}">
        <span class="school-lunch-check">${checked?'✓':'＋'}</span>
-       <span class="school-lunch-name">${title}${warn?'<small>⚠️ アーモンド入り</small>':''}</span>
+       <span class="school-lunch-name">${title}${warn?'<small>⚠️ アーモンド入り・アレルギー注意</small>':''}</span>
        <span class="school-lunch-stars">${schoolLunchPowerBadges(title)||'材料を記録'}</span>
       </button>`;
    }).join('')}</div>
@@ -467,7 +471,7 @@ function renderSchoolLunchToday(){
       const checked=done.has(title), warn=title.includes('アーモンド');
       return `<button class="school-lunch-item ${checked?'eaten':''} ${warn?'ingredient-alert':''}" data-school-eat="${title.replace(/"/g,'&quot;')}">
         <span class="school-lunch-check">${checked?'✓':'＋'}</span>
-        <span class="school-lunch-name">${title}${warn?'<small>⚠️ アーモンド入り</small>':''}</span>
+        <span class="school-lunch-name">${title}${warn?'<small>⚠️ アーモンド入り・アレルギー注意</small>':''}</span>
         <span class="school-lunch-stars">${schoolLunchPowerBadges(title)||'材料を記録'}</span>
       </button>`;
    }).join('')}</div>

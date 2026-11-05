@@ -6630,3 +6630,117 @@ const SCHOOL_RECIPES_V15_23=[
  const found=new Map(SCHOOL_RECIPES.map(r=>[r.title,r]));
  SCHOOL_RECIPES_V15_23.forEach(r=>{const old=found.get(r.title);if(old){old.months=Array.from(new Set([...(old.months||[]),...r.months]));}else SCHOOL_RECIPES.push(r);});
 }
+
+
+// v15.23: 11月献立で見つかった未収録の基本食材（暫定評価）
+const SCHOOL_NOV_INGREDIENTS_V15_23=[
+ {
+  "id": "fish_shishamo",
+  "category": "さかな",
+  "name": "ししゃも",
+  "reading": "ししゃも",
+  "emoji": "🐟",
+  "head_power": 1,
+  "sparkle_power": 1,
+  "muscle_power": 2,
+  "bone_power": 2,
+  "immunity_power": 1,
+  "main_nutrients": "たんぱく質,カルシウム,脂質",
+  "nutrient_list": [
+   "たんぱく質",
+   "カルシウム",
+   "脂質"
+  ],
+  "recipe_tags": "ししゃも,ししゃもフライ,魚",
+  "kids_text": "食べものの栄養は、食べる量や料理のしかたによって変わるよ。",
+  "score_note": "一般的な食品成分をもとにした保守的な暫定評価。個別の献立の分量から計算したものではありません。"
+ },
+ {
+  "id": "fish_sanma",
+  "category": "さかな",
+  "name": "さんま",
+  "reading": "さんま",
+  "emoji": "🐟",
+  "head_power": 2,
+  "sparkle_power": 1,
+  "muscle_power": 2,
+  "bone_power": 0,
+  "immunity_power": 1,
+  "main_nutrients": "たんぱく質,脂質,DHA,EPA",
+  "nutrient_list": [
+   "たんぱく質",
+   "脂質",
+   "DHA",
+   "EPA"
+  ],
+  "recipe_tags": "さんま,秋刀魚,魚",
+  "kids_text": "食べものの栄養は、食べる量や料理のしかたによって変わるよ。",
+  "score_note": "一般的な食品成分をもとにした保守的な暫定評価。個別の献立の分量から計算したものではありません。"
+ },
+ {
+  "id": "fish_hotate",
+  "category": "さかな",
+  "name": "ほたて貝柱",
+  "reading": "ほたてかいばしら",
+  "emoji": "🐚",
+  "head_power": 0,
+  "sparkle_power": 0,
+  "muscle_power": 2,
+  "bone_power": 0,
+  "immunity_power": 0,
+  "main_nutrients": "たんぱく質,亜鉛",
+  "nutrient_list": [
+   "たんぱく質",
+   "亜鉛"
+  ],
+  "recipe_tags": "ほたて,帆立,貝柱,シーフード",
+  "kids_text": "食べものの栄養は、食べる量や料理のしかたによって変わるよ。",
+  "score_note": "一般的な食品成分をもとにした保守的な暫定評価。個別の献立の分量から計算したものではありません。"
+ },
+ {
+  "id": "veg_mizuna",
+  "category": "野菜",
+  "name": "水菜",
+  "reading": "みずな",
+  "emoji": "🥬",
+  "head_power": 0,
+  "sparkle_power": 1,
+  "muscle_power": 0,
+  "bone_power": 1,
+  "immunity_power": 1,
+  "main_nutrients": "ビタミンC,カルシウム,葉酸",
+  "nutrient_list": [
+   "ビタミンC",
+   "カルシウム",
+   "葉酸"
+  ],
+  "recipe_tags": "水菜,みずな,野菜",
+  "kids_text": "食べものの栄養は、食べる量や料理のしかたによって変わるよ。",
+  "score_note": "一般的な食品成分をもとにした保守的な暫定評価。個別の献立の分量から計算したものではありません。"
+ },
+ {
+  "id": "veg_takana",
+  "category": "野菜",
+  "name": "高菜",
+  "reading": "たかな",
+  "emoji": "🥬",
+  "head_power": 0,
+  "sparkle_power": 1,
+  "muscle_power": 0,
+  "bone_power": 0,
+  "immunity_power": 1,
+  "main_nutrients": "βカロテン,ビタミンK,食物繊維",
+  "nutrient_list": [
+   "βカロテン",
+   "ビタミンK",
+   "食物繊維"
+  ],
+  "recipe_tags": "高菜,たかな,たかな漬,野菜",
+  "kids_text": "食べものの栄養は、食べる量や料理のしかたによって変わるよ。",
+  "score_note": "一般的な食品成分をもとにした保守的な暫定評価。個別の献立の分量から計算したものではありません。"
+ }
+];
+{
+ const ids=new Set(FOODS.map(f=>f.id)),names=new Set(FOODS.map(f=>f.name));
+ SCHOOL_NOV_INGREDIENTS_V15_23.forEach(f=>{if(!ids.has(f.id)&&!names.has(f.name))FOODS.push(f);});
+}

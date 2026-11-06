@@ -205,6 +205,12 @@
   <main class="app">
     <section class="card" aria-labelledby="todaySpendingTitle">
       <h2 id="todaySpendingTitle" style="margin:0;font-size:1rem">今日使った金額</h2>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0">
+        <button type="button" id="spendingPrevious" class="back-btn">← 前の日</button>
+        <input type="date" id="spendingDate" aria-label="合計を確認する日" style="font:inherit;max-width:100%">
+        <button type="button" id="spendingNext" class="back-btn">次の日 →</button>
+        <button type="button" id="spendingToday" class="back-btn">今日に戻る</button>
+      </div>
       <p id="todaySpendingAmount" style="font-size:1.8rem;font-weight:800;margin:4px 0" aria-live="polite">0円</p>
       <p id="todaySpendingDetail" class="settle-hint"></p>
       <p class="settle-hint">登録済みの支出・立替を合計します。カードも使った日で集計。未登録のレシートは含みません。</p>
@@ -549,8 +555,29 @@
       }catch(e){ return []; }
     }
 
+    let spendingSelectedDate="";
+
+    function moveSpendingDate(days){
+      const date=new Date((spendingSelectedDate||todayString())+"T00:00:00Z");
+      date.setUTCDate(date.getUTCDate()+days);
+      setSpendingDate(date.toISOString().slice(0,10));
+    }
+
+    function setSpendingDate(date){
+      const today=todayString();
+      spendingSelectedDate=date&&date<today?date:"";
+      renderTodaySpending();
+    }
+
     function renderTodaySpending(){
-      const date=todayString(),rows=mergeEntries([],loadEntries(),loadDeletedIds())
+      const today=todayString(),date=spendingSelectedDate||today;
+      const input=$("spendingDate");
+      input.max=today;
+      input.value=date;
+      $("spendingNext").disabled=date>=today;
+      $("spendingToday").hidden=date===today;
+      $("todaySpendingTitle").textContent=date===today?"今日使った金額":"この日に使った金額";
+      const rows=mergeEntries([],loadEntries(),loadDeletedIds())
         .filter(e=>e.date===date&&['expense','advance'].includes(e.type)&&!e.void&&!e.deletedAt);
       const total=rows.reduce((sum,e)=>sum+(Number.isFinite(Number(e.amount))?Number(e.amount):0),0);
       const count=new Set(rows.map(e=>e.receiptId||e.id)).size;
@@ -999,6 +1026,10 @@
     function init(){
       $("date").value = todayString();
       renderTodaySpending();
+      $("spendingPrevious").addEventListener("click",()=>moveSpendingDate(-1));
+      $("spendingNext").addEventListener("click",()=>moveSpendingDate(1));
+      $("spendingToday").addEventListener("click",()=>setSpendingDate(""));
+      $("spendingDate").addEventListener("change",event=>setSpendingDate(event.target.value));
       window.addEventListener("storage",renderTodaySpending);
       window.addEventListener("focus",renderTodaySpending);
       document.addEventListener("visibilitychange",()=>{if(!document.hidden)renderTodaySpending()});

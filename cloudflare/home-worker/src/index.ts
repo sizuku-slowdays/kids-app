@@ -1,3 +1,5 @@
+import {budgetCalendarJob,budgetNotificationCheck,deliverBudgetCalendar} from './budget-calendar';
+import {budgetRoute,runBudgetSchedules} from './budget';
 import {bodyIdentity,bodyProxy} from './body-calendar';
 import {homeLayoutRoute} from './home-layout';
 import {FamilyFailure,familiesRoute,previewFamilyInvite,registerFamilyInvite} from './families';
@@ -240,6 +242,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     path = url.pathname,
     method = request.method;
   if(url.hostname==='calendar-auth.internal'&&path==='/internal/family-readiness'&&method==='GET'){const ready=env.FAMILY_INVITES_ENABLED==='1'&&await env.DB.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='family_workspaces'").first();return json({protocol:ready?'multi-family-v1':null});}
+  if(path==='/internal/budget-calendar/job')return budgetCalendarJob(request,env);
   if (path === '/internal/passbook-gifts/notification-check') return giftNotificationCheck(request,env);
   if (path === '/internal/school-prep/notification-check') return schoolNotificationCheck(request,env);
   if (url.hostname === 'notification-auth.internal' && path === '/internal/notification-check' && method === 'GET') {
@@ -247,6 +250,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     if (!target || !await appAllowed(env,target.id,'calendar') || !await appAllowed(env,target.id,'notification')) return json({allowed:false});
     const activeSession=await env.DB.prepare('SELECT 1 FROM sessions WHERE id=? AND user_id=? AND revoked_at IS NULL AND expires_at>?').bind(url.searchParams.get('session')||'',target.id,Math.floor(Date.now()/1000)).first();
     if(!activeSession)return json({allowed:false});
+    if((url.searchParams.get('event')||'').startsWith('bg'))return budgetNotificationCheck(env,target.id,url.searchParams);
     const identity=await calendarIdentity(env,target,new Request('https://calendar-auth.internal/api/calendar/identity'));
     return notificationCheck(request,env,await identity.json());
   }
@@ -505,6 +509,10 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       requireValue(await appAllowed(env,user.id,'notification'),403,'このアプリは利用できません');
       if(path==='/api/notifications/identity' && url.hostname==='notification-auth.internal' && method==='GET')return json({user:{id:user.id,display_name:user.display_name},session_id:s.id});
       return notificationProxy(request,env);
+    }
+    if(path==='/api/household-budget'||path.startsWith('/api/household-budget/')){
+      requireValue(await appAllowed(env,user.id,'household-budget'),403,'この家計簿は本人専用です');
+      return budgetRoute(request,env,user.id,body);
     }
     if(path==='/api/body-calendar/identity'&&method==='GET'&&url.hostname==='body-auth.internal'){
       requireValue(await appAllowed(env,user.id,'body-calendar'),403,'このアプリは利用できません');
@@ -774,6 +782,18 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   }
   if (path.startsWith("/api/") || path.startsWith("/media/"))
     throw new Failure(404, "見つかりません");
+  if(path==='/apps/household-budget'||path.startsWith('/apps/household-budget/')){
+    if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
+    requireValue(await appAllowed(env,s.user_id,'household-budget'),403,'この家計簿は本人専用です');
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    if(path==='/apps/household-budget')return new Response(null,{status:303,headers:{...headers,Location:'/apps/household-budget/'}});
+    const file=path.slice('/apps/household-budget/'.length)||'index.html';
+    requireValue(['index.html','app.js','style.css','daily-spending.js'].includes(file),404,'見つかりません');
+    const assetUrl=new URL(url);assetUrl.pathname='/apps/household-budget/'+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const h=new Headers(response.headers);for(const [key,value] of Object.entries(headers))h.set(key,value);
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:h});
+  }
   if(path==='/apps/body-calendar'||path.startsWith('/apps/body-calendar/')){
     if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
     requireValue(await appAllowed(env,s.user_id,'body-calendar'),403,'このアプリは利用できません');
@@ -999,6 +1019,9 @@ export default {
     }
   },
   async scheduled(_event: ScheduledController, env: HomeEnv) {
+    // Budget schedule is opt-in and creates plans only, never payments.
+    try{await runBudgetSchedules(env,_event.scheduledTime);}catch{console.error(JSON.stringify({event:'budget_schedule_failed'}));}
+    try{await deliverBudgetCalendar(env);}catch{console.error(JSON.stringify({event:'budget_calendar_sync_failed'}));}
     // Financial jobs retry hourly on JST day 1. Existing maintenance keeps its original schedule.
     try{await runCashAutomation(env,_event.scheduledTime);}catch{console.error(JSON.stringify({event:'passbook_financial_schedule_failed'}));}
     try{await deliverGiftNotifications(env);}catch{console.error(JSON.stringify({event:'passbook_gift_notification_retry_failed'}));}
@@ -1014,6 +1037,8 @@ export default {
     ]);
   },
 } satisfies ExportedHandler<HomeEnv>;
+
+
 
 
 

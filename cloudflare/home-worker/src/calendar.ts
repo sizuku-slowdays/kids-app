@@ -1,3 +1,4 @@
+import {privateBudgetCalendar,BUDGET_CALENDAR_ID} from './budget-calendar';
 type CalendarEnv = Env & { CALENDAR_SERVICE?: Fetcher };
 type IdentityUser = { id: string; display_name: string; login_name: string; platform_role: string };
 export async function calendarIdentity(env: CalendarEnv, user: IdentityUser, request: Request) {
@@ -23,6 +24,8 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
   const path = url.pathname.slice('/api/calendar'.length) || '/home/status';
   // Only calendar routes. Never proxy arbitrary URLs, karada, login or OAuth.
   if (!/^\/(?:home\/(?:status|link|remove-initial-calendar)|sharing(?:\/offers)?|family\/(?:me|members(?:\/[^/]+)?)|users|me|calendars(?:\/[^/]+(?:\/accept)?)?|events(?:\/[^/]+)?|google-events|integrations\/google-ics|holidays|notifications\/resync)$/.test(path)) return Response.json({error:'見つかりません'},{status:404});
+  if(path.startsWith('/calendars/'+BUDGET_CALENDAR_ID)||path.startsWith('/events/bg'))return Response.json({error:'家計の予定は家計簿から変更してください'},{status:409});
+  if(['POST','PUT'].includes(request.method)){const input=await request.clone().json().catch(()=>null) as any;if(input?.calendar_id===BUDGET_CALENDAR_ID)return Response.json({error:'家計の予定は家計簿から登録してください'},{status:409});}
   const upstream = new URL('https://calendar.internal'+path+url.search);
   const outgoing = new Headers({'X-Home-Calendar':'1'});
   // Strip the caller's legacy token and all impersonation headers.
@@ -50,8 +53,10 @@ export async function calendarProxy(env: CalendarEnv, request: Request, userId: 
   }
   const response = await env.CALENDAR_SERVICE.fetch(new Request(upstream,{method:request.method,headers:outgoing,body:['GET','HEAD'].includes(request.method)?null:request.body,redirect:'manual'}));
   if(path==='/home/status' && response.status===404) return Response.json({error:'カレンダーWorkerのHOME連携コードの反映が必要です。管理者がCloudflareで設定するまで、本人の予定は表示しません'},{status:503,headers:{'Cache-Control':'private, no-store'}});
+  if(request.method==='GET'&&response.ok&&['/events','/calendars'].includes(path)){const original=await response.json();const own=await privateBudgetCalendar(env,userId,path,url.searchParams);return Response.json([...original as any[],...own],{headers:{'Cache-Control':'private, no-store'}});}
   const headers = new Headers({'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
   return new Response(response.body,{status:response.status,headers});
 }
+
 
 

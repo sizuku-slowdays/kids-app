@@ -42,6 +42,19 @@ export default {
 
     const url = new URL(request.url);
 
+    // Inactive until the owner explicitly approves the household-budget cutover.
+    // Retain app_data rows and backups; close every old shared-password path for this key only.
+    if (url.pathname === '/api/home-budget-status' && request.method === 'GET') {
+      return Response.json({retired:env.HOME_KAKEIBO_MIGRATED==='1',home:'https://cetus.fun/wagaya/apps/household-budget/'},{headers:{...cors,'Cache-Control':'no-store'}});
+    }
+    if (env.HOME_KAKEIBO_MIGRATED === '1' && /^\/api\/app-data(?:-public)?(?:\/|$)/.test(url.pathname)) {
+      let posted={};
+      if (['POST','PUT'].includes(request.method)) {try{posted=await request.clone().json();}catch{}}
+      let suffix='';try{suffix=decodeURIComponent(url.pathname.split('/').filter(Boolean)[2]||'');}catch{}
+      const keys=[url.searchParams.get('app'),url.searchParams.get('key'),suffix,posted.app,posted.key];
+      if(keys.some(value=>typeof value==='string'&&value.trim()==='kakeibo-app'))return Response.json({error:'家計簿はHOME本人専用の家計管理へ切り替わりました。旧データは保管されています。',migrated:true,home:'https://cetus.fun/wagaya/apps/household-budget/'},{status:410,headers:{...cors,'Cache-Control':'no-store'}});
+    }
+
     // HOME通帳への切替後は、旧銀行だけを停止する。家計簿などは従来どおり。
     const retired = env.HOME_PASSBOOK_MIGRATED === "1";
     if (url.pathname === "/api/home-passbook-status" && request.method === "GET") {

@@ -931,7 +931,7 @@ async function api(path, method = 'GET', body = null) {
   if (homeCalendarUserId) opts.headers['X-Calendar-User'] = homeCalendarUserId;
   if (body !== null) opts.body = JSON.stringify(body);
   const res = await fetch(API + path, opts);
-  if (!res.ok) { const e = await res.json().catch(() => ({})); if(res.status===401){location.replace('/login');} if(e.identity_changed){document.getElementById('app').style.display='none';calendars=[];events=[];gEvents=[];location.reload();} throw new Error(e.error || res.statusText); }
+  if (!res.ok) { const e = await res.json().catch(() => ({})); if(res.status===401||res.status===403||e.identity_changed){document.getElementById('app').style.display='none';document.querySelectorAll('.overlay.open').forEach(n=>n.classList.remove('open'));calendars=[];events=[];gEvents=[];detailEvent=null;document.getElementById('detail-desc').textContent='';document.getElementById('detail-budget-link')?.remove();}if(res.status===401){location.replace('/login');} if(e.identity_changed){document.getElementById('app').style.display='none';calendars=[];events=[];gEvents=[];location.reload();} throw new Error(e.error || res.statusText); }
   return res.json();
 }
 
@@ -1395,12 +1395,24 @@ function openDetail(e) {
   const eventCal = e.is_google ? null : calendars.find(c => c.id === e.calendar_id);
   const canEdit = !e.is_google && (e.editable ?? (e.created_by_google_id === myProfile?.google_id));
   document.getElementById('detail-edit-btn').style.display = canEdit ? '' : 'none';
+  const oldBudgetLink=document.getElementById('detail-budget-link');if(oldBudgetLink)oldBudgetLink.remove();
+  if(e.budget_managed&&/^\/wagaya\/apps\/household-budget\/\?source=bg[a-f0-9]{32}$/.test(e.budget_url)){const a=document.createElement('a');a.id='detail-budget-link';a.href=e.budget_url;a.textContent='家計簿で確認・操作する';a.style.cssText='display:block;padding:12px;margin:12px 0;background:#fff2db;border-radius:10px';document.getElementById('detail-desc').after(a);}
   const s = fmtDt(e.start_datetime, e.all_day), en = fmtDt(e.end_datetime, e.all_day);
   document.getElementById('detail-time').textContent = e.all_day ? (s === en ? s : s + ' 〜 ' + en) : s + ' 〜 ' + en;
   const calName = e.is_google ? 'Googleカレンダー' : (calendars.find(c => c.id === e.calendar_id)?.name || '');
   document.getElementById('detail-cal').innerHTML = `<span style="color:${getColor(e)}">●</span> ${escapeHtml(calName)}`;
   document.getElementById('detail-desc').textContent = (e.subject_name?'誰の予定：'+e.subject_name+'\n':'')+(e.creator_name ? '登録した人：'+e.creator_name+'\n' : '')+(e.description || ''); renderDetailList(e);
 }
+let refreshingCalendar=false;
+async function refreshCalendarOnReturn(){
+ if(refreshingCalendar||!homeCalendarUserId||document.visibilityState!=='visible')return;
+ refreshingCalendar=true;const reopenBudget=detailEvent?.budget_managed&&document.getElementById('detail-overlay').classList.contains('open');if(reopenBudget)document.getElementById('detail-overlay').classList.remove('open');document.getElementById('app').style.visibility='hidden';
+ try{await api('/home/status');await loadAll();if(reopenBudget&&detailEvent?.budget_managed){const latest=events.find(e=>e.id===detailEvent.id);if(latest)openDetail(latest);else closeDetail();}}
+ catch(e){document.getElementById('app').style.display='none';document.querySelectorAll('.overlay.open').forEach(n=>n.classList.remove('open'));const panel=document.getElementById('home-connection');panel.style.display='block';panel.textContent='本人のカレンダーを確認できません。再読み込みしてください。';}
+ finally{document.getElementById('app').style.visibility='';refreshingCalendar=false;}
+}
+document.addEventListener('visibilitychange',refreshCalendarOnReturn);
+window.addEventListener('pageshow',e=>{if(e.persisted)refreshCalendarOnReturn();});
 function closeDetail(e) { if (e && e.target !== document.getElementById('detail-overlay')) return; document.getElementById('detail-overlay').classList.remove('open'); }
 function editFromDetail() { document.getElementById('detail-overlay').classList.remove('open'); openEvModal(detailEvent, null); }
 

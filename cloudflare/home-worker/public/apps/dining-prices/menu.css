@@ -1,0 +1,16 @@
+.buffet-menu .menu-pair {
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:clamp(8px,2vw,18px);
+ margin-bottom:12px;
+}
+.buffet-menu .menu-pair > * {min-width:0;overflow-wrap:anywhere}
+.buffet-menu .panel {padding:clamp(9px,2vw,16px)}
+.buffet-menu label {display:grid;gap:4px;margin:8px 0}
+.buffet-menu select {width:100%;min-height:44px}
+.buffet-menu h3 {font-size:1rem;margin:0 0 6px}
+.buffet-menu ul {list-style:none;margin:0;padding:0}
+.buffet-menu li {padding:7px 4px;border-bottom:1px solid #dce9e3}
+.buffet-menu li:last-child {border-bottom:0}
+.buffet-menu .exclusive {background:#fff2d3;border-radius:5px}
+.buffet-menu .exclusive small {display:block;color:#735018;font-weight:bold}

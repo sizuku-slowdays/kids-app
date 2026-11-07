@@ -34,6 +34,20 @@ function importLegacy(s,input,hash){importPreview(input);fail(!s.importHash||s.i
 }
 export function applyBudgetCommand(original,command,context){const s=clone(original),now=day(context.today),op=id(context.eventId),type=command.type,d=command.data||{};fail(s.version===1,'データ形式を確認してください');
  switch(type){
+ case 'legacy.bank.import':{
+ fail(s.startDate&&d.confirm===true,'開始残高との二重反映を確認してください');
+ fail(Array.isArray(d.entries)&&d.entries.length>0&&d.entries.length<=100,'取り込む履歴を1〜100件選んでください');
+ for(const raw of d.entries){
+  fail(raw.type==='expense'&&!raw.receiptId,'銀行引落の通常支出を選んでください');
+  const account=s.accounts.find(a=>a.kind==='bank'&&(a.name===raw.payment||a.id===raw.payment));
+  fail(account,'引落元の口座名を確認してください');
+  const key=id(raw.id),existing=s.entries.find(e=>e.legacyIds?.includes(key));
+  if(existing){fail(!existing.void&&existing.amount===raw.amount&&existing.date===raw.date&&existing.payment===account.id,'取り込み済み履歴の内容が変わっています',409);if(existing.ledgerIncluded)continue;existing.ledgerIncluded=true;postEntry(s,existing,now);continue;}
+  fail(!s.entries.some(e=>!e.void&&e.payment===account.id&&e.date===raw.date&&e.amount===raw.amount),'同じ日・口座・金額の履歴があります。収支画面で確認してください',409);
+  const e=cleanEntry({...raw,id:'bank-import-'+key,payment:account.id},now);
+  e.legacyIds=[key];e.legacyPayment=raw.payment;e.legacyKey='legacy:'+key;
+  activeEntry(s,e,now,true);
+ }break;}
  case 'cashPlan.save':{s.cashPlans||=[];const key=id(d.id),old=s.cashPlans.find(p=>p.id===key);fail(!old||old.status==='planned'&&old.version===d.version,'予定が更新されています',409);fail(['income','transfer'].includes(d.kind),'予定の種類を確認してください');const amount=yenAmount(d.amount);fail(amount>0,'金額を入力してください');find(s.accounts,d.to);if(d.kind==='transfer'){find(s.accounts,d.from);fail(d.from!==d.to,'振替元と先を分けてください');}const next={id:key,kind:d.kind,name:text(d.name,100),amount,to:d.to,from:d.kind==='transfer'?d.from:null,date:day(d.date),category:text(d.category||'給与',100),memo:text(d.memo||'',2000),status:'planned',version:(old?.version||0)+1};fail(next.name,'予定名を入力してください');if(old)Object.assign(old,next);else s.cashPlans.push(next);break;}
  case 'cashPlan.cancel':{const p=find(s.cashPlans||[],d.id);fail(p.status==='planned'&&p.version===d.version,'予定が更新されています',409);p.status='cancelled';p.version++;break;}
  case 'cashPlan.confirm':{fail(s.startDate,'先に残高管理を開始してください');const p=find(s.cashPlans||[],d.id);fail(p.status==='planned'&&p.version===d.version,'予定が更新されています',409);const date=day(d.date||p.date);let result=applyBudgetCommand(s,p.kind==='income'?{type:'entry.add',data:{id:'scheduled-'+op,type:'income',date,amount:p.amount,payment:p.to,category:p.category,memo:p.name+(p.memo?' '+p.memo:'')}}:{type:'transfer',data:{date,amount:p.amount,from:p.from,to:p.to,reason:p.name}},context);const saved=find(result.cashPlans,p.id);saved.status='confirmed';saved.version++;saved.actualDate=date;saved.postingId=p.kind==='income'?'scheduled-'+op:op;return result;}

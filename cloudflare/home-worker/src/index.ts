@@ -55,7 +55,7 @@ function json(
   status = 200,
   extra: Record<string, string> = {},
 ) {
-  return Response.json(value, { status, headers: { ...headers, ...extra } });
+  return Response.json(value, { status, headers: { ...headers, 'Content-Type':'application/json; charset=utf-8', ...extra } });
 }
 class Failure extends Error {
   constructor(
@@ -784,7 +784,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     throw new Failure(404, "見つかりません");
   if(path==='/apps/household-budget'||path.startsWith('/apps/household-budget/')){
     if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});
-    requireValue(await appAllowed(env,s.user_id,'household-budget'),403,'この家計簿は本人専用です');
+    if(!await appAllowed(env,s.user_id,'household-budget'))return new Response(method==='HEAD'?null:'<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>家計管理の利用確認</title><body><main><h1>家計管理を開けません</h1><p>現在ログインしているアカウントには、家計管理の利用登録がありません。</p><p>「我が家」でご本人のアカウントにログインしているか確認してください。</p><a href="/">我が家へ戻る</a></main></body></html>',{status:403,headers:{...headers,'Content-Type':'text/html; charset=utf-8'}});
     requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
     if(path==='/apps/household-budget')return new Response(null,{status:303,headers:{...headers,Location:'/apps/household-budget/'}});
     const file=path.slice('/apps/household-budget/'.length)||'index.html';

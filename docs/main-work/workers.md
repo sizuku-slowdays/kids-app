@@ -135,3 +135,8 @@ HOME実装版：[8a52939](https://github.com/sizuku-slowdays/kids-app/commit/8a5
 ## 2026-11-05 家計簿：今日の利用合計のみ反映
 
 今日の利用合計は既存の端末内記録から読み取り集計。Worker・DB・認証・保存形式を変更しない。GitHub Pagesの静的HTMLのみ更新。
+
+
+## 2026-11-07 本人専用口座の入口と表示名
+
+mainの家計簿メニューに本人専用口座管理 `/wagaya/apps/household-budget/?tab=accounts` への入口を追加（6d17a9d）。HOMEブランチで `account.rename` と口座タブ直接表示を追加（e3165db）。既存の本人認可・owner_id保存を使用。口座ID、残高、履歴は維持。口座追加・改名・空名拒否の実行確認、既存budget-coreテスト15件合格。本番反映・実機操作は未確認。従来の資金繰りとは別保存で、従来画面への口座追加・本人別保存・データ移行は未完了。実際の追加口座は未登録。

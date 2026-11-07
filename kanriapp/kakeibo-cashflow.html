@@ -95,6 +95,10 @@ button{border:none;border-radius:999px;padding:9px 13px;font-size:.86rem;font-we
 </main>
 <script src="kakeibo-fixed.js?v=20261004"></script>
 <script>
+if(new URL(location.href).searchParams.get("legacy")!=="1"){
+ document.querySelector("main").hidden=true;
+ location.replace("/wagaya/apps/household-budget/");
+}else{
 const STORAGE_KEY="kakeibo-app-stable-v3",PLAN_KEY="kakeibo-plan-v1",SETTINGS_KEY="kakeibo-cloud-settings-v1",APP_KEY="kakeibo-app",APP_VERSION=6,DEFAULT_API="https://api.cetus.fun/api/app-data";
 const $=id=>document.getElementById(id),yen=v=>Number(v||0).toLocaleString("ja-JP")+"円";
 const makeId=()=>crypto.randomUUID?crypto.randomUUID():"id-"+Date.now()+"-"+Math.random().toString(36).slice(2);
@@ -195,6 +199,7 @@ $("outflowList").addEventListener("click",e=>{const b=e.target.closest("button")
 $("fixedList").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const ruleId=b.closest("[data-id]").dataset.id,id=monthNow()+"-"+ruleId;let x=plan.cashflowFixedStatus.find(y=>y.id===id);if(!x){x={id,month:monthNow(),ruleId,paid:true,updatedAt:new Date().toISOString()};plan.cashflowFixedStatus.push(x)}else{x.paid=!x.paid;x.updatedAt=new Date().toISOString()}persist()});
 
 (async()=>{plan=normalize(JSON.parse(localStorage.getItem(PLAN_KEY)||"null"));$("incomeDate").value=today();$("outflowDate").value=today();render();try{await loadCloud();render()}catch(e){setStatus("クラウド同期できませんでした。端末の内容を表示しています："+e.message,"ng")}})();
+}
 </script>
 </body>
 </html>

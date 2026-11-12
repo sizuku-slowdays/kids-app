@@ -42,34 +42,55 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 .identity{font-size:.84rem;display:flex;gap:16px;flex-wrap:wrap;margin:0 0 12px}
 .name-line{min-width:130px;border-bottom:1px solid;display:inline-block}
 .instructions{font-size:.88rem;background:#f5f2fc;padding:9px 12px;margin:0 0 12px;border-radius:6px}
-.questions{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px}
-.question{display:grid;grid-template-columns:1.8em minmax(0,1fr);align-items:center;gap:.15em;min-height:64px;border-bottom:1px solid #e3e6ee;padding:6px 0;break-inside:avoid}
+.questions{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);column-gap:22px}
+.question{display:grid;grid-template-columns:1.65em minmax(0,1fr);align-items:center;gap:.2em;min-height:88px;border-bottom:1px solid #e3e6ee;padding:7px 0;break-inside:avoid}
 .num{font-size:.83em;font-weight:700;color:#536179}
-.body{display:flex;flex-wrap:wrap;align-items:center;gap:.3em .45em}
-.tag{width:100%;font-size:.71rem;font-weight:700;color:#514181}
+.body{display:grid;gap:4px;justify-items:start}
+.expression{display:flex;align-items:center;gap:.32em;white-space:nowrap;font-size:1.05em}
+.tag{font-size:.76rem;font-weight:700;color:#514181}
+.group-start{border-top:1px solid #aeb7cc}
 .frac{display:inline-grid;vertical-align:middle;text-align:center;line-height:1.1;min-width:1.05em;font-variant-numeric:tabular-nums;font-weight:700}
 .frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 .15em .06em}
 .frac>span:last-child{padding:.06em .15em 0}
 .mixed{display:inline-flex;align-items:center;gap:.18em;font-weight:700}
-.blank{width:4.3em;border-bottom:1px solid #657087;display:inline-block;height:1.5em}
-.group{white-space:nowrap}
+.answer-box{display:inline-block;vertical-align:middle;border:1px solid #657087;border-radius:3px;width:2.55em;height:1.9em}
+.answer-word{width:6em}
+.answer-stack{display:inline-grid;width:2.6em;grid-template-rows:1fr 1fr;height:3.2em;border:1px solid #657087;border-radius:3px}
+.answer-stack>span:first-child{border-bottom:1px solid #657087}
+.answer-mixed{display:inline-flex;align-items:center;gap:.35em}
+.rules{font-size:.82rem;margin:0 0 9px}
+.level-help{font-size:.81rem;font-weight:400;color:var(--muted);display:block;margin-top:4px}
+.hint summary{font-weight:750;cursor:pointer}
+.example{display:flex;align-items:center;gap:.35em;flex-wrap:wrap}
 .answer-value{color:#442c8c;font-weight:750}
 [hidden]{display:none!important}
 @media(max-width:720px){.hero{padding:24px 17px}.workspace{grid-template-columns:1fr;padding:18px 14px 30px;gap:18px}.panel{padding:17px}.motif{gap:5px;padding-right:1px}.tile{width:40px;height:53px;font-size:1.15rem}}
-@media(max-width:420px){.sheet{padding:14px}.questions{grid-template-columns:1fr}.motif .tile:nth-child(2){display:none}}
-@page{size:A4 portrait;margin:13mm}
+@media(min-width:1080px){.questions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.sheet{padding:13px}.motif .tile:nth-child(2){display:none}.expression{font-size:1rem}.identity{gap:4px 10px}}
+@page{size:A4 portrait;margin:12mm}
 @media print{
-body{background:#fff;color:#000;font-size:11pt;line-height:1.35}
-header,.panel,.preview-head{display:none}
-.workspace{display:block;margin:0;padding:0;max-width:none}
-.sheet,.sheet+.sheet{margin:0;border:0;border-radius:0;box-shadow:none;padding:0}
-.sheet+.sheet{break-before:page}
-.sheet-title{font-size:18pt;margin-bottom:3mm}
-.identity{margin-bottom:3mm}
-.instructions{background:none;border:1px solid #777;margin-bottom:3mm;padding:2mm;color:#000}
-.questions{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8mm}
-.question{min-height:22mm;border-color:#bbb}
-.tag,.num,.answer-value{color:#000}
+  body{background:#fff;color:#000;font-size:12pt;line-height:1.25}
+  header,.panel,.preview-head{display:none}
+  .workspace{display:block;margin:0;padding:0;max-width:none}
+  .sheet,.sheet+.sheet{margin:0;border:0;border-radius:0;box-shadow:none;padding:0}
+  .sheet+.sheet{break-before:page}
+  .sheet-title{font-size:18pt;margin-bottom:3mm}
+  .identity{font-size:11pt;margin-bottom:3mm}
+  .instructions{background:none;border:1px solid #777;margin-bottom:2mm;padding:2mm;color:#000;font-size:10pt}
+  .rules{font-size:9pt;margin-bottom:3mm}
+  .questions{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:7mm;grid-auto-rows:var(--row-height)}
+  .sheet[data-count="8"]{--row-height:52mm;--expression-size:17pt;--box-height:10mm;--stack-height:19mm}
+  .sheet[data-count="12"]{--row-height:35mm;--expression-size:16pt;--box-height:9mm;--stack-height:18mm}
+  .sheet[data-count="16"]{--row-height:26mm;--expression-size:15pt;--box-height:8mm;--stack-height:16mm}
+  .question{min-height:0;padding:1.5mm 0;border-color:#bbb}
+  .body{gap:1mm}
+  .expression{font-size:var(--expression-size);gap:1.5mm}
+  .answer-box{width:13mm;height:var(--box-height)}
+  .answer-word{width:37mm}
+  .answer-stack{width:14mm;height:var(--stack-height)}
+  .answer-mixed{gap:2mm}
+  .answer-box,.answer-stack,.answer-stack>span:first-child{border-color:#555}
+  .tag,.num,.answer-value{color:#000}
 }
 </style>
 </head>
@@ -81,114 +102,26 @@ header,.panel,.preview-head{display:none}
 <form id="options">
 <label>問題の種類<select id="mode"><option value="mix">おまかせミックス</option><option value="unit">単位分数がいくつ分？</option><option value="kind">真分数・仮分数の見分け</option><option value="toMixed">仮分数 → 帯分数・整数</option><option value="toImproper">帯分数 → 仮分数</option></select></label>
 <label>問題数<select id="count"><option value="8">8問</option><option value="12" selected>12問</option><option value="16">16問</option></select></label>
-<label>分母の範囲<select id="level"><option value="basic">2〜6（基本）</option><option value="wide">2〜12（チャレンジ）</option></select></label>
+<label>難易度<select id="level" aria-describedby="level-help"><option value="easy">やさしい</option><option value="normal">ふつう</option><option value="challenge">チャレンジ</option></select><small class="level-help" id="level-help"></small></label>
+<label>問題の並び<select id="order"><option value="grouped">種類ごと・かんたんな順</option><option value="random">ランダム</option></select></label>
 <label class="check"><input type="checkbox" id="include">答えも別のページに印刷</label>
 <div class="actions"><button type="submit">新しい問題を作る</button><button class="primary" type="button" id="print">A4で印刷する</button></div>
 </form>
 <p class="status" id="status" aria-live="polite"></p>
-<div class="hint"><strong>分数のことば</strong><p>単位分数は、分子が1の分数。</p><p>仮分数は、分子が分母と同じか、分母より大きい分数。</p></div>
+<details class="hint"><summary>分数のことばと例題</summary>
+<p>単位分数は、分子が1の分数。真分数は分子が分母より小さく、仮分数は分子が分母と同じか、それより大きい分数です。</p>
+<p>帯分数は、整数と真分数を合わせた形です。</p>
+<p class="example"><span class="frac" aria-label="4分の7"><span>7</span><span>4</span></span>は「4分の7」。<span class="frac" aria-label="4分の1"><span>1</span><span>4</span></span>が7こ分です。</p>
+<p>4こで1になり、3こあまるので、答えは<span class="mixed">1<span class="frac" aria-label="4分の3"><span>3</span><span>4</span></span></span>です。</p></details>
 </section>
 <section aria-labelledby="preview">
 <div class="preview-head"><h2 id="preview">印刷プレビュー</h2><span class="badge">A4・たて</span></div>
-<article class="sheet"><h2 class="sheet-title" id="worksheet-title"></h2>
+<article class="sheet" id="problem-sheet"><h2 class="sheet-title" id="worksheet-title"></h2>
 <p class="identity"><span>日づけ　　月　　日</span><span>名前　<span class="name-line">　</span></span></p>
-<p class="instructions" id="directions"></p><ol class="questions" id="problems"></ol></article>
-<article class="sheet" id="answer-sheet" hidden><h2 class="sheet-title" id="answers-title"></h2><p>問題と同じ番号の答えを確認しよう。</p><ol class="questions" id="answers"></ol></article>
+<p class="instructions" id="directions"></p><p class="rules" id="problem-rule" hidden></p><ol class="questions" id="problems"></ol></article>
+<article class="sheet" id="answer-sheet" hidden><h2 class="sheet-title" id="answers-title"></h2><p class="rules" id="marking"></p><ol class="questions" id="answers"></ol></article>
 </section>
 </main>
-<script>
-"use strict";
-const modes = {
-  unit: { title: "単位分数がいくつ分？", directions: "右にある単位分数が何こ分か、空らんに数を書きましょう。" },
-  kind: { title: "真分数・仮分数の見分け", directions: "それぞれの分数が、真分数と仮分数のどちらかを書きましょう。" },
-  toMixed: { title: "仮分数を帯分数・整数に", directions: "仮分数を帯分数に直しましょう。あまりが0なら整数で書きましょう。" },
-  toImproper: { title: "帯分数を仮分数に", directions: "帯分数を、分母を変えずに仮分数に直しましょう。" },
-  mix: { title: "分数のまとめ", directions: "問題ごとの指示を読んで、空らんに答えを書きましょう。" }
-};
-const pick = id => document.getElementById(id);
-const int = (min,max) => min + Math.floor(Math.random() * (max-min+1));
-function shuffle(items) {
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = int(0, i);
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  return items;
-}
-function makeProblems(mode, count, maxDenominator) {
-  const types = mode === "mix" ? Object.keys(modes).filter(type => type !== "mix") : [mode];
-  const used = new Set();
-  const result = [];
-  for (const type of types) {
-    const amount = count / types.length;
-    const proper = [], whole = [], other = [];
-    for (let d = 2; d <= maxDenominator; d++) {
-      for (let n = 1; n <= 4*d-1; n++) {
-        if (type === "toMixed" && n < d) continue;
-        if (type === "toImproper" && (n < d || n % d === 0)) continue;
-        const item = { type, n, d };
-        (n < d ? proper : n % d === 0 ? whole : other).push(item);
-      }
-    }
-    shuffle(proper); shuffle(whole); shuffle(other);
-    const take = (pool, target) => {
-      let added = 0;
-      for (const item of pool) {
-        if (added === target) break;
-        const key = item.n + "/" + item.d;
-        if (used.has(key)) continue;
-        used.add(key);
-        result.push(item);
-        added++;
-      }
-      return added;
-    };
-    let remaining = amount;
-    if (type === "kind" || type === "unit") remaining -= take(proper, Math.ceil(amount/2));
-    if (type === "toMixed") remaining -= take(whole, Math.max(1, Math.floor(amount/4)));
-    remaining -= take(shuffle([...other,...whole]), remaining);
-    if (remaining) take(proper, remaining);
-  }
-  return shuffle(result);
-}
-const frac = (n,d) => '<span class="frac" aria-label="'+d+'分の'+n+'"><span>'+n+'</span><span>'+d+'</span></span>';
-const mixed = (n,d) => '<span class="mixed">'+Math.floor(n/d)+frac(n%d,d)+'</span>';
-const blank = '<span class="blank" aria-label="答えを書く場所"></span>';
-function problemText({type,n,d}, isAnswer) {
-  const f = frac(n,d);
-  const answer = html => isAnswer ? '<span class="answer-value">'+html+'</span>' : blank;
-  switch(type){
-    case "unit": return f+' <span>は</span> '+frac(1,d)+' <span>の</span> <span class="group">'+answer(n)+' こ分</span>';
-    case "kind": return f+' <span>は</span> '+answer(n<d?"真分数":"仮分数");
-    case "toMixed": return f+' <span>＝</span> '+answer(n%d ? mixed(n,d) : n/d);
-    case "toImproper": return mixed(n,d)+' <span>＝</span> '+answer(f);
-  }
-}
-function render(items, isAnswer, mode) {
-  const tags = {unit:"単位分数の何こ分",kind:"真分数か仮分数か",toMixed:"帯分数・整数に直す",toImproper:"仮分数に直す"};
-  return items.map((item,i) => '<li class="question"><span class="num">'+(i+1)+'.</span><div class="body">'+
-    (mode === "mix" ? '<span class="tag">'+tags[item.type]+'</span>' : '')+
-    problemText(item,isAnswer)+'</div></li>').join('');
-}
-let lastSignature = "";
-function generate(){
-  const mode = pick("mode").value, count = Number(pick("count").value);
-  const maxDenominator = pick("level").value === "wide" ? 12 : 6;
-  let items = makeProblems(mode,count,maxDenominator);
-  let signature = JSON.stringify(items);
-  if (signature === lastSignature) { items = makeProblems(mode,count,maxDenominator); signature = JSON.stringify(items); }
-  lastSignature = signature;
-  pick("worksheet-title").textContent = modes[mode].title;
-  pick("answers-title").textContent = modes[mode].title + "　答え";
-  pick("directions").textContent = modes[mode].directions;
-  pick("problems").innerHTML = render(items,false,mode);
-  pick("answers").innerHTML = render(items,true,mode);
-  pick("status").textContent = items.length + "問のプリントを作りました。";
-}
-pick("options").addEventListener("submit", event => { event.preventDefault(); generate(); });
-for (const id of ["mode","count","level"]) pick(id).addEventListener("change",generate);
-pick("include").addEventListener("change",event => { pick("answer-sheet").hidden = !event.target.checked; });
-pick("print").addEventListener("click",() => window.print());
-generate();
-</script>
+<script src="bunsu-print.js" defer></script>
 </body>
 </html>

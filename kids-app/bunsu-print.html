@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="小学4年生の分数練習。仮分数・単位分数・帯分数の問題を作ってA4に印刷。">
+<title>分数プリント工房</title>
+<style>
+:root{--ink:#24344c;--muted:#536179;--violet:#5c46ad;--line:#dbdfea;--paper:#fff;--lav:#f1ecfb}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);background:#eef0f7;font:16px/1.65 system-ui,"Yu Gothic",Meiryo,sans-serif}
+header{background:var(--lav);border-bottom:1px solid #ded5f1}
+.hero{max-width:1180px;margin:auto;padding:28px 30px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.eyebrow{font-weight:750;font-size:.8rem;letter-spacing:.12em;color:#4a378e;margin:0}
+h1{font-size:clamp(1.85rem,4vw,2.8rem);line-height:1.2;letter-spacing:.025em;margin:7px 0 9px}
+.hero p:last-child{margin:0;color:var(--muted)}
+.motif{display:flex;gap:8px;transform:rotate(-8deg);padding-right:10px}
+.tile{display:grid;place-items:center;width:68px;height:77px;border-radius:14px;background:#fff;color:#50409a;font-size:1.6rem;box-shadow:0 3px 0 #d2c5ee}
+.tile:nth-child(2){background:#ffe8a8;color:#5b4419;transform:translateY(12px)}
+.workspace{max-width:1180px;margin:auto;padding:28px 30px 42px;display:grid;grid-template-columns:minmax(240px,290px) minmax(0,1fr);gap:28px;align-items:start}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}
+.panel h2{font-size:1.14rem;margin:0 0 14px}
+label{display:block;font-weight:700;margin:0 0 12px}
+select,button{font:inherit}
+select{width:100%;margin-top:5px;padding:9px;border:1px solid #aeb7cc;border-radius:8px;color:var(--ink);background:#fff}
+.check{display:flex;align-items:center;gap:8px;margin:16px 0;font-size:.91rem}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--violet)}
+button{padding:10px 14px;border:1px solid #a99acb;border-radius:9px;cursor:pointer;background:#fff;color:#44377b;font-weight:750}
+button.primary{background:var(--violet);border-color:var(--violet);color:#fff}
+button:hover{filter:brightness(.95)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #a58ce8;outline-offset:2px}
+.actions{display:grid;gap:9px}
+.help,.status{font-size:.82rem;color:var(--muted);margin:12px 0 0}
+.hint{margin-top:18px;padding-top:15px;border-top:1px solid var(--line);font-size:.86rem}
+.hint p{margin:.35em 0}
+.preview-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 10px}
+.preview-head h2{font-size:1rem;margin:0}
+.badge{font-size:.77rem;background:#fff;border:1px solid var(--line);border-radius:20px;padding:3px 10px}
+.sheet{background:var(--paper);padding:clamp(18px,4vw,36px);border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 20px #283c6110}
+.sheet+.sheet{margin-top:20px}
+.sheet-title{margin:0 0 10px;font-size:1.45rem;line-height:1.35}
+.identity{font-size:.84rem;display:flex;gap:16px;flex-wrap:wrap;margin:0 0 12px}
+.name-line{min-width:130px;border-bottom:1px solid;display:inline-block}
+.instructions{font-size:.88rem;background:#f5f2fc;padding:9px 12px;margin:0 0 12px;border-radius:6px}
+.questions{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px}
+.question{display:grid;grid-template-columns:1.8em minmax(0,1fr);align-items:center;gap:.15em;min-height:64px;border-bottom:1px solid #e3e6ee;padding:6px 0;break-inside:avoid}
+.num{font-size:.83em;font-weight:700;color:#536179}
+.body{display:flex;flex-wrap:wrap;align-items:center;gap:.3em .45em}
+.tag{width:100%;font-size:.71rem;font-weight:700;color:#514181}
+.frac{display:inline-grid;vertical-align:middle;text-align:center;line-height:1.1;min-width:1.05em;font-variant-numeric:tabular-nums;font-weight:700}
+.frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 .15em .06em}
+.frac>span:last-child{padding:.06em .15em 0}
+.mixed{display:inline-flex;align-items:center;gap:.18em;font-weight:700}
+.blank{width:4.3em;border-bottom:1px solid #657087;display:inline-block;height:1.5em}
+.group{white-space:nowrap}
+.answer-value{color:#442c8c;font-weight:750}
+[hidden]{display:none!important}
+@media(max-width:720px){.hero{padding:24px 17px}.workspace{grid-template-columns:1fr;padding:18px 14px 30px;gap:18px}.panel{padding:17px}.motif{gap:5px;padding-right:1px}.tile{width:40px;height:53px;font-size:1.15rem}}
+@media(max-width:420px){.sheet{padding:14px}.questions{grid-template-columns:1fr}.motif .tile:nth-child(2){display:none}}
+@page{size:A4 portrait;margin:13mm}
+@media print{
+body{background:#fff;color:#000;font-size:11pt;line-height:1.35}
+header,.panel,.preview-head{display:none}
+.workspace{display:block;margin:0;padding:0;max-width:none}
+.sheet,.sheet+.sheet{margin:0;border:0;border-radius:0;box-shadow:none;padding:0}
+.sheet+.sheet{break-before:page}
+.sheet-title{font-size:18pt;margin-bottom:3mm}
+.identity{margin-bottom:3mm}
+.instructions{background:none;border:1px solid #777;margin-bottom:3mm;padding:2mm;color:#000}
+.questions{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8mm}
+.question{min-height:22mm;border-color:#bbb}
+.tag,.num,.answer-value{color:#000}
+}
+</style>
+</head>
+<body>
+<header><div class="hero"><div><p class="eyebrow">小学4年生の算数</p><h1>分数プリント工房</h1><p>問題を選んで、自分だけの練習プリントを作ろう。</p></div><div class="motif" aria-hidden="true"><div class="tile"><span class="frac"><span>1</span><span>4</span></span></div><div class="tile"><span class="frac"><span>5</span><span>4</span></span></div></div></div></header>
+<main class="workspace">
+<section class="panel" aria-labelledby="settings">
+<h2 id="settings">プリントの設定</h2>
+<form id="options">
+<label>問題の種類<select id="mode"><option value="mix">おまかせミックス</option><option value="unit">単位分数がいくつ分？</option><option value="kind">真分数・仮分数の見分け</option><option value="toMixed">仮分数 → 帯分数・整数</option><option value="toImproper">帯分数 → 仮分数</option></select></label>
+<label>問題数<select id="count"><option value="8">8問</option><option value="12" selected>12問</option><option value="16">16問</option></select></label>
+<label>分母の範囲<select id="level"><option value="basic">2〜6（基本）</option><option value="wide">2〜12（チャレンジ）</option></select></label>
+<label class="check"><input type="checkbox" id="include">答えも別のページに印刷</label>
+<div class="actions"><button type="submit">新しい問題を作る</button><button class="primary" type="button" id="print">A4で印刷する</button></div>
+</form>
+<p class="status" id="status" aria-live="polite"></p>
+<div class="hint"><strong>分数のことば</strong><p>単位分数は、分子が1の分数。</p><p>仮分数は、分子が分母と同じか、分母より大きい分数。</p></div>
+</section>
+<section aria-labelledby="preview">
+<div class="preview-head"><h2 id="preview">印刷プレビュー</h2><span class="badge">A4・たて</span></div>
+<article class="sheet"><h2 class="sheet-title" id="worksheet-title"></h2>
+<p class="identity"><span>日づけ　　月　　日</span><span>名前　<span class="name-line">　</span></span></p>
+<p class="instructions" id="directions"></p><ol class="questions" id="problems"></ol></article>
+<article class="sheet" id="answer-sheet" hidden><h2 class="sheet-title" id="answers-title"></h2><p>問題と同じ番号の答えを確認しよう。</p><ol class="questions" id="answers"></ol></article>
+</section>
+</main>
+<script>
+"use strict";
+const modes = {
+  unit: { title: "単位分数がいくつ分？", directions: "右にある単位分数が何こ分か、空らんに数を書きましょう。" },
+  kind: { title: "真分数・仮分数の見分け", directions: "それぞれの分数が、真分数と仮分数のどちらかを書きましょう。" },
+  toMixed: { title: "仮分数を帯分数・整数に", directions: "仮分数を帯分数に直しましょう。あまりが0なら整数で書きましょう。" },
+  toImproper: { title: "帯分数を仮分数に", directions: "帯分数を、分母を変えずに仮分数に直しましょう。" },
+  mix: { title: "分数のまとめ", directions: "問題ごとの指示を読んで、空らんに答えを書きましょう。" }
+};
+const pick = id => document.getElementById(id);
+const int = (min,max) => min + Math.floor(Math.random() * (max-min+1));
+function shuffle(items) {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = int(0, i);
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+function makeProblems(mode, count, maxDenominator) {
+  const types = mode === "mix" ? Object.keys(modes).filter(type => type !== "mix") : [mode];
+  const used = new Set();
+  const result = [];
+  for (const type of types) {
+    const amount = count / types.length;
+    const proper = [], whole = [], other = [];
+    for (let d = 2; d <= maxDenominator; d++) {
+      for (let n = 1; n <= 4*d-1; n++) {
+        if (type === "toMixed" && n < d) continue;
+        if (type === "toImproper" && (n < d || n % d === 0)) continue;
+        const item = { type, n, d };
+        (n < d ? proper : n % d === 0 ? whole : other).push(item);
+      }
+    }
+    shuffle(proper); shuffle(whole); shuffle(other);
+    const take = (pool, target) => {
+      let added = 0;
+      for (const item of pool) {
+        if (added === target) break;
+        const key = item.n + "/" + item.d;
+        if (used.has(key)) continue;
+        used.add(key);
+        result.push(item);
+        added++;
+      }
+      return added;
+    };
+    let remaining = amount;
+    if (type === "kind" || type === "unit") remaining -= take(proper, Math.ceil(amount/2));
+    if (type === "toMixed") remaining -= take(whole, Math.max(1, Math.floor(amount/4)));
+    remaining -= take(shuffle([...other,...whole]), remaining);
+    if (remaining) take(proper, remaining);
+  }
+  return shuffle(result);
+}
+const frac = (n,d) => '<span class="frac" aria-label="'+d+'分の'+n+'"><span>'+n+'</span><span>'+d+'</span></span>';
+const mixed = (n,d) => '<span class="mixed">'+Math.floor(n/d)+frac(n%d,d)+'</span>';
+const blank = '<span class="blank" aria-label="答えを書く場所"></span>';
+function problemText({type,n,d}, isAnswer) {
+  const f = frac(n,d);
+  const answer = html => isAnswer ? '<span class="answer-value">'+html+'</span>' : blank;
+  switch(type){
+    case "unit": return f+' <span>は</span> '+frac(1,d)+' <span>の</span> <span class="group">'+answer(n)+' こ分</span>';
+    case "kind": return f+' <span>は</span> '+answer(n<d?"真分数":"仮分数");
+    case "toMixed": return f+' <span>＝</span> '+answer(n%d ? mixed(n,d) : n/d);
+    case "toImproper": return mixed(n,d)+' <span>＝</span> '+answer(f);
+  }
+}
+function render(items, isAnswer, mode) {
+  const tags = {unit:"単位分数の何こ分",kind:"真分数か仮分数か",toMixed:"帯分数・整数に直す",toImproper:"仮分数に直す"};
+  return items.map((item,i) => '<li class="question"><span class="num">'+(i+1)+'.</span><div class="body">'+
+    (mode === "mix" ? '<span class="tag">'+tags[item.type]+'</span>' : '')+
+    problemText(item,isAnswer)+'</div></li>').join('');
+}
+let lastSignature = "";
+function generate(){
+  const mode = pick("mode").value, count = Number(pick("count").value);
+  const maxDenominator = pick("level").value === "wide" ? 12 : 6;
+  let items = makeProblems(mode,count,maxDenominator);
+  let signature = JSON.stringify(items);
+  if (signature === lastSignature) { items = makeProblems(mode,count,maxDenominator); signature = JSON.stringify(items); }
+  lastSignature = signature;
+  pick("worksheet-title").textContent = modes[mode].title;
+  pick("answers-title").textContent = modes[mode].title + "　答え";
+  pick("directions").textContent = modes[mode].directions;
+  pick("problems").innerHTML = render(items,false,mode);
+  pick("answers").innerHTML = render(items,true,mode);
+  pick("status").textContent = items.length + "問のプリントを作りました。";
+}
+pick("options").addEventListener("submit", event => { event.preventDefault(); generate(); });
+for (const id of ["mode","count","level"]) pick(id).addEventListener("change",generate);
+pick("include").addEventListener("change",event => { pick("answer-sheet").hidden = !event.target.checked; });
+pick("print").addEventListener("click",() => window.print());
+generate();
+</script>
+</body>
+</html>

@@ -22,6 +22,7 @@
 | 学習・ゲーム／プリント | [https://cetus.fun/kids-app/](https://cetus.fun/kids-app/) | kids-app / [kids-app/index.html](https://github.com/sizuku-slowdays/kids-app/blob/7afd93235cc6f4cfec2568e07819a028a95789a9/kids-app/index.html) | 静的ページ多数。maker／wagaya/keisan／quiz-labにもあり。全件は下表 |
 
 `home-worker.sslowdayss.workers.dev`のHOMEも設定上有効。cetus.funとはCookieのホストが異なるため、ログイン状態が自動共有される前提にしません。旧入口`/kanriapp/calendar.html`はmainでHOME入口へ誘導する変更履歴があります。
+| 分数プリント工房 | [開く](https://cetus.fun/kids-app/bunsu-print.html) | kids-app / main / `kids-app/bunsu-print.html` | 小学4年生向け。キッズアプリの「計算・数字」から開く。 |
 
 ## mainの静的HTML全件（diaryを除く）
 

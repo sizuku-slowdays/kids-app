@@ -5,6 +5,10 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "vars": {
+    "BUDGET_SCHEDULES_ENABLED": "1",
+    "BUDGET_CALENDAR_ENABLED": "1",
+  },
   "routes": [
     { "pattern": "asobu.cetus.fun", "custom_domain": true },
     { "pattern": "cetus.fun/wagaya/*", "zone_name": "cetus.fun" },

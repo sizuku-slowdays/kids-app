@@ -8,3 +8,5 @@ export function legacyExport(state:BudgetState):any;
 export function businessDate(date:string,holidays?:string[]):string;
 export function monthDate(month:string,day:number):string;
 export function cardDue(card:any,date:string,holidays?:string[]):string|null;
+
+export function missingBudgetMonths(state:BudgetState,asOf:string):string[];

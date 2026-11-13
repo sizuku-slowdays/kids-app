@@ -21,7 +21,7 @@ export function budgetCalendarItems(state: any) {
   const cash=(state.cashPlans||[]).map((p:any)=>({key:'cash:'+p.id,kind:'cash',id:p.id,name:p.name,date:p.actualDate&&p.status==='confirmed'?p.actualDate:p.date,amount:p.amount,status:p.status,version:p.version,account:p.to,description:p.kind==='income'?'入金予定':'口座間の資金移動予定'}));
   const fixed=state.plans.filter((p:any)=>!state.cards.some((c:any)=>c.id===p.payment)).map((p:any)=>({key:'plan:'+p.id,kind:'plan',id:p.id,name:p.name,date:p.dueDate,amount:p.amount,status:p.status,version:p.version,account:p.payment,description:'固定費の引落予定'}));
   const bills=state.bills.map((b:any)=>{const c=summary.cards.find((c:any)=>c.id===b.cardId),sb=c.bills.find((x:any)=>x.id===b.id);return {key:'bill:'+b.id,kind:'bill',id:b.id,name:c.name+' 引落',date:b.dueDate,amount:b.actual??Math.max(0,sb.projected),status:b.status,version:b.version,account:c.accountId,description:'カード代金の引落予定（支出は利用時に計上）'};});
-  return [...cash,...fixed,...bills].filter(p=>p.status!=='cancelled').map(p=>({...p,accountName:state.accounts.find((a:any)=>a.id===p.account)?.name||'',notice:state.calendarNotice||{enabled:false,time:'09:00',daysBefore:1}}));
+  return [...cash,...fixed,...bills].filter(p=>p.status!=='cancelled'&&p.status!=='excluded').map(p=>({...p,accountName:state.accounts.find((a:any)=>a.id===p.account)?.name||'',notice:state.calendarNotice||{enabled:false,time:'09:00',daysBefore:1}}));
 }
 export async function privateBudgetCalendar(env:CalendarEnv,owner:string,path:string,params:URLSearchParams) {
   if(!await permitted(env,owner)) return [];

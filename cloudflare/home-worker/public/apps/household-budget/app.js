@@ -1,4 +1,4 @@
-import {decodeCardCsv,parseRakutenCsv,fingerprint,csvCandidates,suggestCategory} from './card-csv.js';
+import {decodeCardCsv,parseRakutenCsv,fingerprint,csvCandidates,suggestCategory,merchantKey} from './card-csv.js';
 import {dailySpending} from './daily-spending.js';
 
 const $=id=>document.getElementById(id),root=$('app'),dialog=$('dialog');
@@ -216,6 +216,17 @@ async function csvImportForm(card){
  modal(card.name+' のCSV取り込み');const f=el('form'),file=field(f,'楽天カードの利用明細CSV','file','',true);file.accept='.csv,text/csv';
  const statement=field(f,'CSVの基準となる請求月','month','',true),previewHost=el('div'),confirmInput=field(f,'カード・請求月・重複候補・分類を確認しました','checkbox','',true);let rows=[],controls=[];
  f.append(el('p','「翌月以降」の利用も取り込めます。請求月が決まるまでは月別の引落見込に含めません。店名の半角・全角は照合時に統一します。ファイルはこの画面で解析します。登録するのは選択した明細です。開始日より前の利用は未払金へ加算せず、開始日以降の請求月の引落見込に表示します。','notice'),previewHost);
+ const categories=[['','分類を選択'],...Object.keys(data.categories.tree)];
+ const fillUnclassified=(value,store)=>{
+  let count=0;
+  for(const item of controls){
+   if(!item.category||item.category.disabled||item.category.value||store!==undefined&&item.store!==store)continue;
+   item.category.value=value;
+   item.categoryStatus.textContent=store===undefined?'一括設定':'同じ店の明細から設定';
+   count++;
+  }
+  return count;
+ };
  file.onchange=async()=>{
   previewHost.replaceChildren();rows=[];controls=[];confirmInput.checked=false;
   try{
@@ -223,6 +234,15 @@ async function csvImportForm(card){
    const decoded=decodeCardCsv(await file.files[0].arrayBuffer());rows=parseRakutenCsv(decoded.text);
    if(rows.length>500)throw Error('一度の取り込みは500行以内にしてください');
    previewHost.append(el('p',decoded.encoding+' ／ '+rows.length+'行を確認しました。対象外・不明な行も以下で確認してください。','muted'));
+   const bulk=el('div'),bulkCategory=select(bulk,'未分類にまとめて設定するカテゴリ',categories);
+   const bulkStatus=el('p',undefined,'muted');bulkStatus.setAttribute('role','status');
+   bulk.append(button('未分類の明細に一括設定',()=>{
+    if(!bulkCategory.value)throw Error('一括設定するカテゴリを選んでください');
+    const count=fillUnclassified(bulkCategory.value);
+    if(count)confirmInput.checked=false;
+    bulkStatus.textContent=count?count+'件にカテゴリを設定しました。':'対象の未分類明細はありません。';
+   }),bulkStatus);
+   previewHost.append(bulk);
    const imported=data.csvImports||{},used=new Set(Object.values(imported));
    for(const rowData of rows){
     const key=await fingerprint(card.id,rowData),box=el('section');previewHost.append(box);
@@ -235,12 +255,18 @@ async function csvImportForm(card){
     const options=[['add','新しい利用として登録'],...pending.map(p=>['plan:'+p.id,'カード固定費と対応付け '+p.name+' ／ '+yen(p.amount)]),...candidates.map(e=>['match:'+e.id,'手入力と対応付け '+e.date+' '+e.memo+' ／ '+yen(e.amount)]),['skip','今回は取り込まない']];
     const action=select(box,'明細の扱い',options,candidates.length||pending.length?'skip':'add');
     if(candidates.length||pending.length)box.append(el('p','同じカード・日付・金額の履歴があります。店名も確認して対応付けるか、別の購入として登録してください。','notice'));
-    const suggestion=suggestCategory(data,rowData.merchant),category=select(box,'カテゴリ',[['','分類を選択'],...Object.keys(data.categories.tree)],suggestion.category);
-    box.append(el('p',suggestion.source,'muted'));
+    const suggestion=suggestCategory(data,rowData.merchant),category=select(box,'カテゴリ',categories,suggestion.category);
+    const categoryStatus=el('p',suggestion.source,'muted');categoryStatus.setAttribute('role','status');box.append(categoryStatus);
     const separate=field(box,'同日・同額の履歴とは別の購入であることを確認','checkbox');
     if(rowData.identicalCount>1)box.append(el('p','CSV内に同日・同店・同額の行が複数あります。行ごとに確認してください。','notice'));
     const update=()=>{category.required=action.value==='add'||action.value.startsWith('plan:');category.disabled=!(action.value==='add'||action.value.startsWith('plan:'));separate.disabled=action.value!=='add'||!(candidates.length||pending.length);};action.onchange=update;update();
-    controls.push({row:rowData,key,action,category,separate});
+    const store=merchantKey(rowData.merchant);
+    category.onchange=()=>{
+     confirmInput.checked=false;
+     const count=category.value?fillUnclassified(category.value,store):0;
+     categoryStatus.textContent=count?'同じ店の未分類 '+count+'件にも設定しました。':category.value?'選択したカテゴリ':'分類が必要';
+    };
+    controls.push({row:rowData,key,action,category,categoryStatus,separate,store});
    }
   }catch(e){rows=[];controls=[];error(e);}
  };

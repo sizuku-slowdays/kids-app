@@ -51,3 +51,40 @@ test('Deferred manual match and category edits preserve pending billing and do n
 test('A deferred manual match cannot move an already confirmed card bill',async()=>{
  let s=run(started(),'entry.add',{id:'manual-paid-card',date:'2026-11-04',type:'expense',amount:1200,payment:'visa',category:'食費'});s.bills.push({id:'synthetic-confirmed',cardId:'visa',month:'2026-12',status:'confirmed'});const before=structuredClone(s),row={...await csvRow(),paymentMonth:'12月以降',action:'match',entryId:'manual-paid-card'};assert.throws(()=>run(s,'csv.import',csv([row],{statementMonth:'2026-11'})));assert.deepEqual(s,before);
 });
+
+test('Existing pre-start CSV entries can be reassigned to an open bill without reposting',async()=>{
+ const rows=[await csvRow(1200,'SYNTHETIC PURCHASE','2026-10-10'),await csvRow(-200,'SYNTHETIC REFUND','2026-10-11')];
+ const imported=run(started(),'csv.import',csv(rows,{statementMonth:'2026-10'}));
+ // Previously imported files without a payment-month column had no billing metadata.
+ delete imported.entries[0].csvBilling;
+ const entryIds=imported.entries.map(e=>e.id);
+ const command={entryIds,month:'2026-11',confirm:true};
+ const state=run(imported,'csv.billing.assign',command);
+ const summary=budgetSummary(state,'2026-11-07','2026-11');
+ const bill=summary.cards.find(c=>c.id==='visa').bills.find(b=>b.month==='2026-11');
+ assert.equal(bill.expected,0);
+ assert.equal(bill.projected,1000);
+ assert.equal(summary.accounts[0].upcoming,1000);
+ assert.equal(accountBalance(state,'bank-0','2026-11-07'),100000);
+ assert.equal(cardBalance(state,'visa','2026-11-07'),0);
+ assert.deepEqual(state.journal,imported.journal);
+ assert.equal(state.entries.length,2);
+ assert.deepEqual(run(state,'csv.billing.assign',command),state);
+ assert.throws(()=>run(state,'bill.confirm',{id:bill.id,version:bill.version},'2026-11-27'),/実際の請求額/);
+ const allocated=structuredClone(state);
+ allocated.bills.find(b=>b.id===bill.id).openingAllocation=800;
+ assert.equal(budgetSummary(allocated,'2026-11-07').cards.find(c=>c.id==='visa').bills[0].projected,1000);
+ const confirmed=structuredClone(state);
+ confirmed.bills.find(b=>b.id===bill.id).status='confirmed';
+ assert.throws(()=>run(confirmed,'csv.billing.assign',{...command,month:'2026-12'}),/引落済み/);
+});
+
+test('New pre-start CSV uses the statement month for the forecast only',async()=>{
+ const row=await csvRow(1200,'SYNTHETIC PURCHASE','2026-10-20');
+ const s=run(started(),'csv.import',csv([{...row,paymentMonth:'11月'}],{statementMonth:'2026-11'}));
+ const summary=budgetSummary(s,'2026-11-07');
+ assert.equal(summary.cards.find(c=>c.id==='visa').bills[0].projected,1200);
+ assert.equal(summary.cards.find(c=>c.id==='pink').bills[0].projected,0);
+ assert.equal(summary.expense,0);
+ assert.equal(s.journal.length,0);
+});

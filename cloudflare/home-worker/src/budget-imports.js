@@ -49,13 +49,21 @@ function csvBilling(row,statementMonth){
 }
 export function assignCardBilling(s,d,{monthDate,businessDate,ensureMonth}){
  requireValue(d.confirm===true,'カードの請求月を確認してください');monthDate(d.month,1);
- const entry=s.entries.find(e=>e.id===d.entryId&&!e.void),card=s.cards.find(c=>c.id===entry?.payment);
- requireValue(entry?.csvBilling?.status==='pending'&&card,'請求月の確認待ち明細を選んでください');
- requireValue(d.month>=entry.csvBilling.earliestMonth,'CSVに表示された月以降を選んでください');
- requireValue(!s.bills.some(b=>b.cardId===card.id&&b.month===d.month&&b.status==='confirmed'),'引落済みの請求月です。既存の引落を確認してください');
+ const ids=d.entryIds||[d.entryId];
+ requireValue(Array.isArray(ids)&&ids.length>0&&ids.length<=500&&new Set(ids).size===ids.length,'請求月を変更する明細を選んでください');
+ const entries=ids.map(id=>s.entries.find(e=>e.id===id&&!e.void));
+ const card=s.cards.find(c=>c.id===entries[0]?.payment);
+ requireValue(card?.accountId&&card.paymentDay,'カードの支払日と引落口座を設定してください');
  const due=businessDate(monthDate(d.month,card.paymentDay),s.holidays);
- entry.csvBilling={status:'confirmed',month:d.month};entry.dueDate=entry.ledgerIncluded?due:null;
- if(entry.ledgerIncluded)ensureMonth(s,d.month);
+ for(const entry of entries){
+  const historical=entry?.csvImported&&!entry.ledgerIncluded&&s.startDate&&entry.date<s.startDate;
+  requireValue(entry?.payment===card.id&&(historical||entry.csvBilling?.status==='pending'),'請求月を変更できる明細を選んでください');
+  if(entry.csvBilling?.status==='pending')requireValue(d.month>=entry.csvBilling.earliestMonth,'CSVに表示された月以降を選んでください');
+  if(historical&&entry.csvBilling?.status!=='pending')requireValue(due>=s.startDate,'残高管理の開始日以降に引き落とされる請求月を選んでください');
+  requireValue(!s.bills.some(b=>b.cardId===card.id&&b.status==='confirmed'&&[entry.csvBilling?.month,d.month].includes(b.month)),'引落済みの請求月です。既存の引落を確認してください');
+  entry.csvBilling={status:'confirmed',month:d.month};entry.dueDate=entry.ledgerIncluded?due:null;
+ }
+ if(entries.some(e=>e.ledgerIncluded)||s.startDate&&due>=s.startDate)ensureMonth(s,d.month);
  return s;
 }
 export function importCardRows(s,d,{cleanEntry,activeEntry,businessDate,monthDate,ensureMonth,now}){
@@ -91,9 +99,11 @@ export function importCardRows(s,d,{cleanEntry,activeEntry,businessDate,monthDat
   const include=!!s.startDate&&entry.date>=s.startDate;
   activeEntry(s,entry,now,include);
   if(billing)entry.csvBilling=billing;
+  else if(!include)entry.csvBilling={status:'confirmed',month:d.statementMonth};
   if(billing?.status==='pending')entry.dueDate=null;
   else if(include)entry.dueDate=businessDate(monthDate(d.statementMonth,card.paymentDay),s.holidays);
   if(fixed){fixed.status='confirmed';fixed.entryId=entry.id;fixed.version++;}
+  if(!include&&s.startDate&&entry.date<s.startDate&&entry.csvBilling?.status==='confirmed'&&card.accountId&&card.paymentDay&&businessDate(monthDate(entry.csvBilling.month,card.paymentDay),s.holidays)>=s.startDate)ensureMonth(s,entry.csvBilling.month);
   entry.csvImported=true;s.csvImports[row.key]=entry.id;
   // A linked manual entry keeps its original classification and ledger effects.
   const key=merchantKey(row.merchant);s.merchantCategories||={};s.merchantCategories[key]=row.category;

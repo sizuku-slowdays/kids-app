@@ -108,3 +108,28 @@ test('Monthly schedule reports actionable gaps and never duplicates existing or 
  assert.deepEqual(next.journal,s.journal);
  assert.deepEqual(run(next,'plans.generate',{month:'2026-11'}),next);
 });
+
+test('One-off bank withdrawals affect forecasts and calendar immediately, and the ledger only on confirmation',()=>{
+ const original=started();
+ const body={id:'irregular-fee',name:'合成の単発請求',payment:'bank-0',amount:1200,dueDate:'2026-11-25',category:'日用品'};
+ let state=run(original,'plan.add',body);
+ const plan=state.plans[0];
+ assert.equal(plan.month,'2026-11');
+ assert.equal(accountBalance(state,'bank-0','2026-11-07'),100000);
+ assert.equal(budgetSummary(state,'2026-11-07').accounts[0].upcoming,1200);
+ assert.equal(budgetCalendarItems(state).find(x=>x.id===plan.id).description,'単発の引落予定');
+ assert.throws(()=>run(state,'plan.add',body),/登録済み/);
+ assert.throws(()=>run(state,'plan.add',{...body,id:'wrong',payment:'visa'}));
+ assert.throws(()=>run(state,'plans.confirm',{items:[{id:plan.id,version:1}]}),/未来/);
+ state=run(state,'plan.edit',{id:plan.id,version:1,amount:1350,dueDate:'2026-12-01'});
+ assert.equal(state.plans[0].month,'2026-12');
+ assert.equal(budgetSummary(state,'2026-11-07').accounts[0].upcoming,0);
+ state=run(state,'plans.generate',{month:'2026-12'});
+ assert.equal(state.plans.length,1);
+ const confirmed=run(state,'plans.confirm',{items:[{id:plan.id,version:2}]},'2026-12-01');
+ assert.equal(accountBalance(confirmed,'bank-0','2026-12-01'),98650);
+ assert.equal(confirmed.entries.length,1);
+ const cancelled=run(state,'plan.cancel',{id:plan.id,version:2});
+ assert.ok(!budgetCalendarItems(cancelled).some(x=>x.id===plan.id));
+ assert.deepEqual(cancelled.journal,original.journal);
+});

@@ -167,7 +167,7 @@ function accountPage(id){const a=summary.accounts.find(a=>a.id===id);root.append
  const future=details(waiting,'今後の引落予定');for(const p of planned.filter(p=>p.dueDate>today))planRow(future,p);const bills=data.bills.filter(b=>data.cards.find(c=>c.id===b.cardId)?.accountId===id&&b.status==='planned');for(const b of bills){const r=billRow(b.dueDate<=today?waiting:future,b);if(b.dueDate<=today){const l=el('label'),c=el('input');c.type='checkbox';l.append(c,el('span','まとめて確定に含める'));r.prepend(l);checks.push({kind:'bill',p:b,c});}}
  const done=details(s,'引落済みの履歴');for(const p of data.plans.filter(p=>p.payment===id&&p.status==='confirmed')){const r=row(done,p.name,yen(p.amount),p.dueDate);r.append(commandButton('引落を取り消す','plan.undo',{id:p.id,reason:'画面から引落取消'},'danger'));}for(const b of data.bills.filter(b=>b.status==='confirmed'&&data.cards.find(c=>c.id===b.cardId)?.accountId===id))billRow(done,b);
  const history=section('入出金・振替・調整の履歴');for(const j of data.journal.filter(j=>j.scope==='account'&&j.target===id).slice().reverse())row(history,j.date+' '+(j.reason||journalTitle(j)),yen(j.delta),j.reversal?'取り消しの反対記録':'');for(const t of data.transfers.filter(t=>!t.void&&(t.from===id||t.to===id)))history.append(commandButton('振替 '+yen(t.amount)+' を取り消す','transfer.undo',{id:t.id,reason:'振替取消'},'danger'));for(const adjustment of data.adjustments.filter(x=>x.accountId===id&&!x.void))history.append(commandButton('残高調整を取り消す','adjustment.undo',{id:adjustment.id,reason:'残高調整取消'},'danger'));}
-function planRow(host,p){const r=row(host,p.name,yen(p.amount),p.dueDate+'・'+payName(p.payment)+(p.variable?'・変動額':''));r.append(button('金額・日付を変更',()=>{modal(p.name+' の予定');const f=el('form'),n=field(f,'今回の金額','number',p.amount,true),due=field(f,'今回の引落日','date',p.dueDate,true);saveForm(f,'予定を保存','plan.edit',()=>({id:p.id,version:p.version,amount:amount(n),dueDate:due.value}));dialog.append(f);}));r.append(commandButton('今回の予定を削除','plan.cancel',{id:p.id,version:p.version},'danger'));if(p.dueDate<=today)r.append(commandButton(data.cards.some(c=>c.id===p.payment)?'カード利用を登録':'引落済み','plans.confirm',{items:[{id:p.id,version:p.version}]},'primary'));return r;}
+function planRow(host,p){const r=row(host,p.name,yen(p.amount),p.dueDate+'・'+payName(p.payment)+(p.oneOff?'・今回のみ':p.variable?'・変動額':''));r.append(button('金額・日付を変更',()=>{modal(p.name+' の予定');const f=el('form'),n=field(f,'今回の金額','number',p.amount,true),due=field(f,'今回の引落日','date',p.dueDate,true);saveForm(f,'予定を保存','plan.edit',()=>({id:p.id,version:p.version,amount:amount(n),dueDate:due.value}));dialog.append(f);}));r.append(commandButton('今回の予定を削除','plan.cancel',{id:p.id,version:p.version},'danger'));if(p.dueDate<=today)r.append(commandButton(data.cards.some(c=>c.id===p.payment)?'カード利用を登録':'引落済み','plans.confirm',{items:[{id:p.id,version:p.version}]},'primary'));return r;}
 function moneyForm(account,type){modal(account.name+' の'+(type==='income'?'入金':'出金'));const f=el('form'),date=field(f,'日付','date',today,true),n=field(f,'金額','number','',true),category=field(f,'大カテゴリ','text',type==='income'?'給与':'その他'),memo=field(f,'メモ','text','');saveForm(f,'記録する','entry.add',()=>({id:crypto.randomUUID(),type,date:date.value,amount:amount(n),payment:account.id,category:category.value,memo:memo.value,bankEntry:true}));dialog.append(f);}
 function transferForm(account){modal('口座間振替・現金の引き出し');const f=el('form'),from=select(f,'出金元',data.accounts.map(a=>[a.id,a.name]),account?.id),to=select(f,'入金先',data.accounts.map(a=>[a.id,a.name]),'cash'),n=field(f,'金額','number','',true),date=field(f,'実際に移した日','date',today,true),memo=field(f,'メモ','text','');f.append(el('p','出金と入金を1回の操作で反映します。家計の収入・支出には加えません。','notice'));saveForm(f,'振替を記録','transfer',()=>({from:from.value,to:to.value,amount:amount(n),date:date.value,reason:memo.value}));dialog.append(f);}
 function adjustForm(a){modal(a.name+' の残高調整');const f=el('form'),actual=field(f,'数えた実際の残高','number','',true),reason=field(f,'差額の理由','textarea','',true);saveForm(f,'調整記録を追加','account.adjust',()=>({id:a.id,actual:amount(actual,{signed:true}),reason:reason.value}));dialog.append(f);}
@@ -328,26 +328,44 @@ function settingsPage(){calendarSettings();const s=section('利用開始・保�
  });
  categories.append(cf);
  classificationSettingsPage();
- const audit=section('変更履歴');audit.append(button('最近の操作を確認',async()=>{const rows=await request('/audit');modal('変更履歴');for(const op of rows)row(dialog,op.created_at,({'entry.add':'取引の登録','entry.edit':'取引の編集','entry.void':'取引の取消','transfer':'口座振替','transfer.undo':'振替の取消','start':'開始残高の設定','account.adjust':'残高調整','plans.confirm':'固定費の引落確認','payments.confirm':'引落の一括確認','bill.confirm':'カード引落確認','bill.undo':'カード引落取消','plan.undo':'固定費引落取消','rule.save':'固定費の設定','plans.generate':'毎月の予定作成','import':'旧データの取り込み','csv.import':'カードCSVの取り込み','classification.migrate':'カテゴリ体系の移行','classification.entries':'明細の一括分類','classification.people':'対象者の変更','classification.merchant':'自動分類ルールの変更','advance.settle':'立替精算','savings.allocate':'目的別積立','csv.billing.assign':'カード利用の請求月確認','fixed.import':'旧固定費の引き継ぎ'}[op.command_type]||'設定の更新'),'版 '+op.before_revision+' → '+op.after_revision);}));}
+ const audit=section('変更履歴');audit.append(button('最近の操作を確認',async()=>{const rows=await request('/audit');modal('変更履歴');for(const op of rows)row(dialog,op.created_at,({'entry.add':'取引の登録','entry.edit':'取引の編集','entry.void':'取引の取消','transfer':'口座振替','transfer.undo':'振替の取消','start':'開始残高の設定','account.adjust':'残高調整','plans.confirm':'固定費の引落確認','payments.confirm':'引落の一括確認','bill.confirm':'カード引落確認','bill.undo':'カード引落取消','plan.undo':'固定費引落取消','rule.save':'固定費の設定','plans.generate':'毎月の予定作成','plan.add':'単発の引落予定を登録','import':'旧データの取り込み','csv.import':'カードCSVの取り込み','classification.migrate':'カテゴリ体系の移行','classification.entries':'明細の一括分類','classification.people':'対象者の変更','classification.merchant':'自動分類ルールの変更','advance.settle':'立替精算','savings.allocate':'目的別積立','csv.billing.assign':'カード利用の請求月確認','fixed.import':'旧固定費の引き継ぎ'}[op.command_type]||'設定の更新'),'版 '+op.before_revision+' → '+op.after_revision);}));}
 $('quick-add').onclick=()=>{if(data)entryForm();};
 let checking=false;async function checkSession(){if(checking||!userId)return;checking=true;try{const fresh=await request();if(fresh.userId!==userId){closePrivate();userId='';inMemoryPending=null;await load();}}catch(e){error(e);}finally{checking=false;}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkSession();});globalThis.addEventListener('pageshow',()=>checkSession());
 
 
+function withdrawalPlanForm(targetMonth){
+ modal('単発の引落予定を追加');
+ const f=el('form'),banks=data.accounts.filter(a=>a.kind==='bank');
+ if(!banks.length){dialog.append(el('p','口座画面で引落口座を追加してください。'));return;}
+ f.append(el('p','指定した日だけの予定です。実際の引落を確定すると残高に反映します。','muted'));
+ const name=field(f,'予定名','text','',true);name.maxLength=100;
+ const due=field(f,'引落日','date',today.slice(0,7)===targetMonth?today:targetMonth+'-01',true);
+ due.min=targetMonth+'-01';
+ const [year,calendarMonth]=targetMonth.split('-').map(Number);
+ due.max=targetMonth+'-'+new Date(Date.UTC(year,calendarMonth,0)).getUTCDate();
+ const n=field(f,'予定金額（円）','number','',true);n.min=1;
+ const bank=select(f,'引落口座',[['','口座を選択'],...banks.map(a=>[a.id,a.name])]);bank.required=true;
+ const category=categoryPicker(f,{category:'その他'});
+ const person=personField(f);
+ saveForm(f,'引落予定を保存','plan.add',()=>({id:crypto.randomUUID(),name:name.value,dueDate:due.value,amount:amount(n),payment:bank.value,...category.read(),person:person.value}));
+ dialog.append(f);
+}
 function cashPlansPage(){
  const schedule=section('月別の予定'),picker=field(schedule,'対象月','month',month,true);
  picker.onchange=async()=>{if(!picker.value){picker.value=month;return;}month=picker.value;try{await load();}catch(e){error(e);}};
  if(data.entries.some(e=>!e.void&&e.csvBilling?.status==='pending'))schedule.append(el('p','請求月が未確定のカード利用があります。月別の引落見込にはまだ含まれません。カード画面で確認できます。','notice'));
  schedule.append(el('p','予定を生成しただけでは残高は変わりません。固定費・カード引落・入金・振替を同じ月で確認できます。','notice'));
+ schedule.append(button('＋ 単発の引落予定を追加',()=>withdrawalPlanForm(month),'primary'));
  const status=summary.schedule;
  if(status){
   const missing=status.missingFixed.length+status.missingCards.length;
-  schedule.append(el('p',missing?'作成待ち：固定費 '+status.missingFixed.length+'件、カード引落 '+status.missingCards.length+'件':'この月に追加できる固定費・カード引落予定はありません。','muted'));
+  schedule.append(el('p',missing?'作成待ち：固定費 '+status.missingFixed.length+'件、カード引落 '+status.missingCards.length+'件':'固定費・カード設定から自動作成する予定はありません。','muted'));
   if(status.cancelled)schedule.append(el('p','取消済みの予定 '+status.cancelled+'件は、下の「確定済み・取消・記録済み」にあります。','muted'));
   if(status.unconfigured.length)schedule.append(el('p','引落口座・支払日の設定が必要なカード：'+status.unconfigured.join('、'),'muted'));
  }
  let generation;
- schedule.append(button('この月の不足している予定を作成',async()=>{
+ schedule.append(button('固定費・カードの不足分を作成',async()=>{
   if(status&&!status.missingFixed.length&&!status.missingCards.length){note(month+' の追加できる予定はありません。');return;}
   generation||={eventId:crypto.randomUUID(),command:{type:'plans.generate',data:{month,expectedRevision:revision}}};
   const payload=generation.command.data;
@@ -365,13 +383,13 @@ function cashPlansPage(){
   const fixed=data.plans.filter(p=>p.month===payload.month&&!fixedIds.has(p.id)).length;
   const cards=data.bills.filter(b=>b.month===payload.month&&!billIds.has(b.id)).length;
   note(fixed||cards?payload.month+' に固定費 '+fixed+'件、カード引落 '+cards+'件を作成しました。':payload.month+' の追加できる予定はありません。');
- },'primary'));
+ }));
  const reviewCount=status?.review??data.rules.filter(r=>r.needsReview).length;
  if(reviewCount)schedule.append(el('p','確認が必要な固定費が '+reviewCount+'件あります。固定費画面で日付と引落元を確認してください。','notice'));
  const fixed=data.plans.filter(p=>p.month===month&&p.status==='planned').sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
  for(const p of fixed)planRow(schedule,p);
  for(const b of data.bills.filter(b=>b.month===month&&b.status==='planned'))billRow(schedule,b);
- if(!fixed.length&&!data.bills.some(b=>b.month===month&&b.status==='planned'))schedule.append(el('p','この月の固定費・カード引落予定はありません。固定費とカード設定を確認してください。','notice'));
+ if(!fixed.length&&!data.bills.some(b=>b.month===month&&b.status==='planned'))schedule.append(el('p','この月の引落予定はありません。','muted'));
  const excluded=details(schedule,'確定済み・取消・記録済み');for(const p of data.plans.filter(p=>p.month===month&&p.status!=='planned'))row(excluded,p.name,yen(p.amount),p.dueDate+' ／ '+({confirmed:'確定済み',cancelled:'取消済み',excluded:'既存履歴に記録済み'}[p.status]||p.status));
  for(const b of data.bills.filter(b=>b.month===month&&b.status!=='planned'))row(excluded,payName(b.cardId),b.actual===null?'未確認':yen(b.actual),b.dueDate+' ／ '+(b.status==='confirmed'?'引落済み':'取消済み'));
  const s=section('入金・振替の予定');s.append(el('p','予定登録では残高を動かしません。実際の入金や振替を確認して確定します。家族カレンダーには自分だけの予定として表示します。','notice'),button('＋ 給与・手当などの入金予定',()=>cashPlanForm(null,'income'),'primary'),button('＋ 資金移動の予定',()=>cashPlanForm(null,'transfer')));

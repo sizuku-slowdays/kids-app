@@ -1,3 +1,4 @@
+import {shiftBillingMonth,ruleNeedsPlan,ruleCoversMonth,billEvidence,projectBill,installmentProgress,forecastFunds} from './budget-forecast.js';
 import {budgetPeople, migrateClassification, outstandingAdvance, savingsKinds, spendingKinds} from './budget-classification.js';
 import {importFixedRules,importCardRows,assignCardBilling} from './budget-imports.js';
 import {dailySpending} from '../public/apps/household-budget/daily-spending.js';
@@ -39,7 +40,7 @@ function historicalCardForecast(s,b){
 }
 function pendingCardCharges(s,b){const card=find(s.cards,b.cardId);return s.plans.filter(p=>p.status==='planned'&&p.payment===card.id&&cardDue(card,p.nominalDate,s.holidays)?.slice(0,7)===b.month).reduce((n,p)=>n+p.amount,0);}
 function missingMonthlyItems(s,month){
- const fixed=s.rules.filter(r=>r.enabled&&(!r.firstMonth||r.firstMonth<=month)&&!s.plans.some(p=>p.ruleId===r.id&&p.month===month||p.id==='fixed:'+r.id+':'+month));
+ const fixed=s.rules.filter(r=>ruleNeedsPlan(r,month)&&!s.plans.some(p=>p.ruleId===r.id&&p.month===month||p.id==='fixed:'+r.id+':'+month));
  const cards=s.cards.filter(c=>c.accountId&&c.paymentDay&&!s.bills.some(b=>b.cardId===c.id&&b.month===month||b.id==='bill:'+c.id+':'+month));
  return {fixed,cards};
 }
@@ -50,8 +51,58 @@ function monthlyScheduleStatus(s,month){
   review:s.rules.filter(r=>r.needsReview).length,
   unconfigured:s.cards.filter(c=>!c.accountId||!c.paymentDay).map(c=>c.name)};
 }
+function makeBill(s,card,month){
+ return {id:'bill:'+card.id+':'+month,cardId:card.id,month,dueDate:businessDate(monthDate(month,card.paymentDay),s.holidays),openingAllocation:0,actual:null,reason:'',adjustment:null,status:'planned',version:1};
+}
+function termFromInput(term){
+ fail(term&&['ongoing','end','installments'].includes(term.kind),'固定費の終了条件を選んでください');
+ if(term.kind==='ongoing')return {kind:term.kind};
+ if(term.kind==='end'){monthDate(term.endMonth,1);return {kind:term.kind,endMonth:term.endMonth};}
+ monthDate(term.firstMonth,1);
+ fail(Number.isInteger(term.total)&&term.total>=1&&term.total<=600,'支払回数を1〜600回で入力してください');
+ const priorPaid=term.priorPaid??0;
+ fail(Number.isInteger(priorPaid)&&priorPaid>=0&&priorPaid<=term.total,'開始時点の支払済み回数を確認してください');
+ const endMonth=shiftBillingMonth(term.firstMonth,term.total-1);
+ monthDate(endMonth,1);
+ return {kind:term.kind,firstMonth:term.firstMonth,total:term.total,endMonth,priorPaid};
+}
+export function billProjection(s,b){
+ const expected=billExpected(s,b),historicalForecast=historicalCardForecast(s,b);
+ const evidence=billEvidence(s,b,cardDue);
+ const pendingCharges=evidence.plans.reduce((total,plan)=>total+plan.amount,0);
+ const forecast=projectBill(b,evidence,expected+pendingCharges+historicalForecast);
+ return {...b,expected:b.status==='confirmed'?b.expectedAtConfirm:expected,projected:forecast.projected,pendingCharges,historicalForecast,forecast};
+}
+function forecastSchedules(s,asOf){
+ const state={...s,plans:s.plans.slice(),bills:s.bills.slice()};
+ const months=[asOf.slice(0,7),shiftBillingMonth(asOf.slice(0,7),1)].filter(month=>month<='2100-12');
+ const originalPlans=new Set(state.plans.map(plan=>plan.id)),originalBills=new Set(state.bills.map(bill=>bill.id));
+ for(const month of months)ensureMonth(state,month);
+ for(const card of state.cards){
+  if(!card.accountId||!card.paymentDay)continue;
+  const cardMonths=new Set();
+  for(const entry of state.entries){
+   if(entry.void||entry.payment!==card.id||entry.csvBilling?.status==='pending')continue;
+   const month=entry.ledgerIncluded?entry.dueDate?.slice(0,7):entry.csvImported&&state.startDate&&entry.date<state.startDate?entry.csvBilling?.month:null;
+   if(month)cardMonths.add(month);
+  }
+  for(const plan of state.plans){
+   if(plan.status!=='planned'||plan.payment!==card.id)continue;
+   const month=cardDue(card,plan.manualDue?plan.dueDate:plan.nominalDate,state.holidays)?.slice(0,7);
+   if(month)cardMonths.add(month);
+  }
+  for(const month of cardMonths){
+   if(month>'2100-12'||state.bills.some(bill=>bill.cardId===card.id&&bill.month===month))continue;
+   const bill=makeBill(state,card,month);
+   if(!state.startDate||bill.dueDate>=state.startDate)state.bills.push(bill);
+  }
+ }
+ state.plans=state.plans.map(plan=>originalPlans.has(plan.id)?plan:{...plan,virtual:true});
+ state.bills=state.bills.map(bill=>originalBills.has(bill.id)?bill:{...bill,virtual:true});
+ return state;
+}
 function ensureMonth(s,month){monthDate(month,1);const {fixed,cards}=missingMonthlyItems(s,month);for(const r of fixed){const key='fixed:'+r.id+':'+month;const previous=s.plans.filter(p=>p.ruleId===r.id&&p.month<month).sort((a,b)=>b.month.localeCompare(a.month))[0];s.plans.push({id:key,ruleId:r.id,month,name:r.name,payment:r.payment,category:r.category,...(r.middle&&{middle:r.middle}),person:r.person||'',nominalDate:monthDate(month,r.day),dueDate:s.accounts.some(a=>a.id===r.payment&&a.kind==='bank')?businessDate(monthDate(month,r.day),s.holidays):monthDate(month,r.day),amount:r.variable&&previous?previous.amount:r.amount,variable:r.variable,status:'planned',version:1});}
- for(const card of cards){const key='bill:'+card.id+':'+month;s.bills.push({id:key,cardId:card.id,month,dueDate:businessDate(monthDate(month,card.paymentDay),s.holidays),openingAllocation:0,actual:null,reason:'',adjustment:null,status:'planned',version:1});}
+ for(const card of cards){s.bills.push(makeBill(s,card,month));}
 }
 function hasSecrets(value){if(!value||typeof value!=='object')return false;return Object.entries(value).some(([k,v])=>/password|token|secret|credential/i.test(k)||hasSecrets(v));}
 export function importPreview(input){fail(input&&typeof input==='object'&&!hasSecrets(input),'認証情報を含まない家計簿JSONを選んでください');const raw=input.data?.entries?input.data:input;fail(Array.isArray(raw.entries)&&raw.entries.length<=20000,'既存のentries配列を確認してください');return {count:raw.entries.length,splitReceipts:new Set(raw.entries.filter(e=>e.receiptId).map(e=>e.receiptId)).size,fixedRules:Array.isArray(raw.plan?.fixedExpenses)?raw.plan.fixedExpenses.length:0,version:raw.version||null};}
@@ -86,6 +137,14 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
  case 'bill.cancel':{const b=find(s.bills,d.id);fail(b.status==='planned'&&b.version===d.version,'予定が更新されています',409);b.status='cancelled';b.version++;break;}
  case 'calendar.settings':{fail(typeof d.enabled==='boolean'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(d.time)&&[0,1,2,3,7].includes(d.daysBefore),'通知設定を確認してください');s.calendarNotice={enabled:d.enabled,time:d.time,daysBefore:d.daysBefore};break;}
  case 'import':fail(d.confirm===true,'原本を保持する取り込み内容を確認してください');importLegacy(s,d.snapshot,context.importHash);break;
+ case 'cashflow.funds':{
+  monthDate(d.month,1);
+  fail(Array.isArray(d.goals)&&d.goals.length<=30,'確保額の内訳を確認してください');
+  const goals=d.goals.map(goal=>({name:text(goal.name,100),amount:yenAmount(goal.amount)}));
+  fail(goals.every(goal=>goal.name)&&new Set(goals.map(goal=>goal.name)).size===goals.length,'確保する用途を重複なく入力してください');
+  s.fundReserves={...s.fundReserves,[d.month]:{living:yenAmount(d.living),goals}};
+  break;
+ }
  case 'cashflow.reserve':{s.livingReserve=yenAmount(d.amount);break;}
  case 'account.rename':{const a=find(s.accounts,d.id),name=text(d.name,100).trim();fail(name,'口座名を入力してください');a.name=name;break;}
  case 'account.add':{const key=id(d.id);fail(!s.accounts.some(a=>a.id===key),'同じ口座があります',409);fail(['bank','cash'].includes(d.kind),'口座種別を確認してください');s.accounts.push({id:key,name:text(d.name,100),kind:d.kind,opening:null,openingDate:null});break;}
@@ -112,7 +171,7 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
  case 'transfer.undo':{const t=find(s.transfers,d.id);fail(!(s.cashPlans||[]).some(p=>p.postingId===t.id&&p.status==='confirmed')||context.fromCashPlan===true,'振替予定の画面から確定を取り消してください');fail(!t.void,'すでに取り消し済みです',409);undoSource(s,t.id,now,text(d.reason||'振替取消',500));t.void=true;break;}
  case 'account.adjust':{const a=find(s.accounts,d.id);fail(a.opening!==null,'開始残高を設定してください');const actual=yenAmount(d.actual,true),reason=text(d.reason||'',500);fail(reason,'残高調整の理由を入力してください');const expected=accountBalance(s,a.id,now);emit(s,op,now,'account',a.id,actual-expected,reason);s.adjustments.push({id:op,accountId:a.id,date:now,expected,actual,reason,void:false});break;}
  case 'adjustment.undo':{const a=find(s.adjustments,d.id);fail(!a.void,'すでに取り消し済みです',409);undoSource(s,a.id,now,text(d.reason||'残高調整取消',500));a.void=true;break;}
- case 'rule.save':{const key=id(d.id),amount=yenAmount(d.amount);fail(amount>0,'金額を入力してください');fail(s.accounts.some(a=>a.id===d.payment)||s.cards.some(c=>c.id===d.payment),'引落元を選んでください');monthDate(now.slice(0,7),d.day);const rule={id:key,name:text(d.name,100),amount,payment:d.payment,category:text(d.category||'その他',100),...(d.middle&&{middle:text(d.middle,100)}),person:text(d.person||'',100),day:d.day,variable:!!d.variable,enabled:d.enabled!==false,needsReview:false};const at=s.rules.findIndex(r=>r.id===key);if(at<0)s.rules.push(rule);else{if(d.middle===undefined&&rule.category===s.rules[at].category&&s.rules[at].middle)rule.middle=s.rules[at].middle;if(s.rules[at].originalClassification)rule.originalClassification=s.rules[at].originalClassification;if(s.rules[at].firstMonth){rule.firstMonth=s.rules[at].firstMonth;rule.legacy=s.rules[at].legacy;}s.rules[at]=rule;}break;}
+ case 'rule.save':{const key=id(d.id),amount=yenAmount(d.amount);fail(amount>0,'金額を入力してください');fail(s.accounts.some(a=>a.id===d.payment)||s.cards.some(c=>c.id===d.payment),'引落元を選んでください');monthDate(now.slice(0,7),d.day);const rule={id:key,name:text(d.name,100),amount,payment:d.payment,category:text(d.category||'その他',100),...(d.middle&&{middle:text(d.middle,100)}),person:text(d.person||'',100),day:d.day,variable:!!d.variable,enabled:d.enabled!==false,needsReview:false};const at=s.rules.findIndex(r=>r.id===key);if(d.term!==undefined)rule.term=termFromInput(d.term);else if(s.rules[at]?.term)rule.term=s.rules[at].term;if(at<0)s.rules.push(rule);else{if(d.middle===undefined&&rule.category===s.rules[at].category&&s.rules[at].middle)rule.middle=s.rules[at].middle;if(s.rules[at].originalClassification)rule.originalClassification=s.rules[at].originalClassification;if(s.rules[at].firstMonth){rule.firstMonth=s.rules[at].firstMonth;rule.legacy=s.rules[at].legacy;}s.rules[at]=rule;}break;}
  case 'rule.disable':find(s.rules,d.id).enabled=false;break;
  case 'plans.generate':ensureMonth(s,d.month||now.slice(0,7));break;
  case 'plan.add':{
@@ -131,8 +190,58 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
  case 'payments.confirm':{fail(Array.isArray(d.items)&&d.items.length>0&&d.items.length<=100,'引落を選んでください');let combined=s;const unique=new Set();for(const item of d.items){fail(['plan','bill'].includes(item.kind)&&!unique.has(item.id),'引落の指定が重複しています');unique.add(item.id);combined=applyBudgetCommand(combined,{type:item.kind==='bill'?'bill.confirm':'plans.confirm',data:item.kind==='bill'?{id:item.id,version:item.version}:{items:[{id:item.id,version:item.version}]}},context);}return combined;}
  case 'plans.confirm':{fail(Array.isArray(d.items)&&d.items.length>0&&d.items.length<=100,'対象の引落を選んでください');const seen=new Set();for(const x of d.items){fail(!seen.has(x.id),'対象が重複しています');seen.add(x.id);const p=find(s.plans,x.id);fail(p.status==='planned'&&p.version===x.version,'引落は確定済み、または更新されています',409);fail(p.dueDate<=now,'未来の引落はまだ確定できません');const e=cleanEntry({id:p.oneOff?'withdrawal-'+p.id+'-'+p.version:'fixed-'+p.ruleId+'-'+p.month+'-'+p.version,date:day(d.date||p.dueDate),type:'expense',amount:p.amount,payment:p.payment,category:p.category,middle:p.middle,person:p.person,memo:p.name},now);activeEntry(s,e,now,true);p.status='confirmed';p.entryId=e.id;p.version++;}break;}
  case 'plan.undo':{const p=find(s.plans,d.id);fail(p.status==='confirmed','未確定または取り消し済みです',409);const e=find(s.entries,p.entryId);fail(!e.void,'関連取引を確認してください',409);undoSource(s,'entry:'+e.id,now,text(d.reason||'固定費引落取消',500));e.void=true;p.status='planned';p.version++;break;}
- case 'bill.edit':{const b=find(s.bills,d.id);fail(b.status==='planned'&&b.version===d.version,'カード引落予定が更新されています',409);b.actual=yenAmount(d.actual);b.manualDue=!!b.manualDue||!!d.dueDate&&d.dueDate!==b.dueDate;b.dueDate=day(d.dueDate||b.dueDate);b.reason=text(d.reason||'',500);const allocation=yenAmount(d.openingAllocation||0),card=find(s.cards,b.cardId),used=s.bills.filter(x=>x.id!==b.id&&x.cardId===card.id).reduce((a,x)=>a+(x.openingAllocation||0),0);fail(allocation+used<=Math.max(0,card.opening||0),'開始時未払金の割当を確認してください');b.openingAllocation=allocation;if(d.adjustment){fail(['points','refund','fee'].includes(d.adjustment.kind),'差額の種別を確認してください');b.adjustment={kind:d.adjustment.kind,amount:yenAmount(d.adjustment.amount),reason:text(d.adjustment.reason||b.reason,500)};fail(b.adjustment.reason,'差額の内容を入力してください');}else b.adjustment=null;b.version++;break;}
- case 'bill.confirm':{const b=find(s.bills,d.id),card=find(s.cards,b.cardId),a=find(s.accounts,card.accountId);fail(s.startDate&&a.opening!==null&&b.dueDate>=a.openingDate,'引落口座の開始日・残高を設定してください');fail(b.status==='planned'&&b.version===d.version,'確定済み、または予定が更新されています',409);fail(b.dueDate<=now,'未来のカード引落はまだ確定できません');fail(b.actual!==null||pendingCardCharges(s,b)===0&&historicalCardForecast(s,b)===0,'見込に未確認の明細があります。実際の請求額を確認してください');const expected=billExpected(s,b),actual=b.actual===null?expected:b.actual;yenAmount(actual);fail(expected===actual||b.reason,'請求差額の理由（不明なら未照合）を記録してください');const source='payment:'+b.id+':'+b.version;emit(s,source,b.dueDate,'account',a.id,-actual);emit(s,source,b.dueDate,'card',card.id,-actual);let adj=0;if(b.adjustment){adj=b.adjustment.amount*(b.adjustment.kind==='fee'?1:-1);emit(s,source,b.dueDate,'card',card.id,adj,b.adjustment.reason);}b.expectedAtConfirm=expected;b.actual=actual;b.reconciliation=expected+adj-actual;b.source=source;b.status='confirmed';b.version++;break;}
+ case 'bill.estimate':{
+  const card=find(s.cards,d.cardId),month=d.month;
+  monthDate(month,1);
+  fail(card.accountId&&card.closingDay&&card.paymentDay,'カードの引落口座・締め日・支払日を設定してください');
+  const old=s.bills.find(bill=>bill.cardId===card.id&&bill.month===month);
+  const bill=old||makeBill(s,card,month);
+  fail(bill.status==='planned'&&(!old||bill.version===d.version),'既存の引落予定の状態を確認してください',409);
+  fail(!s.startDate||bill.dueDate>=s.startDate,'家計の開始日以降の請求月を選んでください');
+  fail(['estimate','confirmed'].includes(d.status),'請求額の状態を選んでください');
+  const checkedDate=day(d.checkedDate),amount=yenAmount(d.amount);
+  fail(checkedDate<=now&&(!bill.appEstimate||checkedDate>=bill.appEstimate.checkedDate)&&(!bill.appCheckedDate||checkedDate>=bill.appCheckedDate),'最新の確認日を今日以前で指定してください');
+  if(d.status==='confirmed'){
+   bill.actual=amount;
+   bill.appCheckedDate=checkedDate;
+   if(!bill.reason)bill.reason='未照合';
+  }else{
+   fail(bill.actual==null,'確定した請求額は請求額・差額の画面から確認してください',409);
+   const known=billEvidence(s,bill,cardDue).entries.map(({id,signature})=>({id,signature}));
+   bill.appEstimate={amount,checkedDate,known,decisions:[],future:[]};
+  }
+  bill.amountHistory||=[];
+  bill.amountHistory.push({status:d.status,amount,checkedDate,recordedDate:now});
+  if(!old)s.bills.push(bill);
+  else bill.version++;
+  break;
+ }
+ case 'bill.reconcile':{
+  const bill=find(s.bills,d.id);
+  fail(bill.status==='planned'&&bill.actual==null&&bill.appEstimate&&bill.version===d.version,'カード引落予定が更新されています',409);
+  const evidence=billEvidence(s,bill,cardDue);
+  fail(Array.isArray(d.decisions)&&Array.isArray(d.future)&&d.decisions.length<=evidence.entries.length&&d.future.length<=evidence.plans.length,'照合内容を確認してください');
+  const decisions=new Map();
+  for(const choice of d.decisions){
+   const entry=find(evidence.entries,choice.id);
+   fail(!decisions.has(entry.id)&&['included','extra'].includes(choice.coverage)&&choice.signature===entry.signature,'明細の照合を確認してください',409);
+   decisions.set(entry.id,{id:entry.id,signature:entry.signature,coverage:choice.coverage});
+  }
+  const future=new Map(),linkedIds=new Set();
+  for(const choice of d.future){
+   const plan=find(evidence.plans,choice.id);
+   const linked=choice.linkedEntryId?find(evidence.entries,choice.linkedEntryId):null;
+   fail(!future.has(plan.id)&&choice.version===plan.version&&['included','extra'].includes(choice.coverage)&&(!linked||choice.coverage==='included'&&linked.amount>0&&!linkedIds.has(linked.id)),'定期支払いの照合を確認してください',409);
+   if(linked)linkedIds.add(linked.id);
+   future.set(plan.id,{id:plan.id,version:plan.version,coverage:choice.coverage,...linked&&{linkedEntryId:linked.id,linkedSignature:linked.signature}});
+  }
+  bill.appEstimate.decisions=[...decisions.values()];
+  bill.appEstimate.future=[...future.values()];
+  bill.version++;
+  break;
+ }
+ case 'bill.edit':{const b=find(s.bills,d.id);fail(b.status==='planned'&&b.version===d.version,'カード引落予定が更新されています',409);b.actual=yenAmount(d.actual);b.manualDue=!!b.manualDue||!!d.dueDate&&d.dueDate!==b.dueDate;b.dueDate=day(d.dueDate||b.dueDate);b.reason=text(d.reason||'',500);const allocation=yenAmount(d.openingAllocation||0),card=find(s.cards,b.cardId),used=s.bills.filter(x=>x.id!==b.id&&x.cardId===card.id).reduce((a,x)=>a+(x.openingAllocation||0),0);fail(allocation+used<=Math.max(0,card.opening||0),'開始時未払金の割当を確認してください');b.openingAllocation=allocation;if(d.adjustment){fail(['points','refund','fee'].includes(d.adjustment.kind),'差額の種別を確認してください');b.adjustment={kind:d.adjustment.kind,amount:yenAmount(d.adjustment.amount),reason:text(d.adjustment.reason||b.reason,500)};fail(b.adjustment.reason,'差額の内容を入力してください');}else b.adjustment=null;if(b.amountHistory){b.appCheckedDate=now;b.amountHistory.push({status:'confirmed',amount:b.actual,checkedDate:now,recordedDate:now});}b.version++;break;}
+ case 'bill.confirm':{const b=find(s.bills,d.id),card=find(s.cards,b.cardId),a=find(s.accounts,card.accountId);fail(s.startDate&&a.opening!==null&&b.dueDate>=a.openingDate,'引落口座の開始日・残高を設定してください');fail(b.status==='planned'&&b.version===d.version,'確定済み、または予定が更新されています',409);fail(b.dueDate<=now,'未来のカード引落はまだ確定できません');fail(b.actual!==null||!b.appEstimate&&pendingCardCharges(s,b)===0&&historicalCardForecast(s,b)===0,'見込に未確認の明細があります。実際の請求額を確認してください');const expected=billExpected(s,b),actual=b.actual===null?expected:b.actual;yenAmount(actual);fail(expected===actual||b.reason,'請求差額の理由（不明なら未照合）を記録してください');const source='payment:'+b.id+':'+b.version;emit(s,source,b.dueDate,'account',a.id,-actual);emit(s,source,b.dueDate,'card',card.id,-actual);let adj=0;if(b.adjustment){adj=b.adjustment.amount*(b.adjustment.kind==='fee'?1:-1);emit(s,source,b.dueDate,'card',card.id,adj,b.adjustment.reason);}b.expectedAtConfirm=expected;b.actual=actual;b.reconciliation=expected+adj-actual;b.source=source;b.status='confirmed';b.version++;break;}
  case 'bill.undo':{const b=find(s.bills,d.id);fail(b.status==='confirmed','すでに取り消し済みです',409);undoSource(s,b.source,now,text(d.reason||'カード引落取消',500));b.status='planned';b.version++;break;}
  case 'holidays':fail(Array.isArray(d.dates)&&d.dates.length<=400,'休日を確認してください');s.holidays=[...new Set(d.dates.map(day))];for(const p of s.plans.filter(p=>p.status==='planned'&&!p.manualDue&&p.dueDate>=now)){const adjusted=s.accounts.some(a=>a.id===p.payment&&a.kind==='bank')?businessDate(p.nominalDate,s.holidays):p.nominalDate;if(adjusted!==p.dueDate){p.dueDate=adjusted;p.version++;}}for(const b of s.bills.filter(b=>b.status==='planned'&&!b.manualDue&&b.dueDate>=now)){const adjusted=businessDate(monthDate(b.month,find(s.cards,b.cardId).paymentDay),s.holidays);if(adjusted!==b.dueDate){b.dueDate=adjusted;b.version++;}}break;
  case 'classification.migrate':
@@ -216,8 +325,18 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
 export function accountBalance(s,key,asOf){const a=find(s.accounts,key);if(a.opening===null||a.openingDate>asOf)return null;return a.opening+s.journal.filter(j=>j.scope==='account'&&j.target===key&&j.date<=asOf).reduce((n,j)=>n+j.delta,0);}
 export function cardBalance(s,key,asOf){const c=find(s.cards,key);if(c.opening===null||!s.startDate||s.startDate>asOf)return null;return c.opening+s.journal.filter(j=>j.scope==='card'&&j.target===key&&j.date<=asOf).reduce((n,j)=>n+j.delta,0);}
 export function budgetSummary(s,asOf,month=asOf.slice(0,7),basis='date'){
- const accounts=s.accounts.map(a=>{const cashPlans=(s.cashPlans||[]).filter(p=>p.status==='planned'&&p.date.slice(0,7)<=month),plannedIn=cashPlans.filter(p=>p.to===a.id).reduce((n,p)=>n+p.amount,0),plannedOut=cashPlans.filter(p=>p.kind==='transfer'&&p.from===a.id).reduce((n,p)=>n+p.amount,0);const pending=s.plans.filter(p=>p.payment===a.id&&p.status==='planned'&&p.dueDate.slice(0,7)<=month),bills=s.bills.filter(b=>find(s.cards,b.cardId).accountId===a.id&&b.status==='planned'&&b.dueDate.slice(0,7)<=month),upcoming=pending.reduce((n,p)=>n+p.amount,0)+bills.reduce((n,b)=>n+(b.actual===null?Math.max(0,billExpected(s,b)+pendingCardCharges(s,b)+historicalCardForecast(s,b)):b.actual),0),balance=accountBalance(s,a.id,asOf);return {...a,balance,upcoming,plannedIn,plannedOut,forecast:balance===null?null:balance+plannedIn-upcoming-plannedOut,pendingCount:pending.filter(p=>p.dueDate<=asOf).length+bills.filter(b=>b.dueDate<=asOf).length};});
- const cards=s.cards.map(c=>({...c,balance:cardBalance(s,c.id,asOf),bills:s.bills.filter(b=>b.cardId===c.id).map(b=>({...b,expected:b.status==='confirmed'?b.expectedAtConfirm:billExpected(s,b),projected:billExpected(s,b)+pendingCardCharges(s,b)+historicalCardForecast(s,b),pendingCharges:pendingCardCharges(s,b),historicalForecast:historicalCardForecast(s,b)}))})),monthly=s.entries.filter(e=>!e.void&&(basis==='settleMonth'?e.settleMonth:e.date.slice(0,7))===month);let income=0,expense=0,saved=0;
+ const cards=s.cards.map(c=>({...c,balance:cardBalance(s,c.id,asOf),bills:s.bills.filter(b=>b.cardId===c.id).map(b=>billProjection(s,b))}));
+ const accounts=s.accounts.map(a=>{
+  const cashPlans=(s.cashPlans||[]).filter(p=>p.status==='planned'&&p.date.slice(0,7)<=month);
+  const plannedIn=cashPlans.filter(p=>p.to===a.id).reduce((n,p)=>n+p.amount,0);
+  const plannedOut=cashPlans.filter(p=>p.kind==='transfer'&&p.from===a.id).reduce((n,p)=>n+p.amount,0);
+  const pending=s.plans.filter(p=>p.payment===a.id&&p.status==='planned'&&p.dueDate.slice(0,7)<=month);
+  const bills=cards.filter(c=>c.accountId===a.id).flatMap(c=>c.bills.filter(b=>b.status==='planned'&&b.dueDate.slice(0,7)<=month));
+  const upcoming=pending.reduce((n,p)=>n+p.amount,0)+bills.reduce((n,b)=>n+b.projected,0);
+  const balance=accountBalance(s,a.id,asOf);
+  return {...a,balance,upcoming,plannedIn,plannedOut,forecast:balance===null?null:balance+plannedIn-upcoming-plannedOut,pendingCount:pending.filter(p=>p.dueDate<=asOf).length+bills.filter(b=>b.dueDate<=asOf).length};
+ });
+ const monthly=s.entries.filter(e=>!e.void&&(basis==='settleMonth'?e.settleMonth:e.date.slice(0,7))===month);let income=0,expense=0,saved=0;
  const category=Object.create(null),people=Object.create(null),categoryBreakdown=[];
  const addPart=(part,amount,kind)=>{
   const person=part.person||'未設定';
@@ -259,14 +378,27 @@ export function budgetSummary(s,asOf,month=asOf.slice(0,7),basis='date'){
  const advances=s.entries.filter(e=>!e.void&&e.type==='advance').map(e=>({id:e.id,remaining:outstandingAdvance(s,e)}));
  const daily=dailySpending(s.entries,asOf);
  const managed=accounts.filter(a=>a.balance!==null),reserve=s.livingReserve||0,cashflow={reserve,forecast:managed.length?managed.reduce((n,a)=>n+a.forecast,0):null};cashflow.available=cashflow.forecast===null?null:cashflow.forecast-reserve;
- const known=accounts.some(a=>a.balance!==null),cardKnown=cards.every(c=>c.balance!==null),assets=known?accounts.filter(a=>a.balance!==null).reduce((n,a)=>n+a.balance,0):null,debt=cardKnown?cards.reduce((n,c)=>n+Math.max(0,c.balance),0):null;return {cashflow,daily,accounts,cards,income,expense,category,people,categoryBreakdown,saved,savings,waived,advanceReceived,advances,assets,debt,net:assets===null||debt===null?null:assets-debt,unreconciled:cards.flatMap(c=>c.bills.filter(b=>b.status==='confirmed'&&b.reconciliation!==0)),basis,month,schedule:monthlyScheduleStatus(s,month)};
+ const schedule=monthlyScheduleStatus(s,month);
+ const generation=missingBudgetMonths(s,asOf);
+ const projectedState=forecastSchedules(s,asOf);
+ const projectedCards=cards.map(card=>({...card,bills:projectedState.bills.filter(b=>b.cardId===card.id).map(b=>billProjection(projectedState,b))}));
+ const unconfigured=s.cards.some(card=>!card.accountId||!card.paymentDay);
+ const funds=forecastFunds(s,accounts,projectedCards,asOf,unconfigured,projectedState.plans);
+ const cardCharges=Object.fromEntries(s.plans.filter(p=>p.status==='confirmed'&&s.cards.some(c=>c.id===p.payment)).map(plan=>{
+  const entry=s.entries.find(e=>e.id===plan.entryId&&!e.void);
+  const billMonth=entry?.dueDate?.slice(0,7)||entry?.csvBilling?.month;
+  const bill=s.bills.find(b=>b.cardId===plan.payment&&b.month===billMonth&&b.status!=='cancelled');
+  return [plan.id,{month:billMonth||null,status:bill?.status==='confirmed'?'paid':bill?.actual!=null?'billed':'used'}];
+ }));
+ const installments=Object.fromEntries(s.rules.filter(r=>r.term).map(rule=>[rule.id,{...installmentProgress(s,rule),outside:s.plans.filter(plan=>plan.ruleId===rule.id&&plan.status==='planned'&&!ruleCoversMonth(rule,plan.month)).map(plan=>plan.month)}]));
+ const known=accounts.some(a=>a.balance!==null),cardKnown=cards.every(c=>c.balance!==null),assets=known?accounts.filter(a=>a.balance!==null).reduce((n,a)=>n+a.balance,0):null,debt=cardKnown?cards.reduce((n,c)=>n+Math.max(0,c.balance),0):null;return {cashflow,funds,generation,installments,cardCharges,daily,accounts,cards,income,expense,category,people,categoryBreakdown,saved,savings,waived,advanceReceived,advances,assets,debt,net:assets===null||debt===null?null:assets-debt,unreconciled:cards.flatMap(c=>c.bills.filter(b=>b.status==='confirmed'&&b.reconciliation!==0)),basis,month,schedule};
 }
 export function legacyExport(s){const raw=s.legacy?.data?.entries?s.legacy.data:s.legacy||{version:6},entries=[];for(const e of s.entries.filter(e=>!e.void)){e.splits.forEach((p,i)=>entries.push({id:e.legacyIds?.[i]||e.id+':'+i,date:e.date,type:e.type,amount:p.amount,payment:s.cards.find(c=>c.id===e.payment)?.name||s.accounts.find(a=>a.id===e.payment)?.name||e.legacyPayment,category:p.category,categoryMiddle:p.middle,categorySmall:p.small,person:p.person,expenseNature:p.nature,memo:e.memo,settleMonth:e.settleMonth,counterparty:e.counterparty,linkedAdvanceId:e.linkedAdvanceId,...(e.splits.length>1?{receiptId:e.legacyKey?.replace(/^receipt:/,'')||e.id,receiptTotal:e.amount,splitIndex:i,splitCount:e.splits.length}:{})}));}const deletedIds=[...(raw.deletedIds||[]),...s.entries.filter(e=>e.void).flatMap(e=>e.legacyIds?.length?e.legacyIds:e.splits.map((_,i)=>e.id+':'+i)).map(id=>({id}))];const outputIds=new Set(entries.map(e=>e.id));for(const e of s.entries)for(const key of e.legacyIds||[])if(!outputIds.has(key))deletedIds.push({id:key});const represented=new Set(s.entries.flatMap(e=>e.legacyIds||[]));entries.push(...clone((raw.entries||[]).filter(e=>!represented.has(e.id))));return {...clone(raw),entries,deletedIds,categories:clone(s.categories),migrationIssues:clone(s.importIssues),preservedOriginal:clone(s.legacy)};}
 
 
 export function missingBudgetMonths(s,asOf){
  const month=asOf.slice(0,7);
- return [month,monthShift(month,1)].filter(target=>{
+ return [month,shiftBillingMonth(month,1)].filter(target=>target<='2100-12').filter(target=>{
   const {fixed,cards}=missingMonthlyItems(s,target);
   return fixed.length>0||cards.length>0;
  });

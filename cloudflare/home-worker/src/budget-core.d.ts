@@ -10,3 +10,4 @@ export function monthDate(month:string,day:number):string;
 export function cardDue(card:any,date:string,holidays?:string[]):string|null;
 
 export function missingBudgetMonths(state:BudgetState,asOf:string):string[];
+export function billProjection(state:BudgetState,bill:any):any;

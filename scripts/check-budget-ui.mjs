@@ -19,6 +19,7 @@ let value=await (await mf.dispatchFetch(endpoint,{headers:{Cookie:cookie}})).jso
 await page.getByRole('button',{name:'＋ 支出を入力',exact:true}).click();await dialog.getByLabel('レシート・取引の総額（円）',{exact:true}).fill('300');await dialog.getByRole('button',{name:'現金',exact:true}).click();await dialog.getByLabel('カテゴリに分けるときだけ、内訳を追加',{exact:true}).check();const parts=dialog.locator('.split-row');await parts.nth(0).getByLabel('この内訳の金額（円）',{exact:true}).fill('200');await parts.nth(1).getByLabel('この内訳の金額（円）',{exact:true}).fill('100');await parts.nth(1).getByLabel('大カテゴリ',{exact:true}).selectOption('日用品');await dialog.getByRole('button',{name:'保存する',exact:true}).click();await dialog.waitFor({state:'hidden'});value=await (await mf.dispatchFetch(endpoint,{headers:{Cookie:cookie}})).json();assert.equal(value.data.entries.length,2);assert.equal(value.data.entries[1].splits.length,2);assert.equal(value.summary.expense,400);
 await command('entry.add',{id:'older-spending',type:'expense',amount:75,payment:'cash',date:'2025-01-01',category:'食費'});
 await page.getByRole('button',{name:'ホーム',exact:true}).click();
+await page.getByText('日別支出・口座・今月の収支',{exact:true}).click();
 const spending=page.locator('section').filter({has:page.getByLabel('合計を確認する日')});
 await spending.getByLabel('合計を確認する日').fill('2025-01-01');
 assert.equal(await spending.locator('.amount').textContent(),'75円');
@@ -32,7 +33,7 @@ assert.equal(await spending.locator('.amount').textContent(),'400円');
 assert.equal(await spending.getByRole('button',{name:'次の日 →',exact:true}).isDisabled(),true);
 for(const width of [320,390,768,1280]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'home overflow '+width);}
 await page.setViewportSize({width:390,height:844});await page.screenshot({path:new URL('budget-home-mobile.png',root).pathname,fullPage:true});
-await page.getByRole('button',{name:'口座',exact:true}).click();await page.getByRole('button',{name:'詳細',exact:true}).first().click();await page.getByRole('button',{name:'振替・現金引出',exact:true}).click();await dialog.getByLabel('金額',{exact:true}).fill('500');await dialog.getByRole('button',{name:'振替を記録',exact:true}).click();await dialog.getByRole('alert').waitFor();await page.reload();await page.getByRole('button',{name:'前回と同じ内容で再試行',exact:true}).click();await page.getByRole('heading',{name:'口座と、今月末までの見込み',exact:true}).waitFor();value=await (await mf.dispatchFetch(endpoint,{headers:{Cookie:cookie}})).json();assert.equal(value.summary.accounts.find(a=>a.id==='cash').balance,1100);assert.equal(value.summary.expense,400);
+await page.getByRole('button',{name:'口座',exact:true}).click();await page.getByRole('button',{name:'詳細',exact:true}).first().click();await page.getByRole('button',{name:'振替・現金引出',exact:true}).click();await dialog.getByLabel('金額',{exact:true}).fill('500');await dialog.getByRole('button',{name:'振替を記録',exact:true}).click();await dialog.getByRole('alert').waitFor();await page.reload();await page.getByRole('button',{name:'前回と同じ内容で再試行',exact:true}).click();await page.getByRole('heading',{name:'あといくら使える？',exact:true}).waitFor();value=await (await mf.dispatchFetch(endpoint,{headers:{Cookie:cookie}})).json();assert.equal(value.summary.accounts.find(a=>a.id==='cash').balance,1100);assert.equal(value.summary.expense,400);
 await page.getByRole('button',{name:'口座',exact:true}).click();await page.getByRole('button',{name:'詳細',exact:true}).first().click();await page.screenshot({path:new URL('budget-account-mobile.png',root).pathname,fullPage:true});
 await page.getByRole('button',{name:'固定費',exact:true}).click();await page.getByRole('button',{name:'＋ 固定費を追加',exact:true}).click();await dialog.getByLabel('名前',{exact:true}).fill('サンプル保険');await dialog.getByLabel('金額（変動型は初回の目安）',{exact:true}).fill('200');await dialog.getByLabel('毎月何日（31日は月末へ調整）',{exact:true}).fill('2');await dialog.getByRole('button',{name:'固定費を保存',exact:true}).click();await dialog.waitFor({state:'hidden'});value=await (await mf.dispatchFetch(endpoint,{headers:{Cookie:cookie}})).json();assert.equal(value.data.plans.filter(p=>p.ruleId===value.data.rules[0].id).length,2);assert.equal(value.summary.accounts[0].balance,9500);
 await page.getByRole('button',{name:'口座',exact:true}).click();await page.getByRole('button',{name:'詳細',exact:true}).first().click();await page.getByRole('button',{name:'引落済み',exact:true}).click();await page.locator('button').filter({hasText:'引落を取り消す'}).first().waitFor({state:'attached'});value=await (await mf.dispatchFetch(endpoint,{headers:{Cookie:cookie}})).json();assert.equal(value.summary.accounts[0].balance,9300);assert.equal(value.summary.expense,600);
@@ -42,8 +43,44 @@ await page.goto('https://cetus.fun/wagaya/apps/household-budget/?source='+source
 await page.reload();await dialog.getByRole('button',{name:'確定を取り消して予定に戻す',exact:true}).click();await dialog.waitFor({state:'hidden'});value=await (await mf.dispatchFetch(endpoint,{headers:{Cookie:cookie}})).json();assert.equal(value.summary.accounts[0].balance,9300);assert.equal(value.summary.income,0);
 await page.reload();await dialog.getByRole('button',{name:'この予定を削除',exact:true}).click();await dialog.waitFor({state:'hidden'});await page.reload();await page.getByRole('alert').waitFor();assert((await page.getByRole('alert').innerText()).includes('見つかりません'));
 for(const tab of ['収支','予定','固定費','カード','集計','設定']){await page.getByRole('button',{name:tab,exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,tab+' overflow');}
+await page.getByRole('button',{name:'カード',exact:true}).click();
+const pink=page.locator('section').filter({has:page.getByRole('heading',{name:'楽天PINK',exact:true})});
+await pink.getByRole('button',{name:'利用額の合計を登録',exact:true}).click();
+await dialog.getByLabel('カードアプリで確認した合計（円）',{exact:true}).fill('5000');
+await dialog.getByRole('button',{name:'確認した合計を保存',exact:true}).click();
+await dialog.waitFor({state:'hidden'});
+await pink.getByText(/利用済みの仮登録 5,000円/).waitFor();
+await pink.getByRole('button',{name:'明細・定期支払いを照合',exact:true}).click();
+await dialog.getByRole('button',{name:'照合を保存',exact:true}).click();
+await dialog.waitFor({state:'hidden'});
+await page.getByRole('button',{name:'固定費',exact:true}).click();
+await page.getByRole('button',{name:'＋ 固定費を追加',exact:true}).click();
+await dialog.getByLabel('名前',{exact:true}).fill('分割の例');
+await dialog.getByLabel('金額（変動型は初回の目安）',{exact:true}).fill('500');
+await dialog.getByLabel('支払いの終了条件',{exact:true}).selectOption('installments');
+await dialog.getByLabel('初回支払月',{exact:true}).fill('2026-05');
+await dialog.getByLabel('総支払回数',{exact:true}).fill('24');
+await dialog.getByText('最終支払月 2028-04',{exact:true}).waitFor();
+await dialog.getByRole('button',{name:'固定費を保存',exact:true}).click();
+await dialog.waitFor({state:'hidden'});
+await page.getByRole('button',{name:'ホーム',exact:true}).click();
+await page.getByRole('button',{name:'生活費・確保額を設定',exact:true}).click();
+await dialog.getByLabel('今月これから使う生活費（円）',{exact:true}).fill('0');
+await dialog.getByRole('button',{name:'＋ 確保する用途を追加',exact:true}).click();
+await dialog.getByLabel('用途（旅行・返済など）',{exact:true}).fill('旅行');
+await dialog.getByLabel('確保額（円）',{exact:true}).fill('300');
+await dialog.getByRole('button',{name:'今月分を保存',exact:true}).click();
+await dialog.waitFor({state:'hidden'});
+value=await (await mf.dispatchFetch(endpoint,{headers:{Cookie:cookie}})).json();
+assert.equal(value.summary.assets,10400);
+assert.equal(value.summary.funds.reserves.goals[0].amount,300);
+assert.equal(value.summary.cards.find(c=>c.id==='pink').bills.find(b=>b.appEstimate).projected,5000);
+for(const width of [320,390,1280]){
+ await page.setViewportSize({width,height:844});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'forecast home overflow '+width);
+}
 const calendarHTML=await readFile(new URL('public/calendar.html',worker),'utf8'),detailSource=calendarHTML.slice(calendarHTML.indexOf('function openDetail(e) {'),calendarHTML.indexOf('let refreshingCalendar=false;'));
 const detailPage=await browser.newPage();await detailPage.setContent('<div id="detail-overlay"><div id="detail-bar"></div><h2 id="detail-title"></h2><div id="detail-gbadge"></div><button id="detail-edit-btn"></button><p id="detail-time"></p><p id="detail-cal"></p><p id="detail-desc"></p></div>');await detailPage.evaluate(({source,url})=>{window.detailEvent=null;window.calendars=[];window.myProfile={google_id:'synthetic'};window.getColor=()=> '#b86b16';window.fmtDt=value=>value;window.escapeHtml=value=>value;window.renderDetailList=()=>{};const open=eval('('+source+')');open({id:'private',title:'合成給与',start_datetime:'2026-11-02',end_datetime:'2026-11-02',all_day:1,editable:false,budget_managed:true,budget_url:url});},{source:detailSource,url:'/wagaya/apps/household-budget/?source='+source});assert.equal(await detailPage.getByRole('link',{name:'家計簿で確認・操作する'}).getAttribute('href'),'/wagaya/apps/household-budget/?source='+source);assert.equal(await detailPage.locator('#detail-edit-btn').isVisible(),false);await detailPage.close();
-assert.deepEqual(errors,[]);console.log('PASS: actual local HOME+DB, explicit opening, amount-first spending, optional categories, split receipt, lost-response/refresh-safe transfer, fixed monthly plans and confirmation, scheduled income, calendar action link, confirm/undo/delete, all navigation tabs, 320/390/768/1280 widths, no JS errors. Synthetic data only.');
+assert.deepEqual(errors,[]);console.log('PASS: actual local HOME+DB, explicit opening, amount-first spending, optional categories, split receipt, lost-response/refresh-safe transfer, fixed monthly plans and confirmation, scheduled income, card amount and reconciliation, installment end, reserves, calendar action link, confirm/undo/delete, all navigation tabs, 320/390/768/1280 widths, no JS errors. Synthetic data only.');
 }finally{await browser?.close();await mf.dispose();}
 

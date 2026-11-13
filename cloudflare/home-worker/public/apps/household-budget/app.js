@@ -25,7 +25,7 @@ function pending(){try{return JSON.parse(sessionStorage.getItem(pendingKey())||'
 function remember(value){inMemoryPending=value;try{if(value)sessionStorage.setItem(pendingKey(),JSON.stringify(value));else sessionStorage.removeItem(pendingKey());}catch{}}
 async function send(type,values,token=crypto.randomUUID(),exact){if(busy)throw Error('処理中です');const body=exact||{eventId:token,command:{type,data:{...values,expectedRevision:revision}}},old=pending();if(old&&old.eventId!==body.eventId)throw Error('未確認の操作があります。ホームの再試行から確認してください');busy=true;remember(body);try{await request('/command','POST',body);remember(null);}catch(e){if(e.status&&e.status<500)remember(null);throw e;}finally{busy=false;}}
 function commandButton(label,type,values,cls=''){let body;return button(label,async()=>{if(!body)body={eventId:crypto.randomUUID(),command:{type,data:{...values,expectedRevision:revision}}};await send(type,values,body.eventId,body);body=null;await load();if(dialog.open)dialog.close();},cls);}
-function saveForm(form,label,type,collect){const b=el('button',label,'primary');b.type='submit';form.append(b);let body;form.onsubmit=async e=>{e.preventDefault();if(busy)return;b.disabled=true;try{if(!body){const values=await collect();body={eventId:crypto.randomUUID(),command:{type,data:{...values,expectedRevision:revision}}};}await send(type,body.command.data,body.eventId,body);body=null;await load();dialog.close();note('保存しました'+(type.startsWith('entry.')?' ／ 今日使った金額 '+yen(summary.daily?.spent):''));}catch(err){if(err.status&&err.status<500)body=null;error(err);}finally{b.disabled=false;}};}
+function saveForm(form,label,type,collect,onSaved){const b=el('button',label,'primary');b.type='submit';form.append(b);let body;form.onsubmit=async e=>{e.preventDefault();if(busy)return;b.disabled=true;try{if(!body){const values=await collect();body={eventId:crypto.randomUUID(),command:{type,data:{...values,expectedRevision:revision}}};}await send(type,body.command.data,body.eventId,body);onSaved?.(body.command.data);body=null;await load();dialog.close();note('保存しました'+(type.startsWith('entry.')?' ／ 今日使った金額 '+yen(summary.daily?.spent):''));}catch(err){if(err.status&&err.status<500)body=null;error(err);}finally{b.disabled=false;}};}
 function amount(input,{signed=false,optional=false}={}){if(input.value===''&&optional)return null;const n=Number(input.value);if(input.value===''||!Number.isSafeInteger(n)||!signed&&n<0)throw Error('金額を整数の円で入力してください');return n;}
 function payName(id){return data.cards.find(c=>c.id===id)?.name||data.accounts.find(a=>a.id===id)?.name||id;}
 function payments(){return [...data.cards.map(c=>[c.id,c.name]),...data.accounts.map(a=>[a.id,a.name])];}
@@ -341,14 +341,11 @@ function withdrawalPlanForm(targetMonth){
  f.append(el('p','指定した日だけの予定です。実際の引落を確定すると残高に反映します。','muted'));
  const name=field(f,'予定名','text','',true);name.maxLength=100;
  const due=field(f,'引落日','date',today.slice(0,7)===targetMonth?today:targetMonth+'-01',true);
- due.min=targetMonth+'-01';
- const [year,calendarMonth]=targetMonth.split('-').map(Number);
- due.max=targetMonth+'-'+new Date(Date.UTC(year,calendarMonth,0)).getUTCDate();
  const n=field(f,'予定金額（円）','number','',true);n.min=1;
  const bank=select(f,'引落口座',[['','口座を選択'],...banks.map(a=>[a.id,a.name])]);bank.required=true;
  const category=categoryPicker(f,{category:'その他'});
  const person=personField(f);
- saveForm(f,'引落予定を保存','plan.add',()=>({id:crypto.randomUUID(),name:name.value,dueDate:due.value,amount:amount(n),payment:bank.value,...category.read(),person:person.value}));
+ saveForm(f,'引落予定を保存','plan.add',()=>({id:crypto.randomUUID(),name:name.value,dueDate:due.value,amount:amount(n),payment:bank.value,...category.read(),person:person.value}),saved=>{month=saved.dueDate.slice(0,7);});
  dialog.append(f);
 }
 function cashPlansPage(){

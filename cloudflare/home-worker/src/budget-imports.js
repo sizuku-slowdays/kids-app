@@ -50,8 +50,9 @@ function csvBilling(row,statementMonth){
 export function assignCardBilling(s,d,{monthDate,businessDate,ensureMonth}){
  requireValue(d.confirm===true,'カードの請求月を確認してください');monthDate(d.month,1);
  const ids=d.entryIds||[d.entryId];
- requireValue(Array.isArray(ids)&&ids.length>0&&ids.length<=500&&new Set(ids).size===ids.length,'請求月を変更する明細を選んでください');
- const entries=ids.map(id=>s.entries.find(e=>e.id===id&&!e.void));
+ requireValue(Array.isArray(ids)&&ids.length>0&&ids.length<=s.entries.length&&new Set(ids).size===ids.length,'請求月を変更する明細を選んでください');
+ const activeEntries=new Map(s.entries.filter(e=>!e.void).map(e=>[e.id,e]));
+ const entries=ids.map(id=>activeEntries.get(id));
  const card=s.cards.find(c=>c.id===entries[0]?.payment);
  requireValue(card?.accountId&&card.paymentDay,'カードの支払日と引落口座を設定してください');
  const due=businessDate(monthDate(d.month,card.paymentDay),s.holidays);

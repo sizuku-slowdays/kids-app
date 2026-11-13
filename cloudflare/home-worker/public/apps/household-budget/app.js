@@ -257,12 +257,33 @@ function historicalCsvBillingForm(entries){
  const f=el('form');
  f.append(el('p','カードの請求書に載っている明細を選んでください。選んだ明細の利用日と登録額はそのまま、引落見込の月を更新します。','notice'));
  const target=field(f,'請求書の支払月','month',today.slice(0,7),true);
+ const actions=el('div',undefined,'actions');
+ const count=el('p',undefined,'muted');
+ count.setAttribute('role','status');
+ f.append(actions,count);
  const choices=entries.map(entry=>({
   id:entry.id,
-  checked:field(f,entry.date+' ／ '+entry.memo+' ／ '+yen(entry.amount)+' ／ '+(entry.csvBilling?.month||'請求月未確定'),'checkbox'),
+  checkbox:field(f,entry.date+' ／ '+entry.memo+' ／ '+yen(entry.amount)+' ／ '+(entry.csvBilling?.month||'請求月未確定'),'checkbox'),
  }));
  const confirm=field(f,'選んだ明細がこの請求月の請求書に載っていることを確認しました','checkbox','',true);
- saveForm(f,'選んだ明細の請求月を保存','csv.billing.assign',()=>({entryIds:choices.filter(x=>x.checked.checked).map(x=>x.id),month:target.value,confirm:confirm.checked}));
+ const selected=()=>choices.filter(choice=>choice.checkbox.checked);
+ const updateSelection=()=>{
+  count.textContent=selected().length+'件を選択中（全'+choices.length+'件）';
+  confirm.checked=false;
+ };
+ const setSelection=checked=>{
+  for(const choice of choices)choice.checkbox.checked=checked;
+  updateSelection();
+ };
+ actions.append(button('すべて選択',()=>setSelection(true)),button('すべて解除',()=>setSelection(false)));
+ for(const choice of choices)choice.checkbox.onchange=updateSelection;
+ target.onchange=updateSelection;
+ updateSelection();
+ saveForm(f,'選んだ明細の請求月を保存','csv.billing.assign',()=>{
+  const entryIds=selected().map(choice=>choice.id);
+  if(!entryIds.length)throw Error('請求月を変更する明細を選んでください');
+  return {entryIds,month:target.value,confirm:confirm.checked};
+ });
  dialog.append(f);
 }
 function csvBillingForm(entry){

@@ -1,3 +1,4 @@
+import {budgetClassificationPreview} from './budget-classification.js';
 import {fingerprint,merchantKey} from '../public/apps/household-budget/card-csv.js';
 import {budgetCalendarStatements,budgetCalendarItem,budgetCalendarStatus,deliverBudgetCalendar} from './budget-calendar.ts';
 import {newBudget,applyBudgetCommand,budgetSummary,missingBudgetMonths,importPreview,legacyExport,BudgetError,type BudgetState} from './budget-core.js';
@@ -46,6 +47,7 @@ export async function budgetRoute(request:Request,env:BudgetEnv,userId:string,re
  }
  if(method==='GET'&&path==='/legacy-bank-preview'){const current=await state(env,userId);return json({entries:(await legacyBankRows(env,userId)).filter((e:any)=>current.data.startDate&&e.date>=current.data.startDate&&e.date<=today()&&current.data.accounts.some((a:any)=>a.kind==='bank'&&(a.name===e.payment||a.id===e.payment))&&!current.data.entries.some((x:any)=>x.legacyIds?.includes(e.id)&&(x.ledgerIncluded||x.balanceIncludedExternally))).map((e:any)=>{const account=current.data.accounts.find((a:any)=>a.kind==='bank'&&(a.name===e.payment||a.id===e.payment));return {...e,accountId:account.id,blockedReason:account.opening===null?'この口座の開始残高が未設定です':e.date<account.openingDate?'この口座の開始日は'+account.openingDate+'です。引落日はそれより前です。':null};})});}
  if(method==='GET'&&path==='/calendar-item')return budgetCalendarItem(env,userId,url.searchParams.get('source')||'');
+ if(method==='GET'&&path==='/classification-preview'){const current=await state(env,userId);return json({...budgetClassificationPreview(current.data),revision:current.revision});}
  if(method==='GET'&&path==='/export'){const value=await state(env,userId);const audit=(await env.DB.prepare('SELECT * FROM budget_operations WHERE owner_id=? ORDER BY after_revision').bind(userId).all()).results;return json({format:'budget-backup-v1',revision:value.revision,state:value.data,audit,legacyCompatible:legacyExport(value.data)});}
  if(method==='GET'&&path==='/audit'){const rows=await env.DB.prepare('SELECT event_id,command_type,before_revision,after_revision,created_at FROM budget_operations WHERE owner_id=? ORDER BY after_revision DESC LIMIT 200').bind(userId).all();return json(rows.results);}
  if(method==='POST'&&path==='/calendar-resync'){if(request.headers.get('X-Budget-User')!==userId)throw new BudgetError('HOMEの利用者が変わりました',409);await deliverBudgetCalendar(env);return json(await budgetCalendarStatus(env,userId));}
@@ -61,6 +63,16 @@ export async function budgetRoute(request:Request,env:BudgetEnv,userId:string,re
  if(r.recordedId){recordedEntry=r.recordedKind==='new'?current.data.entries.find((e:any)=>e.id===r.recordedId):raw.entries?.find((e:any)=>e.id===r.recordedId&&!deleted.has(e.id));if(!recordedEntry)throw new BudgetError('支払済み履歴が見つかりません');}
  return {source,payment:r.payment,day:r.day,variable:r.variable,replaceRuleId:r.replaceRuleId,recordedKind:r.recordedKind,recordedEntry};
  })}};
+ }
+ if(input.command.type==='classification.migrate'){
+ const current=await state(env,userId);
+ const records=(await env.DB.prepare("SELECT command_json FROM budget_operations WHERE owner_id=? AND command_type='csv.import' AND after_revision<=? ORDER BY after_revision").bind(userId,input.command.data?.expectedRevision??-1).all<{command_json:string}>()).results;
+ const merchants:Record<string,string>=Object.create(null);
+ for(const record of records)for(const row of JSON.parse(record.command_json).data.rows){
+  const entryId=current.data.csvImports?.[row.key];
+  if(entryId&&!merchants[entryId]&&typeof row.merchant==='string'&&row.merchant.length<=500)merchants[entryId]=row.merchant;
+ }
+ input.command.data={...input.command.data,merchants};
  }
  if(input.command.type==='csv.import'){
  const selection=input.command.data;if(!Array.isArray(selection?.rows)||!selection.rows.length||selection.rows.length>500)throw new BudgetError('取り込む明細を1〜500件選んでください');

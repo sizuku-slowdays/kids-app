@@ -8,6 +8,9 @@ let calendarStatus={enabled:false,pending:0};
 let spendingDate='';
 let data,summary,revision=0,userId='',today='',tab=['accounts','entries'].includes(new URL(location.href).searchParams.get('tab'))?new URL(location.href).searchParams.get('tab'):'home',accountId='',month='',basis='date',busy=false,inMemoryPending=null;
 const api='/api/household-budget';
+let entryViewMonth='';
+const defaultPeople=['自分','長女','次女','祖父','祖母','犬','家族共通','その他'];
+const spendingKinds=['計画的','予定外','突発的'];
 function error(e){const n=el('p',e.message||'操作できませんでした','error');n.setAttribute('role','alert');if(dialog.open){dialog.querySelectorAll('[role="alert"]').forEach(old=>old.remove());dialog.prepend(n);}else $('message').replaceChildren(n);}
 function note(text){$('message').replaceChildren(el('p',text,'notice'));}
 function button(label,action,cls=''){const b=el('button',label,cls);b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){error(e);}finally{b.disabled=false;}};return b;}
@@ -90,14 +93,57 @@ function cashflowHome(){
 function home(){cashflowHome();dailyTotal(root);const cards=el('div',undefined,'summary-grid');for(const [label,value,detail]of [['管理中の口座・現金合計',summary.assets,'開始残高を設定した口座のみ'],['カード未払金',summary.debt,'PINK・VISAの残り'],['未払金を差し引いた金額',summary.net,'口座合計とは分けて表示']]){const c=el('div',undefined,'card');c.append(el('small',label),el('p',yen(value),'amount'),el('small',detail));cards.append(c);}root.append(cards);
  const s=section('口座と、今月末までの見込み');s.append(el('p','確認待ちと今月末までの入金・振替・引落予定を含めます。未割当のカード開始残高・未登録の引落は見込額に含まれません。','muted'));const grid=el('div',undefined,'cards');for(const a of summary.accounts.filter(a=>a.opening!==null)){const c=el('article',undefined,'card');c.append(el('h3',a.name),el('p',yen(a.balance),'amount'));metric(c,'入金予定',a.plannedIn);metric(c,'引落・振替予定',a.upcoming+a.plannedOut);metric(c,'予定反映後の見込',a.forecast);if(a.pendingCount)c.append(el('p','確認待ち '+a.pendingCount+'件','badge'));c.append(button('口座を見る',()=>{tab='accounts';accountId=a.id;render();}));grid.append(c);}s.append(grid);const unconfigured=summary.accounts.filter(a=>a.opening===null);if(unconfigured.length){const closed=details(s,'まだ開始していない口座（'+unconfigured.length+'件）');for(const a of unconfigured)closed.append(button(a.name+' の設定',()=>{tab='accounts';accountId=a.id;render();}));}
  const flow=section('今月の収支（利用日基準）');metric(flow,'収入',summary.income);metric(flow,'支出',summary.expense);flow.append(el('p','振替・残高調整・カード引落は、収支に重ねて計上しません。','muted'));const pendingPlans=data.plans.filter(p=>p.status==='planned'&&p.month===today.slice(0,7));const waiting=section('今月の固定費予定');if(!pendingPlans.length)waiting.append(el('p','確認待ちはありません。','muted'));for(const p of pendingPlans.slice(0,8))row(waiting,p.name,yen(p.amount),p.dueDate+'・'+payName(p.payment));if(summary.unreconciled.length)root.prepend(el('p','カード請求の差額が '+summary.unreconciled.length+'件あります。カード画面で確認できます。','notice'));}
-function categoryFields(host,initial={}){const major=select(host,'大カテゴリ',Object.keys(data.categories.tree).filter(name=>!data.categories.hidden.includes(name)||name===initial.category),initial.category||data.preferences.category||'その他');const extra=details(host,'中・小カテゴリ（必要なときだけ）'),middle=select(extra,'中カテゴリ（任意）',[['','指定しない']]),small=select(extra,'小カテゴリ（任意）',[['','指定しない']]);const person=field(host,'家族別（任意）','text',initial.person??data.preferences.person??'');person.placeholder='呼び名を入力・空欄でも登録できます';const refreshMiddle=()=>{const tree=data.categories.tree[major.value]||{};middle.replaceChildren(new Option('指定しない',''),...Object.keys(tree).map(v=>new Option(v,v)));refreshSmall();};const refreshSmall=()=>{const raw=data.categories.tree[major.value]?.[middle.value]||[],values=Array.isArray(raw)?raw:Object.keys(raw);small.replaceChildren(new Option('指定しない',''),...values.map(v=>new Option(v,v)));};major.onchange=refreshMiddle;middle.onchange=refreshSmall;refreshMiddle();middle.value=initial.middle??data.preferences.middle??'';refreshSmall();small.value=initial.small??data.preferences.small??'';return ()=>({category:major.value,middle:middle.value,small:small.value,person:person.value,nature:initial.nature||'必要'});}
+function categoryPicker(host,initial={},csv=false,income=false){
+ const names=(income&&data.categories.income||Object.keys(data.categories.tree)).filter(name=>csv||!data.categories.hidden.includes(name)||name===initial.category);
+ if(initial.category&&!names.includes(initial.category))names.push(initial.category);
+ const major=select(host,'大カテゴリ',csv?[['','分類を選択'],...names]:names,initial.category||'');
+ const extra=details(host,'中カテゴリ（任意）');
+ extra.open=!!initial.middle;
+ extra.hidden=income;
+ const middle=select(extra,'中カテゴリ（任意）',[['','指定しない']]);
+ const setOptions=(input,names,value)=>{
+  if(value&&!names.includes(value))names.push(value);
+  input.replaceChildren(new Option('指定しない',''),...names.map(name=>new Option(name,name)));
+  input.value=value||'';
+ };
+ const setPath=(path)=>{
+  major.value=path.category||'';
+  setOptions(middle,Object.keys(data.categories.tree[major.value]||{}),path.middle);
+ };
+ major.onchange=()=>setPath({category:major.value});
+ setPath(initial);
+ return {major,middle,setPath,read:()=>({category:major.value,middle:middle.value,small:major.value===initial.category&&middle.value===(initial.middle||'')?initial.small||'':''})};
+}
+function personField(host,value=''){
+ const names=[...new Set([...(data.people||defaultPeople),value].filter(Boolean))];
+ return select(host,'対象者（任意）',[['','未設定'],...names],value);
+}
+function categoryFields(host,initial={},type='expense'){
+ const income=['income','recovery'].includes(type);
+ const picker=categoryPicker(host,{
+  category:initial.category??(income?'その他':data.preferences.category??'その他'),
+  middle:initial.middle??(income?'':data.preferences.middle),
+  small:initial.small??(income?'':data.preferences.small),
+ },false,income);
+ const person=personField(host,initial.person??'');
+ return ()=>({...picker.read(),person:person.value,nature:initial.nature||'必要',originalClassification:initial.originalClassification});
+}
 function entryForm(existing,type=existing?.type||'expense'){modal(existing?'取引を編集':type==='expense'?'支出を入力':'入出金を記録');const f=el('form'),date=field(f,'日付','date',existing?.date||today,true),total=field(f,'レシート・取引の総額（円）','number',existing?.amount||'',true);total.className='amount-input';total.min=1;
+ const merchant=field(f,'利用先（任意）','text',existing?.merchant||existing?.memo||'');merchant.readOnly=!!existing?.merchant&&!!(existing.csvImported||Object.values(data.csvImports||{}).includes(existing.id));
+ const purchase=field(f,'購入内容（任意）','text',existing?.purchase||'');purchase.maxLength=500;
  let payment=existing?.payment||data.preferences.payments?.[type]||data.preferences.payment||'pink';const buy=['expense','advance','refund'].includes(type),allowed=buy?[...data.cards.map(c=>[c.id,c.name]),...data.accounts.map(a=>[a.id,a.name])]:data.accounts.map(a=>[a.id,a.name]);if(!allowed.some(([id])=>id===payment)){if(existing)allowed.push([payment,payName(payment)+'（旧記録・確認対象）']);else payment=allowed[0][0];}const pay=el('div',undefined,'pay-buttons');const payButtons=[];for(const [id,label]of allowed){const b=button(label,()=>{payment=id;payButtons.forEach(([key,n])=>n.className=key===id?'active':'');},id===payment?'active':'');payButtons.push([id,b]);pay.append(b);}f.append(el('p',buy?'支払い元':'入金先','muted'),pay);
- const single=el('div'),singleRead=categoryFields(single,existing?.splits[0]||{});f.append(single);const split=field(f,'カテゴリに分けるときだけ、内訳を追加','checkbox');split.checked=(existing?.splits.length||0)>1;const splitHost=el('div'),splitRows=[],splitTotal=el('p',undefined,'notice');function addSplit(part={}){const box=el('div',undefined,'split-row'),n=field(box,'この内訳の金額（円）','number',part.amount||'',true),read=categoryFields(box,part);const record={box,n,read};box.append(button('この内訳を削除',()=>{box.remove();splitRows.splice(splitRows.indexOf(record),1);update();},'text danger'));n.oninput=update;splitRows.push(record);splitHost.append(box);update();}function update(){const sum=splitRows.reduce((n,r)=>n+Number(r.n.value||0),0);splitTotal.textContent='内訳合計 '+yen(sum)+' ／ 総額 '+yen(Number(total.value||0));}splitHost.append(button('＋ 内訳を追加',()=>addSplit()));for(const part of existing?.splits.length>1?existing.splits:[])addSplit(part);splitHost.append(splitTotal);f.append(splitHost);const toggle=()=>{single.hidden=split.checked;splitHost.hidden=!split.checked;single.querySelectorAll('input,select').forEach(n=>n.disabled=split.checked);splitHost.querySelectorAll('input,select').forEach(n=>n.disabled=!split.checked);};split.onchange=()=>{if(split.checked&&!splitRows.length){addSplit({amount:Number(total.value)||'',...singleRead()});addSplit();}toggle();};toggle();total.oninput=update;
- const memo=field(f,'お店・メモ（任意）','text',existing?.memo||''),party=['advance','recovery'].includes(type)?field(f,'立替の相手','text',existing?.counterparty||'',true):null,link=type==='recovery'?select(f,'回収する立替（任意）',[['','指定しない'],...data.entries.filter(e=>e.type==='advance'&&!e.void).map(e=>[e.id,e.date+' '+e.counterparty+' '+yen(e.amount)])],existing?.linkedAdvanceId||''):null;
- const advanced=details(f,'反映月・詳しい指定'),settle=field(advanced,'従来の集計に使う反映月','month',existing?.settleMonth||today.slice(0,7));if(existing?.legacyIds?.length)f.append(el('p','旧記録の原本は保持します。残高に未反映の記録は、編集しても自動反映しません。','notice'));
- saveForm(f,'保存する',existing?'entry.edit':'entry.add',()=>{const value=amount(total),parts=split.checked?splitRows.map(r=>({...r.read(),amount:amount(r.n)})):[{...singleRead(),amount:value}];if(parts.reduce((n,p)=>n+p.amount,0)!==value)throw Error('内訳の合計と取引総額を一致させてください');return {id:existing?.id||crypto.randomUUID(),date:date.value,type,amount:value,payment,bankEntry:data.accounts.some(a=>a.id===payment&&a.kind==='bank'),splits:parts,memo:memo.value,counterparty:party?.value||'',linkedAdvanceId:link?.value||'',settleMonth:settle.value};});dialog.append(f);total.focus();}
-function entriesPage(){dailyTotal(root);const s=section('収支の記録'),filter=field(s,'表示月','month',month),person=field(s,'家族別で絞る（任意）','text','');const list=el('div');s.append(list);const draw=()=>{list.replaceChildren();const entries=data.entries.filter(e=>!e.void&&e.date.slice(0,7)===filter.value&&(!person.value||e.splits.some(p=>p.person.includes(person.value)))).sort((a,b)=>b.date.localeCompare(a.date));for(const e of entries){const r=row(list,e.date+' '+(e.memo||e.splits.map(p=>p.category).join('・')),yen(e.amount),payName(e.payment)+'・'+({expense:'支出',income:'収入',advance:'立替',recovery:'回収',refund:'返金'}[e.type])+(e.ledgerIncluded?'・残高反映済み':e.balanceIncludedExternally?'・残高へ再反映しない確認済み':'・残高対象外'));r.append(button('編集',()=>entryForm(e)),commandButton('取り消す','entry.void',{id:e.id,reason:'画面から取引取消'},'danger'));if(!e.ledgerIncluded&&!e.balanceIncludedExternally&&data.startDate&&e.date>=data.startDate)r.append(button('残高へ反映',()=>{modal('開始残高との二重反映を確認');const f=el('form'),payment=select(f,'実際の支払元・入金先',payments(),e.payment),confirmInput=field(f,'開始日の取引前残高に含めていない取引です','checkbox','',true);confirmInput.checked=false;saveForm(f,'確認して残高へ反映','entry.apply',()=>({id:e.id,payment:payment.value,confirm:confirmInput.checked}));dialog.append(f);}));}if(!entries.length)list.append(el('p','この条件の記録はありません。','muted'));};filter.onchange=draw;person.oninput=draw;draw();s.prepend(button('＋ 支出を入力',()=>entryForm(),'primary'));const more=details(s,'収入・立替・回収・返金');for(const [type,label]of [['income','収入'],['advance','立替'],['recovery','回収'],['refund','返金']])more.append(button(label,()=>entryForm(null,type)));}
+ const single=el('div'),singleRead=categoryFields(single,existing?.splits[0]||{},type);f.append(single);const split=field(f,'カテゴリに分けるときだけ、内訳を追加','checkbox');split.checked=(existing?.splits.length||0)>1;const splitHost=el('div'),splitRows=[],splitTotal=el('p',undefined,'notice');function addSplit(part={}){const box=el('div',undefined,'split-row'),n=field(box,'この内訳の金額（円）','number',part.amount||'',true),read=categoryFields(box,part,type);const record={box,n,read};box.append(button('この内訳を削除',()=>{box.remove();splitRows.splice(splitRows.indexOf(record),1);update();},'text danger'));n.oninput=update;splitRows.push(record);splitHost.append(box);update();}function update(){const sum=splitRows.reduce((n,r)=>n+Number(r.n.value||0),0);splitTotal.textContent='内訳合計 '+yen(sum)+' ／ 総額 '+yen(Number(total.value||0));}splitHost.append(button('＋ 内訳を追加',()=>addSplit()));for(const part of existing?.splits.length>1?existing.splits:[])addSplit(part);splitHost.append(splitTotal);f.append(splitHost);const toggle=()=>{single.hidden=split.checked;splitHost.hidden=!split.checked;single.querySelectorAll('input,select').forEach(n=>n.disabled=split.checked);splitHost.querySelectorAll('input,select').forEach(n=>n.disabled=!split.checked);};split.onchange=()=>{if(split.checked&&!splitRows.length){addSplit({amount:Number(total.value)||'',...singleRead()});addSplit();}toggle();};toggle();total.oninput=update;
+ const paymentDetails=details(f,'立替・精算（必要なときだけ）');paymentDetails.open=['advance','recovery'].includes(type);
+ const asAdvance=['expense','advance'].includes(type)?field(paymentDetails,'立替として記録する','checkbox'):null;
+ if(asAdvance)asAdvance.checked=type==='advance';
+ const party=asAdvance||['advance','recovery'].includes(type)?field(paymentDetails,'精算相手','text',existing?.counterparty||'',!asAdvance):null,link=type==='recovery'?select(f,'回収する立替（任意）',[['','指定しない'],...data.entries.filter(e=>e.type==='advance'&&!e.void).map(e=>[e.id,e.date+' '+e.counterparty+' '+yen(e.amount)])],existing?.linkedAdvanceId||''):null;
+ if(asAdvance){const updateAdvance=()=>{party.required=asAdvance.checked;party.disabled=!asAdvance.checked;};asAdvance.onchange=updateAdvance;updateAdvance();}
+ const advanced=details(f,'支出区分・詳しい指定');
+ const spending=select(advanced,'支出区分',[['','未設定'],...spendingKinds],existing?.spendingKind||'');
+ const savings=select(advanced,'積立の種類',[['','指定なし'],'カード投資積立'],existing?.savingsKind||'');
+ const settle=field(advanced,'従来の集計に使う反映月','month',existing?.settleMonth||today.slice(0,7));if(existing?.legacyIds?.length)f.append(el('p','旧記録の原本は保持します。残高に未反映の記録は、編集しても自動反映しません。','notice'));
+ saveForm(f,'保存する',existing?'entry.edit':'entry.add',()=>{const value=amount(total),parts=split.checked?splitRows.map(r=>({...r.read(),amount:amount(r.n)})):[{...singleRead(),amount:value}];if(parts.reduce((n,p)=>n+p.amount,0)!==value)throw Error('内訳の合計と取引総額を一致させてください');if(parts.some(p=>!p.category))throw Error('大カテゴリを選んでください');return {id:existing?.id||crypto.randomUUID(),date:date.value,type:asAdvance?(asAdvance.checked?'advance':'expense'):type,amount:value,payment,bankEntry:data.accounts.some(a=>a.id===payment&&a.kind==='bank'),splits:parts,memo:existing?.memo||merchant.value,purchase:purchase.value,merchant:merchant.value,spendingKind:spending.value,savingsKind:savings.value,counterparty:party?.disabled?'':party?.value||'',linkedAdvanceId:link?.value||'',settleMonth:settle.value};});dialog.append(f);total.focus();}
+function entriesPage(){dailyTotal(root);const s=section('収支の記録'),filter=field(s,'表示月','month',entryViewMonth||month),person=personField(s),search=field(s,'購入内容・利用先で検索','search',''),unorganized=field(s,'未整理だけ表示','checkbox');const list=el('div');s.append(list);let visibleEntries=[];s.prepend(button('表示中の明細を一括分類',()=>bulkEntryForm(visibleEntries.filter(e=>!['income','recovery'].includes(e.type)))),button('立替を精算',advanceSettlementForm));const draw=()=>{list.replaceChildren();const entries=visibleEntries=data.entries.filter(e=>!e.void&&e.date.slice(0,7)===filter.value&&(!unorganized.checked||e.splits.some(p=>p.category==='その他'&&p.middle==='未整理'))&&(!person.value||e.splits.some(p=>p.person===person.value))&&(!search.value||[e.purchase,e.merchant,e.memo].some(v=>v?.normalize('NFKC').toLowerCase().includes(search.value.normalize('NFKC').toLowerCase())))).sort((a,b)=>b.date.localeCompare(a.date));for(const e of entries){const r=row(list,e.date+' '+([e.purchase,e.merchant||e.memo].filter(Boolean).join(' ／ ')||e.splits.map(p=>p.category).join('・')),yen(e.amount),payName(e.payment)+'・'+({expense:'支出',income:'収入',advance:'立替',recovery:'回収',refund:'返金'}[e.type])+(e.ledgerIncluded?'・残高反映済み':e.balanceIncludedExternally?'・残高へ再反映しない確認済み':'・残高対象外'));for(const part of e.splits)r.firstElementChild.append(el('p',[part.category,part.middle].filter(Boolean).join(' › ')+(part.person?' ／ 対象者：'+part.person:'')+(e.splits.length>1?' ／ '+yen(part.amount):'')+(part.middle==='未整理'&&part.originalClassification?' ／ 旧分類：'+part.originalClassification.category:''),'muted'));r.append(button('編集',()=>entryForm(e)),commandButton('取り消す','entry.void',{id:e.id,reason:'画面から取引取消'},'danger'));if(!e.ledgerIncluded&&!e.balanceIncludedExternally&&data.startDate&&e.date>=data.startDate)r.append(button('残高へ反映',()=>{modal('開始残高との二重反映を確認');const f=el('form'),payment=select(f,'実際の支払元・入金先',payments(),e.payment),confirmInput=field(f,'開始日の取引前残高に含めていない取引です','checkbox','',true);confirmInput.checked=false;saveForm(f,'確認して残高へ反映','entry.apply',()=>({id:e.id,payment:payment.value,confirm:confirmInput.checked}));dialog.append(f);}));}if(!entries.length)list.append(el('p','この条件の記録はありません。','muted'));};filter.onchange=()=>{entryViewMonth=filter.value;draw();};person.onchange=unorganized.onchange=draw;search.oninput=draw;draw();s.prepend(button('＋ 支出を入力',()=>entryForm(),'primary'));const more=details(s,'収入・立替・回収・返金');for(const [type,label]of [['income','収入'],['advance','立替'],['recovery','回収'],['refund','返金']])more.append(button(label,()=>entryForm(null,type)));}
 function accountsPage(){const s=section('口座・現金');for(const a of summary.accounts){const r=row(s,a.name,yen(a.balance),'今月の引落予定 '+yen(a.upcoming)+' ／ 見込 '+yen(a.forecast));r.append(button('詳細',()=>{accountId=a.id;render();}));}s.append(button('＋ 口座・財布を追加',accountAddForm),button('以前の銀行引落を確認して反映',legacyBankImport));}
 function accountRenameForm(a){modal('口座の名前を変更');const f=el('form'),name=field(f,'表示する口座名','text',a.name,true);f.append(el('p','例：ゆうちょ口座【学校用】。この家計管理を利用する本人に表示します。','muted'));saveForm(f,'名前を保存','account.rename',()=>({id:a.id,name:name.value.trim()}));dialog.append(f);}
 async function legacyBankImport(){
@@ -135,7 +181,7 @@ function accountOpeningDateForm(a){
 }
 function openAccountForm(a){if(!data.startDate){startForm(a.id);return;}modal(a.name+' の開始残高');const f=el('form'),date=field(f,'開始日（その日の取引前）','date',data.startDate||today,true),n=field(f,'開始残高','number','',true),check=field(f,'この残高と開始日を確認しました','checkbox','',true);saveForm(f,'開始残高を設定','account.open',()=>({id:a.id,date:date.value,amount:amount(n,{signed:true}),confirm:check.checked}));dialog.append(f);}
 function fixedPage(){const s=section('固定費');s.append(button('以前の固定費を確認して引き継ぐ',fixedImportForm));s.append(button('＋ 固定費を追加',()=>ruleForm(),'primary'),el('p','毎月の予定は自動作成。予定だけでは残高を減らしません。実際の引落確認は口座画面で行います。','muted'));for(const [key,name]of payments()){const rules=data.rules.filter(r=>r.payment===key);if(!rules.length)continue;const group=details(s,name+'（'+rules.length+'件）');for(const r of rules){const item=row(group,r.name,yen(r.amount),(r.variable?'金額変動型':'金額固定型')+'・毎月'+r.day+'日'+(!r.enabled?'・停止中':'')+(r.needsReview?'・旧設定を要確認':''));item.append(button('編集',()=>ruleForm(r)));if(r.enabled)item.append(commandButton('停止する','rule.disable',{id:r.id}));}}const unmapped=data.rules.filter(r=>!payments().some(([id])=>id===r.payment));if(unmapped.length){const review=details(s,'引落元を確認する旧固定費');for(const r of unmapped)review.append(button(r.name+' を確認',()=>ruleForm(r)));}}
-function ruleForm(r){modal(r?'固定費を編集':'固定費を追加');const f=el('form'),name=field(f,'名前','text',r?.name||'',true),n=field(f,'金額（変動型は初回の目安）','number',r?.amount||'',true),payment=select(f,'引落元・カード',payments(),r?.payment||'bank-0'),kind=select(f,'金額の種類',[['fixed','金額固定型'],['variable','金額変動型']],r?.variable?'variable':'fixed'),date=field(f,'毎月何日（31日は月末へ調整）','number',r?.day||1,true),category=field(f,'大カテゴリ','text',r?.category||'その他'),person=field(f,'家族別（任意）','text',r?.person||''),enabled=field(f,'今後の予定を作る','checkbox');enabled.checked=r?r.enabled:true;if(r?.needsReview)f.append(el('p','旧固定費は停止した状態で取り込んでいます。継続するものだけ有効にしてください。','notice'));saveForm(f,'固定費を保存','rule.save',()=>({id:r?.id||crypto.randomUUID(),name:name.value,amount:amount(n),payment:payment.value,day:Number(date.value),variable:kind.value==='variable',category:category.value,person:person.value,enabled:enabled.checked}));dialog.append(f);}
+function ruleForm(r){modal(r?'固定費を編集':'固定費を追加');const f=el('form'),name=field(f,'名前','text',r?.name||'',true),n=field(f,'金額（変動型は初回の目安）','number',r?.amount||'',true),payment=select(f,'引落元・カード',payments(),r?.payment||'bank-0'),kind=select(f,'金額の種類',[['fixed','金額固定型'],['variable','金額変動型']],r?.variable?'variable':'fixed'),date=field(f,'毎月何日（31日は月末へ調整）','number',r?.day||1,true),category=categoryPicker(f,{category:r?.category||'その他',middle:r?.middle}),person=personField(f,r?.person||''),enabled=field(f,'今後の予定を作る','checkbox');enabled.checked=r?r.enabled:true;if(r?.needsReview)f.append(el('p','旧固定費は停止した状態で取り込んでいます。継続するものだけ有効にしてください。','notice'));saveForm(f,'固定費を保存','rule.save',()=>({id:r?.id||crypto.randomUUID(),name:name.value,amount:amount(n),payment:payment.value,day:Number(date.value),variable:kind.value==='variable',...category.read(),person:person.value,enabled:enabled.checked}));dialog.append(f);}
 function cardsPage(){for(const c of summary.cards){const s=section(c.name);s.append(button('利用明細CSVを取り込む',()=>csvImportForm(c),'primary'));metric(s,'現在の未払金',c.balance===null?null:Math.max(0,c.balance));if(c.balance<0)metric(s,'過払・返金などのカード残高',-c.balance);s.append(el('p',c.accountId?'引落口座：'+payName(c.accountId)+' ／ '+c.closingDay+'日締め・'+c.monthOffset+'か月後の'+c.paymentDay+'日払い':'締め日・支払日・引落口座は未設定','muted'),button('カード設定',()=>cardForm(c)));if(c.opening>0){const allocated=data.bills.filter(b=>b.cardId===c.id).reduce((n,b)=>n+(b.openingAllocation||0),0);s.append(el('p','開始時未払金のうち請求月に未割当：'+yen(c.opening-allocated)+'。最初の請求予定で割り当ててください。','notice'));}const unresolved=data.entries.filter(e=>!e.void&&e.payment===c.id&&e.csvBilling?.status==='pending');if(unresolved.length){metric(s,'請求月が未確定の利用分',unresolved.filter(e=>e.ledgerIncluded).reduce((n,e)=>n+(e.type==='refund'?-e.amount:e.amount),0));s.append(el('p','残高管理開始日以降の利用は未払金に含みます。請求月を確認すると、対象月の引落見込に表示します。','notice'));const pending=details(s,'翌月以降・請求月の確認待ち '+unresolved.length+'件');for(const e of unresolved){const r=row(pending,e.memo,yen(e.amount),e.date+' ／ '+e.csvBilling.earliestMonth+'以降・請求月未確定'+(!e.ledgerIncluded?' ／ 開始前の履歴':''));r.append(button('請求月を設定',()=>csvBillingForm(e)));}}const historical=data.entries.filter(e=>!e.void&&e.csvImported&&!e.ledgerIncluded&&e.payment===c.id&&data.startDate&&e.date<data.startDate);if(historical.length)s.append(button('開始日前のCSV明細の請求月を確認・変更',()=>historicalCsvBillingForm(historical)));const charges=details(s,'カードで払う固定費（利用登録）');for(const p of data.plans.filter(p=>p.payment===c.id&&p.status==='planned'))planRow(charges,p);for(const p of data.plans.filter(p=>p.payment===c.id&&p.status==='confirmed'))charges.append(commandButton(p.name+' の利用登録を取り消す','plan.undo',{id:p.id,reason:'カード固定費の利用登録取消'},'danger'));for(const b of data.bills.filter(b=>b.cardId===c.id&&b.status==='planned'))billRow(s,b);const done=details(s,'引落済み・差額の履歴');for(const b of data.bills.filter(b=>b.cardId===c.id&&b.status==='confirmed'))billRow(done,b);}}
 function billForecast(b){return summary.cards.find(c=>c.id===b.cardId)?.bills.find(x=>x.id===b.id)?.projected||0;}
 function billExpected(b){return summary.cards.find(c=>c.id===b.cardId)?.bills.find(x=>x.id===b.id)?.expected||0;}
@@ -143,13 +189,146 @@ function historicalForecast(b){return summary.cards.find(c=>c.id===b.cardId)?.bi
 function billRow(host,b){const c=data.cards.find(c=>c.id===b.cardId),r=row(host,c.name+' '+b.month+'月の引落',(b.actual===null?'未確認（見込 '+yen(Math.max(0,billForecast(b)))+'）':yen(b.actual)),b.dueDate+'・'+(b.status==='confirmed'?'引落済み':'予定')+(b.actual===null?'・請求額は未確認':'・請求額確認済み')+'・登録明細 '+yen(billExpected(b))+(historicalForecast(b)>0?'・開始日前のCSV明細 '+yen(historicalForecast(b))+' を見込に含む':'')+(billForecast(b)>billExpected(b)+historicalForecast(b)?'・未確認カード固定費を含む':''));if(b.status==='planned'){r.append(commandButton('今回の予定を削除','bill.cancel',{id:b.id,version:b.version},'danger'));r.append(button('請求額・差額を確認',()=>billForm(b)));if(b.dueDate<=today&&(b.actual!==null||historicalForecast(b)===0))r.append(commandButton('カード引落済み','bill.confirm',{id:b.id,version:b.version},'primary'));}else{if(b.reconciliation)r.append(el('p','未照合の差額 '+yen(b.reconciliation)+' ／ '+b.reason,'notice'));if(b.adjustment)r.append(el('p',b.adjustment.kind+' '+yen(b.adjustment.amount)+'・'+b.adjustment.reason,'muted'));r.append(commandButton('引落を取り消す','bill.undo',{id:b.id,reason:'カード引落取消'},'danger'));}return r;}
 function billForm(b){modal('実際のカード請求を確認');const f=el('form');f.append(el('p','利用時の支出をもう一度計上せず、銀行残高と未払金を減らします。差額が不明なら、理由に「未照合」と記録して残してください。','notice'));const expected=el('p','登録明細＋開始時未払金の割当：'+yen(billExpected(b)));f.append(expected);if(historicalForecast(b)>0)f.append(el('p','開始日前のCSV明細（見込に含む分）：'+yen(historicalForecast(b))+'。実際の請求額と、開始時未払金に含めた金額を確認してください。','notice'));const allocation=field(f,'開始時未払金から、この請求へ割り当てる額','number',b.openingAllocation||0,true),actual=field(f,'銀行から実際に引き落とす金額','number',b.actual===null?Math.max(0,billForecast(b)):b.actual,true),due=field(f,'実際の引落日・予定日','date',b.dueDate,true),reason=field(f,'請求差額の理由（差額があれば必須）','textarea',b.reason||''),kind=select(f,'説明できる調整がある場合',[['','調整しない・未照合のまま残す'],['points','ポイント充当'],['refund','明細にない返金'],['fee','明細にない手数料']],b.adjustment?.kind||''),adj=field(f,'調整額（ポイント・返金・手数料）','number',b.adjustment?.amount||0);saveForm(f,'請求予定を保存','bill.edit',()=>({id:b.id,version:b.version,actual:amount(actual),dueDate:due.value,openingAllocation:amount(allocation),reason:reason.value,adjustment:kind.value?{kind:kind.value,amount:amount(adj),reason:reason.value}:null}));dialog.append(f);}
 function cardForm(c){modal(c.name+' の設定');const f=el('form'),account=select(f,'引落口座',data.accounts.filter(a=>a.kind==='bank').map(a=>[a.id,a.name]),c.accountId||''),close=field(f,'締め日（不明なまま決めないでください）','number',c.closingDay||'',true),offset=select(f,'支払い月',[['0','締め月と同じ月'],['1','締め月の翌月'],['2','締め月の翌々月']],String(c.monthOffset)),pay=field(f,'支払日（休日は次の登録銀行営業日）','number',c.paymentDay||'',true);saveForm(f,'カード設定を保存','card.configure',()=>({id:c.id,accountId:account.value,closingDay:Number(close.value),paymentDay:Number(pay.value),monthOffset:Number(offset.value)}));dialog.append(f);}
-function statsPage(){const s=section('カテゴリ別・家族別の集計'),m=field(s,'対象月','month',month),mode=select(s,'集計基準',[['date','利用日（新しい家計管理）'],['settleMonth','反映月（従来の表示）']],basis);m.onchange=async()=>{month=m.value;await load();};mode.onchange=async()=>{basis=mode.value;await load();};metric(s,'収入',summary.income);metric(s,'支出',summary.expense);const categories=section('大カテゴリ別'),people=section('家族別');for(const [name,n]of Object.entries(summary.category))row(categories,name,yen(n));for(const [name,n]of Object.entries(summary.people))row(people,name,yen(n));const past=details(s,'従来の予算・資金繰り設定（保持した原本）');past.append(el('p','旧データのplanをそのまま保持しています。旧残高は開始残高へ自動転記しません。','muted'));past.append(button('保存されている旧設定を見る',()=>{modal('旧設定・読み取り専用');const pre=el('pre');pre.style.whiteSpace='pre-wrap';pre.textContent=JSON.stringify(data.legacy?.data?.plan||data.legacy?.plan||{},null,2);dialog.append(pre);}));}
+function statsPage(){
+ const s=section('カテゴリ別・対象者別の集計'),m=field(s,'対象月','month',month),mode=select(s,'集計基準',[['date','利用日（新しい家計管理）'],['settleMonth','反映月（従来の表示）']],basis);
+ m.onchange=async()=>{month=m.value;await load();};mode.onchange=async()=>{basis=mode.value;await load();};
+ metric(s,'収入',summary.income);metric(s,'支出',summary.expense);
+ const categories=section('大・中カテゴリ別');
+ const filter=select(categories,'対象者で絞る',[['','すべて'],...new Set((summary.categoryBreakdown||[]).map(part=>part.person))]);
+ const exclude=select(categories,'集計から除外する対象者',[['','除外なし'],...new Set((summary.categoryBreakdown||[]).map(part=>part.person))]);
+ const list=el('div');categories.append(list);
+ const draw=()=>{
+  list.replaceChildren();
+  const totals=new Map(),kinds=new Map();
+  for(const part of summary.categoryBreakdown||[]){
+   if(filter.value&&part.person!==filter.value||exclude.value&&part.person===exclude.value)continue;
+   kinds.set(part.kind,(kinds.get(part.kind)||0)+part.amount);
+   if(!totals.has(part.category))totals.set(part.category,{total:0,middle:new Map()});
+   const major=totals.get(part.category);major.total+=part.amount;
+   if(!part.middle)continue;
+   if(!major.middle.has(part.middle))major.middle.set(part.middle,{total:0});
+   const middle=major.middle.get(part.middle);middle.total+=part.amount;
+  }
+  for(const [name,major] of totals){
+   if(!major.middle.size){row(list,name,yen(major.total));continue;}
+   const group=details(list,name+' ／ '+yen(major.total));
+   for(const [name,middle] of major.middle){
+    row(group,name||'中カテゴリ指定なし',yen(middle.total));
+   }
+  }
+  const kindGroup=section('支出区分別',list);
+  for(const kind of [...spendingKinds,'未設定'])metric(kindGroup,kind,kinds.get(kind)||0);
+  if(!totals.size)list.append(el('p','対象の支出はありません。','muted'));
+ };
+ filter.onchange=exclude.onchange=draw;draw();
+ const people=section('対象者別');
+ for(const [name,n]of Object.entries(summary.people))row(people,name,yen(n));
+ const saving=section('貯金・積立');saving.append(button('目的別積立を記録',savingsForm));
+ for(const [purpose,total] of Object.entries(summary.savings||{}))metric(saving,purpose,total);
+ metric(s,'立替の返金',summary.advanceReceived||0);
+ metric(s,'立替の差額免除（自己負担）',summary.waived||0);
+ const past=details(s,'従来の予算・資金繰り設定（保持した原本）');past.append(el('p','旧データのplanをそのまま保持しています。旧残高は開始残高へ自動転記しません。','muted'));past.append(button('保存されている旧設定を見る',()=>{modal('旧設定・読み取り専用');const pre=el('pre');pre.style.whiteSpace='pre-wrap';pre.textContent=JSON.stringify(data.legacy?.data?.plan||data.legacy?.plan||{},null,2);dialog.append(pre);}));}
 function startForm(selectedAccount){modal('残高管理の開始日と開始残高');const f=el('form'),start=field(f,'開始日','date','2026-11-01',true);f.append(el('p','最初はこの画面で家計全体の残高管理を開始します。使う口座にチェックし、各口座の開始残高を入力してください。開始後は口座ごとに追加設定できます。','notice'));f.append(el('p','開始日の取引前の残高を入力します。11月1日から始める場合は、10月31日の取引がすべて終わった時点の口座残高・現金残高と、まだ引き落とされていないカード代金を入力してください。開始日以降の取引は、実際に利用した日付で記録します。','notice'));const accounts=[];for(const a of data.accounts){const box=el('div',undefined,'account-picker'),check=field(box,a.name+' を管理する','checkbox'),n=field(box,'取引前の開始残高','number','');check.checked=a.id===selectedAccount;accounts.push({a,check,n});f.append(box);}const cards=[];for(const c of data.cards){const n=field(f,c.name+' の開始時未払金（支払済み分を除く）','number','',true);cards.push({c,n});}const confirmInput=field(f,'開始日・実残高・対象取引を確認しました','checkbox','',true);saveForm(f,'確認した残高で開始','start',()=>({startDate:start.value,confirm:confirmInput.checked,accounts:accounts.filter(x=>x.check.checked).map(x=>({id:x.a.id,amount:amount(x.n,{signed:true})})),cards:cards.map(x=>({id:x.c.id,amount:amount(x.n,{signed:true})}))}));dialog.append(f);}
 function importForm(){modal('既存データを引き継ぐ');const f=el('form'),file=field(f,'家計簿のJSON（認証情報を除いたもの）','file','',true);file.accept='.json,application/json';const result=el('p',undefined,'notice');f.append(result);let snapshot;file.onchange=async()=>{try{snapshot=JSON.parse(await file.files[0].text());const preview=await request('/import-preview','POST',snapshot);result.textContent=preview.count+'件の旧行・分割レシート '+preview.splitReceipts+'組・固定費 '+preview.fixedRules+'件。原本を保持し、収支と残高への反映を分けて取り込みます。';}catch(e){snapshot=null;error(e);}};const check=field(f,'旧アプリのバックアップを取り、取り込む内容を確認しました','checkbox','',true);saveForm(f,'原本を保持して取り込む','import',()=>{if(!snapshot)throw Error('JSONを読み込んで確認してください');return {snapshot,confirm:check.checked};});dialog.append(f);}
 async function download(){const payload=await request('/export'),blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='budget-backup-'+today+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function classificationSettingsPage(){
+ const people=section('対象者');
+ const names=data.people||defaultPeople;
+ const form=el('form'),old=select(form,'対象者の操作',[['','新しく追加'],...names.map(name=>[name,name+' の名前を変更'])]);
+ const name=field(form,'名前','text','',true);name.maxLength=100;
+ old.onchange=()=>{name.value=old.value;};
+ saveForm(form,'対象者を保存','classification.people',()=>({old:old.value,name:name.value}));
+ people.append(form);
+ const rules=section('CSVの自動分類ルール');
+ rules.append(button('ルールを追加',()=>merchantRuleForm()));
+ for(const [key,rule] of Object.entries(data.merchantCategories||{})){
+  const detail=typeof rule==='string'?rule:rule.disabled?'自動提案を停止中':[rule.category,rule.middle,rule.person].filter(Boolean).join(' ／ ');
+  row(rules,key,'',detail).append(button('編集',()=>merchantRuleForm(key,rule)),
+   commandButton('削除・提案を停止','classification.merchant',{key,disabled:true}));
+ }
+ const migration=section('カテゴリの移行');
+ migration.append(button('移行プレビュー',async()=>{
+  const preview=await request('/classification-preview');
+  modal('カテゴリの移行プレビュー');
+  if(preview.alreadyApplied){dialog.append(el('p','カテゴリは移行済みです。'));return;}
+  const f=el('form');
+  f.append(el('p','分類を確認する取引 '+preview.entries+'件 ／ 未整理 '+preview.unorganized+'件'));
+  f.append(el('p','固定費設定 '+preview.rules+'件 ／ 未確定予定 '+preview.plans+'件 ／ 自動分類 '+preview.merchantRules+'件','muted'));
+  const mapping=details(f,'旧カテゴリと移行先');
+  for(const item of preview.mappings)row(mapping,item.from,[item.category,item.middle].filter(Boolean).join(' › '),
+   [item.person?'対象者：'+item.person:'',item.income?'収入側の記録は保持':''].filter(Boolean).join(' ／ '));
+  const examples=details(f,'その他 → 未整理に移す明細');
+  for(const item of preview.unresolved)row(examples,item.date+' '+(item.label||''),yen(item.amount),item.categories.join('・'));
+  f.append(button('JSONバックアップを保存',download));
+  const confirm=field(f,'バックアップを保存し、移行内容を確認しました','checkbox','',true);
+  if(preview.revision!==revision){dialog.append(el('p','内容が更新されています。開き直して確認してください。'));return;}
+  saveForm(f,'分類を移行する','classification.migrate',()=>({confirm:confirm.checked,expectedRevision:preview.revision}));
+  dialog.append(f);
+ }));
+}
+function merchantRuleForm(key='',rule={}){
+ modal('自動分類ルール');
+ const f=el('form'),name=field(f,'利用先','text',key,true);
+ name.readOnly=!!key;
+ const picker=categoryPicker(f,typeof rule==='string'?{category:rule}:rule,true);
+ const person=personField(f,rule.person||'');
+ saveForm(f,'ルールを保存','classification.merchant',()=>({key:merchantKey(name.value),...picker.read(),person:person.value}));
+ dialog.append(f);
+}
+function bulkEntryForm(entries){
+ modal('登録済み明細の分類を一括変更');
+ const f=el('form'),picker=categoryPicker(f,{},true);
+ const person=select(f,'対象者',[['','変更しない'],['unset','未設定'],...(data.people||defaultPeople)]);
+ const spending=select(f,'支出区分',[['','変更しない'],['unset','未設定'],...spendingKinds]);
+ const list=el('div'),items=entries.map(e=>({id:e.id,check:field(list,e.date+' '+(e.purchase||e.merchant||e.memo)+' ／ '+yen(e.amount),'checkbox')}));
+ f.append(button('全選択',()=>{for(const item of items)item.check.checked=true;}),button('選択解除',()=>{for(const item of items)item.check.checked=false;}),list);
+ saveForm(f,'選択した明細を保存','classification.entries',()=>{
+  const selected=items.filter(x=>x.check.checked).map(x=>({id:x.id}));
+  if(!selected.length||!picker.major.value&&!person.value&&!spending.value)throw Error('変更する明細と項目を選んでください');
+  return {items:selected,...picker.read(),...(person.value&&{person:person.value==='unset'?'':person.value}),...(spending.value&&{spendingKind:spending.value==='unset'?'':spending.value})};
+ });
+ dialog.append(f);
+}
+function advanceSettlementForm(){
+ modal('立替の精算');
+ const f=el('form'),date=field(f,'精算日','date',today,true),account=select(f,'返金の入金先',data.accounts.filter(a=>a.opening!==null).map(a=>[a.id,a.name]));
+ const items=[];
+ if(!account.value)account.value=account.options[0]?.value||'';
+ for(const {id,remaining} of summary.advances||[]){
+  if(!remaining)continue;
+  const entry=data.entries.find(e=>e.id===id),box=section(entry.counterparty,f);
+  box.append(el('p',entry.date+' ／ '+(entry.purchase||entry.merchant||entry.memo)+' ／ 未精算 '+yen(remaining)));
+  const received=field(box,'今回の返金額','number',''),waive=field(box,'残額を免除して完了','checkbox');
+  received.min=0;received.max=remaining;
+  items.push({id,remaining,received,waive});
+ }
+ if(!items.length){dialog.append(el('p','未精算の立替はありません。'));return;}
+ saveForm(f,'精算を記録','advance.settle',()=>({date:date.value,accountId:account.value,items:items.filter(x=>x.waive.checked||Number(x.received.value)>0).map(x=>({
+  id:x.id,received:Number(x.received.value||0),waived:x.waive.checked?x.remaining-Number(x.received.value||0):0,
+ }))}));
+ dialog.append(f);
+}
+function savingsForm(){
+ modal('目的別積立');
+ const f=el('form'),purpose=select(f,'積立の目的',Object.keys(data.categories.tree['貯金・積立']||{NISA:0,ゲーム貯金:0,旅行積立:0,その他:0}));
+ if(!purpose.value)purpose.value=purpose.options[0]?.value||'';
+ const date=field(f,'日付','date',today,true),value=field(f,'取り分ける額（取り崩しはマイナス）','number','',true);
+ saveForm(f,'積立を記録','savings.allocate',()=>({purpose:purpose.value,date:date.value,amount:amount(value,{signed:true})}));
+ dialog.append(f);
+}
 function settingsPage(){calendarSettings();const s=section('利用開始・保存');s.append(button('既存データを引き継ぐ',importForm),button('開始残高を設定',startForm),button('JSONバックアップを保存',download));if(data.importIssues.length){const review=details(s,'旧データの確認待ち '+data.importIssues.length+'件（原本保持）');for(const issue of data.importIssues){const line=row(review,issue.key,issue.reason);const entry=data.entries.find(e=>e.legacyKey===issue.key);if(entry)line.append(button('この取引を確認',()=>entryForm(entry)));}}const holidays=section('銀行休日');holidays.append(el('p','土日・12月31日〜1月3日は翌営業日へ調整します。祝日や振替休日は、確認した日付を登録してください。過去の引落日は書き換えません。','muted'));const f=el('form'),dates=field(f,'追加の銀行休日（1行にYYYY-MM-DDを1つ）','textarea',data.holidays.join('\n'));saveForm(f,'休日を保存','holidays',()=>({dates:dates.value.split(/\s+/).filter(Boolean)}));holidays.append(f);
- const categories=section('カテゴリを追加');categories.append(el('p','既存の大・中・小カテゴリを保持します。大カテゴリだけで支出登録できます。','muted'));const cf=el('form'),major=field(cf,'大カテゴリ','text','',true),middle=field(cf,'中カテゴリ（任意）','text',''),small=field(cf,'小カテゴリ（任意）','text','');saveForm(cf,'追加する','categories',()=>{const tree=structuredClone(data.categories.tree),name=major.value.trim();tree[name]||={};if(middle.value.trim()){const m=middle.value.trim();tree[name][m]||=[];if(small.value.trim()&&!tree[name][m].includes(small.value.trim()))tree[name][m].push(small.value.trim());}return {tree,hidden:data.categories.hidden};});categories.append(cf);
- const audit=section('変更履歴');audit.append(button('最近の操作を確認',async()=>{const rows=await request('/audit');modal('変更履歴');for(const op of rows)row(dialog,op.created_at,({'entry.add':'取引の登録','entry.edit':'取引の編集','entry.void':'取引の取消','transfer':'口座振替','transfer.undo':'振替の取消','start':'開始残高の設定','account.adjust':'残高調整','plans.confirm':'固定費の引落確認','payments.confirm':'引落の一括確認','bill.confirm':'カード引落確認','bill.undo':'カード引落取消','plan.undo':'固定費引落取消','rule.save':'固定費の設定','plans.generate':'毎月の予定作成','import':'旧データの取り込み','csv.import':'カードCSVの取り込み','csv.billing.assign':'カード利用の請求月確認','fixed.import':'旧固定費の引き継ぎ'}[op.command_type]||'設定の更新'),'版 '+op.before_revision+' → '+op.after_revision);}));}
+ const categories=section('カテゴリを追加');
+ const cf=el('form'),major=field(cf,'大カテゴリ','text','',true),middle=field(cf,'中カテゴリ（任意）','text','');
+ saveForm(cf,'追加する','categories',()=>{
+  const tree=structuredClone(data.categories.tree),name=major.value.trim(),child=middle.value.trim();
+  if(!name)throw Error('大カテゴリを入力してください');
+  tree[name]||={};
+  if(child&&!Object.hasOwn(tree[name],child))tree[name][child]=[];
+  return {tree,hidden:data.categories.hidden};
+ });
+ categories.append(cf);
+ classificationSettingsPage();
+ const audit=section('変更履歴');audit.append(button('最近の操作を確認',async()=>{const rows=await request('/audit');modal('変更履歴');for(const op of rows)row(dialog,op.created_at,({'entry.add':'取引の登録','entry.edit':'取引の編集','entry.void':'取引の取消','transfer':'口座振替','transfer.undo':'振替の取消','start':'開始残高の設定','account.adjust':'残高調整','plans.confirm':'固定費の引落確認','payments.confirm':'引落の一括確認','bill.confirm':'カード引落確認','bill.undo':'カード引落取消','plan.undo':'固定費引落取消','rule.save':'固定費の設定','plans.generate':'毎月の予定作成','import':'旧データの取り込み','csv.import':'カードCSVの取り込み','classification.migrate':'カテゴリ体系の移行','classification.entries':'明細の一括分類','classification.people':'対象者の変更','classification.merchant':'自動分類ルールの変更','advance.settle':'立替精算','savings.allocate':'目的別積立','csv.billing.assign':'カード利用の請求月確認','fixed.import':'旧固定費の引き継ぎ'}[op.command_type]||'設定の更新'),'版 '+op.before_revision+' → '+op.after_revision);}));}
 $('quick-add').onclick=()=>{if(data)entryForm();};
 let checking=false;async function checkSession(){if(checking||!userId)return;checking=true;try{const fresh=await request();if(fresh.userId!==userId){closePrivate();userId='';inMemoryPending=null;await load();}}catch(e){error(e);}finally{checking=false;}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkSession();});globalThis.addEventListener('pageshow',()=>checkSession());
@@ -216,12 +395,11 @@ async function csvImportForm(card){
  modal(card.name+' のCSV取り込み');const f=el('form'),file=field(f,'楽天カードの利用明細CSV','file','',true);file.accept='.csv,text/csv';
  const statement=field(f,'CSVの基準となる請求月','month','',true),previewHost=el('div'),confirmInput=field(f,'カード・請求月・重複候補・分類を確認しました','checkbox','',true);let rows=[],controls=[];
  f.append(el('p','「翌月以降」の利用も取り込めます。請求月が決まるまでは月別の引落見込に含めません。店名の半角・全角は照合時に統一します。ファイルはこの画面で解析します。登録するのは選択した明細です。開始日より前の利用は未払金へ加算せず、開始日以降の請求月の引落見込に表示します。','notice'),previewHost);
- const categories=[['','分類を選択'],...Object.keys(data.categories.tree)];
  const fillUnclassified=(value,store)=>{
   let count=0;
   for(const item of controls){
    if(!item.category||item.category.disabled||item.category.value||store!==undefined&&item.store!==store)continue;
-   item.category.value=value;
+   item.picker.setPath(typeof value==='string'?{category:value}:value);
    item.categoryStatus.textContent=store===undefined?'一括設定':'同じ店の明細から設定';
    count++;
   }
@@ -234,14 +412,43 @@ async function csvImportForm(card){
    const decoded=decodeCardCsv(await file.files[0].arrayBuffer());rows=parseRakutenCsv(decoded.text);
    if(rows.length>500)throw Error('一度の取り込みは500行以内にしてください');
    previewHost.append(el('p',decoded.encoding+' ／ '+rows.length+'行を確認しました。対象外・不明な行も以下で確認してください。','muted'));
-   const bulk=el('div'),bulkCategory=select(bulk,'未分類にまとめて設定するカテゴリ',categories);
-   const bulkStatus=el('p',undefined,'muted');bulkStatus.setAttribute('role','status');
-   bulk.append(button('未分類の明細に一括設定',()=>{
-    if(!bulkCategory.value)throw Error('一括設定するカテゴリを選んでください');
-    const count=fillUnclassified(bulkCategory.value);
-    if(count)confirmInput.checked=false;
-    bulkStatus.textContent=count?count+'件にカテゴリを設定しました。':'対象の未分類明細はありません。';
-   }),bulkStatus);
+   const bulk=el('div');
+   const view=select(bulk,'表示',[['','すべて'],['unclassified','未分類'],['classified','分類済み']]);
+   const picker=categoryPicker(bulk,{},true);
+   const person=select(bulk,'対象者',[['','変更しない'],['unset','未設定'],...(data.people||defaultPeople)]),spending=select(bulk,'支出区分',[['','変更しない'],['unset','未設定'],...spendingKinds]);
+   const count=el('p',undefined,'muted');count.setAttribute('role','status');
+   const editable=()=>controls.filter(x=>x.category&&!x.category.disabled);
+   const visible=item=>!view.value||view.value==='unclassified'&&!item.category.value||view.value==='classified'&&!!item.category.value;
+   const refresh=()=>{
+    for(const item of controls.filter(x=>x.box))item.box.hidden=!!view.value&&(!item.category||item.category.disabled||!visible(item));
+    count.textContent=editable().filter(x=>x.chosen.checked).length+'件を選択中';
+    confirmInput.checked=false;
+   };
+   view.onchange=refresh;
+   bulk.append(button('表示中を全選択',()=>{for(const x of editable().filter(visible))x.chosen.checked=true;refresh();}),
+    button('選択解除',()=>{for(const x of controls)if(x.chosen)x.chosen.checked=false;refresh();}),
+    button('選択した明細を一括変更',()=>{
+     const items=editable().filter(x=>x.chosen.checked&&visible(x));
+     if(!items.length)throw Error('変更する明細を選んでください');
+     if(!picker.major.value&&!person.value&&!spending.value)throw Error('一括変更する項目を選んでください');
+     for(const item of items){
+      if(picker.major.value)item.picker.setPath(picker.read());
+      if(person.value)item.person.value=person.value==='unset'?'':person.value;
+      if(spending.value)item.spending.value=spending.value==='unset'?'':spending.value;
+     }
+     refresh();
+    }),button('選択した明細に分類候補を適用',()=>{
+     const items=editable().filter(x=>x.chosen.checked&&visible(x)&&!x.category.value&&x.suggestion.category&&!x.suggestion.ambiguous);
+     if(!items.length)throw Error('候補が一つに絞れる未分類明細を選んでください');
+     for(const item of items){
+      item.picker.setPath(item.suggestion);
+      item.person.value=item.suggestion.person||'';
+     }
+     refresh();
+    }),button('未分類の明細に一括設定',()=>{
+     if(!picker.major.value)throw Error('一括設定するカテゴリを選んでください');
+     fillUnclassified(picker.read());refresh();
+    }),count);
    previewHost.append(bulk);
    const imported=data.csvImports||{},used=new Set(Object.values(imported));
    for(const rowData of rows){
@@ -255,26 +462,49 @@ async function csvImportForm(card){
     const options=[['add','新しい利用として登録'],...pending.map(p=>['plan:'+p.id,'カード固定費と対応付け '+p.name+' ／ '+yen(p.amount)]),...candidates.map(e=>['match:'+e.id,'手入力と対応付け '+e.date+' '+e.memo+' ／ '+yen(e.amount)]),['skip','今回は取り込まない']];
     const action=select(box,'明細の扱い',options,candidates.length||pending.length?'skip':'add');
     if(candidates.length||pending.length)box.append(el('p','同じカード・日付・金額の履歴があります。店名も確認して対応付けるか、別の購入として登録してください。','notice'));
-    const suggestion=suggestCategory(data,rowData.merchant),category=select(box,'カテゴリ',categories,suggestion.category);
-    const categoryStatus=el('p',suggestion.source,'muted');categoryStatus.setAttribute('role','status');box.append(categoryStatus);
+    const suggestion=suggestCategory(data,rowData.merchant);
+    const picker=categoryPicker(box,{},true),category=picker.major;
+    const person=personField(box,suggestion.person||'');person.value='';
+    const extra=details(box,'購入内容・支出区分など（任意）');
+    const purchase=field(extra,'購入内容','text','');purchase.maxLength=500;
+    const spending=select(extra,'支出区分',[['','未設定'],...spendingKinds]);
+    const savings=select(extra,'積立の種類',[['','指定なし'],'カード投資積立']);
+    const remember=field(extra,'この分類を次回の候補に保存','checkbox');
+    const categoryStatus=el('p',suggestion.source,'muted');box.append(categoryStatus);
+    const candidatesForStore=suggestion.candidates?.length?suggestion.candidates:[suggestion];
+    for(const candidate of candidatesForStore.filter(x=>x.category)){
+     box.append(button('候補を使う：'+[candidate.category,candidate.middle,candidate.person].filter(Boolean).join(' ／ '),()=>{
+      if(category.disabled)return;
+      picker.setPath(candidate);if(candidate.person&&!Array.from(person.options).some(o=>o.value===candidate.person))person.append(new Option(candidate.person,candidate.person));person.value=candidate.person||'';refresh();
+     }));
+    }
     const separate=field(box,'同日・同額の履歴とは別の購入であることを確認','checkbox');
     if(rowData.identicalCount>1)box.append(el('p','CSV内に同日・同店・同額の行が複数あります。行ごとに確認してください。','notice'));
-    const update=()=>{category.required=action.value==='add'||action.value.startsWith('plan:');category.disabled=!(action.value==='add'||action.value.startsWith('plan:'));separate.disabled=action.value!=='add'||!(candidates.length||pending.length);};action.onchange=update;update();
-    const store=merchantKey(rowData.merchant);
-    category.onchange=()=>{
-     confirmInput.checked=false;
-     const count=category.value?fillUnclassified(category.value,store):0;
-     categoryStatus.textContent=count?'同じ店の未分類 '+count+'件にも設定しました。':category.value?'選択したカテゴリ':'分類が必要';
+    const chosen=field(box,'一括変更の対象にする','checkbox');
+    const update=()=>{
+     const enabled=action.value==='add'||action.value.startsWith('plan:');
+     for(const input of [category,picker.middle,person,purchase,spending,savings,remember,chosen])input.disabled=!enabled;
+     separate.disabled=action.value!=='add'||!(candidates.length||pending.length);
     };
-    controls.push({row:rowData,key,action,category,categoryStatus,separate,store});
+    action.onchange=()=>{update();refresh();};update();
+    const store=merchantKey(rowData.merchant);
+    const refreshCategory=category.onchange;
+    category.onchange=()=>{
+     refreshCategory();
+     if(!data.classificationVersion&&category.value&&!suggestion.review)fillUnclassified(category.value,store);
+     refresh();
+    };
+    for(const input of [picker.middle,person,purchase,spending,savings,remember,chosen,separate])input.addEventListener('change',refresh);
+    controls.push({row:rowData,key,action,category,categoryStatus,separate,store,picker,person,purchase,spending,savings,remember,chosen,box,suggestion});
    }
+   refresh();
   }catch(e){rows=[];controls=[];error(e);}
  };
  saveForm(f,'確認したCSV明細を取り込む','csv.import',()=>{
   if(!rows.length)throw Error('CSVを読み込んでください');
-  const selected=controls.filter(x=>x.action.value!=='skip');if(!selected.length)throw Error('登録または対応付けする明細を選んでください');
+  const selected=controls.filter(x=>x.action.value!=='skip');if(selected.some(x=>x.category&&!x.category.disabled&&!x.category.value))throw Error('取り込む明細の大カテゴリを選んでください');if(!selected.length)throw Error('登録または対応付けする明細を選んでください');
   if(selected.some(x=>!x.row.billingDeferred&&x.row.billingMonthNumber&&x.row.billingMonthNumber!==Number(statement.value.slice(5))))throw Error('選んだ明細の支払月と請求月が一致しません。対象の月の明細だけ選んでください');
-  return {cardId:card.id,statementMonth:statement.value,confirm:confirmInput.checked,rows:selected.map(x=>({key:x.key,date:x.row.date,merchant:x.row.merchant,signedAmount:x.row.signedAmount,method:x.row.method,paymentMonth:x.row.paymentMonth,billingMonthNumber:x.row.billingMonthNumber,occurrence:x.row.occurrence,category:x.category?.value,separate:x.separate?.checked,action:x.action.value==='assign'?'assign':x.action.value.startsWith('match:')?'match':x.action.value.startsWith('plan:')?'plan':'add',planId:x.action.value.startsWith('plan:')?x.action.value.slice(5):null,entryId:x.action.value.startsWith('match:')?x.action.value.slice(6):null}))};
+  return {cardId:card.id,statementMonth:statement.value,confirm:confirmInput.checked,rows:selected.map(x=>({key:x.key,date:x.row.date,merchant:x.row.merchant,signedAmount:x.row.signedAmount,method:x.row.method,paymentMonth:x.row.paymentMonth,billingMonthNumber:x.row.billingMonthNumber,occurrence:x.row.occurrence,...x.picker?.read(),person:x.person?.value,purchase:x.purchase?.value,spendingKind:x.spending?.value,savingsKind:x.savings?.value,remember:x.remember?.checked,separate:x.separate?.checked,action:x.action.value==='assign'?'assign':x.action.value.startsWith('match:')?'match':x.action.value.startsWith('plan:')?'plan':'add',planId:x.action.value.startsWith('plan:')?x.action.value.slice(5):null,entryId:x.action.value.startsWith('match:')?x.action.value.slice(6):null}))};
  });dialog.append(f);
 }
 

@@ -46,6 +46,24 @@ test('budget private API isolates users, atomically retries commands and keeps i
  assert.equal((await post('csv.import',{cardId:'visa',statementMonth:'2026-11',confirm:true,rows:[row]})).status,200);const before=await get(),e=before.data.entries.find(e=>e.id==='csv-'+row.key);assert.equal(e.dueDate,null);
  const body={entryId:e.id,month:'2026-12',confirm:true,expectedRevision:before.revision};assert.equal((await post('csv.billing.assign',body,'csv-assign-operation')).status,200);assert.equal((await post('csv.billing.assign',body,'csv-assign-operation')).status,200);const after=await get();assert.deepEqual(after.data.journal,before.data.journal);assert.equal(after.data.entries.find(x=>x.id===e.id).csvBilling.status,'confirmed');assert.equal((await get('other')).data.entries.length,0);
  });
+ await t.test('classification preview and migration are private, revision-checked and replayable',async()=>{
+ const before=await get();
+ assert.equal((await call('/classification-preview','child')).status,403);
+ assert.equal((await call('/classification-preview','other')).data.entries,0);
+ const preview=await call('/classification-preview');
+ assert.equal(preview.status,200);
+ assert.equal(preview.data.revision,before.revision);
+ assert.deepEqual((await get()).data,before.data);
+ assert.equal((await post('classification.migrate',{confirm:true,expectedRevision:before.revision-1})).status,409);
+ const payload={confirm:true,expectedRevision:before.revision};
+ assert.equal((await post('classification.migrate',payload,'synthetic-taxonomy-migration')).status,200);
+ assert.equal((await post('classification.migrate',payload,'synthetic-taxonomy-migration')).status,200);
+ const after=await get();
+ assert.equal(after.revision,before.revision+1);
+ assert.deepEqual(after.data.journal,before.data.journal);
+ assert.deepEqual(after.data.bills,before.data.bills);
+ assert.equal((await call('/classification-preview')).data.alreadyApplied,true);
+ });
  await t.test('private JSON export can replay the full command history and detect tampering',async()=>{const backup=(await call('/export')).data;assert.equal(replayBudgetAudit(backup).ok,true);const damaged=structuredClone(backup);damaged.audit[0].after_hash='wrong';assert.throws(()=>replayBudgetAudit(damaged));});
  await t.test('logout/revocation closes private routes and foreign-key integrity stays intact',async()=>{await db.prepare("UPDATE sessions SET revoked_at=? WHERE user_id='owner'").bind(now).run();assert.equal((await call('/audit')).status,401);assert.deepEqual((await db.prepare('PRAGMA foreign_key_check').all()).results,[]);});
  }finally{await mf.dispose();}

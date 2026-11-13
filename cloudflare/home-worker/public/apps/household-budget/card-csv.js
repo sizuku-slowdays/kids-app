@@ -59,9 +59,21 @@ export function csvCandidates(state,card,row){
  return state.entries.filter(e=>!e.void&&e.payment===card&&e.type===type&&e.date===row.date&&e.amount===amount);
 }
 export function suggestCategory(state,merchant){
- const key=merchantKey(merchant);if(state.merchantCategories?.[key]&&Object.hasOwn(state.categories.tree,state.merchantCategories[key]))return {category:state.merchantCategories[key],source:'保存した店名の分類'};const prior=state.entries.filter(e=>!e.void&&merchantKey(e.memo)===key&&e.splits.length===1).sort((a,b)=>b.date.localeCompare(a.date));
- if(prior.length)return {category:prior[0].splits[0].category,source:'以前の分類'};
- const rules=[[/ENEOS|エネオス|出光/,'交通・ガソリン'],[/APPLE|アップル|UQ|KDDI|ドコモ/,'通信・サブスク'],[/ベネッセ|進研ゼミ/,'子ども']];
+ const key=merchantKey(merchant),saved=state.merchantCategories?.[key];
+ if(saved?.disabled)return {category:'',source:'自動提案を停止中'};
+ const rule=typeof saved==='string'?{category:saved}:saved;
+ const prior=state.entries.filter(e=>!e.void&&merchantKey(e.merchant||e.memo)===key&&e.splits.length===1).sort((a,b)=>b.date.localeCompare(a.date));
+ const valid=part=>part&&Object.hasOwn(state.categories.tree,part.category);
+ const mixed=/AMAZON|アマゾン|楽天市場/.test(key);
+ if(valid(rule))return {...rule,source:'保存した店名の分類',review:mixed||!!state.classificationVersion,ambiguous:mixed};
+ const known=prior.map(e=>e.splits[0]).filter(valid);
+ if(known.length){
+  const paths=new Set(known.map(p=>JSON.stringify([p.category,p.middle||'',p.person||''])));
+  const candidates=Array.from(new Map(known.map(p=>[JSON.stringify([p.category,p.middle||'',p.person||'']),p])).values()).slice(0,8);
+  const {category,middle,person}=known[0];
+  return {...(state.classificationVersion?{category,middle,person:paths.size===1?person:'',candidates}:{category}),source:'以前の分類',review:mixed||paths.size>1||!!state.classificationVersion,ambiguous:mixed||paths.size>1};
+ }
+ const rules=[[/ENEOS|エネオス|出光/,state.classificationVersion?'車・交通':'交通・ガソリン'],[/APPLE|アップル|UQ|KDDI|ドコモ/,'通信・サブスク'],[/ベネッセ|進研ゼミ/,state.classificationVersion?'教育':'子ども']];
  const match=rules.find(([re,category])=>re.test(key)&&Object.hasOwn(state.categories.tree,category));
- return match?{category:match[1],source:'店名から推測'}:{category:'',source:'分類が必要'};
+ return match?{category:match[1],source:'店名から推測',review:!!state.classificationVersion}:{category:'',source:'分類が必要'};
 }

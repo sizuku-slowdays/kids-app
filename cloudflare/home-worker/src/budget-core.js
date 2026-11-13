@@ -38,8 +38,20 @@ function historicalCardForecast(s,b){
  return Math.max(0,amount-(b.openingAllocation||0));
 }
 function pendingCardCharges(s,b){const card=find(s.cards,b.cardId);return s.plans.filter(p=>p.status==='planned'&&p.payment===card.id&&cardDue(card,p.nominalDate,s.holidays)?.slice(0,7)===b.month).reduce((n,p)=>n+p.amount,0);}
-function ensureMonth(s,month){monthDate(month,1);for(const r of s.rules.filter(r=>r.enabled&&(!r.firstMonth||r.firstMonth<=month))){const key='fixed:'+r.id+':'+month;if(!s.plans.some(p=>p.id===key)){const previous=s.plans.filter(p=>p.ruleId===r.id&&p.month<month).sort((a,b)=>b.month.localeCompare(a.month))[0];s.plans.push({id:key,ruleId:r.id,month,name:r.name,payment:r.payment,category:r.category,...(r.middle&&{middle:r.middle}),person:r.person||'',nominalDate:monthDate(month,r.day),dueDate:s.accounts.some(a=>a.id===r.payment&&a.kind==='bank')?businessDate(monthDate(month,r.day),s.holidays):monthDate(month,r.day),amount:r.variable&&previous?previous.amount:r.amount,variable:r.variable,status:'planned',version:1});}}
- for(const card of s.cards.filter(c=>c.accountId&&c.paymentDay)){const key='bill:'+card.id+':'+month;if(!s.bills.some(b=>b.id===key))s.bills.push({id:key,cardId:card.id,month,dueDate:businessDate(monthDate(month,card.paymentDay),s.holidays),openingAllocation:0,actual:null,reason:'',adjustment:null,status:'planned',version:1});}
+function missingMonthlyItems(s,month){
+ const fixed=s.rules.filter(r=>r.enabled&&(!r.firstMonth||r.firstMonth<=month)&&!s.plans.some(p=>p.ruleId===r.id&&p.month===month||p.id==='fixed:'+r.id+':'+month));
+ const cards=s.cards.filter(c=>c.accountId&&c.paymentDay&&!s.bills.some(b=>b.cardId===c.id&&b.month===month||b.id==='bill:'+c.id+':'+month));
+ return {fixed,cards};
+}
+function monthlyScheduleStatus(s,month){
+ const {fixed,cards}=missingMonthlyItems(s,month);
+ return {missingFixed:fixed.map(r=>r.name),missingCards:cards.map(c=>c.name),
+  cancelled:s.plans.filter(p=>p.month===month&&p.status==='cancelled').length+s.bills.filter(b=>b.month===month&&b.status==='cancelled').length,
+  review:s.rules.filter(r=>r.needsReview).length,
+  unconfigured:s.cards.filter(c=>!c.accountId||!c.paymentDay).map(c=>c.name)};
+}
+function ensureMonth(s,month){monthDate(month,1);const {fixed,cards}=missingMonthlyItems(s,month);for(const r of fixed){const key='fixed:'+r.id+':'+month;const previous=s.plans.filter(p=>p.ruleId===r.id&&p.month<month).sort((a,b)=>b.month.localeCompare(a.month))[0];s.plans.push({id:key,ruleId:r.id,month,name:r.name,payment:r.payment,category:r.category,...(r.middle&&{middle:r.middle}),person:r.person||'',nominalDate:monthDate(month,r.day),dueDate:s.accounts.some(a=>a.id===r.payment&&a.kind==='bank')?businessDate(monthDate(month,r.day),s.holidays):monthDate(month,r.day),amount:r.variable&&previous?previous.amount:r.amount,variable:r.variable,status:'planned',version:1});}
+ for(const card of cards){const key='bill:'+card.id+':'+month;s.bills.push({id:key,cardId:card.id,month,dueDate:businessDate(monthDate(month,card.paymentDay),s.holidays),openingAllocation:0,actual:null,reason:'',adjustment:null,status:'planned',version:1});}
 }
 function hasSecrets(value){if(!value||typeof value!=='object')return false;return Object.entries(value).some(([k,v])=>/password|token|secret|credential/i.test(k)||hasSecrets(v));}
 export function importPreview(input){fail(input&&typeof input==='object'&&!hasSecrets(input),'認証情報を含まない家計簿JSONを選んでください');const raw=input.data?.entries?input.data:input;fail(Array.isArray(raw.entries)&&raw.entries.length<=20000,'既存のentries配列を確認してください');return {count:raw.entries.length,splitReceipts:new Set(raw.entries.filter(e=>e.receiptId).map(e=>e.receiptId)).size,fixedRules:Array.isArray(raw.plan?.fixedExpenses)?raw.plan.fixedExpenses.length:0,version:raw.version||null};}
@@ -235,9 +247,15 @@ export function budgetSummary(s,asOf,month=asOf.slice(0,7),basis='date'){
  const advances=s.entries.filter(e=>!e.void&&e.type==='advance').map(e=>({id:e.id,remaining:outstandingAdvance(s,e)}));
  const daily=dailySpending(s.entries,asOf);
  const managed=accounts.filter(a=>a.balance!==null),reserve=s.livingReserve||0,cashflow={reserve,forecast:managed.length?managed.reduce((n,a)=>n+a.forecast,0):null};cashflow.available=cashflow.forecast===null?null:cashflow.forecast-reserve;
- const known=accounts.some(a=>a.balance!==null),cardKnown=cards.every(c=>c.balance!==null),assets=known?accounts.filter(a=>a.balance!==null).reduce((n,a)=>n+a.balance,0):null,debt=cardKnown?cards.reduce((n,c)=>n+Math.max(0,c.balance),0):null;return {cashflow,daily,accounts,cards,income,expense,category,people,categoryBreakdown,saved,savings,waived,advanceReceived,advances,assets,debt,net:assets===null||debt===null?null:assets-debt,unreconciled:cards.flatMap(c=>c.bills.filter(b=>b.status==='confirmed'&&b.reconciliation!==0)),basis,month};
+ const known=accounts.some(a=>a.balance!==null),cardKnown=cards.every(c=>c.balance!==null),assets=known?accounts.filter(a=>a.balance!==null).reduce((n,a)=>n+a.balance,0):null,debt=cardKnown?cards.reduce((n,c)=>n+Math.max(0,c.balance),0):null;return {cashflow,daily,accounts,cards,income,expense,category,people,categoryBreakdown,saved,savings,waived,advanceReceived,advances,assets,debt,net:assets===null||debt===null?null:assets-debt,unreconciled:cards.flatMap(c=>c.bills.filter(b=>b.status==='confirmed'&&b.reconciliation!==0)),basis,month,schedule:monthlyScheduleStatus(s,month)};
 }
 export function legacyExport(s){const raw=s.legacy?.data?.entries?s.legacy.data:s.legacy||{version:6},entries=[];for(const e of s.entries.filter(e=>!e.void)){e.splits.forEach((p,i)=>entries.push({id:e.legacyIds?.[i]||e.id+':'+i,date:e.date,type:e.type,amount:p.amount,payment:s.cards.find(c=>c.id===e.payment)?.name||s.accounts.find(a=>a.id===e.payment)?.name||e.legacyPayment,category:p.category,categoryMiddle:p.middle,categorySmall:p.small,person:p.person,expenseNature:p.nature,memo:e.memo,settleMonth:e.settleMonth,counterparty:e.counterparty,linkedAdvanceId:e.linkedAdvanceId,...(e.splits.length>1?{receiptId:e.legacyKey?.replace(/^receipt:/,'')||e.id,receiptTotal:e.amount,splitIndex:i,splitCount:e.splits.length}:{})}));}const deletedIds=[...(raw.deletedIds||[]),...s.entries.filter(e=>e.void).flatMap(e=>e.legacyIds?.length?e.legacyIds:e.splits.map((_,i)=>e.id+':'+i)).map(id=>({id}))];const outputIds=new Set(entries.map(e=>e.id));for(const e of s.entries)for(const key of e.legacyIds||[])if(!outputIds.has(key))deletedIds.push({id:key});const represented=new Set(s.entries.flatMap(e=>e.legacyIds||[]));entries.push(...clone((raw.entries||[]).filter(e=>!represented.has(e.id))));return {...clone(raw),entries,deletedIds,categories:clone(s.categories),migrationIssues:clone(s.importIssues),preservedOriginal:clone(s.legacy)};}
 
 
-export function missingBudgetMonths(s,asOf){const months=[asOf.slice(0,7),monthShift(asOf.slice(0,7),1)];return months.filter(month=>s.rules.some(r=>r.enabled&&(!r.firstMonth||r.firstMonth<=month)&&!s.plans.some(p=>p.id==='fixed:'+r.id+':'+month))||s.cards.some(c=>c.accountId&&c.paymentDay&&!s.bills.some(b=>b.id==='bill:'+c.id+':'+month)));}
+export function missingBudgetMonths(s,asOf){
+ const month=asOf.slice(0,7);
+ return [month,monthShift(month,1)].filter(target=>{
+  const {fixed,cards}=missingMonthlyItems(s,target);
+  return fixed.length>0||cards.length>0;
+ });
+}

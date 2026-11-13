@@ -88,3 +88,23 @@ test('New pre-start CSV uses the statement month for the forecast only',async()=
  assert.equal(summary.expense,0);
  assert.equal(s.journal.length,0);
 });
+
+test('Monthly schedule reports actionable gaps and never duplicates existing or cancelled plans',()=>{
+ let s=started();
+ s.cards[1].paymentDay=null;
+ s=run(s,'rule.save',{id:'new',name:'New fee',amount:300,payment:'bank-0',day:15});
+ s=run(s,'rule.save',{id:'old',name:'Previously generated',amount:400,payment:'bank-0',day:20});
+ s.plans.push({id:'existing-legacy-id',ruleId:'old',month:'2026-11',payment:'bank-0',status:'cancelled',dueDate:'2026-11-20'});
+ let status=budgetSummary(s,'2026-11-07').schedule;
+ assert.deepEqual(status.missingFixed,['New fee']);
+ assert.equal(status.missingCards.length,1);
+ assert.equal(status.cancelled,1);
+ assert.equal(status.unconfigured.length,1);
+ const next=run(s,'plans.generate',{month:'2026-11'});
+ status=budgetSummary(next,'2026-11-07').schedule;
+ assert.deepEqual(status.missingFixed,[]);
+ assert.deepEqual(status.missingCards,[]);
+ assert.equal(next.plans.filter(p=>p.ruleId==='old').length,1);
+ assert.deepEqual(next.journal,s.journal);
+ assert.deepEqual(run(next,'plans.generate',{month:'2026-11'}),next);
+});

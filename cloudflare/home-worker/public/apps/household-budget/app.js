@@ -33,7 +33,7 @@ function row(host,title,value,detail){const r=el('div',undefined,'row'),d=el('di
 function metric(host,label,value){const p=el('p',undefined,'metric');p.append(el('span',label),el('strong',yen(value),value<0?'negative':''));host.append(p);}
 function details(host,title){const d=el('details');d.append(el('summary',title));host.append(d);return d;}
 async function load(){const value=await request('?'+new URLSearchParams({...(month?{month}:{}),basis}));if(userId&&userId!==value.userId){closePrivate();inMemoryPending=null;spendingDate='';}userId=value.userId;calendarStatus=value.calendar||{enabled:false,pending:0};data=value.data;summary=value.summary;revision=value.revision;today=value.today;month=month||today.slice(0,7);
- if(!pending()){for(const targetMonth of [today.slice(0,7),nextMonth(today.slice(0,7))]){const missing=data.rules.some(r=>r.enabled&&(!r.firstMonth||r.firstMonth<=targetMonth)&&!data.plans.some(p=>p.ruleId===r.id&&p.month===targetMonth))||data.cards.some(c=>c.accountId&&c.paymentDay&&!data.bills.some(b=>b.cardId===c.id&&b.month===targetMonth));if(missing){await send('plans.generate',{month:targetMonth});return load();}}}render();await openBudgetLink();}
+ if(!pending()){for(const targetMonth of [today.slice(0,7),nextMonth(today.slice(0,7))]){const missing=data.rules.some(r=>r.enabled&&(!r.firstMonth||r.firstMonth<=targetMonth)&&!data.plans.some(p=>p.ruleId===r.id&&p.month===targetMonth||p.id==='fixed:'+r.id+':'+targetMonth))||data.cards.some(c=>c.accountId&&c.paymentDay&&!data.bills.some(b=>b.cardId===c.id&&b.month===targetMonth||b.id==='bill:'+c.id+':'+targetMonth));if(missing){try{await send('plans.generate',{month:targetMonth});return load();}catch(e){if(e.status!==409)throw e;break;}}}}render();await openBudgetLink();}
 function nextMonth(m){const [y,n]=m.split('-').map(Number);return new Date(Date.UTC(y,n,1)).toISOString().slice(0,7);}
 function render(){root.replaceChildren();$('nav').replaceChildren(...[['home','ホーム'],['entries','収支'],['accounts','口座'],['plans','予定'],['fixed','固定費'],['cards','カード'],['stats','集計'],['settings','設定']].map(([id,label])=>button(label,async()=>{tab=id;accountId='';if(id!=='stats'){month=today.slice(0,7);basis='date';await load();}else render();},tab===id?'active':'')));
  const unfinished=pending();if(unfinished){const s=section('前回の操作を確認してください');s.append(el('p','通信が途切れた可能性があります。同じ操作番号で再試行するため二重には反映しません。','notice'),button('前回と同じ内容で再試行',async()=>{await send(unfinished.command.type,unfinished.command.data,unfinished.eventId,unfinished);await load();},'primary'));return;}
@@ -336,11 +336,38 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 function cashPlansPage(){
  const schedule=section('月別の予定'),picker=field(schedule,'対象月','month',month,true);
- picker.onchange=async()=>{month=picker.value;await load();};
+ picker.onchange=async()=>{if(!picker.value){picker.value=month;return;}month=picker.value;try{await load();}catch(e){error(e);}};
  if(data.entries.some(e=>!e.void&&e.csvBilling?.status==='pending'))schedule.append(el('p','請求月が未確定のカード利用があります。月別の引落見込にはまだ含まれません。カード画面で確認できます。','notice'));
  schedule.append(el('p','予定を生成しただけでは残高は変わりません。固定費・カード引落・入金・振替を同じ月で確認できます。','notice'));
- schedule.append(commandButton('この月の不足している予定を作成','plans.generate',{month},'primary'));
- const reviewCount=data.rules.filter(r=>r.needsReview).length;if(reviewCount)schedule.append(el('p','確認が必要な固定費が '+reviewCount+'件あります。固定費画面で日付と引落元を確認してください。','notice'));
+ const status=summary.schedule;
+ if(status){
+  const missing=status.missingFixed.length+status.missingCards.length;
+  schedule.append(el('p',missing?'作成待ち：固定費 '+status.missingFixed.length+'件、カード引落 '+status.missingCards.length+'件':'この月に追加できる固定費・カード引落予定はありません。','muted'));
+  if(status.cancelled)schedule.append(el('p','取消済みの予定 '+status.cancelled+'件は、下の「確定済み・取消・記録済み」にあります。','muted'));
+  if(status.unconfigured.length)schedule.append(el('p','引落口座・支払日の設定が必要なカード：'+status.unconfigured.join('、'),'muted'));
+ }
+ let generation;
+ schedule.append(button('この月の不足している予定を作成',async()=>{
+  if(status&&!status.missingFixed.length&&!status.missingCards.length){note(month+' の追加できる予定はありません。');return;}
+  generation||={eventId:crypto.randomUUID(),command:{type:'plans.generate',data:{month,expectedRevision:revision}}};
+  const payload=generation.command.data;
+  const fixedIds=new Set(data.plans.map(p=>p.id)),billIds=new Set(data.bills.map(b=>b.id));
+  try{await send('plans.generate',payload,generation.eventId,generation);}
+  catch(e){
+   if(e.status&&e.status<500)generation=null;
+   if(e.status!==409)throw e;
+   await load();
+   note('予定の最新情報を読み込みました。作成待ちが残っていれば、もう一度押してください。');
+   return;
+  }
+  generation=null;
+  await load();
+  const fixed=data.plans.filter(p=>p.month===payload.month&&!fixedIds.has(p.id)).length;
+  const cards=data.bills.filter(b=>b.month===payload.month&&!billIds.has(b.id)).length;
+  note(fixed||cards?payload.month+' に固定費 '+fixed+'件、カード引落 '+cards+'件を作成しました。':payload.month+' の追加できる予定はありません。');
+ },'primary'));
+ const reviewCount=status?.review??data.rules.filter(r=>r.needsReview).length;
+ if(reviewCount)schedule.append(el('p','確認が必要な固定費が '+reviewCount+'件あります。固定費画面で日付と引落元を確認してください。','notice'));
  const fixed=data.plans.filter(p=>p.month===month&&p.status==='planned').sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
  for(const p of fixed)planRow(schedule,p);
  for(const b of data.bills.filter(b=>b.month===month&&b.status==='planned'))billRow(schedule,b);

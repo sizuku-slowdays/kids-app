@@ -265,6 +265,23 @@ window.FOODS=[
     ]
   },
   {
+    "id": "meat_chicken_gizzard",
+    "category": "肉",
+    "name": "砂ずり（砂肝）",
+    "emoji": "🍗",
+    "main_nutrients": "たんぱく質,鉄,亜鉛,ビタミンB12",
+    "kids_text": "よくかんで食べる、コリコリしたお肉！ 筋肉や血液をつくる栄養が入っているよ！",
+    "recipe_tags": "砂ずり,砂肝,すなずり,すなぎも,鶏の内臓",
+    "reading": "すなずり（すなぎも）",
+    "category_ui": "🍽️ 肉",
+    "nutrient_list": [
+      "たんぱく質",
+      "鉄",
+      "亜鉛",
+      "ビタミンB12"
+    ]
+  },
+  {
     "id": "meat_004",
     "category": "肉",
     "name": "とんかつ（豚ロース）",
@@ -3883,7 +3900,7 @@ function applyV8Scores(){
 applyV8Scores();
 
 // v9 official MEXT starter records
-const OFFICIAL_NUTRIENTS_V9={"いわし": {"mext_id": "10047", "official_name": "まいわし/生", "protein_g": 19.2, "fat_g": 9.2, "calcium_mg": 74, "iron_mg": 2.1, "zinc_mg": 1.6, "vitamin_d_ug": 32.0, "vitamin_e_mg": 2.5, "vitamin_b6_mg": 0.49, "vitamin_b12_ug": 16.0, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10047_7"}, "さば": {"mext_id": "10154", "official_name": "まさば/生", "calcium_mg": 6, "iron_mg": 1.2, "zinc_mg": 1.1, "vitamin_d_ug": 5.1, "vitamin_e_mg": 1.3, "vitamin_b6_mg": 0.59, "vitamin_b12_ug": 13.0, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10154_7"}, "鮭": {"mext_id": "10134", "official_name": "しろさけ/生", "protein_g": 22.3, "fat_g": 4.1, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10134_7"}, "しらす": {"mext_id": "10056", "official_name": "しらす干し/半乾燥品", "protein_g": 40.5, "calcium_mg": 520, "iron_mg": 0.8, "zinc_mg": 3.0, "vitamin_d_ug": 61.0, "vitamin_e_mg": 1.5, "vitamin_b12_ug": 6.3, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10056_6"}, "ほうれん草": {"mext_id": "06267", "official_name": "ほうれんそう/葉/通年平均/生", "protein_g": 2.2, "fat_g": 0.4, "calcium_mg": 49, "iron_mg": 2.0, "zinc_mg": 0.7, "vitamin_a_rae_ug": 350, "vitamin_e_mg": 2.1, "vitamin_k_ug": 270, "vitamin_b6_mg": 0.14, "folate_ug": 210, "vitamin_c_mg": 35, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=6_06267_7"}, "小松菜": {"mext_id": "06087", "official_name": "こまつな/葉/ゆで", "calcium_mg": 150, "iron_mg": 2.1, "zinc_mg": 0.3, "vitamin_a_rae_ug": 260, "vitamin_e_mg": 1.5, "vitamin_k_ug": 320, "folate_ug": 86, "vitamin_c_mg": 21, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=6_06087_7"}, "鶏卵": {"mext_id": "12004", "official_name": "鶏卵/全卵/生", "calcium_mg": 46, "iron_mg": 1.5, "zinc_mg": 1.1, "vitamin_a_rae_ug": 210, "vitamin_d_ug": 3.8, "vitamin_e_mg": 1.3, "vitamin_k_ug": 12, "vitamin_b12_ug": 1.1, "folate_ug": 49, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=12_12004_7"}};
+const OFFICIAL_NUTRIENTS_V9={"砂ずり（砂肝）": {"mext_id": "11233", "official_name": "にわとり／すなぎも／生", "protein_g": 18.3, "fat_g": 1.8, "calcium_mg": 7, "iron_mg": 2.5, "zinc_mg": 2.8, "vitamin_a_rae_ug": 4, "vitamin_d_ug": 0, "vitamin_e_mg": 0.3, "vitamin_k_ug": 28, "vitamin_b6_mg": 0.04, "vitamin_b12_ug": 1.7, "folate_ug": 36, "vitamin_c_mg": 5, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=11_11233_7"}, "いわし": {"mext_id": "10047", "official_name": "まいわし/生", "protein_g": 19.2, "fat_g": 9.2, "calcium_mg": 74, "iron_mg": 2.1, "zinc_mg": 1.6, "vitamin_d_ug": 32.0, "vitamin_e_mg": 2.5, "vitamin_b6_mg": 0.49, "vitamin_b12_ug": 16.0, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10047_7"}, "さば": {"mext_id": "10154", "official_name": "まさば/生", "calcium_mg": 6, "iron_mg": 1.2, "zinc_mg": 1.1, "vitamin_d_ug": 5.1, "vitamin_e_mg": 1.3, "vitamin_b6_mg": 0.59, "vitamin_b12_ug": 13.0, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10154_7"}, "鮭": {"mext_id": "10134", "official_name": "しろさけ/生", "protein_g": 22.3, "fat_g": 4.1, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10134_7"}, "しらす": {"mext_id": "10056", "official_name": "しらす干し/半乾燥品", "protein_g": 40.5, "calcium_mg": 520, "iron_mg": 0.8, "zinc_mg": 3.0, "vitamin_d_ug": 61.0, "vitamin_e_mg": 1.5, "vitamin_b12_ug": 6.3, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=10_10056_6"}, "ほうれん草": {"mext_id": "06267", "official_name": "ほうれんそう/葉/通年平均/生", "protein_g": 2.2, "fat_g": 0.4, "calcium_mg": 49, "iron_mg": 2.0, "zinc_mg": 0.7, "vitamin_a_rae_ug": 350, "vitamin_e_mg": 2.1, "vitamin_k_ug": 270, "vitamin_b6_mg": 0.14, "folate_ug": 210, "vitamin_c_mg": 35, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=6_06267_7"}, "小松菜": {"mext_id": "06087", "official_name": "こまつな/葉/ゆで", "calcium_mg": 150, "iron_mg": 2.1, "zinc_mg": 0.3, "vitamin_a_rae_ug": 260, "vitamin_e_mg": 1.5, "vitamin_k_ug": 320, "folate_ug": 86, "vitamin_c_mg": 21, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=6_06087_7"}, "鶏卵": {"mext_id": "12004", "official_name": "鶏卵/全卵/生", "calcium_mg": 46, "iron_mg": 1.5, "zinc_mg": 1.1, "vitamin_a_rae_ug": 210, "vitamin_d_ug": 3.8, "vitamin_e_mg": 1.3, "vitamin_k_ug": 12, "vitamin_b12_ug": 1.1, "folate_ug": 49, "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=12_12004_7"}};
 
 function attachOfficialV9(){
  if(typeof FOODS==='undefined') return;
@@ -3901,7 +3918,7 @@ function attachOfficialV9(){
 }
 attachOfficialV9();
 
-const SERVING_GRAMS_V10={"いわし": 40, "さば": 50, "鮭": 50, "しらす": 10, "ほうれん草": 30, "小松菜": 30, "鶏卵": 50, "さば缶": 40, "牛乳": 150, "ヨーグルト": 80, "納豆": 30, "白ごはん": 120};
+const SERVING_GRAMS_V10={"砂ずり（砂肝）": 50, "いわし": 40, "さば": 50, "鮭": 50, "しらす": 10, "ほうれん草": 30, "小松菜": 30, "鶏卵": 50, "さば缶": 40, "牛乳": 150, "ヨーグルト": 80, "納豆": 30, "白ごはん": 120};
 const POWER_RULES_V10={"head": [["vitamin_b12_ug", 0.8, 2], ["iron_mg", 1.2, 1], ["dha_mg", 150, 2], ["epa_mg", 100, 1], ["vitamin_b6_mg", 0.25, 1]], "sparkle": [["protein_g", 8, 1], ["zinc_mg", 1.2, 1], ["vitamin_a_rae_ug", 180, 1], ["vitamin_c_mg", 20, 1], ["vitamin_e_mg", 1.5, 1]], "muscle": [["protein_g", 10, 3], ["protein_g", 6, 2], ["protein_g", 3, 1], ["zinc_mg", 1.2, 1], ["vitamin_b6_mg", 0.25, 1]], "bone": [["calcium_mg", 120, 2], ["vitamin_d_ug", 2.5, 2], ["vitamin_k_ug", 45, 1], ["protein_g", 6, 1]], "immunity": [["vitamin_a_rae_ug", 180, 1], ["vitamin_c_mg", 20, 1], ["vitamin_d_ug", 2.5, 1], ["zinc_mg", 1.2, 1], ["protein_g", 6, 1]]};
 
 function servingForV10(f){

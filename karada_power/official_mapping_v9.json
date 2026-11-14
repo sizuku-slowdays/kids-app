@@ -1,4 +1,22 @@
 {
+  "砂ずり（砂肝）": {
+    "mext_id": "11233",
+    "official_name": "にわとり／すなぎも／生",
+    "protein_g": 18.3,
+    "fat_g": 1.8,
+    "calcium_mg": 7,
+    "iron_mg": 2.5,
+    "zinc_mg": 2.8,
+    "vitamin_a_rae_ug": 4,
+    "vitamin_d_ug": 0,
+    "vitamin_e_mg": 0.3,
+    "vitamin_k_ug": 28,
+    "vitamin_b6_mg": 0.04,
+    "vitamin_b12_ug": 1.7,
+    "folate_ug": 36,
+    "vitamin_c_mg": 5,
+    "source_url": "https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=11_11233_7"
+  },
   "いわし": {
     "mext_id": "10047",
     "official_name": "まいわし/生",

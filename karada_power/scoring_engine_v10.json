@@ -2,6 +2,7 @@
   "version": "v10-serving-engine",
   "principle": "Official MEXT per-100g nutrient data × realistic serving grams; missing values are not treated as zero.",
   "serving_grams": {
+    "砂ずり（砂肝）": 50,
     "いわし": 40,
     "さば": 50,
     "鮭": 50,

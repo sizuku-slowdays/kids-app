@@ -100,6 +100,101 @@ export function installmentProgress(state, rule) {
  return {paid, remaining, projected, skipped};
 }
 
+const benefitName = name => (name || '').normalize('NFKC').match(/児童扶養手当|児童手当/)?.[0];
+
+export function plannedCashFlows(state, asOf) {
+ const actualMonths = new Set(state.entries.filter(entry => entry.type === 'income' && entry.ledgerIncluded &&
+  !entry.void && entry.date <= asOf && (benefitName(entry.memo)||entry.splits?.some(part=>benefitName(part.category)||benefitName(part.middle)))).map(entry => entry.date.slice(0,7)));
+ const benefits = new Map();
+ const pending = (state.cashPlans || []).filter(plan => plan.status === 'planned');
+ for (const plan of pending) {
+  if (plan.kind !== 'income' || !benefitName(plan.name) && !benefitName(plan.memo)) continue;
+  const month = plan.date.slice(0,7);
+  if (!benefits.has(month)) benefits.set(month,[]);
+  benefits.get(month).push(plan);
+ }
+ const conflicts = [...benefits].filter(([month,plans]) => actualMonths.has(month) || plans.length > 1);
+ const excluded = new Set(conflicts.flatMap(([,plans]) => plans.map(plan => plan.id)));
+ return {active:pending.filter(plan => !excluded.has(plan.id)),
+  conflicts:conflicts.map(([month,plans]) => ({month,ids:plans.map(plan => plan.id)}))};
+}
+
+function projectAccounts(accounts, rows, current, committedOnly = false) {
+ const results = new Map(accounts.filter(account => account.balance !== null).map(account =>
+  [account.id,{accountId:account.id,currentBalance:account.balance,balance:account.balance,days:[]}]));
+ const dates = new Map();
+ for (const row of rows) {
+  if (!dates.has(row.date)) dates.set(row.date,[]);
+  dates.get(row.date).push(row);
+ }
+ for (const [date, movements] of dates) {
+  const affected = new Map();
+  function day(accountId) {
+   const result = results.get(accountId);
+   if (!result) return null;
+   if (!affected.has(accountId)) affected.set(accountId,{
+    date,before:result.balance,plannedIncome:0,transferIn:0,transferOut:0,payments:0,
+    sameDay:false,uncertain:false,unknown:false,items:[]
+   });
+   return affected.get(accountId);
+  }
+  for (const row of movements) {
+   const out = day(row.from), incoming = day(row.to);
+   if (out) {
+    if (row.kind === 'transfer') out.transferOut += row.amount;
+    else out.payments += row.amount;
+    out.unknown ||= !!row.unknown;
+    out.uncertain ||= !!(row.uncertain || row.virtual || row.review || row.overdue || row.kind==='transfer');
+    out.items.push(row);
+   }
+   if (incoming) {
+    if (!committedOnly) {
+     if (row.kind === 'income') incoming.plannedIncome += row.amount;
+     else incoming.transferIn += row.amount;
+    }
+    incoming.uncertain=true;
+    incoming.items.push(row);
+   }
+  }
+  for (const [accountId, item] of affected) {
+   const result = results.get(accountId), inflows = item.plannedIncome + item.transferIn;
+   const outflows = item.transferOut + item.payments;
+   result.balance = item.before + inflows - outflows;
+   item.sameDay = inflows > 0 && outflows > 0 && item.before < outflows;
+   item.balance = result.balance;
+   item.shortage = Math.max(0,-item.balance);
+   result.days.push(item);
+  }
+ }
+ return [...results.values()].map(result => {
+  const currentDays = result.days.filter(day => day.date.slice(0,7)<=current);
+  const later = result.days.filter(day => day.date.slice(0,7)>current);
+  let required = 0;
+  const needs = currentDays.flatMap(day => {
+   if (day.shortage <= required || !day.items.some(item => item.from===result.accountId)) return [];
+   const additional = day.shortage - required;
+   required = day.shortage;
+   return [{date:day.date,additional,total:required}];
+  });
+  const futurePeak = later.reduce((best,day) => day.shortage > (best?.shortage||0) ? day : best,null);
+  const monthlyPeaks = new Map();
+  for (const day of later) {
+   const month=day.date.slice(0,7);
+   if(day.shortage>(monthlyPeaks.get(month)?.shortage||0)) monthlyPeaks.set(month,day);
+  }
+  let funded=required;
+  const futureMonths=[...monthlyPeaks].map(([month,day])=>{
+   const additional=Math.max(0,day.shortage-funded);
+   funded+=additional;
+   return {month,date:day.date,amount:day.shortage,additional};
+  });
+  return {accountId:result.accountId,currentBalance:result.currentBalance,currentDays,
+   monthEnd:currentDays.at(-1)?.balance ?? result.currentBalance,needs,required,futureMonths,
+   future:futurePeak && {date:futurePeak.date,amount:futurePeak.shortage,
+    additional:Math.max(0,futurePeak.shortage-required)}};
+ });
+}
+
 export function forecastFunds(state, accounts, cards, asOf, missing, availablePlans = state.plans) {
  const current = asOf.slice(0,7), next = shiftBillingMonth(current,1);
  const rows = [];
@@ -115,51 +210,80 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
    virtual:!!bill.virtual});
  }
  const horizon = rows.reduce((month, row) => row.date.slice(0,7) > month ? row.date.slice(0,7) : month, next);
- for (const plan of state.cashPlans || []) {
-  if (plan.status !== 'planned' || plan.date.slice(0,7) > horizon) continue;
-  rows.push({kind:plan.kind,id:plan.id,name:plan.name,date:plan.date,amount:plan.amount,from:plan.from,to:plan.to});
+ const cash = plannedCashFlows(state,asOf);
+ const overdueIncome = [];
+ for (const plan of cash.active) {
+  if (plan.date.slice(0,7)>horizon) continue;
+  if (plan.date<asOf && plan.kind==='income') { overdueIncome.push(plan);continue; }
+  // Overdue outflows are still reserved. An overdue transfer is kept whole, with a warning.
+  rows.push({kind:plan.kind,id:plan.id,name:plan.name,amount:plan.amount,from:plan.from,to:plan.to,
+   date:plan.date<asOf?asOf:plan.date,originalDate:plan.date,overdue:plan.date<asOf});
  }
- rows.sort((a,b) => a.date.localeCompare(b.date) || Number(!!a.to && !a.from) - Number(!!b.to && !b.from));
+ for (const row of rows) if(row.date<asOf){
+  row.originalDate=row.date;row.overdue=true;row.date=asOf;
+ }
+ rows.sort((a,b) => a.date.localeCompare(b.date));
  const managed = new Map(accounts.filter(account => account.balance !== null).map(account => [account.id,account.balance]));
- const balance = new Map(managed);
  const currentAssets = managed.size ? [...managed.values()].reduce((total, amount) => total+amount,0) : null;
- const shortfalls = new Map();
- let monthEnd = currentAssets;
- for (const row of rows) {
-  const from = managed.has(row.from), to = managed.has(row.to);
-  if (row.date.slice(0,7) <= current && monthEnd !== null) monthEnd += (to ? row.amount : 0) - (from ? row.amount : 0);
-  if (from) {
-   balance.set(row.from,balance.get(row.from)-row.amount);
-   const shortage = -balance.get(row.from);
-   if (shortage > (shortfalls.get(row.from)?.amount || 0)) shortfalls.set(row.from,{accountId:row.from,amount:shortage,date:row.date});
+ const accountForecasts = projectAccounts(accounts,rows,current);
+ const withoutPending = new Map(projectAccounts(accounts,rows,current,true).map(account=>[account.accountId,account]));
+ for (const account of accountForecasts) {
+  const confirmed = withoutPending.get(account.accountId);
+  const days = new Map(confirmed.currentDays.map(day=>[day.date,day.balance]));
+  for (const day of account.currentDays) {
+   day.withoutPending = days.get(day.date) ?? day.balance;
   }
-  if (to) balance.set(row.to,balance.get(row.to)+row.amount);
+  account.requiredWithoutPending = confirmed.required;
  }
+ const monthEndTotals={plannedIncome:0,transferIn:0,transferOut:0,payments:0};
+ for(const account of accountForecasts)for(const day of account.currentDays){
+  for(const key of Object.keys(monthEndTotals))monthEndTotals[key]+=day[key];
+ }
+ const monthEnd = currentAssets === null ? null : currentAssets + monthEndTotals.plannedIncome +
+  monthEndTotals.transferIn - monthEndTotals.transferOut - monthEndTotals.payments;
  const withdrawals = rows.filter(row => row.kind === 'bill' || row.kind === 'plan' || row.kind === 'transfer' && managed.has(row.from) && !managed.has(row.to));
  const cardTotal = sum(withdrawals.filter(row => row.kind === 'bill'));
  const recurring = withdrawals.reduce((total,row) => total + (row.futureRecurring || 0),0);
  const confirmed = sum(withdrawals.filter(row => row.kind === 'bill' && !row.uncertain));
  const income = sum(rows.filter(row => row.kind === 'income' && managed.has(row.to)));
  const missingAccount = rows.some(row => row.from && !managed.has(row.from) || row.to && !managed.has(row.to));
- const unassigned = state.entries.some(entry => !entry.void && entry.csvBilling?.status === 'pending' && (entry.ledgerIncluded || entry.csvImported && state.startDate)) ||
-  cards.some(card => (card.opening || 0) > card.bills.filter(bill => bill.status !== 'cancelled').reduce((total,bill) => total + (bill.openingAllocation || 0),0));
- const unprojected = state.plans.some(plan => plan.status === 'planned' &&
+ const pendingEntries=state.entries.filter(entry=>!entry.void&&entry.csvBilling?.status==='pending'&&
+  (entry.ledgerIncluded||entry.csvImported&&state.startDate));
+ const openingUnassigned=cards.some(card => (card.opening || 0) > card.bills.filter(bill => bill.status !== 'cancelled').reduce((total,bill) => total + (bill.openingAllocation || 0),0));
+ const unassigned=openingUnassigned||pendingEntries.length>0;
+ const unmappedPlans=state.plans.filter(plan => plan.status === 'planned' &&
   !state.accounts.some(account => account.id === plan.payment) &&
-  !cards.some(card => card.id === plan.payment && card.accountId && card.closingDay && card.paymentDay)) ||
-  state.entries.some(entry => {
-  if (entry.void) return false;
+  !cards.some(card => card.id === plan.payment && card.accountId && card.closingDay && card.paymentDay));
+ const unprojectedMonths=state.entries.flatMap(entry => {
+  if (entry.void) return [];
   const card = cards.find(item => item.id === entry.payment);
-  if (!card) return false;
+  if (!card) return [];
   const month = entry.ledgerIncluded ? entry.dueDate?.slice(0,7) :
     entry.csvImported && state.startDate && entry.csvBilling?.month >= state.startDate.slice(0,7) ? entry.csvBilling.month : null;
-  return month && !card.bills.some(bill => bill.month === month && bill.status !== 'cancelled');
+  return month && !card.bills.some(bill => bill.month === month && bill.status !== 'cancelled') ? [month] : [];
  });
+ const unprojected=unmappedPlans.length>0||unprojectedMonths.length>0;
+ const currentRows=rows.filter(row=>row.date.slice(0,7)<=current);
+ const currentUnknown=missing||openingUnassigned||pendingEntries.some(entry=>!entry.csvBilling.earliestMonth||entry.csvBilling.earliestMonth<=current)||
+  unmappedPlans.some(plan=>plan.dueDate.slice(0,7)<=current)||unprojectedMonths.some(month=>month<=current)||
+  currentRows.some(row=>row.unknown||row.from&&!managed.has(row.from)||row.to&&!managed.has(row.to))||
+  cash.conflicts.some(conflict=>conflict.month<=current)||overdueIncome.length>0;
  const unknown = rows.some(row => row.unknown) || missing || missingAccount || unassigned || unprojected;
  const reserves = state.fundReserves?.[current] ?? null;
  const reserved = reserves ? reserves.living + sum(reserves.goals) : null;
  const available = currentAssets === null || reserved === null || unknown ? null : currentAssets - sum(withdrawals) - reserved;
- return {currentAssets,monthEnd,available,reserves,horizon,income,unknown,missingAccount,unassigned,unprojected,
+ // Keep the previous field available to clients with an older cached bundle.
+ const shortfalls = accountForecasts.flatMap(account => {
+  if(account.future?.amount>account.required)return [{accountId:account.accountId,date:account.future.date,amount:account.future.amount}];
+  if(!account.required)return [];
+  return [{accountId:account.accountId,date:account.needs.at(-1).date,amount:account.required}];
+ });
+ const currentPayments = sum(withdrawals.filter(row=>row.date.slice(0,7)<=current));
+ const currentAllowance = currentAssets===null||reserved===null||currentUnknown?null:currentAssets-currentPayments-reserved;
+ const cardAllowance = available===null||currentAllowance===null?null:Math.max(0,Math.min(available,currentAllowance));
+ return {currentAssets,monthEnd,monthEndTotals,available,reserves,horizon,income,unknown,missingAccount,unassigned,unprojected,
   tentative:unknown || rows.some(row => row.uncertain || row.virtual),
-  monthTentative:missing || missingAccount || unassigned || unprojected || rows.some(row => row.date.slice(0,7)<=current && (row.uncertain || row.virtual)),
-  confirmed,estimated:cardTotal-confirmed-recurring,recurring,other:sum(withdrawals)-cardTotal,rows,shortfalls:[...shortfalls.values()]};
+  monthTentative:currentUnknown || currentRows.some(row => row.kind==='income'||row.kind==='transfer'||row.uncertain||row.virtual||row.review),
+  currentUnknown,accountForecasts,cardAllowance,currentAllowance,benefitConflicts:cash.conflicts,overdueIncome,
+  confirmed,estimated:cardTotal-confirmed-recurring,recurring,other:sum(withdrawals)-cardTotal,rows,shortfalls};
 }

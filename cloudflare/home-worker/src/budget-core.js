@@ -1,4 +1,4 @@
-import {shiftBillingMonth,ruleNeedsPlan,ruleCoversMonth,billEvidence,projectBill,installmentProgress,forecastFunds} from './budget-forecast.js';
+import {shiftBillingMonth,ruleNeedsPlan,ruleCoversMonth,billEvidence,projectBill,installmentProgress,forecastFunds,plannedCashFlows} from './budget-forecast.js';
 import {budgetPeople, migrateClassification, outstandingAdvance, savingsKinds, spendingKinds} from './budget-classification.js';
 import {importFixedRules,importCardRows,assignCardBilling} from './budget-imports.js';
 import {dailySpending} from '../public/apps/household-budget/daily-spending.js';
@@ -326,8 +326,8 @@ export function accountBalance(s,key,asOf){const a=find(s.accounts,key);if(a.ope
 export function cardBalance(s,key,asOf){const c=find(s.cards,key);if(c.opening===null||!s.startDate||s.startDate>asOf)return null;return c.opening+s.journal.filter(j=>j.scope==='card'&&j.target===key&&j.date<=asOf).reduce((n,j)=>n+j.delta,0);}
 export function budgetSummary(s,asOf,month=asOf.slice(0,7),basis='date'){
  const cards=s.cards.map(c=>({...c,balance:cardBalance(s,c.id,asOf),bills:s.bills.filter(b=>b.cardId===c.id).map(b=>billProjection(s,b))}));
+ const cashPlans=plannedCashFlows(s,asOf).active.filter(p=>p.date.slice(0,7)<=month&&(p.kind!=='income'||p.date>=asOf));
  const accounts=s.accounts.map(a=>{
-  const cashPlans=(s.cashPlans||[]).filter(p=>p.status==='planned'&&p.date.slice(0,7)<=month);
   const plannedIn=cashPlans.filter(p=>p.to===a.id).reduce((n,p)=>n+p.amount,0);
   const plannedOut=cashPlans.filter(p=>p.kind==='transfer'&&p.from===a.id).reduce((n,p)=>n+p.amount,0);
   const pending=s.plans.filter(p=>p.payment===a.id&&p.status==='planned'&&p.dueDate.slice(0,7)<=month);

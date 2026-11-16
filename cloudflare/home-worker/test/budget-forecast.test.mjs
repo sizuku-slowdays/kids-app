@@ -12,7 +12,7 @@ function started(){
  for (const id of ['pink','visa']) state = apply(state,'card.configure',{id,accountId:'bank-0',closingDay:31,paymentDay:27,monthOffset:1});
  return apply(state,'start',{
   startDate:'2026-11-01',confirm:true,
-  accounts:[{id:'bank-0',amount:200000},{id:'cash',amount:100000}],
+  accounts:[{id:'bank-0',amount:200000},{id:'cash',amount:100000},{id:'bank-1',amount:0}],
   cards:[{id:'pink',amount:0},{id:'visa',amount:0}],
  });
 }
@@ -57,7 +57,9 @@ test('confirmed November and provisional December reserve money once without pos
  assert.equal(funds.income,6000);
  assert.equal(funds.available,63000);
  assert.equal(funds.tentative,true);
- assert.deepEqual(funds.shortfalls,[{accountId:'bank-0',date:'2026-12-28',amount:26000}]);
+ assert.deepEqual(funds.accountForecasts[0].future,{date:'2026-12-28',amount:26000,additional:26000});
+ assert.equal(funds.cardAllowance,63000);
+ assert.equal(funds.currentAllowance,120000);
  assert.deepEqual(state.journal,[]);
  const calendar=budgetCalendarItems(state);
  assert.equal(calendar.filter(row=>row.kind==='bill').length,4);
@@ -169,4 +171,86 @@ test('card installment progress waits for the bank withdrawal and goes back on u
  assert.equal(budgetSummary(state,'2026-12-28').installments['card-phone'].paid,1);
  state=apply(state,'bill.undo',{id:b.id},'2026-12-28');
  assert.equal(budgetSummary(state,'2026-12-28').installments['card-phone'].paid,0);
+});
+
+
+test('November funding stays visible after a larger December bill, using balance and dated receipts',()=>{
+ let state=started();
+ state=apply(state,'account.adjust',{id:'bank-0',actual:2000,reason:'Fixture'});
+ state=estimate(state,'pink',firstMonth,179000,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=estimate(state,'pink',secondMonth,60000);
+ state=estimate(state,'visa',secondMonth,0,'confirmed');
+ const save=(id,kind,to,amount,date,from)=>{state=apply(state,'cashPlan.save',{id,name:id,kind,to,amount,date,from});};
+ save('past-pay','income','bank-0',95000,'2026-11-12');
+ save('early-pay','income','bank-0',10000,'2026-11-26');
+ save('late-pay','income','bank-0',5000,'2026-11-30');
+ save('transfer','transfer','bank-0',3000,'2026-11-27','cash');
+ state=apply(state,'plan.add',{id:'future-bank',name:'Future bank payment',payment:'bank-1',amount:13000,dueDate:'2026-12-29',category:'その他'});
+ const previous=structuredClone(state);
+ const funds=budgetSummary(state,'2026-11-14').funds;
+ const bank=funds.accountForecasts.find(account=>account.accountId==='bank-0');
+ assert.equal(bank.currentBalance,2000);
+ const debit=bank.currentDays.find(day=>day.date==='2026-11-27');
+ assert.equal(debit.before,12000);
+ assert.equal(debit.payments,179000);
+ assert.equal(debit.transferIn,3000);
+ assert.equal(debit.balance,-164000);
+ assert.equal(debit.withoutPending,-177000);
+ assert.equal(debit.sameDay,true);
+ assert.deepEqual(bank.needs,[{date:'2026-11-27',additional:164000,total:164000}]);
+ assert.deepEqual(bank.future,{date:'2026-12-28',amount:219000,additional:55000});
+ assert.equal(funds.overdueIncome[0].id,'past-pay');
+ const secondBank=funds.accountForecasts.find(account=>account.accountId==='bank-1');
+ assert.deepEqual(secondBank.needs,[]);
+ assert.deepEqual(secondBank.future,{date:'2026-12-29',amount:13000,additional:13000});
+ assert.equal(funds.monthEnd,-62000);
+ assert.deepEqual(funds.monthEndTotals,{plannedIncome:15000,transferIn:3000,transferOut:3000,payments:179000});
+ assert.equal(funds.accountForecasts.reduce((total,account)=>total+account.monthEnd,0),funds.monthEnd);
+ const january=estimate(state,'pink','2027-01',50000);
+ const updated=budgetSummary(january,'2026-11-14').funds;
+ assert.equal(updated.monthEnd,funds.monthEnd);
+ assert.deepEqual(updated.monthEndTotals,funds.monthEndTotals);
+ assert.deepEqual(updated.accountForecasts.find(account=>account.accountId==='bank-0').futureMonths,[
+  {month:'2026-12',date:'2026-12-28',amount:219000,additional:55000},
+  {month:'2027-01',date:'2027-01-27',amount:269000,additional:50000},
+ ]);
+ assert.deepEqual(state,previous);
+});
+
+test('current positives remain visible when a future amount is missing, and confirmed funds count once',()=>{
+ let state=started();
+ state=estimate(state,'pink',firstMonth,50000,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=apply(state,'cashflow.funds',{month:firstMonth,living:5000,goals:[]});
+ state=apply(state,'cashPlan.save',{id:'benefit',name:'児童扶養手当',kind:'income',date:'2026-11-13',to:'bank-0',amount:10000});
+ state=apply(state,'cashPlan.confirm',{id:'benefit',version:1,date:'2026-11-13'});
+ state=apply(state,'cashPlan.save',{id:'duplicate',name:'児童手当',kind:'income',date:'2026-11-20',to:'bank-0',amount:5000});
+ let summary=budgetSummary(state,today);
+ assert.equal(summary.assets,310000);
+ assert.equal(summary.funds.income,0);
+ assert.equal(summary.funds.monthEnd,260000);
+ assert.deepEqual(summary.funds.benefitConflicts,[{month:firstMonth,ids:['duplicate']}]);
+ state=apply(state,'cashPlan.cancel',{id:'duplicate',version:1});
+ summary=budgetSummary(state,today);
+ assert.equal(summary.funds.currentUnknown,false);
+ assert.equal(summary.funds.currentAllowance,255000);
+ assert.equal(summary.funds.cardAllowance,null);
+ assert.equal(summary.funds.accountForecasts[0].required,0);
+});
+
+test('two conflicting benefit plans are excluded and incremental deadlines do not double count',()=>{
+ let state=started();
+ state=estimate(state,'pink',firstMonth,260000,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=apply(state,'cashPlan.save',{id:'a',name:'児童手当',kind:'income',date:'2026-11-20',to:'bank-0',amount:5000});
+ state=apply(state,'cashPlan.save',{id:'b',name:'児童扶養手当',kind:'income',date:'2026-11-21',to:'bank-0',amount:10000});
+ state=apply(state,'plan.add',{id:'direct',name:'Bank payment',payment:'bank-0',amount:20000,dueDate:'2026-11-30',category:'その他'});
+ const funds=budgetSummary(state,today).funds;
+ assert.equal(funds.income,0);
+ assert.equal(funds.currentUnknown,true);
+ assert.deepEqual(funds.accountForecasts[0].needs,[
+  {date:'2026-11-27',additional:60000,total:60000},
+  {date:'2026-11-30',additional:20000,total:80000},
+ ]);
 });

@@ -215,14 +215,15 @@ async function home() {
   }
   if (!visibleApps.length)
     root.append(el("p", "設定から、使うアプリを追加できます。", "muted"));
-  const previousHome = el("a", null, "previous-home");
-  previousHome.href = "https://cetus.fun/kids-app/";
-  previousHome.append(
-    el("span", "🎮", "icon"),
-    el("strong", "キッズアプリ一覧"),
-    el("small", "›"),
-  );
-  root.append(previousHome);
+  for (const [name, icon, url] of [
+    ["キッズアプリ一覧", "🎮", "https://cetus.fun/kids-app/"],
+    ["プリントメーカー", "🖨️", "https://cetus.fun/maker/"],
+  ]) {
+    const link = el("a", null, "previous-home");
+    link.href = url;
+    link.append(el("span", icon, "icon"), el("strong", name), el("small", "›"));
+    root.append(link);
+  }
 }
 function settings() {
   root.replaceChildren();

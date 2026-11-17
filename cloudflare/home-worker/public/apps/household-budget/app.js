@@ -401,9 +401,15 @@ function accountFundingAmount(account){
  return account.estimatedPayment?'準備不要（見込）':'準備不要';
 }
 function accountFunding(host,account){
+ if(!account.deadlines.length)return;
+ const list=el('ol',undefined,'funding-deadlines');
  for(const step of account.deadlines){
-  row(host,step.date+' まで',yen(step.amount),step.items.join('・')+(step.total!==step.amount?' ／ 累計 '+yen(step.total):''));
+  const item=el('li');
+  const detail=step.items.join('・')+(step.total!==step.amount?' ／ 累計 '+yen(step.total):'');
+  row(item,step.date+' まで',yen(step.amount),detail).classList.add('funding-deadline');
+  list.append(item);
  }
+ host.append(list);
 }
 function accountPaymentLabel(account){
  const amount=account.totals.payments;
@@ -438,8 +444,10 @@ function accountsPage(){
   if(summary.savingsGoals?.unassigned)prep.append(el('p','確保元が未割当の積立は、口座別の不足額に反映できません。','notice'));
   if(data.cards.some(card=>!card.accountId||!card.paymentDay))prep.append(el('p','引落口座や支払日が未登録のカードは、口座別の引落予定に反映されません。','notice'));
   for(const account of view.accounts){
-   const group=el('div');
-   row(group,payName(account.id),accountFundingAmount(account));
+   const group=el('div',undefined,'funding-account');
+   const header=el('div',undefined,'funding-account-header');
+   header.append(el('h3',payName(account.id)),el('strong',accountFundingAmount(account)));
+   group.append(header);
    accountFunding(group,account);
    prep.append(group);
   }

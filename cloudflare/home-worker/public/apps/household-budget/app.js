@@ -416,14 +416,26 @@ function accountPaymentLabel(account){
  if(account.unknownPayment)return amount?yen(amount)+' ＋ 未登録':'未登録';
  return yen(amount)+(account.estimatedPayment?'（見込）':'');
 }
-function accountMonthTotals(host,account,view){
+function accountMonthTotals(host,account,view,currentBalance){
  const historical=view.selected<today.slice(0,7);
  const future=view.selected>today.slice(0,7);
  metric(host,'月初残高'+(future?'（見込）':'（実績）'),account.opening);
  if(account.openedMidMonth)host.append(el('p','この口座は月の途中から残高を記録しています。','muted'));
+ if(!historical&&!future){
+  metric(host,'月初からの残高増減（実績）',account.postedChange);
+  metric(host,'家計簿の現在残高（見込の起点）',currentBalance);
+  const posted=data.journal.filter(item=>item.scope==='account'&&item.target===account.id&&
+   item.date.slice(0,7)===view.selected&&item.date<=today);
+  if(posted.length){
+   const list=details(host,'現在残高に反映済みの取引');
+   for(const item of posted.slice().sort((a,b)=>b.date.localeCompare(a.date))){
+    row(list,item.reason||journalTitle(item),(item.delta>0?'+':'')+yen(item.delta),item.date);
+   }
+  }
+ }
  if(!historical){
   if(account.totals.income)metric(host,'入金予定（見込）',account.totals.income);
-  else row(host,'入金予定','登録なし');
+  else metric(host,'今後の入金予定',0);
   metric(host,'振替入金予定',account.totals.transferIn);
   const payment=el('p',undefined,'metric');
   payment.append(el('span','引落・支出予定'),el('strong',accountPaymentLabel(account)));
@@ -461,7 +473,7 @@ function accountsPage(){
    const labels=['月初 '+yen(account.opening),...(!historical?['引落・支出予定 '+accountPaymentLabel(account)]:[]),
     (historical?'月末実績 ':'月末見込 ')+yen(account.monthEnd)];
    r.firstElementChild.append(el('p',labels.join(' ／ '),'muted'));
-   accountMonthTotals(details(list,a.name+'の内訳'),account,view);
+   accountMonthTotals(details(list,a.name+'の内訳'),account,view,a.balance);
   }
   else r.firstElementChild.append(el('p','今月の引落予定 '+yen(a.upcoming)+' ／ 見込 '+yen(a.forecast),'muted'));
  }
@@ -491,7 +503,7 @@ function accountPage(id){const a=summary.accounts.find(a=>a.id===id);root.append
    row(selected,'引落のために追加で準備',accountFundingAmount(outlook));
    accountFunding(selected,outlook);
   }
-  accountMonthTotals(selected,outlook,view);
+  accountMonthTotals(selected,outlook,view,a.balance);
   if(outlook.items.length){
    const list=details(selected,'対象月の入出金・引落予定');
    for(const item of outlook.items){

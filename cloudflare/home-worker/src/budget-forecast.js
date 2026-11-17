@@ -100,23 +100,64 @@ export function installmentProgress(state, rule) {
  return {paid, remaining, projected, skipped};
 }
 
+const incomeKey = (account, date, amount) => JSON.stringify([account,date,amount]);
+const transferKey = plan => JSON.stringify([plan.from,plan.to,plan.date,plan.amount]);
+
 const benefitName = name => (name || '').normalize('NFKC').match(/児童扶養手当|児童手当/)?.[0];
 
 export function plannedCashFlows(state, asOf) {
- const actualMonths = new Set(state.entries.filter(entry => entry.type === 'income' && entry.ledgerIncluded &&
-  !entry.void && entry.date <= asOf && (benefitName(entry.memo)||entry.splits?.some(part=>benefitName(part.category)||benefitName(part.middle)))).map(entry => entry.date.slice(0,7)));
+ const actualIncome=state.entries.filter(entry=>entry.type==='income'&&entry.ledgerIncluded&&!entry.void&&entry.date<=asOf);
+ const actualBenefits=new Map(),postedIncome=new Map();
+ for(const entry of actualIncome){
+  const key=incomeKey(entry.payment,entry.date,entry.amount);
+  if(!postedIncome.has(key))postedIncome.set(key,[]);
+  postedIncome.get(key).push(entry);
+  const benefit=benefitName(entry.memo)||entry.splits?.map(part=>benefitName(part.category)||benefitName(part.middle)).find(Boolean);
+  if(!benefit)continue;
+  const month=entry.date.slice(0,7);
+  if(!actualBenefits.has(month))actualBenefits.set(month,new Set());
+  actualBenefits.get(month).add(benefit);
+ }
+ const duplicatePostedIncome=[...postedIncome.values()].filter(entries=>entries.length>1)
+  .map(entries=>({date:entries[0].date,accountId:entries[0].payment,amount:entries[0].amount}));
+ const paidBenefitConflicts=[...actualBenefits].filter(([,names])=>names.size>1).map(([month])=>month);
+ const postedTransfers=new Set(state.transfers.filter(transfer=>!transfer.void&&transfer.date<=asOf).map(transferKey));
+ const incomePlans=new Map();
  const benefits = new Map();
  const pending = (state.cashPlans || []).filter(plan => plan.status === 'planned');
  for (const plan of pending) {
-  if (plan.kind !== 'income' || !benefitName(plan.name) && !benefitName(plan.memo)) continue;
+  if (plan.kind !== 'income') continue;
+  const key=incomeKey(plan.to,plan.date,plan.amount);
+  if(!incomePlans.has(key))incomePlans.set(key,[]);
+  incomePlans.get(key).push(plan);
+  if (!benefitName(plan.name) && !benefitName(plan.memo) && !benefitName(plan.category)) continue;
   const month = plan.date.slice(0,7);
   if (!benefits.has(month)) benefits.set(month,[]);
   benefits.get(month).push(plan);
  }
- const conflicts = [...benefits].filter(([month,plans]) => actualMonths.has(month) || plans.length > 1);
- const excluded = new Set(conflicts.flatMap(([,plans]) => plans.map(plan => plan.id)));
+ const conflicts = [...benefits].filter(([month,plans]) => actualBenefits.has(month) || plans.length > 1);
+ const duplicateIncome=[...incomePlans].flatMap(([key,plans])=>postedIncome.has(key)||plans.length>1?plans:[]);
+ const duplicateTransfers=pending.filter(plan=>plan.kind==='transfer'&&postedTransfers.has(transferKey(plan)));
+ const excluded = new Set([...conflicts.flatMap(([,plans]) => plans),...duplicateIncome,...duplicateTransfers].map(plan=>plan.id));
  return {active:pending.filter(plan => !excluded.has(plan.id)),
-  conflicts:conflicts.map(([month,plans]) => ({month,ids:plans.map(plan => plan.id)}))};
+  duplicateIncome,duplicateTransfers,duplicatePostedIncome,paidBenefitConflicts,conflicts:conflicts.map(([month,plans]) => ({month,ids:plans.map(plan => plan.id)}))};
+}
+
+function possiblePaymentDuplicates(state, asOf, month, rows) {
+ const posted=state.entries.filter(entry=>!entry.void&&entry.ledgerIncluded&&entry.date<=asOf);
+ const byAccountDateAmount=new Map();
+ for(const entry of posted){
+  if(entry.type!=='expense')continue;
+  const key=incomeKey(entry.payment,entry.date,entry.amount);
+  if(!byAccountDateAmount.has(key))byAccountDateAmount.set(key,[]);
+  byAccountDateAmount.get(key).push(entry);
+ }
+ const fixed=rows.filter(row=>row.kind==='plan'&&row.date.slice(0,7)<=month&&
+  byAccountDateAmount.has(incomeKey(row.from,row.originalDate||row.date,row.amount)));
+ const csv=[...byAccountDateAmount.values()].filter(entries=>entries.some(entry=>entry.csvImported)&&
+  entries.some(entry=>!entry.csvImported)&&entries.some(entry=>!entry.dueDate||entry.dueDate.slice(0,7)<=month))
+  .map(entries=>({date:entries[0].date,accountId:entries[0].payment,amount:entries[0].amount}));
+ return {fixed,csv};
 }
 
 function projectAccounts(accounts, rows, current, committedOnly = false) {
@@ -211,9 +252,15 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
  }
  const horizon = rows.reduce((month, row) => row.date.slice(0,7) > month ? row.date.slice(0,7) : month, next);
  const cash = plannedCashFlows(state,asOf);
+ const managed = new Map(accounts.filter(account => account.balance !== null).map(account => [account.id,account.balance]));
+ const untrackedTransfers=[];
  const overdueIncome = [];
  for (const plan of cash.active) {
   if (plan.date.slice(0,7)>horizon) continue;
+  if(plan.kind==='transfer'&&(!managed.has(plan.from)||!managed.has(plan.to))){
+   untrackedTransfers.push(plan);
+   continue;
+  }
   if (plan.date<asOf && plan.kind==='income') { overdueIncome.push(plan);continue; }
   // Overdue outflows are still reserved. An overdue transfer is kept whole, with a warning.
   rows.push({kind:plan.kind,id:plan.id,name:plan.name,amount:plan.amount,from:plan.from,to:plan.to,
@@ -223,7 +270,6 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
   row.originalDate=row.date;row.overdue=true;row.date=asOf;
  }
  rows.sort((a,b) => a.date.localeCompare(b.date));
- const managed = new Map(accounts.filter(account => account.balance !== null).map(account => [account.id,account.balance]));
  const currentAssets = managed.size ? [...managed.values()].reduce((total, amount) => total+amount,0) : null;
  const accountForecasts = projectAccounts(accounts,rows,current);
  const withoutPending = new Map(projectAccounts(accounts,rows,current,true).map(account=>[account.accountId,account]));
@@ -241,12 +287,12 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
  }
  const monthEnd = currentAssets === null ? null : currentAssets + monthEndTotals.plannedIncome +
   monthEndTotals.transferIn - monthEndTotals.transferOut - monthEndTotals.payments;
- const withdrawals = rows.filter(row => row.kind === 'bill' || row.kind === 'plan' || row.kind === 'transfer' && managed.has(row.from) && !managed.has(row.to));
+ const withdrawals=rows.filter(row=>row.kind==='bill'||row.kind==='plan');
  const cardTotal = sum(withdrawals.filter(row => row.kind === 'bill'));
  const recurring = withdrawals.reduce((total,row) => total + (row.futureRecurring || 0),0);
  const confirmed = sum(withdrawals.filter(row => row.kind === 'bill' && !row.uncertain));
  const income = sum(rows.filter(row => row.kind === 'income' && managed.has(row.to)));
- const missingAccount = rows.some(row => row.from && !managed.has(row.from) || row.to && !managed.has(row.to));
+ const missingAccount = untrackedTransfers.length>0 || rows.some(row => row.from && !managed.has(row.from) || row.to && !managed.has(row.to));
  const pendingEntries=state.entries.filter(entry=>!entry.void&&entry.csvBilling?.status==='pending'&&
   (entry.ledgerIncluded||entry.csvImported&&state.startDate));
  const openingUnassigned=cards.some(card => (card.opening || 0) > card.bills.filter(bill => bill.status !== 'cancelled').reduce((total,bill) => total + (bill.openingAllocation || 0),0));
@@ -264,10 +310,14 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
  });
  const unprojected=unmappedPlans.length>0||unprojectedMonths.length>0;
  const currentRows=rows.filter(row=>row.date.slice(0,7)<=current);
+ const paymentDuplicates=possiblePaymentDuplicates(state,asOf,current,rows);
  const currentUnknown=missing||openingUnassigned||pendingEntries.some(entry=>!entry.csvBilling.earliestMonth||entry.csvBilling.earliestMonth<=current)||
   unmappedPlans.some(plan=>plan.dueDate.slice(0,7)<=current)||unprojectedMonths.some(month=>month<=current)||
   currentRows.some(row=>row.unknown||row.from&&!managed.has(row.from)||row.to&&!managed.has(row.to))||
-  cash.conflicts.some(conflict=>conflict.month<=current)||overdueIncome.length>0;
+  cash.conflicts.some(conflict=>conflict.month<=current)||overdueIncome.length>0||
+  paymentDuplicates.fixed.length>0||paymentDuplicates.csv.length>0||
+  cash.duplicatePostedIncome.some(entry=>entry.date.slice(0,7)===current)||cash.paidBenefitConflicts.includes(current)||
+  [...cash.duplicateIncome,...cash.duplicateTransfers].some(plan=>plan.date.slice(0,7)<=current)||untrackedTransfers.some(plan=>plan.date.slice(0,7)<=current);
  const unknown = rows.some(row => row.unknown) || missing || missingAccount || unassigned || unprojected;
  const reserves = state.fundReserves?.[current] ?? null;
  const reserved = reserves ? reserves.living + sum(reserves.goals) : null;
@@ -279,11 +329,19 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
   return [{accountId:account.accountId,date:account.needs.at(-1).date,amount:account.required}];
  });
  const currentPayments = sum(withdrawals.filter(row=>row.date.slice(0,7)<=current));
- const currentAllowance = currentAssets===null||reserved===null||currentUnknown?null:currentAssets-currentPayments-reserved;
- const cardAllowance = available===null||currentAllowance===null?null:Math.max(0,Math.min(available,currentAllowance));
+ const fundingGap=accountForecasts.some(account=>account.currentBalance<0||account.requiredWithoutPending>0);
+ const allowanceIssues=[
+  ...(!reserves?['reserves']:[]),
+  ...(currentAssets===null||currentUnknown?['month']:[]),
+  ...(currentRows.some(row=>row.kind==='bill'&&(row.uncertain||row.unknown))?['currentCard']:[]),
+  ...(fundingGap?['funding']:[]),
+ ];
+ const currentAllowance = allowanceIssues.length?null:Math.max(0,currentAssets-currentPayments-reserved);
+ const cardAllowance = available===null||currentAllowance===null||
+  rows.some(row=>row.review&&row.uncertain)?null:Math.max(0,Math.min(available,currentAllowance));
  return {currentAssets,monthEnd,monthEndTotals,available,reserves,horizon,income,unknown,missingAccount,unassigned,unprojected,
   tentative:unknown || rows.some(row => row.uncertain || row.virtual),
   monthTentative:currentUnknown || currentRows.some(row => row.kind==='income'||row.kind==='transfer'||row.uncertain||row.virtual||row.review),
-  currentUnknown,accountForecasts,cardAllowance,currentAllowance,benefitConflicts:cash.conflicts,overdueIncome,
+  currentUnknown,accountForecasts,cardAllowance,currentAllowance,allowanceIssues,benefitConflicts:cash.conflicts,duplicateIncome:cash.duplicateIncome,duplicateTransfers:cash.duplicateTransfers,duplicatePostedIncome:cash.duplicatePostedIncome,paidBenefitConflicts:cash.paidBenefitConflicts,paymentDuplicates,untrackedTransfers,overdueIncome,
   confirmed,estimated:cardTotal-confirmed-recurring,recurring,other:sum(withdrawals)-cardTotal,rows,shortfalls};
 }

@@ -61,7 +61,14 @@ export async function mountedHome(request: Request, dispatch: (request: Request)
     // Only known HOME root paths in quoted literals/attributes are mounted.
     // External URLs and relative imports, legacy /wagaya links, user data and regexes stay intact.
     text = text.replace(/(["'`])(\/(?:api|media|apps)(?:\/[^"'`\s<>]*)?|\/(?:login|setup|register|join|groups|app\.js|style\.css|manifest\.webmanifest|home-icon-192\.png|home-icon-512\.png|icon\.svg)(?:[?#][^"'`\s<>]*)?|\/(?:[?#][^"'`\s<>]*)?)(?=["'`])/g,
-      (_match, quote: string, value: string) => quote + mountedPath(value));
+      (match, quote: string, value: string, offset: number) => {
+        if (/^\/(?:[?#]|$)/.test(value)) {
+          // A standalone slash is also used as a date or Base64 delimiter in application scripts.
+          const before = text.slice(Math.max(0, offset-80), offset);
+          if (!/(?:\b(?:href|action|src|location)\s*=\s*|\blocation\.(?:replace|assign)\(\s*)$/i.test(before)) return match;
+        }
+        return quote + mountedPath(value);
+      });
     if (type.includes("html")) text = text.replace("</head>", '<script src="/wagaya/mount-pwa.js" defer></script></head>');
     if (type.includes("manifest+json")) {
       const manifest = JSON.parse(text);

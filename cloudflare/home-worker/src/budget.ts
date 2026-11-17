@@ -2,7 +2,7 @@ import {budgetClassificationPreview} from './budget-classification.js';
 import {fingerprint,merchantKey} from '../public/apps/household-budget/card-csv.js';
 import {budgetCalendarStatements,budgetCalendarItem,budgetCalendarStatus,deliverBudgetCalendar} from './budget-calendar.ts';
 import {newBudget,applyBudgetCommand,budgetSummary,missingBudgetMonths,importPreview,legacyExport,BudgetError,type BudgetState} from './budget-core.js';
-type BudgetEnv=Env & {BUDGET_SCHEDULES_ENABLED?:string;BUDGET_CALENDAR_ENABLED?:string;NOTIFICATION_SERVICE?:Fetcher};
+type BudgetEnv=Env & {BUDGET_MONTHLY_BENEFIT_DEFAULTS?:string;BUDGET_SCHEDULES_ENABLED?:string;BUDGET_CALENDAR_ENABLED?:string;NOTIFICATION_SERVICE?:Fetcher};
 const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
 const today=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
 async function hash(value:string){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(n=>n.toString(16).padStart(2,'0')).join('');}
@@ -36,9 +36,14 @@ async function legacyBankRows(env:BudgetEnv,owner:string){
  const raw=await legacyData(env,owner),deleted=new Set((raw.deletedIds||[]).map((x:any)=>typeof x==='string'?x:x.id));
  return (raw.entries||[]).filter((e:any)=>e.type==='expense'&&!e.receiptId&&!deleted.has(e.id)).map((e:any)=>({id:e.id,type:e.type,date:e.date,amount:e.amount,payment:e.payment,category:e.category||'その他',person:e.person||'',memo:e.memo||'',settleMonth:e.settleMonth||e.date?.slice(0,7)}));
 }
+function monthlyBenefitDefaults(env:BudgetEnv,userId:string){
+ if(userId!=='bootstrap-admin'||!env.BUDGET_MONTHLY_BENEFIT_DEFAULTS)return undefined;
+ const match=/^(\d{1,12}):(\d{1,12})$/.exec(env.BUDGET_MONTHLY_BENEFIT_DEFAULTS);
+ return match?{enabled:true,even:Number(match[1]),odd:Number(match[2])}:undefined;
+}
 export async function budgetRoute(request:Request,env:BudgetEnv,userId:string,read:(request:Request,max?:number)=>Promise<any>){
  try{const url=new URL(request.url),path=url.pathname.slice('/api/household-budget'.length),method=request.method;
- if(method==='GET'&&path===''){const value=await state(env,userId),asOf=today(),month=url.searchParams.get('month')||asOf.slice(0,7),basis=url.searchParams.get('basis')==='settleMonth'?'settleMonth':'date';return json({...value,userId,today:asOf,calendar:await budgetCalendarStatus(env,userId),automation:{scheduleEnabled:env.BUDGET_SCHEDULES_ENABLED==='1',calendarEnabled:env.BUDGET_CALENDAR_ENABLED==='1'},summary:budgetSummary(value.data,asOf,month,basis)});}
+ if(method==='GET'&&path===''){const value=await state(env,userId),asOf=today(),month=url.searchParams.get('month')||asOf.slice(0,7),basis=url.searchParams.get('basis')==='settleMonth'?'settleMonth':'date';return json({...value,userId,today:asOf,calendar:await budgetCalendarStatus(env,userId),automation:{scheduleEnabled:env.BUDGET_SCHEDULES_ENABLED==='1',calendarEnabled:env.BUDGET_CALENDAR_ENABLED==='1'},summary:budgetSummary(value.data,asOf,month,basis,{defaultMonthlyBenefit:monthlyBenefitDefaults(env,userId)})});}
  if(method==='GET'&&path==='/legacy-fixed-preview'){
  const raw=await legacyData(env,userId),current=await state(env,userId),deleted=new Set((raw.deletedIds||[]).map((x:any)=>typeof x==='string'?x:x.id));
  const rules=(raw.plan?.fixedExpenses||[]).filter((r:any)=>r?.id&&!r.deletedAt);

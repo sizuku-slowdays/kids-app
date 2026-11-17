@@ -2,7 +2,7 @@ export class BudgetError extends Error {constructor(message:string,status?:numbe
 export type BudgetState = Record<string, any>;
 export function newBudget():BudgetState;
 export function applyBudgetCommand(state:BudgetState,command:{type:string;data?:any},context:{today:string;eventId:string;importHash?:string}):BudgetState;
-export function budgetSummary(state:BudgetState,today:string,month?:string,basis?:string):any;
+export function budgetSummary(state:BudgetState,today:string,month?:string,basis?:string,options?:{defaultMonthlyBenefit?:{enabled:boolean,even:number,odd:number}}):any;
 export function importPreview(input:any):any;
 export function legacyExport(state:BudgetState):any;
 export function businessDate(date:string,holidays?:string[]):string;

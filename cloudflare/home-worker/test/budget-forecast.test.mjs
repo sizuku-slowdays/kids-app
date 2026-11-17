@@ -254,3 +254,117 @@ test('two conflicting benefit plans are excluded and incremental deadlines do no
   {date:'2026-11-30',additional:20000,total:80000},
  ]);
 });
+
+test('confirmed manual income and a matching income plan do not inflate the forecast',()=>{
+ let state=started();
+ state=estimate(state,'pink',firstMonth,50000,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=apply(state,'entry.add',{id:'pay',type:'income',amount:22000,date:today,payment:'bank-0',category:'給与',memo:'Salary'});
+ state=apply(state,'cashPlan.save',{id:'salary',name:'Salary',kind:'income',date:today,to:'bank-0',amount:22000});
+ state=apply(state,'cashflow.funds',{month:firstMonth,living:0,goals:[]});
+ const summary=budgetSummary(state,today);
+ assert.equal(summary.funds.monthEnd,272000);
+ assert.equal(summary.funds.monthEndTotals.plannedIncome,0);
+ assert.deepEqual(summary.funds.duplicateIncome.map(plan=>plan.id),['salary']);
+ assert.equal(summary.funds.currentAllowance,null);
+ assert.equal(state.cashPlans[0].status,'planned');
+});
+
+test('cash on another account or an unconfirmed deposit cannot unblock spending before the debit',()=>{
+ let state=started();
+ state=estimate(state,'pink',firstMonth,210000,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=apply(state,'cashPlan.save',{id:'deposit',name:'Pending deposit',kind:'income',date:'2026-11-23',to:'bank-0',amount:50000});
+ state=apply(state,'cashflow.funds',{month:firstMonth,living:0,goals:[]});
+ const {funds}=budgetSummary(state,today);
+ assert.equal(funds.monthEnd,140000);
+ assert.equal(funds.accountForecasts[0].required,0);
+ assert.equal(funds.accountForecasts[0].requiredWithoutPending,10000);
+ assert.equal(funds.currentAllowance,null);
+ assert.ok(funds.allowanceIssues.includes('funding'));
+});
+
+test('transfers within the managed set net to zero and a missing-side transfer is flagged',()=>{
+ let state=started();
+ state=estimate(state,'pink',firstMonth,0,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=apply(state,'cashPlan.save',{id:'internal',name:'Internal',kind:'transfer',date:today,from:'bank-0',to:'cash',amount:300});
+ state=apply(state,'cashPlan.save',{id:'untracked',name:'Untracked',kind:'transfer',date:today,from:'bank-2',to:'bank-0',amount:1000});
+ const {funds}=budgetSummary(state,today);
+ assert.equal(funds.monthEnd,300000);
+ assert.equal(funds.monthEndTotals.transferIn,300);
+ assert.equal(funds.monthEndTotals.transferOut,300);
+ assert.equal(funds.untrackedTransfers[0].id,'untracked');
+ assert.equal(funds.currentUnknown,true);
+});
+
+test('a matching bank expense and pending pull are kept for review without offering a spending amount',()=>{
+ let state=started();
+ state=estimate(state,'pink',firstMonth,0,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=apply(state,'entry.add',{id:'bank-debit',type:'expense',bankEntry:true,amount:900,date:today,payment:'bank-0',category:'その他'});
+ state=apply(state,'plan.add',{id:'bank-pending',name:'Pending pull',payment:'bank-0',amount:900,dueDate:today,category:'その他'});
+ state=apply(state,'cashflow.funds',{month:firstMonth,living:0,goals:[]});
+ const {funds}=budgetSummary(state,today);
+ assert.equal(funds.paymentDuplicates.fixed[0].id,'once:bank-pending');
+ assert.equal(funds.currentAllowance,null);
+ assert.equal(state.plans.find(plan=>plan.id==='once:bank-pending').status,'planned');
+});
+
+test('both posted child benefits are flagged without rewriting the bank ledger',()=>{
+ let state=started();
+ state=estimate(state,'pink',firstMonth,0,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=apply(state,'cashflow.funds',{month:firstMonth,living:0,goals:[]});
+ for(const [id,amount,memo] of [['benefit-a',10000,'児童扶養手当'],['benefit-b',4000,'児童手当']]){
+  state=apply(state,'entry.add',{id,type:'income',amount,date:today,payment:'bank-0',category:'手当',memo});
+ }
+ const {funds}=budgetSummary(state,today);
+ assert.equal(funds.currentAssets,314000);
+ assert.deepEqual(funds.paidBenefitConflicts,[firstMonth]);
+ assert.equal(funds.currentAllowance,null);
+});
+
+test('spending month uses previous payroll and cash or bank payment dates, with rolling carryover',()=>{
+ let state=started();
+ // Begin in October so the preceding payroll is independently tracked.
+ state.startDate='2026-10-01';
+ for(const account of state.accounts)if(account.openingDate)account.openingDate=state.startDate;
+ const post=(id,type,amount,date,payment,category)=>{state=apply(state,'entry.add',{id,type,amount,date,payment,category,bankEntry:true});};
+ post('oct-salary','income',100000,'2026-10-30','bank-0','給与');
+ post('nov-cash','expense',5000,'2026-11-03','cash','食費');
+ post('nov-bank','expense',3000,'2026-11-04','bank-0','固定費');
+ post('oct-card','expense',4000,'2026-10-28','pink','食費');
+ state=estimate(state,'pink',firstMonth,4000,'confirmed');
+ state=estimate(state,'visa',firstMonth,0,'confirmed');
+ state=estimate(state,'pink',secondMonth,2000,'confirmed');
+ state=estimate(state,'visa',secondMonth,0,'confirmed');
+ state=apply(state,'cashPlan.save',{id:'nov-payroll',kind:'income',name:'給与',amount:110000,date:'2026-11-30',to:'bank-0'});
+ state=apply(state,'transfer',{from:'bank-0',to:'cash',amount:1000,date:'2026-11-10'});
+ const opts={defaultMonthlyBenefit:{enabled:true,even:10000,odd:20000}};
+ const [nov,dec]=budgetSummary(state,today,firstMonth,'date',opts).spendingMonths.months;
+ assert.equal(nov.carry,300000);
+ assert.equal(nov.salary,100000);
+ assert.equal(nov.benefit,20000);
+ assert.deepEqual(nov.payments,{bank:3000,cash:5000,card:4000});
+ assert.equal(nov.remaining,408000);
+ assert.equal(dec.carry,408000);
+ assert.equal(dec.salary,110000);
+ assert.equal(dec.benefit,10000);
+ assert.equal(dec.payments.card,2000);
+ assert.equal(dec.remaining,526000);
+});
+
+test('registered benefit replaces automatic amount and disabled rules do not reappear',()=>{
+ const opts={defaultMonthlyBenefit:{enabled:true,even:10000,odd:20000}};
+ let state=started();
+ state=apply(state,'entry.add',{id:'actual-benefit',type:'income',amount:25000,date:today,payment:'bank-0',category:'手当',memo:'児童扶養手当'});
+ const months=()=>budgetSummary(state,today,firstMonth,'date',opts).spendingMonths.months;
+ assert.equal(months()[0].benefit,25000);
+ assert.equal(months()[1].benefit,10000);
+ state=apply(state,'cashflow.monthlyBenefit',{enabled:true,even:12000,odd:23000});
+ assert.equal(months()[1].benefit,12000);
+ state=apply(state,'cashflow.monthlyBenefit',{enabled:false,even:0,odd:0});
+ assert.equal(months()[0].benefit,25000);
+ assert.equal(months()[1].benefit,0);
+});

@@ -48,6 +48,15 @@ test('original wagaya URL serves HOME, sessions, app assets and redirects on the
   const me=await (await call('/api/me',{cookie})).json();assert.equal(me.user.display_name,'非公開の親');
   r=await call('/',{cookie});assert.equal(r.status,200);assert.equal(r.headers.get('Location'),null);
   r=await call('/mama.html?source=installed',{cookie});assert.equal(r.status,200);assert.equal(r.headers.get('Location'),null);assert.match(await r.text(),/src="\/wagaya\/app.js"/);
+  await db.prepare("INSERT OR IGNORE INTO personal_app_access (user_id,app_id) VALUES (?,?)").bind(me.user.id,'household-budget').run();
+  for(const [path,fragment] of [
+   ['/apps/household-budget/app.js',"return date.replaceAll('-','/');"],
+   ['/apps/passbook/book.js',"replaceAll('-','/')"],
+  ]){
+   const asset=await call(path,{cookie});
+   assert.equal(asset.status,200);
+   assert.ok((await asset.text()).includes(fragment),path);
+  }
   const apps=await (await call('/api/home',{cookie})).json();assert.equal(apps.find(a=>a.id==='muscle-bank').path,'/wagaya/apps/muscle-bank/');
   r=await call('/apps/muscle-bank/',{cookie});assert.match(await r.text(),/href="\/wagaya\/"/);
   r=await call('/apps/muscle-bank/config.js',{cookie});assert.match(await r.text(),/apiBase:'\/wagaya\/api\/muscle-bank'/);

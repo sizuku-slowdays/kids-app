@@ -236,7 +236,7 @@ function projectAccounts(accounts, rows, current, committedOnly = false) {
  });
 }
 
-export function forecastFunds(state, accounts, cards, asOf, missing, availablePlans = state.plans, savings = {holdings:{},plans:[],reserved:0,unassigned:0}) {
+export function forecastFunds(state, accounts, cards, asOf, missing, availablePlans = state.plans, savings = {holdings:{},plans:[],reserved:0,unassigned:0}, through = asOf.slice(0,7)) {
  const current = asOf.slice(0,7), next = shiftBillingMonth(current,1);
  const rows = [];
  for (const plan of availablePlans) {
@@ -250,7 +250,7 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
    futureRecurring:bill.forecast.recurringContribution,
    virtual:!!bill.virtual});
  }
- const horizon = rows.reduce((month, row) => row.date.slice(0,7) > month ? row.date.slice(0,7) : month, next);
+ const horizon = rows.reduce((month, row) => row.date.slice(0,7) > month ? row.date.slice(0,7) : month, through>next?through:next);
  const cash = plannedCashFlows(state,asOf);
  const managed = new Map(accounts.filter(account => account.balance !== null).map(account => [account.id,account.balance]));
  const untrackedTransfers=[];

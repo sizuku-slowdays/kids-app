@@ -43,7 +43,7 @@ function monthlyBenefitDefaults(env:BudgetEnv,userId:string){
 }
 export async function budgetRoute(request:Request,env:BudgetEnv,userId:string,read:(request:Request,max?:number)=>Promise<any>){
  try{const url=new URL(request.url),path=url.pathname.slice('/api/household-budget'.length),method=request.method;
- if(method==='GET'&&path===''){const value=await state(env,userId),asOf=today(),month=url.searchParams.get('month')||asOf.slice(0,7),basis=url.searchParams.get('basis')==='settleMonth'?'settleMonth':'date';return json({...value,userId,today:asOf,calendar:await budgetCalendarStatus(env,userId),automation:{scheduleEnabled:env.BUDGET_SCHEDULES_ENABLED==='1',calendarEnabled:env.BUDGET_CALENDAR_ENABLED==='1'},summary:budgetSummary(value.data,asOf,month,basis,{defaultMonthlyBenefit:monthlyBenefitDefaults(env,userId)})});}
+ if(method==='GET'&&path===''){const value=await state(env,userId),asOf=today(),month=url.searchParams.get('month')||asOf.slice(0,7),basis=url.searchParams.get('basis')==='settleMonth'?'settleMonth':'date';return json({...value,userId,today:asOf,calendar:await budgetCalendarStatus(env,userId),automation:{scheduleEnabled:env.BUDGET_SCHEDULES_ENABLED==='1',calendarEnabled:env.BUDGET_CALENDAR_ENABLED==='1'},summary:budgetSummary(value.data,asOf,month,basis,{accountMonth:url.searchParams.get('accountMonth')||undefined,defaultMonthlyBenefit:monthlyBenefitDefaults(env,userId)})});}
  if(method==='GET'&&path==='/legacy-fixed-preview'){
  const raw=await legacyData(env,userId),current=await state(env,userId),deleted=new Set((raw.deletedIds||[]).map((x:any)=>typeof x==='string'?x:x.id));
  const rules=(raw.plan?.fixedExpenses||[]).filter((r:any)=>r?.id&&!r.deletedAt);

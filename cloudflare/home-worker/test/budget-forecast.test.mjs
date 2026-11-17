@@ -368,3 +368,78 @@ test('registered benefit replaces automatic amount and disabled rules do not rea
  assert.equal(months()[0].benefit,25000);
  assert.equal(months()[1].benefit,0);
 });
+
+const monthlyAccount=(state,month,id='bank-0',date=today)=>
+ budgetSummary(state,date,undefined,undefined,{accountMonth:month}).accountMonth.accounts.find(a=>a.id===id);
+
+test('account month carries November closing balance into December and projects the December card bill once',()=>{
+ let s=started();
+ s=estimate(s,'pink',firstMonth,197000,'confirmed');
+ s=estimate(s,'visa',firstMonth,0,'confirmed');
+ s=apply(s,'entry.add',{id:'card-nov',type:'expense',date:today,payment:'pink',amount:80000,category:'その他'});
+ s=estimate(s,'visa',secondMonth,0,'confirmed');
+ assert.equal(monthlyAccount(s,firstMonth).monthEnd,3000);
+ let dec=monthlyAccount(s,secondMonth);
+ assert.equal(dec.opening,3000);
+ assert.equal(dec.totals.payments,80000);
+ assert.equal(dec.required,77000);
+ assert.equal(dec.estimatedPayment,true);
+ assert.deepEqual(dec.deadlines.map(x=>[x.date,x.amount]),[['2026-12-28',77000]]);
+ s=estimate(s,'pink',secondMonth,80000,'confirmed');
+ dec=monthlyAccount(s,secondMonth);
+ assert.equal(dec.totals.payments,80000);
+ assert.equal(dec.items.filter(item=>item.kind==='bill'&&item.amount>0).length,1);
+ assert.equal(dec.estimatedPayment,false);
+});
+
+test('monthly transfer is mirrored and funding ignores later or same-day income; only the peak shortfall is required',()=>{
+ let s=started();
+ const bank='bank-1';
+ s=apply(s,'plan.add',{id:'first',name:'First debit',amount:10000,payment:bank,dueDate:'2026-12-07'});
+ s=apply(s,'plan.add',{id:'second',name:'Second debit',amount:10000,payment:bank,dueDate:'2026-12-21'});
+ s=apply(s,'cashPlan.save',{id:'move',name:'Transfer',kind:'transfer',from:'bank-0',to:bank,date:'2026-12-01',amount:4000});
+ s=apply(s,'cashPlan.save',{id:'salary',name:'Deposit',kind:'income',to:bank,date:'2026-12-07',amount:8000});
+ s=apply(s,'cashPlan.save',{id:'late',name:'Later deposit',kind:'income',to:bank,date:'2026-12-22',amount:20000});
+ const dec=monthlyAccount(s,secondMonth,bank);
+ assert.equal(dec.totals.transferIn,4000);
+ assert.equal(monthlyAccount(s,secondMonth).totals.transferOut,4000);
+ assert.equal(dec.totals.income,28000);
+ assert.equal(dec.required,8000);
+ assert.equal(dec.monthEnd,12000);
+ assert.deepEqual(dec.deadlines.map(x=>[x.date,x.amount,x.total]),[['2026-12-07',6000,6000],['2026-12-21',2000,8000]]);
+});
+
+test('twelve-month outlook is read-only, keeps reservations outside bank balances and records past balances from the journal',()=>{
+ let s=started();
+ s=apply(s,'rule.save',{id:'month-end',name:'Recurring debit',amount:1000,payment:'bank-1',day:31,firstMonth:secondMonth});
+ s=apply(s,'entry.add',{id:'old-debit',type:'expense',date:today,payment:'bank-0',bankEntry:true,amount:500,category:'その他'});
+ s=apply(s,'cashPlan.save',{id:'later-pay',name:'Later debit funding',kind:'income',to:'bank-1',date:'2027-11-05',amount:123});
+ s.savingsGoals=[{id:'test-goal',name:'Saving',category:'other',target:null,status:'active',holdings:{'bank-0':100000},frequency:'irregular',scheduleAsOf:today}];
+ s=estimate(s,'pink',secondMonth,120000,'confirmed');
+ const before=structuredClone(s);
+ const last=budgetSummary(s,today,undefined,undefined,{accountMonth:'2027-11'}).accountMonth;
+ assert.equal(last.max,'2027-11');assert.equal(last.min,'2025-11');
+ const far=last.accounts.find(a=>a.id==='bank-1');
+ assert.equal(far.totals.payments,2000);assert.equal(far.totals.income,123);
+ assert.deepEqual(far.items.filter(item=>item.kind==='plan').map(item=>item.date),['2027-11-01','2027-11-30']);
+ const jan=monthlyAccount(s,'2027-01','bank-1');
+ assert(jan.items.some(item=>item.date==='2027-01-04'&&item.name==='Recurring debit'));
+ const dec=monthlyAccount(s,secondMonth);
+ assert.equal(dec.opening,199500);assert.equal(dec.reserved,100000);
+ assert.equal(dec.monthEnd,79500);assert.equal(dec.required,20500);
+ assert.equal(dec.incomplete,true);
+ const nov=monthlyAccount(s,firstMonth,'bank-0','2026-12-10');
+ assert.equal(nov.opening,200000);assert.equal(nov.monthEnd,199500);
+ assert.equal(nov.required,null);
+ assert.deepEqual(s,before);
+});
+
+test('changing the confirmed debit date moves the amount to that month without creating a second charge',()=>{
+ let s=started();
+ s=estimate(s,'pink',secondMonth,25000,'confirmed');
+ const saved=bill(s);
+ s=apply(s,'bill.edit',{id:saved.id,version:saved.version,dueDate:'2027-01-08',actual:25000,reason:'Adjusted bank withdrawal date'});
+ assert(!monthlyAccount(s,secondMonth).items.some(item=>item.id===saved.id));
+ const jan=monthlyAccount(s,'2027-01');
+ assert.deepEqual(jan.items.filter(item=>item.id===saved.id).map(item=>[item.date,item.amount,item.uncertain]),[['2027-01-08',25000,false]]);
+});

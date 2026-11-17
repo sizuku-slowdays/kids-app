@@ -509,6 +509,12 @@ function accountStatement(host,a,account,view){
  return statement;
 }
 function accountsPage(){
+ const overview=section('口座一覧・現在残高');
+ overview.className='account-overview';
+ const links=el('ul',undefined,'account-overview-grid');
+ links.setAttribute('role','list');
+ overview.append(links);
+ if(!summary.accounts.length)overview.append(el('p','登録済みの口座はありません。','muted'));
  const view=accountMonthPicker();
  const current=today.slice(0,7);
  const historical=view?.selected<current;
@@ -522,7 +528,16 @@ function accountsPage(){
   const card=section('',root);
   card.className='passbook-account';
   const title=el('h2',a.name);
+  title.tabIndex=-1;
   card.append(title);
+  const item=el('li');
+  const jump=button('',()=>{
+   card.scrollIntoView({block:'start'});
+   title.focus({preventScroll:true});
+  },'account-overview-link');
+  jump.append(el('span',a.name),el('strong',yen(a.balance),a.balance<0?'negative':''));
+  item.append(jump);
+  links.append(item);
   const figures=el('dl',undefined,'passbook-figures passbook-balances');
   accountMoney(figures,'現在残高',a.balance);
   if(account){

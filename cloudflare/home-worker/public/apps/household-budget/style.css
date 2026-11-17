@@ -5,14 +5,37 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere}
 .savings-actions button{flex:0 1 auto}
 progress{display:block;width:100%;height:18px;margin-top:14px;accent-color:var(--main)}
 .account-month-controls{display:flex;align-items:end;gap:8px}
-.account-month-controls label{flex:1;margin:0}
+.account-month-controls label{flex:1;min-width:0;margin:0}
 .account-month-controls button{white-space:nowrap}
-.funding-account{padding:14px 0;border-top:1px solid var(--line)}
-.funding-account-header{display:flex;align-items:baseline;justify-content:space-between;gap:6px 16px;flex-wrap:wrap}
-.funding-account-header h3{margin:0;font-size:1.1rem}
-.funding-account-header strong{font-size:1.1rem;font-variant-numeric:tabular-nums}
 .funding-deadlines{margin:8px 0 0 clamp(12px,3vw,28px);padding:0 0 0 12px;list-style:none;border-inline-start:2px solid var(--line)}
 .funding-deadline.row{align-items:baseline;padding:8px 0;gap:4px 12px;font-size:.875rem;border-bottom:0}
 .funding-deadlines li+li{border-top:1px solid #f0e8da}
 .funding-deadline p{font-size:.8rem;margin:3px 0 0}
 .funding-deadline>strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.passbook-account{padding:clamp(14px,3vw,22px);scroll-margin-top:12px}
+.passbook-account h2{margin:0 0 14px}
+.passbook-figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px 16px;margin:12px 0}
+.passbook-figures dt{color:#776c5c;font-size:.84rem;line-height:1.4}
+.passbook-figures dd{margin:4px 0 0;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.passbook-balances dd{font-size:1.1rem}
+.passbook-funding,.passbook-statement{margin:8px 0 0}
+.passbook-funding>summary{color:#795018;background:#fbf4e5;border-radius:10px;padding:10px 12px}
+.passbook-funding h3{margin:14px 0 4px;font-size:.95rem}
+.passbook-statement>summary{color:#795018}
+.passbook-table{table-layout:fixed}
+.passbook-table caption{text-align:left;color:#776c5c;font-size:.84rem;padding-bottom:8px}
+.passbook-table th,.passbook-table td{vertical-align:top;border-bottom:1px solid #f0e8da}
+.passbook-table th:first-child{width:48%}
+.passbook-table th:not(:first-child),.passbook-table td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.passbook-table time,.passbook-table small{display:block;color:#776c5c;font-size:.78rem}
+.passbook-entry-name{display:block;line-height:1.5}
+.passbook-status{font-size:.76rem;color:#685f50}
+.passbook-planned{background:#fdf9f0}
+.passbook-planned .passbook-status{color:#8c591d}
+.passbook-action{display:block;font-size:.84rem;min-height:44px;padding:7px 4px}
+@media(max-width:480px){
+ .passbook-balances{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .passbook-table{font-size:.82rem}
+ .passbook-table th:first-child{width:44%}
+}

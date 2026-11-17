@@ -443,3 +443,42 @@ test('changing the confirmed debit date moves the amount to that month without c
  const jan=monthlyAccount(s,'2027-01');
  assert.deepEqual(jan.items.filter(item=>item.id===saved.id).map(item=>[item.date,item.amount,item.uncertain]),[['2027-01-08',25000,false]]);
 });
+
+test('account passbook joins dated postings and forecasts without writing either month',()=>{
+ let s=started();
+ s=apply(s,'entry.add',{id:'benefit-actual',type:'income',date:'2026-11-11',payment:'bank-0',amount:2000,category:'その他',memo:'Deposit'});
+ s=apply(s,'transfer',{from:'bank-0',to:'bank-1',date:today,amount:1000,reason:'Transfer'});
+ s=apply(s,'plan.add',{id:'late-debit',name:'Debit',payment:'bank-0',dueDate:'2026-11-18',amount:207000});
+ s=apply(s,'cashPlan.save',{id:'same-day-credit',kind:'income',name:'Deposit',to:'bank-0',date:'2026-11-18',amount:11000});
+ s=apply(s,'cashPlan.save',{id:'earlier-credit',kind:'income',name:'Earlier',to:'bank-0',date:'2026-11-16',amount:500});
+ s=estimate(s,'pink',firstMonth,0,'confirmed');
+ s=estimate(s,'visa',firstMonth,0,'confirmed');
+ const before=structuredClone(s);
+ const nov=monthlyAccount(s,firstMonth);
+ assert.deepEqual(nov.transactions.filter(row=>row.delta).map(row=>[row.date,row.status,row.delta,row.balance]),[
+  ['2026-11-11','posted',2000,202000],
+  [today,'posted',-1000,201000],
+  ['2026-11-16','planned',500,201500],
+  ['2026-11-18','planned',-207000,-5500],
+  ['2026-11-18','planned',11000,5500],
+ ]);
+ assert.deepEqual(nov.nextDebit,{date:'2026-11-18',cost:207000,unknown:false,before:201500,incomingBefore:500,gap:5500});
+ assert.equal(nov.required,5500);
+ assert.equal(nov.monthEnd,5500);
+ assert.equal(monthlyAccount(s,secondMonth).basis,5500);
+ assert.equal(monthlyAccount(s,firstMonth,'bank-1').transactions[0].delta,1000);
+ assert.deepEqual(s,before);
+});
+
+test('unpriced payments are marked and historical passbooks contain only journal rows',()=>{
+ let s=started();
+ s=apply(s,'entry.add',{id:'oct-record',type:'income',date:'2026-11-01',payment:'bank-0',amount:1200,category:'その他'});
+ const past=monthlyAccount(s,firstMonth,'bank-0','2026-12-01');
+ assert.equal(past.monthEnd,201200);
+ assert.equal(past.required,null);
+ assert(past.transactions.every(row=>row.status==='posted'));
+ const dec=monthlyAccount(s,secondMonth);
+ assert(dec.transactions.some(row=>row.status==='planned'&&row.unknown));
+ assert.equal(dec.incomplete,true);
+ assert.equal(monthlyAccount(s,secondMonth,'bank-3').basis,null);
+});

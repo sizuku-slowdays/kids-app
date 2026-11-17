@@ -26,7 +26,13 @@ export function projectAccountMonth(state, accounts, cards, rows, holdings, toda
    account.opening+entries.filter(entry=>entry.date<first).reduce((total,entry)=>total+entry.delta,0);
   const basis=month===current?account.balance:opening;
   const reserved=historical?0:holdings[id]||0;
-  let balance=basis, required=0;
+  let postedBalance=opening;
+  const transactions=posted.sort((a,b)=>a.date.localeCompare(b.date)).map(entry=>{
+   if(postedBalance!==null)postedBalance+=entry.delta;
+   return {id:entry.id,date:entry.date,source:entry.source,reason:entry.reason,reversal:entry.reversal,
+    delta:entry.delta,balance:postedBalance,status:'posted'};
+  });
+  let balance=basis, required=0, incomingBefore=0, nextDebit=null;
   const deadlines=[];
   const days=new Map();
   const totals={income:0,transferIn:0,payments:0,transferOut:0};
@@ -36,16 +42,25 @@ export function projectAccountMonth(state, accounts, cards, rows, holdings, toda
    if(!days.has(item.date))days.set(item.date,[]);
    days.get(item.date).push(item);
   }
-  if(balance!==null&&!historical)for(const [date,movements] of days){
+  for(const [date,movements] of days){
    const out=movements.filter(item=>item.from===id);
+   const incoming=movements.filter(item=>item.to===id);
    const cost=out.reduce((sum,item)=>sum+item.amount,0);
-   // A same-day credit has no guaranteed ordering relative to a debit.
-   const gap=cost ? Math.max(0,reserved+cost-balance) : 0;
+   // The funding calculation cannot rely on a same-day credit arriving first.
+   const gap=balance!==null&&cost ? Math.max(0,reserved+cost-balance) : 0;
+   const unknown=out.some(item=>item.unknown);
+   if(!nextDebit&&(cost||unknown)){
+    nextDebit={date,cost,unknown,before:balance,incomingBefore,gap:balance===null?null:gap};
+   }
    if(gap>required){
     deadlines.push({date,amount:gap-required,total:gap,items:out.map(item=>item.name)});
     required=gap;
    }
-   balance=movements.reduce(change,balance);
+   for(const item of [...out,...incoming]){
+    if(balance!==null)balance=change(balance,item);
+    transactions.push({...item,delta:item.to===id?item.amount:-item.amount,balance,status:'planned'});
+   }
+   incomingBefore+=incoming.reduce((sum,item)=>sum+item.amount,0);
   }
   const accountCards=cards.filter(card=>card.accountId===id);
   const unassignedCard=accountCards.some(card=>
@@ -59,9 +74,9 @@ export function projectAccountMonth(state, accounts, cards, rows, holdings, toda
     plan.kind==='transfer'&&(plan.from===id||plan.to===id)&&
      (!knownIds.has(plan.from)||!knownIds.has(plan.to))
    ));
-  return {id,postedChange:known?posted.reduce((total,entry)=>total+entry.delta,0):null,opening:openedMidMonth?null:opening,openedMidMonth,monthEnd:historical&&opening!==null?
-   opening+posted.reduce((total,entry)=>total+entry.delta,0):balance,
-   reserved,totals,items,deadlines,required:!historical&&basis!==null?required:null,
+  return {id,postedChange:known?postedBalance-opening:null,opening:openedMidMonth?null:opening,
+   openedMidMonth,recordedOpening:openedMidMonth?opening:null,basis,monthEnd:historical?postedBalance:balance,
+   reserved,totals,items,transactions,nextDebit,deadlines,required:!historical&&basis!==null?required:null,
    incomplete:!historical&&(unresolved||unassignedCard||unavailableCash),
    unknownPayment:items.some(item=>item.unknown),estimatedPayment:items.some(item=>(item.kind==='bill'&&item.uncertain)||item.virtual),
   };

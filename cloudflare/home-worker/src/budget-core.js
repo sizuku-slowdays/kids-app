@@ -1,3 +1,4 @@
+import {savingsLegacy,savingsSchedule,savingsHoldings,savingsOverview,savingsGoalBalance,debtPaid} from './budget-savings.js';
 import {spendingMonthSummary} from './budget-spending-month.js';
 import {shiftBillingMonth,ruleNeedsPlan,ruleCoversMonth,billEvidence,projectBill,installmentProgress,forecastFunds,plannedCashFlows} from './budget-forecast.js';
 import {budgetPeople, migrateClassification, outstandingAdvance, savingsKinds, spendingKinds} from './budget-classification.js';
@@ -72,7 +73,19 @@ export function billProjection(s,b){
  const evidence=billEvidence(s,b,cardDue);
  const pendingCharges=evidence.plans.reduce((total,plan)=>total+plan.amount,0);
  const forecast=projectBill(b,evidence,expected+pendingCharges+historicalForecast);
- return {...b,expected:b.status==='confirmed'?b.expectedAtConfirm:expected,projected:forecast.projected,pendingCharges,historicalForecast,forecast};
+ const futurePurchases=(s.cardPurchasePlans||[]).filter(plan=>plan.cardId===b.cardId&&plan.month===b.month&&plan.status==='planned');
+ const matches=new Set();
+ let purchaseReview=false,purchaseForecast=0;
+ if(b.actual===null)for(const plan of futurePurchases){
+  const match=evidence.entries.find(entry=>entry.amount===plan.amount&&!matches.has(entry.id));
+  if(match)matches.add(match.id);
+  if(match||b.appEstimate&&plan.useDate<=b.appEstimate.checkedDate)purchaseReview=true;
+  else purchaseForecast+=plan.amount;
+ }
+ forecast.projected+=purchaseForecast;
+ if(purchaseForecast)forecast.unknown=false;
+ forecast.review||=purchaseReview;
+ return {...b,futurePurchases,purchaseForecast,expected:b.status==='confirmed'?b.expectedAtConfirm:expected,projected:forecast.projected,pendingCharges,historicalForecast,forecast};
 }
 function forecastSchedules(s,asOf){
  const state={...s,plans:s.plans.slice(),bills:s.bills.slice()};
@@ -111,6 +124,24 @@ function importLegacy(s,input,hash){importPreview(input);fail(!s.importHash||s.i
  if(input.categories?.tree||raw.categories?.tree){const settings=input.categories||raw.categories;s.categories={tree:{...s.categories.tree,...clone(settings.tree)},hidden:clone(settings.hidden||[])};}
  for(const r of raw.plan?.fixedExpenses||[]){if(!r?.id||r.deletedAt)continue;s.rules.push({id:'legacy-rule-'+s.rules.length,name:String(r.name||''),amount:Number(r.amount)||0,payment:s.cards.find(c=>c.name===r.payment)?.id||s.accounts.find(a=>a.name===r.payment)?.id||'',category:r.category||'その他',person:r.person||'',day:Number(r.day)||1,variable:false,enabled:false,needsReview:true,legacy:clone(r)});}
 }
+function removeUnusedPurchaseBill(state,cardId,month){
+ const bill=state.bills.find(b=>b.cardId===cardId&&b.month===month);
+ if(!bill?.purchaseOnly||bill.version!==1||bill.status!=='planned')return;
+ const projected=billProjection(state,bill);
+ if(projected.futurePurchases.length||projected.expected||projected.pendingCharges||projected.historicalForecast)return;
+ state.bills=state.bills.filter(b=>b.id!==bill.id);
+}
+function adjustGoalHolding(goal,account,delta){
+ const held=Object.hasOwn(goal.holdings,account)?goal.holdings[account]:0;
+ goal.holdings={...goal.holdings,[account]:held+delta};
+}
+function reserveForGoal(state,goal,accountId,amount,now){
+ const account=find(state.accounts,accountId);
+ const balance=accountBalance(state,account.id,now),overview=savingsHoldings(state);
+ const total=state.accounts.reduce((sum,item)=>sum+Math.max(0,accountBalance(state,item.id,now)||0),0);
+ fail(balance!==null&&balance-(overview.holdings[account.id]||0)>=amount&&total-overview.reserved>=amount,'積立元の自由残高が足りません');
+ adjustGoalHolding(goal,account.id,amount);
+}
 export function applyBudgetCommand(original,command,context){const s=clone(original),now=day(context.today),op=id(context.eventId),type=command.type,d=command.data||{};fail(s.version===1,'データ形式を確認してください');
  switch(type){
  case 'legacy.bank.import':{
@@ -135,7 +166,7 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
  case 'cashPlan.confirm':{fail(s.startDate,'先に残高管理を開始してください');const p=find(s.cashPlans||[],d.id);fail(p.status==='planned'&&p.version===d.version,'予定が更新されています',409);const date=day(d.date||p.date);let result=applyBudgetCommand(s,p.kind==='income'?{type:'entry.add',data:{id:'scheduled-'+op,type:'income',date,amount:p.amount,payment:p.to,category:p.category,middle:p.middle,memo:p.name+(p.memo?' '+p.memo:'')}}:{type:'transfer',data:{date,amount:p.amount,from:p.from,to:p.to,reason:p.name}},context);const saved=find(result.cashPlans,p.id);saved.status='confirmed';saved.version++;saved.actualDate=date;saved.postingId=p.kind==='income'?'scheduled-'+op:op;return result;}
  case 'cashPlan.undo':{const p=find(s.cashPlans||[],d.id);fail(p.status==='confirmed'&&p.version===d.version,'予定が更新されています',409);const result=applyBudgetCommand(s,p.kind==='income'?{type:'entry.void',data:{id:p.postingId,reason:'入金予定の確定取消'}}:{type:'transfer.undo',data:{id:p.postingId,reason:'振替予定の確定取消'}},{...context,fromCashPlan:true});const saved=find(result.cashPlans,p.id);saved.status='planned';saved.version++;return result;}
  case 'plan.cancel':{const p=find(s.plans,d.id);fail(p.status==='planned'&&p.version===d.version,'予定が更新されています',409);p.status='cancelled';p.version++;break;}
- case 'bill.cancel':{const b=find(s.bills,d.id);fail(b.status==='planned'&&b.version===d.version,'予定が更新されています',409);b.status='cancelled';b.version++;break;}
+ case 'bill.cancel':{const b=find(s.bills,d.id);fail(!billProjection(s,b).futurePurchases.length,'カード利用予定を変更・取消してから引落予定を取り消してください');fail(b.status==='planned'&&b.version===d.version,'予定が更新されています',409);b.status='cancelled';b.version++;break;}
  case 'calendar.settings':{fail(typeof d.enabled==='boolean'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(d.time)&&[0,1,2,3,7].includes(d.daysBefore),'通知設定を確認してください');s.calendarNotice={enabled:d.enabled,time:d.time,daysBefore:d.daysBefore};break;}
  case 'import':fail(d.confirm===true,'原本を保持する取り込み内容を確認してください');importLegacy(s,d.snapshot,context.importHash);break;
  case 'cashflow.funds':{
@@ -165,16 +196,16 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
  }
  case 'account.open':{fail(s.startDate,'ホームの「開始残高を設定」から先に残高管理を開始してください');fail(d.confirm===true,'この残高と開始日にチェックしてください');const a=find(s.accounts,d.id);fail(a.opening===null,'開始残高は設定済みです',409);a.openingDate=day(d.date);fail(a.openingDate>=s.startDate&&a.openingDate<=now,'開始日を確認してください');a.opening=yenAmount(d.amount,true);break;}
  case 'entry.add':{const e=cleanEntry(d,now);fail(!s.entries.some(x=>x.id===e.id),'この取引は登録済みです',409);fail(s.cards.some(c=>c.id===e.payment)||e.payment==='cash'||d.bankEntry===true&&s.accounts.some(a=>a.id===e.payment&&a.kind==='bank')||e.type!=='expense'&&s.accounts.some(a=>a.id===e.payment),'買い物の支払元はPINK・VISA・現金です');activeEntry(s,e,now,!!s.startDate&&e.date>=s.startDate);s.preferences.payment=e.payment;s.preferences.payments||={};s.preferences.payments[e.type]=e.payment;s.preferences.category=e.splits[0].category;s.preferences.middle=e.splits[0].middle;s.preferences.small=e.splits[0].small;s.preferences.person=e.splits[0].person;for(const part of e.splits)if(!Object.hasOwn(s.categories.tree,part.category))s.categories.tree[part.category]={};break;}
- case 'entry.edit':{const old=find(s.entries,d.id);fail(!(s.cashPlans||[]).some(p=>p.postingId===old.id&&p.status==='confirmed'),'入金予定の画面から確定を取り消してください');fail(!s.plans.some(p=>p.entryId===old.id&&p.status==='confirmed'),'固定費は引落を取り消してから修正してください');fail(!old.void,'取り消し済みです',409);const next=cleanEntry({...old,...d,splits:d.splits||(old.splits.length===1?[{...old.splits[0],amount:d.amount??old.amount,category:d.category??old.splits[0].category,person:d.person??old.splits[0].person}]:old.splits)},now);validateSavings(s,next);const sameDebit=['expense','advance'].includes(old.type)&&['expense','advance'].includes(next.type);
+ case 'entry.edit':{const old=find(s.entries,d.id);fail(!(s.savingsGoalEvents||[]).some(event=>event.entryId===old.id),'積立から充当した支出です');fail(!(s.cashPlans||[]).some(p=>p.postingId===old.id&&p.status==='confirmed'),'入金予定の画面から確定を取り消してください');fail(!s.plans.some(p=>p.entryId===old.id&&p.status==='confirmed'),'固定費は引落を取り消してから修正してください');fail(!old.void,'取り消し済みです',409);const next=cleanEntry({...old,...d,splits:d.splits||(old.splits.length===1?[{...old.splits[0],amount:d.amount??old.amount,category:d.category??old.splits[0].category,person:d.person??old.splits[0].person}]:old.splits)},now);validateSavings(s,next);const sameDebit=['expense','advance'].includes(old.type)&&['expense','advance'].includes(next.type);
  const metadataAware=s.classificationVersion||Object.hasOwn(d,'purchase');
  const financialChange=!metadataAware||['date','amount','payment'].some(key=>next[key]!==old[key])||next.type!==old.type&&!sameDebit;
  if((s.advanceSettlements||[]).some(settlement=>settlement.items.some(item=>item.id===old.id)))fail(!financialChange&&next.type===old.type,'精算済みの立替は金額や支払元を変更できません');
  if(old.type==='advance'&&next.type!=='advance')fail(!s.entries.some(e=>!e.void&&e.type==='recovery'&&e.linkedAdvanceId===old.id),'回収済みの立替は種類を変更できません');
  if(old.ledgerIncluded&&financialChange)undoSource(s,'entry:'+old.id,now,'取引の編集');next.legacyIds=old.legacyIds;next.legacyPayment=old.legacyPayment;next.legacyKey=old.legacyKey;next.balanceIncludedExternally=old.balanceIncludedExternally;next.csvImported=old.csvImported;if(old.merchant)next.merchant=old.merchant;if(old.csvBilling&&next.payment===old.payment)next.csvBilling=clone(old.csvBilling);next.ledgerIncluded=old.ledgerIncluded;if(financialChange)postEntry(s,next,now);else if(Object.hasOwn(old,'dueDate'))next.dueDate=old.dueDate;if(!metadataAware&&next.csvBilling)next.dueDate=old.dueDate;s.entries[s.entries.findIndex(e=>e.id===old.id)]=next;break;}
  case 'entry.apply':{const e=find(s.entries,d.id);fail(d.confirm===true&&!e.void&&!e.ledgerIncluded&&!e.balanceIncludedExternally,'反映対象を確認してください',409);if(d.payment)e.payment=id(d.payment);e.ledgerIncluded=true;postEntry(s,e,now);break;}
- case 'entry.void':{const e=find(s.entries,d.id);fail(!(s.cashPlans||[]).some(p=>p.postingId===e.id&&p.status==='confirmed')||context.fromCashPlan===true,'入金予定の画面から確定を取り消してください');fail(!s.plans.some(p=>p.entryId===e.id&&p.status==='confirmed'),'固定費は口座画面から取り消してください');fail(!e.void,'すでに取り消し済みです',409);fail(!(s.advanceSettlements||[]).some(x=>x.items.some(item=>item.id===e.id)),'精算済みの立替は取り消せません');if(e.ledgerIncluded)undoSource(s,'entry:'+e.id,now,text(d.reason||'取引の取り消し',500));e.void=true;break;}
+ case 'entry.void':{const e=find(s.entries,d.id);fail(!(s.savingsGoalEvents||[]).some(event=>event.entryId===e.id),'積立から充当した支出です');fail(!(s.cashPlans||[]).some(p=>p.postingId===e.id&&p.status==='confirmed')||context.fromCashPlan===true,'入金予定の画面から確定を取り消してください');fail(!s.plans.some(p=>p.entryId===e.id&&p.status==='confirmed'),'固定費は口座画面から取り消してください');fail(!e.void,'すでに取り消し済みです',409);fail(!(s.advanceSettlements||[]).some(x=>x.items.some(item=>item.id===e.id)),'精算済みの立替は取り消せません');if(e.ledgerIncluded)undoSource(s,'entry:'+e.id,now,text(d.reason||'取引の取り消し',500));e.void=true;break;}
  case 'transfer':{fail(s.startDate,'先に残高管理を開始してください');const from=find(s.accounts,d.from),to=find(s.accounts,d.to),amount=yenAmount(d.amount),date=day(d.date);fail(from.id!==to.id&&amount>0,'振替元・振替先・金額を確認してください');fail(from.opening!==null&&to.opening!==null&&date>=from.openingDate&&date>=to.openingDate&&date<=now,'両口座の開始日・残高を確認してください');emit(s,op,date,'account',from.id,-amount);emit(s,op,date,'account',to.id,amount);s.transfers.push({id:op,from:from.id,to:to.id,amount,date,reason:text(d.reason||'',500),void:false});break;}
- case 'transfer.undo':{const t=find(s.transfers,d.id);fail(!(s.cashPlans||[]).some(p=>p.postingId===t.id&&p.status==='confirmed')||context.fromCashPlan===true,'振替予定の画面から確定を取り消してください');fail(!t.void,'すでに取り消し済みです',409);undoSource(s,t.id,now,text(d.reason||'振替取消',500));t.void=true;break;}
+ case 'transfer.undo':{const t=find(s.transfers,d.id);fail(!(s.savingsGoalEvents||[]).some(event=>event.transferId===t.id),'積立に連動した振替です');fail(!(s.cashPlans||[]).some(p=>p.postingId===t.id&&p.status==='confirmed')||context.fromCashPlan===true,'振替予定の画面から確定を取り消してください');fail(!t.void,'すでに取り消し済みです',409);undoSource(s,t.id,now,text(d.reason||'振替取消',500));t.void=true;break;}
  case 'account.adjust':{const a=find(s.accounts,d.id);fail(a.opening!==null,'開始残高を設定してください');const actual=yenAmount(d.actual,true),reason=text(d.reason||'',500);fail(reason,'残高調整の理由を入力してください');const expected=accountBalance(s,a.id,now);emit(s,op,now,'account',a.id,actual-expected,reason);s.adjustments.push({id:op,accountId:a.id,date:now,expected,actual,reason,void:false});break;}
  case 'adjustment.undo':{const a=find(s.adjustments,d.id);fail(!a.void,'すでに取り消し済みです',409);undoSource(s,a.id,now,text(d.reason||'残高調整取消',500));a.void=true;break;}
  case 'rule.save':{const key=id(d.id),amount=yenAmount(d.amount);fail(amount>0,'金額を入力してください');fail(s.accounts.some(a=>a.id===d.payment)||s.cards.some(c=>c.id===d.payment),'引落元を選んでください');monthDate(now.slice(0,7),d.day);const rule={id:key,name:text(d.name,100),amount,payment:d.payment,category:text(d.category||'その他',100),...(d.middle&&{middle:text(d.middle,100)}),person:text(d.person||'',100),day:d.day,variable:!!d.variable,enabled:d.enabled!==false,needsReview:false};const at=s.rules.findIndex(r=>r.id===key);if(d.term!==undefined)rule.term=termFromInput(d.term);else if(s.rules[at]?.term)rule.term=s.rules[at].term;if(at<0)s.rules.push(rule);else{if(d.middle===undefined&&rule.category===s.rules[at].category&&s.rules[at].middle)rule.middle=s.rules[at].middle;if(s.rules[at].originalClassification)rule.originalClassification=s.rules[at].originalClassification;if(s.rules[at].firstMonth){rule.firstMonth=s.rules[at].firstMonth;rule.legacy=s.rules[at].legacy;}s.rules[at]=rule;}break;}
@@ -195,7 +226,7 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
  case 'plan.edit':{const p=find(s.plans,d.id);fail(p.status==='planned','確定済みの金額は取り消してから修正してください',409);fail(p.version===d.version,'予定が更新されています',409);p.amount=yenAmount(d.amount);fail(p.amount>0,'金額を入力してください');p.manualDue=!!p.manualDue||!!d.dueDate&&d.dueDate!==p.dueDate;p.dueDate=day(d.dueDate||p.dueDate);if(p.oneOff){p.month=p.dueDate.slice(0,7);monthDate(p.month,1);}p.version++;break;}
  case 'payments.confirm':{fail(Array.isArray(d.items)&&d.items.length>0&&d.items.length<=100,'引落を選んでください');let combined=s;const unique=new Set();for(const item of d.items){fail(['plan','bill'].includes(item.kind)&&!unique.has(item.id),'引落の指定が重複しています');unique.add(item.id);combined=applyBudgetCommand(combined,{type:item.kind==='bill'?'bill.confirm':'plans.confirm',data:item.kind==='bill'?{id:item.id,version:item.version}:{items:[{id:item.id,version:item.version}]}},context);}return combined;}
  case 'plans.confirm':{fail(Array.isArray(d.items)&&d.items.length>0&&d.items.length<=100,'対象の引落を選んでください');const seen=new Set();for(const x of d.items){fail(!seen.has(x.id),'対象が重複しています');seen.add(x.id);const p=find(s.plans,x.id);fail(p.status==='planned'&&p.version===x.version,'引落は確定済み、または更新されています',409);fail(p.dueDate<=now,'未来の引落はまだ確定できません');const e=cleanEntry({id:p.oneOff?'withdrawal-'+p.id+'-'+p.version:'fixed-'+p.ruleId+'-'+p.month+'-'+p.version,date:day(d.date||p.dueDate),type:'expense',amount:p.amount,payment:p.payment,category:p.category,middle:p.middle,person:p.person,memo:p.name},now);activeEntry(s,e,now,true);p.status='confirmed';p.entryId=e.id;p.version++;}break;}
- case 'plan.undo':{const p=find(s.plans,d.id);fail(p.status==='confirmed','未確定または取り消し済みです',409);const e=find(s.entries,p.entryId);fail(!e.void,'関連取引を確認してください',409);undoSource(s,'entry:'+e.id,now,text(d.reason||'固定費引落取消',500));e.void=true;p.status='planned';p.version++;break;}
+ case 'plan.undo':{const p=find(s.plans,d.id);fail(p.status==='confirmed','未確定または取り消し済みです',409);const e=find(s.entries,p.entryId);fail(!(s.savingsGoalEvents||[]).some(event=>event.entryId===e.id),'積立から充当した支出です');fail(!e.void,'関連取引を確認してください',409);undoSource(s,'entry:'+e.id,now,text(d.reason||'固定費引落取消',500));e.void=true;p.status='planned';p.version++;break;}
  case 'bill.estimate':{
   const card=find(s.cards,d.cardId),month=d.month;
   monthDate(month,1);
@@ -247,7 +278,7 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
   break;
  }
  case 'bill.edit':{const b=find(s.bills,d.id);fail(b.status==='planned'&&b.version===d.version,'カード引落予定が更新されています',409);b.actual=yenAmount(d.actual);b.manualDue=!!b.manualDue||!!d.dueDate&&d.dueDate!==b.dueDate;b.dueDate=day(d.dueDate||b.dueDate);b.reason=text(d.reason||'',500);const allocation=yenAmount(d.openingAllocation||0),card=find(s.cards,b.cardId),used=s.bills.filter(x=>x.id!==b.id&&x.cardId===card.id).reduce((a,x)=>a+(x.openingAllocation||0),0);fail(allocation+used<=Math.max(0,card.opening||0),'開始時未払金の割当を確認してください');b.openingAllocation=allocation;if(d.adjustment){fail(['points','refund','fee'].includes(d.adjustment.kind),'差額の種別を確認してください');b.adjustment={kind:d.adjustment.kind,amount:yenAmount(d.adjustment.amount),reason:text(d.adjustment.reason||b.reason,500)};fail(b.adjustment.reason,'差額の内容を入力してください');}else b.adjustment=null;if(b.amountHistory){b.appCheckedDate=now;b.amountHistory.push({status:'confirmed',amount:b.actual,checkedDate:now,recordedDate:now});}b.version++;break;}
- case 'bill.confirm':{const b=find(s.bills,d.id),card=find(s.cards,b.cardId),a=find(s.accounts,card.accountId);fail(s.startDate&&a.opening!==null&&b.dueDate>=a.openingDate,'引落口座の開始日・残高を設定してください');fail(b.status==='planned'&&b.version===d.version,'確定済み、または予定が更新されています',409);fail(b.dueDate<=now,'未来のカード引落はまだ確定できません');fail(b.actual!==null||!b.appEstimate&&pendingCardCharges(s,b)===0&&historicalCardForecast(s,b)===0,'見込に未確認の明細があります。実際の請求額を確認してください');const expected=billExpected(s,b),actual=b.actual===null?expected:b.actual;yenAmount(actual);fail(expected===actual||b.reason,'請求差額の理由（不明なら未照合）を記録してください');const source='payment:'+b.id+':'+b.version;emit(s,source,b.dueDate,'account',a.id,-actual);emit(s,source,b.dueDate,'card',card.id,-actual);let adj=0;if(b.adjustment){adj=b.adjustment.amount*(b.adjustment.kind==='fee'?1:-1);emit(s,source,b.dueDate,'card',card.id,adj,b.adjustment.reason);}b.expectedAtConfirm=expected;b.actual=actual;b.reconciliation=expected+adj-actual;b.source=source;b.status='confirmed';b.version++;break;}
+ case 'bill.confirm':{const b=find(s.bills,d.id),card=find(s.cards,b.cardId),a=find(s.accounts,card.accountId);fail(s.startDate&&a.opening!==null&&b.dueDate>=a.openingDate,'引落口座の開始日・残高を設定してください');fail(b.status==='planned'&&b.version===d.version,'確定済み、または予定が更新されています',409);fail(b.dueDate<=now,'未来のカード引落はまだ確定できません');fail(b.actual!==null||!b.appEstimate&&pendingCardCharges(s,b)===0&&historicalCardForecast(s,b)===0&&!billProjection(s,b).futurePurchases.length,'見込に未確認の明細があります。実際の請求額を確認してください');const expected=billExpected(s,b),actual=b.actual===null?expected:b.actual;yenAmount(actual);fail(expected===actual||b.reason,'請求差額の理由（不明なら未照合）を記録してください');const source='payment:'+b.id+':'+b.version;emit(s,source,b.dueDate,'account',a.id,-actual);emit(s,source,b.dueDate,'card',card.id,-actual);let adj=0;if(b.adjustment){adj=b.adjustment.amount*(b.adjustment.kind==='fee'?1:-1);emit(s,source,b.dueDate,'card',card.id,adj,b.adjustment.reason);}b.expectedAtConfirm=expected;b.actual=actual;b.reconciliation=expected+adj-actual;b.source=source;b.status='confirmed';b.version++;break;}
  case 'bill.undo':{const b=find(s.bills,d.id);fail(b.status==='confirmed','すでに取り消し済みです',409);undoSource(s,b.source,now,text(d.reason||'カード引落取消',500));b.status='planned';b.version++;break;}
  case 'holidays':fail(Array.isArray(d.dates)&&d.dates.length<=400,'休日を確認してください');s.holidays=[...new Set(d.dates.map(day))];for(const p of s.plans.filter(p=>p.status==='planned'&&!p.manualDue&&p.dueDate>=now)){const adjusted=s.accounts.some(a=>a.id===p.payment&&a.kind==='bank')?businessDate(p.nominalDate,s.holidays):p.nominalDate;if(adjusted!==p.dueDate){p.dueDate=adjusted;p.version++;}}for(const b of s.bills.filter(b=>b.status==='planned'&&!b.manualDue&&b.dueDate>=now)){const adjusted=businessDate(monthDate(b.month,find(s.cards,b.cardId).paymentDay),s.holidays);if(adjusted!==b.dueDate){b.dueDate=adjusted;b.version++;}}break;
  case 'classification.migrate':
@@ -300,8 +331,164 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
   }
   break;
  }
+ case 'savings.goal.save':{
+  const goals=s.savingsGoals||=[];
+  const old=d.id?find(goals,d.id):null;
+  fail(!old||!old.deleted,'終了した目標を確認してください');
+  const name=text(d.name,100),category=text(d.category||'その他',100);
+  const startMonth=d.startMonth||null,deadline=d.deadline?day(d.deadline):null;
+  if(startMonth)monthDate(startMonth,1);
+  if(deadline)monthDate(deadline.slice(0,7),1);
+  fail(name&&(!startMonth||!deadline||startMonth<=deadline.slice(0,7)),'積立名と開始月・期限を確認してください');
+  fail(['monthly','alternate','irregular','once'].includes(d.frequency)&&['auto','manual'].includes(d.mode),'積立頻度と金額の設定を確認してください');
+  fail(['active','achieved','paused','ended'].includes(d.status),'ステータスを確認してください');
+  monthDate(now.slice(0,7),d.day);
+  if(d.accountId)find(s.accounts,d.accountId);
+  const legacy=d.legacyPurpose?savingsLegacy(s).find(group=>group.purpose===d.legacyPurpose):null;
+  fail(!d.legacyPurpose||!old&&legacy,'旧履歴はすでに引き継がれています',409);
+  const goal=old||{id:op,holdings:{},unassigned:Math.max(0,legacy?.balance||0),legacyPurpose:legacy?.purpose||null};
+  const hasPayments=(s.savingsGoalEvents||[]).some(event=>event.goalId===goal.id&&event.kind==='repay');
+  fail(!hasPayments||d.debt,'返済履歴があるため借金の設定を保持してください');
+  const debt=d.debt?{principal:yenAmount(d.debt.principal),rate:d.debt.rate??null}:null;
+  if(debt)fail(debt.principal>=debtPaid(goal,(s.savingsGoalEvents||[]).filter(e=>e.goalId===goal.id))&&(debt.rate===null||Number.isFinite(debt.rate)&&debt.rate>=0&&debt.rate<=100),'元金と年利を確認してください');
+  Object.assign(goal,{name,category,target:d.target==null?null:yenAmount(d.target),deadline,startMonth,frequency:d.frequency,
+   mode:d.mode,amount:d.mode==='manual'?yenAmount(d.amount):null,day:d.day,accountId:d.accountId||null,memo:text(d.memo||'',1000),status:d.status,scheduleAsOf:now,debt});
+  if(!old)goals.push(goal);
+  const initial=old?0:yenAmount(d.initial??0);
+  if(initial)reserveForGoal(s,goal,goal.accountId,initial,now);
+  (s.savingsGoalEvents||=[]).push({id:op,goalId:goal.id,kind:initial?'opening':old?'update':'create',date:now,amount:initial,accountId:goal.accountId});
+  break;
+ }
+ case 'savings.goal.plan':{
+  const goal=find(s.savingsGoals||[],d.id),date=day(d.date),period=date.slice(0,7);
+  fail(!goal.deleted&&goal.status==='active'&&goal.frequency==='irregular','不定期の積立目標を確認してください');
+  monthDate(period,1);
+  fail(!(s.savingsGoalEvents||[]).some(event=>event.goalId===goal.id&&event.period===period),'この月の積立は確定済みです',409);
+  const plans=goal.manualPlans||={};
+  if(d.cancel){fail(plans[period]?.date===date,'積立予定が更新されています',409);delete plans[period];break;}
+  const amount=yenAmount(d.amount);
+  fail(amount>0&&date>=now&&(!goal.deadline||date<=goal.deadline)&&(!goal.startMonth||period>=goal.startMonth),'予定日・金額・目標期限を確認してください');
+  if(d.previousDate){const previous=day(d.previousDate).slice(0,7);fail(plans[previous]&&plans[previous].date===d.previousDate&&(previous===period||!plans[period]),'積立予定が更新されています',409);delete plans[previous];}
+  else fail(!plans[period],'この月にはすでに積立予定があります',409);
+  plans[period]={period,date,amount};
+  break;
+ }
+ case 'savings.goal.record':{
+  const goal=find(s.savingsGoals||[],d.id),kind=d.kind;
+  const date=day(d.date||now),history=(s.savingsGoalEvents||=[]);
+  fail(!goal.deleted&&date<=now,'目標と実績日を確認してください');
+  fail(['confirm','add','assign','release','move','pay','repay','delete'].includes(kind),'積立の操作を確認してください');
+  if(kind==='delete'){
+   fail(d.confirm===true,'残っている確保額の解除を確認してください');
+   goal.deleted=true;
+   const amount=savingsGoalBalance(goal);
+   history.push({id:op,goalId:goal.id,date,kind,amount,released:clone(goal.holdings),unassigned:goal.unassigned});
+   goal.holdings={};goal.unassigned=0;
+   break;
+  }
+  const amount=yenAmount(d.amount),account=find(s.accounts,d.accountId);
+  fail(amount>0,'金額は1円以上で入力してください');
+  const event={id:op,goalId:goal.id,kind,date,amount,accountId:account.id};
+  if(kind==='confirm'||kind==='add'||kind==='assign'){
+   if(kind==='confirm'){
+    const plan=savingsSchedule(goal,history.filter(event=>event.goalId===goal.id),goal.scheduleAsOf).find(plan=>plan.period===d.period);
+    fail(plan&&d.period<=now.slice(0,7)&&d.period<=date.slice(0,7),'積立予定が変更されています',409);
+    event.period=plan.period;event.scheduledDate=plan.date;event.plannedAmount=plan.amount;
+   }
+   let next=s;
+   const destination=d.to?find(s.accounts,d.to):account;
+   if(d.to){
+    fail(kind!=='assign'&&account.id!==destination.id,'振替元と振替先を確認してください');
+    const matches=s.transfers.filter(move=>!move.void&&move.from===account.id&&move.to===destination.id&&move.date===date&&move.amount===amount);
+    if(d.transferId){
+     const move=find(matches,d.transferId);
+     fail(!history.some(event=>event.transferId===move.id),'この振替はすでに積立に使用されています',409);
+     event.transferId=move.id;
+    }else{
+     fail(!matches.length,'同じ振替が登録済みです。既存の振替を選んでください',409);
+     fail(!(s.cashPlans||[]).some(plan=>plan.kind==='transfer'&&plan.status==='planned'&&plan.from===account.id&&plan.to===destination.id&&plan.date===date&&plan.amount===amount),'同じ振替予定があります。予定を確定したあと、既存の振替を選んでください',409);
+     const held=savingsHoldings(s).holdings[account.id]||0,fromBalance=accountBalance(s,account.id,date);
+     fail(fromBalance!==null&&Math.min(fromBalance,accountBalance(s,account.id,now))-held>=amount,'振替元の自由残高が足りません');
+     next=applyBudgetCommand(s,{type:'transfer',data:{from:account.id,to:destination.id,date,amount,reason:goal.name}},context);
+     event.transferId=op;
+    }
+    event.accountId=destination.id;event.from=account.id;
+   }
+   const target=find(next.savingsGoals,goal.id);
+   if(kind==='assign'){
+    fail(amount<=target.unassigned,'未割当の積立額を確認してください');
+    target.unassigned-=amount;
+   }
+   reserveForGoal(next,target,destination.id,amount,now);
+   target.scheduleAsOf=now;
+   next.savingsGoalEvents.push(event);
+   return next;
+  }
+  fail(Object.hasOwn(goal.holdings,account.id)&&amount<=goal.holdings[account.id],'確保済み金額を超えています');
+  adjustGoalHolding(goal,account.id,-amount);
+  if(kind==='move'){
+   const target=find(s.savingsGoals,d.destination);
+   fail(target.id!==goal.id&&!target.deleted,'振替先の積立を確認してください');
+   adjustGoalHolding(target,account.id,amount);
+   target.scheduleAsOf=now;event.destination=target.id;
+  }
+  if(kind==='pay'||kind==='repay'){
+   fail(accountBalance(s,account.id,date)!==null,'支払元の開始日と残高を確認してください');
+   if(kind==='repay'){
+    const principal=yenAmount(d.principal);
+    const paid=debtPaid(goal,history.filter(e=>e.goalId===goal.id));
+    fail(goal.debt&&principal<=amount&&principal<=goal.debt.principal-paid,'元金返済額を確認してください');
+    event.principal=principal;event.interest=amount-principal;
+   }
+   const matches=s.entries.filter(e=>!e.void&&e.ledgerIncluded&&e.type==='expense'&&e.payment===account.id&&e.amount===amount&&e.date===date);
+   let next=s;
+   if(d.entryId){
+    const entry=find(matches,d.entryId);
+    fail(!history.some(event=>event.entryId===entry.id),'この支出は充当済みです',409);
+    event.entryId=entry.id;
+   }else{
+    fail(!matches.length,'同じ日・口座・金額の支出が登録済みです。既存の支出を選んでください',409);
+    fail(!s.plans.some(plan=>plan.status==='planned'&&plan.payment===account.id&&plan.dueDate===date&&plan.amount===amount),'同じ引落予定があります。先に予定画面で確定し、既存の支出を選んでください',409);
+    fail(accountBalance(s,account.id,date)>=amount&&accountBalance(s,account.id,now)>=amount,'支払元の残高が足りません');
+    event.entryId='goal-'+op;
+    next=applyBudgetCommand(s,{type:'entry.add',data:{id:event.entryId,type:'expense',bankEntry:true,date,amount,payment:account.id,category:text(d.category||'その他',100),memo:goal.name}},context);
+   }
+   find(next.savingsGoals,goal.id).scheduleAsOf=now;
+   next.savingsGoalEvents.push(event);
+   return next;
+  }
+  goal.scheduleAsOf=now;history.push(event);
+  break;
+ }
+ case 'card.purchasePlan.save':{
+  const plans=s.cardPurchasePlans||=[];
+  const old=d.id?find(plans,d.id):null;
+  const card=find(s.cards,d.cardId),name=text(d.name,100),date=day(d.useDate),amount=yenAmount(d.amount);
+  monthDate(d.month,1);
+  fail(card.accountId&&card.paymentDay&&name&&amount&&d.month>=date.slice(0,7)&&d.month>=now.slice(0,7),'カード・利用予定日・引落月と金額を確認してください');
+  const statementMonth=d.statementMonth||null;
+  if(statementMonth){monthDate(statementMonth,1);fail(statementMonth>=date.slice(0,7)&&statementMonth<=d.month,'利用月・請求月・引落月を確認してください');}
+  let bill=s.bills.find(b=>b.cardId===card.id&&b.month===d.month);
+  fail(!bill||bill.status==='planned'&&bill.actual===null,'引落済み・取消済み・請求額確定済みの月です');
+  if(!bill){bill={...makeBill(s,card,d.month),purchaseOnly:true};s.bills.push(bill);}
+  const next={id:old?.id||op,cardId:card.id,name,useDate:date,statementMonth,month:d.month,amount,status:'planned'};
+  if(old){
+   const {cardId,month}=old;
+   Object.assign(old,next);
+   if(cardId!==next.cardId||month!==next.month)removeUnusedPurchaseBill(s,cardId,month);
+  }else plans.push(next);
+  break;
+ }
+ case 'card.purchasePlan.status':{
+  const plan=find(s.cardPurchasePlans||[],d.id);
+  fail(['covered','cancelled'].includes(d.status),'支払予定の状態を確認してください');
+  plan.status=d.status;
+  if(d.status==='cancelled')removeUnusedPurchaseBill(s,plan.cardId,plan.month);
+  break;
+ }
  case 'savings.allocate':{
   const purpose=text(d.purpose,100),date=day(d.date),amount=yenAmount(d.amount,true);
+  fail(!(s.savingsGoals||[]).some(goal=>goal.legacyPurpose===purpose),'この目的は新しい積立画面に引き継がれています');
   fail(purpose&&amount&&date<=now,'積立の目的・金額・日付を確認してください');
   (s.savingsAllocations||=[]).push({id:op,purpose,date,amount});
   break;
@@ -390,7 +577,8 @@ export function budgetSummary(s,asOf,month=asOf.slice(0,7),basis='date',options=
  const projectedState=forecastSchedules(s,asOf);
  const projectedCards=cards.map(card=>({...card,bills:projectedState.bills.filter(b=>b.cardId===card.id).map(b=>billProjection(projectedState,b))}));
  const unconfigured=s.cards.some(card=>!card.accountId||!card.paymentDay);
- const funds=forecastFunds(s,accounts,projectedCards,asOf,unconfigured,projectedState.plans);
+ const savingsGoals=savingsOverview(s,asOf);
+ const funds=forecastFunds(s,accounts,projectedCards,asOf,unconfigured,projectedState.plans,savingsGoals);
  const cashflow={reserve:funds.reserves?.living??null,forecast:funds.monthEnd,available:funds.currentAllowance};
  const cardCharges=Object.fromEntries(s.plans.filter(p=>p.status==='confirmed'&&s.cards.some(c=>c.id===p.payment)).map(plan=>{
   const entry=s.entries.find(e=>e.id===plan.entryId&&!e.void);
@@ -399,7 +587,7 @@ export function budgetSummary(s,asOf,month=asOf.slice(0,7),basis='date',options=
   return [plan.id,{month:billMonth||null,status:bill?.status==='confirmed'?'paid':bill?.actual!=null?'billed':'used'}];
  }));
  const installments=Object.fromEntries(s.rules.filter(r=>r.term).map(rule=>[rule.id,{...installmentProgress(s,rule),outside:s.plans.filter(plan=>plan.ruleId===rule.id&&plan.status==='planned'&&!ruleCoversMonth(rule,plan.month)).map(plan=>plan.month)}]));
- const known=accounts.some(a=>a.balance!==null),cardKnown=cards.every(c=>c.balance!==null),assets=known?accounts.filter(a=>a.balance!==null).reduce((n,a)=>n+a.balance,0):null,debt=cardKnown?cards.reduce((n,c)=>n+Math.max(0,c.balance),0):null;return {cashflow,funds,spendingMonths:spendingMonthSummary(s,funds,asOf,options.defaultMonthlyBenefit),generation,installments,cardCharges,daily,accounts,cards,income,expense,category,people,categoryBreakdown,saved,savings,waived,advanceReceived,advances,assets,debt,net:assets===null||debt===null?null:assets-debt,unreconciled:cards.flatMap(c=>c.bills.filter(b=>b.status==='confirmed'&&b.reconciliation!==0)),basis,month,schedule};
+ const known=accounts.some(a=>a.balance!==null),cardKnown=cards.every(c=>c.balance!==null),assets=known?accounts.filter(a=>a.balance!==null).reduce((n,a)=>n+a.balance,0):null,debt=cardKnown?cards.reduce((n,c)=>n+Math.max(0,c.balance),0):null;return {cashflow,funds,savingsGoals,spendingMonths:spendingMonthSummary(s,funds,asOf,options.defaultMonthlyBenefit),generation,installments,cardCharges,daily,accounts,cards,income,expense,category,people,categoryBreakdown,saved,savings,waived,advanceReceived,advances,assets,debt,net:assets===null||debt===null?null:assets-debt,unreconciled:cards.flatMap(c=>c.bills.filter(b=>b.status==='confirmed'&&b.reconciliation!==0)),basis,month,schedule};
 }
 export function legacyExport(s){const raw=s.legacy?.data?.entries?s.legacy.data:s.legacy||{version:6},entries=[];for(const e of s.entries.filter(e=>!e.void)){e.splits.forEach((p,i)=>entries.push({id:e.legacyIds?.[i]||e.id+':'+i,date:e.date,type:e.type,amount:p.amount,payment:s.cards.find(c=>c.id===e.payment)?.name||s.accounts.find(a=>a.id===e.payment)?.name||e.legacyPayment,category:p.category,categoryMiddle:p.middle,categorySmall:p.small,person:p.person,expenseNature:p.nature,memo:e.memo,settleMonth:e.settleMonth,counterparty:e.counterparty,linkedAdvanceId:e.linkedAdvanceId,...(e.splits.length>1?{receiptId:e.legacyKey?.replace(/^receipt:/,'')||e.id,receiptTotal:e.amount,splitIndex:i,splitCount:e.splits.length}:{})}));}const deletedIds=[...(raw.deletedIds||[]),...s.entries.filter(e=>e.void).flatMap(e=>e.legacyIds?.length?e.legacyIds:e.splits.map((_,i)=>e.id+':'+i)).map(id=>({id}))];const outputIds=new Set(entries.map(e=>e.id));for(const e of s.entries)for(const key of e.legacyIds||[])if(!outputIds.has(key))deletedIds.push({id:key});const represented=new Set(s.entries.flatMap(e=>e.legacyIds||[]));entries.push(...clone((raw.entries||[]).filter(e=>!represented.has(e.id))));return {...clone(raw),entries,deletedIds,categories:clone(s.categories),migrationIssues:clone(s.importIssues),preservedOriginal:clone(s.legacy)};}
 

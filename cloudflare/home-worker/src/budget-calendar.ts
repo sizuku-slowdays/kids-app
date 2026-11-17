@@ -1,3 +1,4 @@
+import {savingsCalendarItems} from './budget-savings.js';
 import {billProjection} from './budget-core.js';
 
 type CalendarEnv = Env & { BUDGET_CALENDAR_ENABLED?: string; NOTIFICATION_SERVICE?: Fetcher };
@@ -20,7 +21,7 @@ export function budgetCalendarItems(state: any) {
   const cash=(state.cashPlans||[]).map((p:any)=>({key:'cash:'+p.id,kind:'cash',id:p.id,name:p.name,date:p.actualDate&&p.status==='confirmed'?p.actualDate:p.date,amount:p.amount,status:p.status,version:p.version,account:p.to,description:p.kind==='income'?'入金予定':'口座間の資金移動予定'}));
   const fixed=state.plans.filter((p:any)=>!state.cards.some((c:any)=>c.id===p.payment)).map((p:any)=>({key:'plan:'+p.id,kind:'plan',id:p.id,name:p.name,date:p.dueDate,amount:p.amount,status:p.status,version:p.version,account:p.payment,description:p.oneOff?'単発の引落予定':'固定費の引落予定'}));
   const bills=state.bills.map((b:any)=>{const c=state.cards.find((c:any)=>c.id===b.cardId),sb=billProjection(state,b);return {key:'bill:'+b.id,kind:'bill',id:b.id,name:c.name+' 引落',date:b.dueDate,amount:b.actual??Math.max(0,sb.projected),status:b.status,version:b.version,account:c.accountId,description:'カード代金の引落予定（支出は利用時に計上）'+(b.status==='planned'&&b.actual==null&&b.appEstimate?'・暫定':'')};});
-  return [...cash,...fixed,...bills].filter(p=>p.status!=='cancelled'&&p.status!=='excluded').map(p=>({...p,accountName:state.accounts.find((a:any)=>a.id===p.account)?.name||'',notice:state.calendarNotice||{enabled:false,time:'09:00',daysBefore:1}}));
+  return [...cash,...fixed,...bills,...savingsCalendarItems(state)].filter(p=>p.status!=='cancelled'&&p.status!=='excluded').map(p=>({...p,accountName:state.accounts.find((a:any)=>a.id===p.account)?.name||'',notice:state.calendarNotice||{enabled:false,time:'09:00',daysBefore:1}}));
 }
 export async function privateBudgetCalendar(env:CalendarEnv,owner:string,path:string,params:URLSearchParams) {
   if(!await permitted(env,owner)) return [];
@@ -32,7 +33,7 @@ export async function privateBudgetCalendar(env:CalendarEnv,owner:string,path:st
   for(const p of budgetCalendarItems(JSON.parse(row.data_json))){
     if(params.get('from')&&p.date<params.get('from')!||params.get('to')&&p.date>params.get('to')!)continue;
     const source=await budgetSource(owner,p.key);
-    list.push({id:source,calendar_id:BUDGET_CALENDAR_ID,title:(p.status==='confirmed'?'✓ ':'')+p.name,description:p.description+'\n'+p.amount.toLocaleString('ja-JP')+'円・'+p.accountName+'\n'+(p.status==='confirmed'?'確定済み':'予定だけでは残高は変わりません'),start_datetime:p.date+'T00:00:00',end_datetime:p.date+'T00:00:00',all_day:1,color:'#b86b16',editable:false,budget_managed:true,budget_url:'/wagaya/apps/household-budget/?source='+source,visibility:{audience:'self'},recurrence_type:'none'});
+    list.push({id:source,calendar_id:BUDGET_CALENDAR_ID,title:(p.status==='confirmed'?'✓ ':'')+p.name,description:p.description+'\n'+[p.amount>0?p.amount.toLocaleString('ja-JP')+'円':'',p.accountName].filter(Boolean).join('・')+'\n'+(p.status==='confirmed'?'確定済み':'予定だけでは残高は変わりません'),start_datetime:p.date+'T00:00:00',end_datetime:p.date+'T00:00:00',all_day:1,color:'#b86b16',editable:false,budget_managed:true,budget_url:'/wagaya/apps/household-budget/?source='+source,visibility:{audience:'self'},recurrence_type:'none'});
   }
   return list;
 }
@@ -45,11 +46,30 @@ export async function budgetCalendarStatements(env:CalendarEnv,owner:string,data
   const desired=new Map<string,{key:string;payload:string|null}>();
   for(const p of budgetCalendarItems(data))desired.set(await budgetSource(owner,p.key),{key:p.key,payload:JSON.stringify(p)});
   for(const row of old)if(!desired.has(row.source_id))desired.set(row.source_id,{key:row.event_key,payload:null});
-  const statements=[];
-  for(const [source,item] of desired){
-    if(old.some(x=>x.source_id===source&&x.payload_json===item.payload))continue;
-    statements.push(env.DB.prepare('INSERT INTO budget_calendar_outbox(source_id,owner_id,event_key,version,payload_json,job_token,synced_version) SELECT ?,?,?,?,?,?,0 WHERE EXISTS(SELECT 1 FROM budget_states WHERE owner_id=? AND revision=? AND last_op=?) ON CONFLICT(source_id) DO UPDATE SET version=excluded.version,payload_json=excluded.payload_json,job_token=excluded.job_token WHERE excluded.version>budget_calendar_outbox.version').bind(source,owner,item.key,revision,item.payload,crypto.randomUUID(),owner,revision,eventId));
+  const statements:D1PreparedStatement[]=[];
+  const previous=new Map(old.map(row=>[row.source_id,row.payload_json]));
+  const batch:string[]=[];
+  const encoder=new TextEncoder();
+  let size=0;
+  function flush(){
+    if(!batch.length)return;
+    statements.push(env.DB.prepare(`INSERT INTO budget_calendar_outbox(source_id,owner_id,event_key,version,payload_json,job_token,synced_version)
+      SELECT json_extract(value,'$[0]'),?,json_extract(value,'$[1]'),?,json_extract(value,'$[2]'),json_extract(value,'$[3]'),0
+      FROM json_each(?) WHERE EXISTS(SELECT 1 FROM budget_states WHERE owner_id=? AND revision=? AND last_op=?)
+      ON CONFLICT(source_id) DO UPDATE SET version=excluded.version,payload_json=excluded.payload_json,job_token=excluded.job_token
+      WHERE excluded.version>budget_calendar_outbox.version`).bind(owner,revision,'['+batch.join(',')+']',owner,revision,eventId));
+    batch.length=0;
+    size=0;
   }
+  for(const [source,item] of desired){
+    if(previous.get(source)===item.payload)continue;
+    const row=JSON.stringify([source,item.key,item.payload,crypto.randomUUID()]);
+    const bytes=encoder.encode(row).byteLength+1;
+    if(size+bytes>60000)flush();
+    batch.push(row);
+    size+=bytes;
+  }
+  flush();
   return statements;
 }
 export async function budgetCalendarItem(env:CalendarEnv,owner:string,source:string) {
@@ -63,7 +83,7 @@ export async function budgetNotificationCheck(env:CalendarEnv,owner:string,param
   const row=await env.DB.prepare('SELECT payload_json,version FROM budget_calendar_outbox WHERE source_id=? AND owner_id=?').bind(params.get('event'),owner).first<{payload_json:string|null;version:number}>();
   if(!row?.payload_json||String(row.version)!==params.get('version'))return privateJSON({allowed:false});
   const p=JSON.parse(row.payload_json);
-  if(p.status!=='planned'||!p.notice.enabled||p.amount<=0)return privateJSON({allowed:false});
+  if(p.status!=='planned'||!p.notice.enabled||(p.amount<=0&&p.kind!=='saving'))return privateJSON({allowed:false});
   return privateJSON({allowed:true,title:'家計の予定を確認してください',url:'/wagaya/apps/household-budget/?source='+params.get('event')});
 }
 // Only the notification service can redeem an unguessable, current job token.
@@ -76,7 +96,7 @@ export async function budgetCalendarJob(request:Request,env:CalendarEnv) {
   if(!row)return privateJSON({error:'予約が更新されています'},404);
   const enabled=await permitted(env,row.owner_id,true),p=row.payload_json?JSON.parse(row.payload_json):null;
   let occurrences:any[]=[];
-  if(enabled&&p?.status==='planned'&&p.notice.enabled&&p.amount>0){const d=new Date(p.date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-p.notice.daysBefore);occurrences=[{date:d.toISOString().slice(0,10),time:p.notice.time}];}
+  if(enabled&&p?.status==='planned'&&p.notice.enabled&&(p.amount>0||p.kind==='saving')){const d=new Date(p.date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-p.notice.daysBefore);occurrences=[{date:d.toISOString().slice(0,10),time:p.notice.time}];}
   // Only generic metadata goes to notification storage. Financial details stay HOME private.
   return privateJSON({source_id:row.source_id,version:row.version,recipient:'home:'+row.owner_id,occurrences});
 }

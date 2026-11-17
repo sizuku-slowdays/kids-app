@@ -236,7 +236,7 @@ function projectAccounts(accounts, rows, current, committedOnly = false) {
  });
 }
 
-export function forecastFunds(state, accounts, cards, asOf, missing, availablePlans = state.plans) {
+export function forecastFunds(state, accounts, cards, asOf, missing, availablePlans = state.plans, savings = {holdings:{},plans:[],reserved:0,unassigned:0}) {
  const current = asOf.slice(0,7), next = shiftBillingMonth(current,1);
  const rows = [];
  for (const plan of availablePlans) {
@@ -321,7 +321,11 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
  const unknown = rows.some(row => row.unknown) || missing || missingAccount || unassigned || unprojected;
  const reserves = state.fundReserves?.[current] ?? null;
  const reserved = reserves ? reserves.living + sum(reserves.goals) : null;
- const available = currentAssets === null || reserved === null || unknown ? null : currentAssets - sum(withdrawals) - reserved;
+ const savingsPlans=savings.plans.filter(plan=>plan.period<=horizon);
+ const currentSavings=sum(savingsPlans.filter(plan=>plan.period<=current));
+ const futureSavings=sum(savingsPlans);
+ const savingsNameConflict=reserves?.goals.some(reserve=>savings.goals?.some(goal=>goal.name===reserve.name)||savings.legacy?.some(group=>group.purpose===reserve.name));
+ const available = currentAssets === null || reserved === null || unknown || savingsNameConflict ? null : currentAssets - sum(withdrawals) - reserved - savings.reserved - futureSavings;
  // Keep the previous field available to clients with an older cached bundle.
  const shortfalls = accountForecasts.flatMap(account => {
   if(account.future?.amount>account.required)return [{accountId:account.accountId,date:account.future.date,amount:account.future.amount}];
@@ -330,16 +334,22 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
  });
  const currentPayments = sum(withdrawals.filter(row=>row.date.slice(0,7)<=current));
  const fundingGap=accountForecasts.some(account=>account.currentBalance<0||account.requiredWithoutPending>0);
+ const savingsRows=savingsPlans.filter(plan=>plan.accountId&&managed.has(plan.accountId)).map(plan=>({kind:'plan',from:plan.accountId,amount:plan.amount,date:plan.date<asOf?asOf:plan.date}));
+ const afterSavings=projectAccounts(accounts.map(account=>({...account,balance:account.balance===null?null:account.balance-(savings.holdings[account.id]||0)})),[...rows,...savingsRows].sort((a,b)=>a.date.localeCompare(b.date)),current,true);
+ const savingsIssue=savings.unassigned>0||savingsNameConflict||
+  savingsPlans.some(plan=>plan.period<=current&&(!plan.accountId||!managed.has(plan.accountId)))||
+  (savings.reserved>0||currentSavings>0)&&afterSavings.some(account=>account.currentBalance<0||account.required>0);
  const allowanceIssues=[
   ...(!reserves?['reserves']:[]),
   ...(currentAssets===null||currentUnknown?['month']:[]),
   ...(currentRows.some(row=>row.kind==='bill'&&(row.uncertain||row.unknown))?['currentCard']:[]),
   ...(fundingGap?['funding']:[]),
+  ...(savingsIssue?['savings']:[]),
  ];
- const currentAllowance = allowanceIssues.length?null:Math.max(0,currentAssets-currentPayments-reserved);
+ const currentAllowance = allowanceIssues.length?null:Math.max(0,currentAssets-currentPayments-reserved-savings.reserved-currentSavings);
  const cardAllowance = available===null||currentAllowance===null||
   rows.some(row=>row.review&&row.uncertain)?null:Math.max(0,Math.min(available,currentAllowance));
- return {currentAssets,monthEnd,monthEndTotals,available,reserves,horizon,income,unknown,missingAccount,unassigned,unprojected,
+ return {currentSavings,futureSavings,savingsReserved:savings.reserved,currentAssets,monthEnd,monthEndTotals,available,reserves,horizon,income,unknown,missingAccount,unassigned,unprojected,
   tentative:unknown || rows.some(row => row.uncertain || row.virtual),
   monthTentative:currentUnknown || currentRows.some(row => row.kind==='income'||row.kind==='transfer'||row.uncertain||row.virtual||row.review),
   currentUnknown,accountForecasts,cardAllowance,currentAllowance,allowanceIssues,benefitConflicts:cash.conflicts,duplicateIncome:cash.duplicateIncome,duplicateTransfers:cash.duplicateTransfers,duplicatePostedIncome:cash.duplicatePostedIncome,paidBenefitConflicts:cash.paidBenefitConflicts,paymentDuplicates,untrackedTransfers,overdueIncome,

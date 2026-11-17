@@ -367,10 +367,9 @@ function entryForm(existing,type=existing?.type||'expense'){modal(existing?'取�
  const settle=field(advanced,'従来の集計に使う反映月','month',existing?.settleMonth||today.slice(0,7));if(existing?.legacyIds?.length)f.append(el('p','旧記録の原本は保持します。残高に未反映の記録は、編集しても自動反映しません。','notice'));
  saveForm(f,'保存する',existing?'entry.edit':'entry.add',()=>{const value=amount(total),parts=split.checked?splitRows.map(r=>({...r.read(),amount:amount(r.n)})):[{...singleRead(),amount:value}];if(parts.reduce((n,p)=>n+p.amount,0)!==value)throw Error('内訳の合計と取引総額を一致させてください');if(parts.some(p=>!p.category))throw Error('大カテゴリを選んでください');return {id:existing?.id||crypto.randomUUID(),date:date.value,type:asAdvance?(asAdvance.checked?'advance':'expense'):type,amount:value,payment,bankEntry:data.accounts.some(a=>a.id===payment&&a.kind==='bank'),splits:parts,memo:existing?.memo||merchant.value,purchase:purchase.value,merchant:merchant.value,spendingKind:spending.value,savingsKind:savings.value,counterparty:party?.disabled?'':party?.value||'',linkedAdvanceId:link?.value||'',settleMonth:settle.value};});dialog.append(f);total.focus();}
 function entriesPage(){dailyTotal(root);const s=section('収支の記録'),filter=field(s,'表示月','month',entryViewMonth||month),person=personField(s),search=field(s,'購入内容・利用先で検索','search',''),unorganized=field(s,'未整理だけ表示','checkbox');const list=el('div');s.append(list);let visibleEntries=[];s.prepend(button('表示中の明細を一括分類',()=>bulkEntryForm(visibleEntries.filter(e=>!['income','recovery'].includes(e.type)))),button('立替を精算',advanceSettlementForm));const draw=()=>{list.replaceChildren();const entries=visibleEntries=data.entries.filter(e=>!e.void&&e.date.slice(0,7)===filter.value&&(!unorganized.checked||e.splits.some(p=>p.category==='その他'&&p.middle==='未整理'))&&(!person.value||e.splits.some(p=>p.person===person.value))&&(!search.value||[e.purchase,e.merchant,e.memo].some(v=>v?.normalize('NFKC').toLowerCase().includes(search.value.normalize('NFKC').toLowerCase())))).sort((a,b)=>b.date.localeCompare(a.date));for(const e of entries){const r=row(list,e.date+' '+([e.purchase,e.merchant||e.memo].filter(Boolean).join(' ／ ')||e.splits.map(p=>p.category).join('・')),yen(e.amount),payName(e.payment)+'・'+({expense:'支出',income:'収入',advance:'立替',recovery:'回収',refund:'返金'}[e.type])+(e.ledgerIncluded?'・残高反映済み':e.balanceIncludedExternally?'・残高へ再反映しない確認済み':'・残高対象外'));for(const part of e.splits)r.firstElementChild.append(el('p',[part.category,part.middle].filter(Boolean).join(' › ')+(part.person?' ／ 対象者：'+part.person:'')+(e.splits.length>1?' ／ '+yen(part.amount):'')+(part.middle==='未整理'&&part.originalClassification?' ／ 旧分類：'+part.originalClassification.category:''),'muted'));r.append(button('編集',()=>entryForm(e)),commandButton('取り消す','entry.void',{id:e.id,reason:'画面から取引取消'},'danger'));if(!e.ledgerIncluded&&!e.balanceIncludedExternally&&data.startDate&&e.date>=data.startDate)r.append(button('残高へ反映',()=>{modal('開始残高との二重反映を確認');const f=el('form'),payment=select(f,'実際の支払元・入金先',payments(),e.payment),confirmInput=field(f,'開始日の取引前残高に含めていない取引です','checkbox','',true);confirmInput.checked=false;saveForm(f,'確認して残高へ反映','entry.apply',()=>({id:e.id,payment:payment.value,confirm:confirmInput.checked}));dialog.append(f);}));}if(!entries.length)list.append(el('p','この条件の記録はありません。','muted'));};filter.onchange=()=>{entryViewMonth=filter.value;draw();};person.onchange=unorganized.onchange=draw;search.oninput=draw;draw();s.prepend(button('＋ 支出を入力',()=>entryForm(),'primary'));const more=details(s,'収入・立替・回収・返金');for(const [type,label]of [['income','収入'],['advance','立替'],['recovery','回収'],['refund','返金']])more.append(button(label,()=>entryForm(null,type)));}
-function accountMonthPicker(){
+function accountMonthPicker(box){
  const view=summary.accountMonth;
  if(!view)return null;
- const box=section('口座の月別資金繰り');
  const controls=el('div',undefined,'account-month-controls');
  const input=field(controls,'表示する年月','month',view.selected,true);
  input.min=view.min;
@@ -509,15 +508,17 @@ function accountStatement(host,a,account,view){
  return statement;
 }
 function accountsPage(){
- const overview=section('口座一覧・現在残高');
+ const overview=section('口座の月別資金繰り');
  overview.className='account-overview';
+ const view=accountMonthPicker(overview);
+ const current=today.slice(0,7);
+ const historical=view?.selected<current;
+ const balanceLabel=historical?'月末残高（実績）':'月末残高見込';
+ overview.append(el('h3',view?monthLabel(view.selected)+'の'+balanceLabel:'現在残高'));
  const links=el('ul',undefined,'account-overview-grid');
  links.setAttribute('role','list');
  overview.append(links);
  if(!summary.accounts.length)overview.append(el('p','登録済みの口座はありません。','muted'));
- const view=accountMonthPicker();
- const current=today.slice(0,7);
- const historical=view?.selected<current;
  if(!historical&&summary.savingsGoals?.unassigned)root.append(el('p','確保元が未割当の積立は、口座別の不足額に反映できません。','notice'));
  if(!historical&&data.cards.some(card=>!card.accountId||!card.paymentDay))root.append(el('p','引落口座や支払日が未登録のカードは、口座別の引落予定に反映されません。','notice'));
  const focusAccount=accountId;
@@ -535,14 +536,15 @@ function accountsPage(){
    card.scrollIntoView({block:'start'});
    title.focus({preventScroll:true});
   },'account-overview-link');
-  jump.append(el('span',a.name),el('strong',yen(a.balance),a.balance<0?'negative':''));
+  const overviewBalance=view?account?.monthEnd:a.balance;
+  jump.append(el('span',a.name),el('strong',yen(overviewBalance),overviewBalance<0?'negative':''));
   item.append(jump);
   links.append(item);
   const figures=el('dl',undefined,'passbook-figures passbook-balances');
   accountMoney(figures,'現在残高',a.balance);
   if(account){
    accountMoney(figures,historical||view.selected===current?'月初残高（実績）':'月初残高（見込）',account.opening);
-   accountMoney(figures,historical?'月末残高（実績）':'月末残高見込',account.monthEnd);
+   accountMoney(figures,balanceLabel,account.monthEnd);
   }
   card.append(figures);
   if(account&&!historical)accountFundingDetails(card,account,view,()=>{

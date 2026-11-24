@@ -347,11 +347,12 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
   ...(savingsIssue?['savings']:[]),
  ];
  const currentAllowance = allowanceIssues.length?null:Math.max(0,currentAssets-currentPayments-reserved-savings.reserved-currentSavings);
+ const currentAllowanceEstimate = currentAssets===null?null:currentAssets-currentPayments-(reserved??0)-savings.reserved-currentSavings;
  const cardAllowance = available===null||currentAllowance===null||
   rows.some(row=>row.review&&row.uncertain)?null:Math.max(0,Math.min(available,currentAllowance));
  return {currentSavings,futureSavings,savingsReserved:savings.reserved,currentAssets,monthEnd,monthEndTotals,available,reserves,horizon,income,unknown,missingAccount,unassigned,unprojected,
   tentative:unknown || rows.some(row => row.uncertain || row.virtual),
   monthTentative:currentUnknown || currentRows.some(row => row.kind==='income'||row.kind==='transfer'||row.uncertain||row.virtual||row.review),
-  currentUnknown,accountForecasts,cardAllowance,currentAllowance,allowanceIssues,benefitConflicts:cash.conflicts,duplicateIncome:cash.duplicateIncome,duplicateTransfers:cash.duplicateTransfers,duplicatePostedIncome:cash.duplicatePostedIncome,paidBenefitConflicts:cash.paidBenefitConflicts,paymentDuplicates,untrackedTransfers,overdueIncome,
+  currentUnknown,accountForecasts,cardAllowance,currentAllowance,currentAllowanceEstimate,currentPayments,currentReserved:reserved,allowanceIssues,benefitConflicts:cash.conflicts,duplicateIncome:cash.duplicateIncome,duplicateTransfers:cash.duplicateTransfers,duplicatePostedIncome:cash.duplicatePostedIncome,paidBenefitConflicts:cash.paidBenefitConflicts,paymentDuplicates,untrackedTransfers,overdueIncome,
   confirmed,estimated:cardTotal-confirmed-recurring,recurring,other:sum(withdrawals)-cardTotal,rows,shortfalls};
 }

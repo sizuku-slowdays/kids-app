@@ -1,3 +1,4 @@
+const takeoutCategory = '持ち帰り弁当';
 const weights = ['100g', '150g', '200g', '300g'];
 
 const menu = [
@@ -12,15 +13,27 @@ const menu = [
   {id:'curry', name:'ビーフカレー', category:'カレー', prices:[1274]},
 ];
 
+const takeoutMenu = [
+  {id:'pork', name:'唐津開拓豚 ポーク ステーキ', prices:[1008,1242,1476,1944]},
+  {id:'chicken', name:'肥後ハーブ鶏 チキン ステーキ', prices:[882,1053,1224,1566]},
+  {id:'loin', name:'PRIME BEEF ロース ステーキ', prices:[1269,1701,2133,2997]},
+  {id:'sagari', name:'PRIME BEEF サガリ ステーキ', prices:[1080,1418,1755,2430]},
+  {id:'ribeye', name:'黒毛和牛 リブロース ステーキ', prices:[1350,1823,2295,3240]},
+  {id:'sirloin', name:'黒毛和牛 サーロイン ステーキ', prices:[1755,2430,3105,4455]},
+  {id:'fillet', name:'黒毛和牛 ヒレ＆シャトーブリアン', prices:[2030,2786,3564,5184]},
+  {id:'hamburg', name:'三種肉仕立ての 特製ハンバーグ', prices:[1485], sizes:['200g']},
+  {id:'curry', name:'California ビーフカリー', prices:[1274], sizes:['1食']},
+];
+
 export const californiaStore = {
   id:'california-steak-nogata',
   name:'カリフォルニアステーキ 野方店',
   type:'order',
   note:'店頭メニュー画像の税込価格。ご飯・スープ・ビーフシチュー食べ放題の案内あり。カレーは個別表記あり。トッピングの税込価格は要確認。',
-  categories:['ステーキ', 'ハンバーグ', 'カレー'],
+  categories:['ステーキ', 'ハンバーグ', 'カレー', takeoutCategory],
   courses:[],
   source_version:'california-steak-nogata-20261124',
-  products:menu.map(({id,name,category,prices})=>({
+  products:[...menu.map(({id,name,category,prices})=>({
     id:'california-'+id,
     name,
     category,
@@ -33,5 +46,18 @@ export const californiaStore = {
       label:id==='curry'?'1皿':weights[index],
       price,
     })),
-  })),
+  })), ...takeoutMenu.map(({id,name,prices,sizes=weights})=>({
+    id:'california-takeout-'+id,
+    name,
+    category:takeoutCategory,
+    period:'takeout',
+    time_note:'持ち帰り専用。提供時間帯の記載なし。',
+    note:'ライス200g付き。大盛り無料。',
+    hidden:false,
+    variants:prices.map((price,index)=>({
+      id:'california-takeout-'+id+'-'+index,
+      label:sizes[index],
+      price,
+    })),
+  }))],
 };

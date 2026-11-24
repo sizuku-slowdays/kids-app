@@ -31,7 +31,11 @@ test('HOME auth, household separation, persistent CRUD and concurrent saves pres
   assert.equal((await call(null)).status,401);assert.equal((await call('other')).status,403);
   const first=await (await call()).json();assert.equal(first.editable,true);assert.equal(first.stores.length,4);assert.equal((await (await call()).json()).revision,first.revision);assert.equal(first.stores.find(s=>s.id==='nurubon-fukushige').courses[4].prices[2],null);assert.deepEqual(first.stores[0].courses.map(c=>c.prices),prices);
   const california=first.stores.find(s=>s.id==="california-steak-nogata");
-  assert.equal(california.type,"order");assert.equal(california.products.length,9);
+  assert.equal(california.type,"order");assert.equal(california.products.length,18);
+  const takeout=california.products.filter(p=>p.period==='takeout');
+  assert.equal(takeout.length,9);
+  assert.equal(takeout.flatMap(p=>p.variants).length,30);
+  assert.deepEqual(takeout.find(p=>p.id==='california-takeout-hamburg').variants.map(v=>[v.label,v.price]),[['200g',1485]]);
   assert.deepEqual(california.products[1].variants.map(v=>v.price),[1490,1922,2354,3110]);
   assert.equal((await (await call('kid')).json()).editable,false);assert.equal((await call('kid','PUT',{revision:first.revision,stores:[]})).status,403);
   const stores=structuredClone(first.stores);stores.find(s=>s.id==='nurubon-fukushige').drink_options[0].prices[0]=600;stores.find(s=>s.id==='nurubon-fukushige').courses[0].prices[2]=3718;stores.push({id:'another',name:'別のお店',note:'税込',courses:[{id:'c',name:'コース',prices:[1000,900,800,500,0]}]});

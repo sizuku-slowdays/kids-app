@@ -218,10 +218,10 @@ function monthLabel(value){
  const [year,number]=value.split('-');
  return year+'年'+Number(number)+'月';
 }
-function spendingMonths(){
+function spendingMonths(host=root){
  const monthly=summary.spendingMonths;
  if(!monthly)return;
- const sectionRoot=section('引落月で見る収支');
+ const sectionRoot=section('引落月で見る収支',host);
  sectionRoot.append(button('手当の設定を変更',()=>monthlyBenefitForm(monthly.rule)));
  for(const [index,m] of monthly.months.entries()){
   const box=index?details(sectionRoot,monthLabel(m.month)+'の見通し'):section(monthLabel(m.month),sectionRoot);
@@ -244,14 +244,21 @@ function spendingMonths(){
 function cashflowHome(){
  const funds=summary.funds;
  if(!funds?.accountForecasts)return;
+ const start=root.children.length;
  monthlyFunding(funds);
+ const fundingPanel=root.children[start];
  const monthly=section('今月末の残高見込'+(funds.monthTentative?'（暫定）':''));
  monthly.append(el('p',yen(funds.monthEnd),'amount'));
- monthEndBreakdown(monthly,funds);
+ monthEndBreakdown(details(monthly,'残高の内訳'),funds);
  const s=section('あといくら使える？');
+ s.classList.add('budget-hero');
+ root.insertBefore(s,fundingPanel);
+
  row(s,'今月の使用可能額（登録済みの予定に基づく目安）',funds.currentAllowance===null?'算出不可／要確認':yen(funds.currentAllowance));
- row(s,'今後のカード引落も確保した使用可能額（暫定）',funds.cardAllowance===null?'算出不可／要確認':yen(funds.cardAllowance));
- s.append(el('p','着金済みのお金から、今月の支払い・生活費・確保額を差し引きます。下段は '+funds.horizon+' までの登録済み支払いも確保した家計全体の目安です。','muted'));
+ const futureAllowance=details(s,'来月以降のカード引落も考慮する場合');
+ row(futureAllowance,'今後のカード引落も確保した使用可能額（暫定）',funds.cardAllowance===null?'算出不可／要確認':yen(funds.cardAllowance));
+ s.append(el('p','着金済みのお金から今月の支払い・生活費・確保額を差し引いた目安です。','muted'));
+ futureAllowance.append(el('p',funds.horizon+' までの登録済み支払いも確保した家計全体の目安です。','muted'));
  const allowanceMessages={
   reserves:'残りの生活費・確保額を設定してください。',
   month:'金額・入金・振替・取引の確認待ちがあります。下の「要確認」を確認してください。',
@@ -291,7 +298,7 @@ function cashflowHome(){
  if(funds.benefitConflicts.length)issues.push(['同じ月の児童手当・児童扶養手当の予定に重複があります。着金済み分は残高に含め、重複候補の予定は見込みから外しています。','入金予定を確認','plans']);
  if(funds.overdueIncome.length)issues.push(['予定日を過ぎた未確定の入金は、見込みに含めていません。入金の確定か予定日の見直しをしてください。','入金予定を確認','plans']);
  if(issues.length){
-  const warning=section('要確認');
+  const warning=details(root,'要確認（'+issues.length+'件）');
   for(const [message,label,target] of issues)warning.append(el('p',message,'notice'),button(label,()=>openBudgetTab(target)));
  }
  const outlook=details(root,'来月以降の見通し');
@@ -307,11 +314,12 @@ function cashflowHome(){
   }
  }
  const recent=section('直近の引落予定');
+ root.insertBefore(recent,monthly.nextSibling);
  const upcoming=funds.rows.filter(item=>item.date.slice(0,7)===today.slice(0,7)&&(item.kind==='bill'||item.kind==='plan')).slice(0,5);
  if(!upcoming.length)recent.append(el('p','登録済みの引落予定はありません。','muted'));
  for(const item of upcoming)fundSource(recent,item);
 }
-function home(){spendingMonths();cashflowHome();const extra=details(root,'日別支出・口座・今月の収支');dailyTotal(extra);const cards=el('div',undefined,'summary-grid');for(const [label,value,detail]of [['管理中の口座・現金合計',summary.assets,'開始残高を設定した口座のみ'],['カード未払金',summary.debt,'PINK・VISAの残り'],['未払金を差し引いた金額',summary.net,'口座合計とは分けて表示']]){const c=el('div',undefined,'card');c.append(el('small',label),el('p',yen(value),'amount'),el('small',detail));cards.append(c);}extra.append(cards);
+function home(){cashflowHome();const spending=details(root,'引落月で見る収支・繰り越し');spendingMonths(spending);const extra=details(root,'日別支出・口座・今月の収支');dailyTotal(extra);const cards=el('div',undefined,'summary-grid');for(const [label,value,detail]of [['管理中の口座・現金合計',summary.assets,'開始残高を設定した口座のみ'],['カード未払金',summary.debt,'PINK・VISAの残り'],['未払金を差し引いた金額',summary.net,'口座合計とは分けて表示']]){const c=el('div',undefined,'card');c.append(el('small',label),el('p',yen(value),'amount'),el('small',detail));cards.append(c);}extra.append(cards);
  const s=section('口座と、今月末までの見込み',extra);s.append(el('p','確認待ちと今月末までの入金・振替・引落予定を含めます。未割当のカード開始残高・未登録の引落は見込額に含まれません。','muted'));const grid=el('div',undefined,'cards');for(const a of summary.accounts.filter(a=>a.opening!==null)){const c=el('article',undefined,'card');c.append(el('h3',a.name),el('p',yen(a.balance),'amount'));metric(c,'入金予定',a.plannedIn);metric(c,'引落・振替予定',a.upcoming+a.plannedOut);metric(c,'予定反映後の見込',a.forecast);if(a.pendingCount)c.append(el('p','確認待ち '+a.pendingCount+'件','badge'));c.append(button('口座を見る',()=>{tab='accounts';accountId=a.id;render();}));grid.append(c);}s.append(grid);const unconfigured=summary.accounts.filter(a=>a.opening===null);if(unconfigured.length){const closed=details(s,'まだ開始していない口座（'+unconfigured.length+'件）');for(const a of unconfigured)closed.append(button(a.name+' の設定',()=>{tab='accounts';accountId=a.id;render();}));}
  const flow=section('今月の収支（利用日基準）',extra);metric(flow,'収入',summary.income);metric(flow,'支出',summary.expense);
  flow.append(button('収支の明細を見る',()=>openBudgetTab('entries')));

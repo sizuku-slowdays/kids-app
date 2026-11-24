@@ -1,4 +1,5 @@
 import {nurubonStore} from './dining-nurubon';
+import {californiaStore} from './dining-california';
 import {westernStore} from './dining-western';
 type Course = {id:string;name:string;prices:(number|null)[]};
 type Product={id:string;name:string;category:string;period:string;time_note:string;note:string;hidden:boolean;source_page?:number;variants:{id:string;label:string;price:number}[]};
@@ -53,7 +54,8 @@ export async function diningRoute(request:Request,env:Env,userId:string,readBody
  if(!row)return json({error:'料金を読み込めませんでした'},503);
  row=await importWestern(env,group.id,userId,row);
  row=await importWestern(env,group.id,userId,row,true);
- row=await importNurubon(env,group.id,userId,row);
+ row=await importStore(env,group.id,userId,row,nurubonStore);
+ row=await importStore(env,group.id,userId,row,californiaStore);
  if(request.method==='PUT'){
   let data;try{data=await readBody(request);}catch(e){throw e;}
   if(!Number.isSafeInteger(data.revision))return json({error:'画面を読み直してください'},400);
@@ -85,13 +87,13 @@ async function importWestern(env:Env,household:string,userId:string,row:{stores_
  return row;
 }
 
-async function importNurubon(env:Env,household:string,userId:string,row:{stores_json:string;revision:number}){
- const source=nurubonStore.source_version;
+async function importStore(env:Env,household:string,userId:string,row:{stores_json:string;revision:number},store:Store & {source_version:string}){
+ const source=store.source_version;
  for(let retry=0;retry<3;retry++){
   if(await env.DB.prepare('SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?').bind(household,source).first())return row;
   const stores=JSON.parse(row.stores_json) as Store[],now=new Date().toISOString();
-  if(stores.some(s=>s.id===nurubonStore.id)){await env.DB.prepare('INSERT OR IGNORE INTO dining_price_imports VALUES(?,?,?)').bind(household,source,now).run();return row;}
-  const nextJSON=JSON.stringify([...stores,nurubonStore]);
+  if(stores.some(s=>s.id===store.id)){await env.DB.prepare('INSERT OR IGNORE INTO dining_price_imports VALUES(?,?,?)').bind(household,source,now).run();return row;}
+  const nextJSON=JSON.stringify([...stores,store]);
   await env.DB.batch([
    env.DB.prepare('INSERT INTO dining_price_backups SELECT ?,household_id,revision,stores_json,? FROM dining_price_states WHERE household_id=? AND revision=? AND NOT EXISTS(SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?)').bind(crypto.randomUUID(),now,household,row.revision,household,source),
    env.DB.prepare('UPDATE dining_price_states SET stores_json=?,revision=revision+1,updated_by=?,updated_at=? WHERE household_id=? AND revision=? AND NOT EXISTS(SELECT 1 FROM dining_price_imports WHERE household_id=? AND source_id=?)').bind(nextJSON,userId,now,household,row.revision,household,source),

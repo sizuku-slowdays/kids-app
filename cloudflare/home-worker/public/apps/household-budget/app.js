@@ -254,7 +254,20 @@ function cashflowHome(){
  s.classList.add('budget-hero');
  root.insertBefore(s,fundingPanel);
 
- row(s,'今月の使用可能額（登録済みの予定に基づく目安）',funds.currentAllowance===null?'算出不可／要確認':yen(funds.currentAllowance));
+ const estimate=funds.currentAllowanceEstimate;
+ const provisional=funds.currentAllowance===null;
+ const shown=provisional?estimate:funds.currentAllowance;
+ s.append(el('p',shown==null?'口座残高の設定が必要です':yen(Math.max(0,shown)),'amount'));
+ if(provisional&&shown!=null)s.append(el('p','暫定・未確認の支払い等で減る可能性があります。使ってよいと確定した金額ではありません。','notice'));
+ if(estimate!=null&&estimate<0)s.append(el('p','登録済みの金額でも '+yen(-estimate)+' 不足しています。','notice'));
+ const calc=details(s,'今月の計算内訳');
+ metric(calc,'現在の口座・現金合計',funds.currentAssets);
+ metric(calc,'－今月までの残りの支払い',funds.currentPayments);
+ if(funds.currentReserved==null)calc.append(el('p','生活費・確保額：未設定（暫定額から未控除）','notice'));
+ else metric(calc,'－生活費・確保額',funds.currentReserved);
+ metric(calc,'－積立の確保済み資金',funds.savingsReserved);
+ metric(calc,'－今月までの積立予定',funds.currentSavings);
+ if(estimate!=null)metric(calc,'差引残額（登録済み分）',estimate);
  const futureAllowance=details(s,'来月以降のカード引落も考慮する場合');
  row(futureAllowance,'今後のカード引落も確保した使用可能額（暫定）',funds.cardAllowance===null?'算出不可／要確認':yen(funds.cardAllowance));
  s.append(el('p','着金済みのお金から今月の支払い・生活費・確保額を差し引いた目安です。','muted'));
@@ -262,7 +275,7 @@ function cashflowHome(){
  const allowanceMessages={
   reserves:'残りの生活費・確保額を設定してください。',
   month:'金額・入金・振替・取引の確認待ちがあります。下の「要確認」を確認してください。',
-  currentCard:'今月のカード請求額が確定すると計算できます。',
+  currentCard:'今月のカード請求額に未確定分があります。仮登録済みの金額を使用しています。',
   savings:'積立の確保元・残高、または生活費の画面で入力した確保額との重複を確認してください。',
   funding:'引落日までの資金が足りない口座があります。着金・振替を確認してください。',
  };

@@ -189,6 +189,7 @@ async function home() {
     for(const app of [
       {id:"kakeibo-index",name:"家計簿メニュー",icon:"💰",path:"https://cetus.fun/kanriapp/kakeibo-index.html",status:"ready"},
       {id:"kakeibo-input",name:"すぐ入力",icon:"✍️",path:"https://cetus.fun/kanriapp/kakeibo-input.html",status:"ready"},
+      {id:"loto-random",name:"億万長者メーカー",icon:"🎲",path:"https://mini-apps.sslowdayss.workers.dev/loto-random/",status:"ready"},
     ]) quick.append(appCard(app));
   }
   const favoriteApps=visibleApps.filter(a=>a.featured);

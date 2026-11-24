@@ -47,3 +47,70 @@ progress{display:block;width:100%;height:18px;margin-top:14px;accent-color:var(-
  .passbook-table{font-size:.82rem}
  .passbook-table th:first-child{width:44%}
 }
+
+/* 2026-11-24: soft dashboard theme; presentation only */
+:root{--line:#eadfe5;--main:#9c526e;--muted:#746671;--rose:#f9e8ef;--mint:#e5f2eb;color:#423740;background:#faf7f8;font-size:16px}
+body{background:linear-gradient(155deg,#f9e8ef 0,#faf7f8 320px);min-height:100vh}
+main{max-width:1100px;padding:24px 22px 120px}
+header{padding:18px 22px;background:#fff9fc;border:1px solid #eedde5;border-radius:24px}
+header h1{font-size:28px;color:#694253;letter-spacing:.03em}
+header a{background:white;border:1px solid var(--line);border-radius:999px;padding:9px 15px;text-decoration:none;font-size:13px}
+a{color:#92506b}small,.muted,.passbook-figures dt,.passbook-table time,.passbook-table small,.passbook-table caption{color:var(--muted)}
+button{color:#684757;border-color:var(--line);border-radius:13px;background:#fff;min-height:44px}
+button:hover:not(:disabled){background:#f9edf2}
+.primary,.primary:hover:not(:disabled){background:#a45876;color:#fff;border-color:#a45876;font-weight:700}
+nav{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px;padding:8px;background:#fff;border:1px solid var(--line);border-radius:20px;margin:18px 0 22px;box-shadow:0 4px 18px #69425309}
+nav button{min-width:0;border:0;padding:9px 3px;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;line-height:1.4}
+nav button::before{font-size:20px;line-height:1.3}
+nav button:nth-child(1)::before{content:'⌂'}nav button:nth-child(2)::before{content:'✎'}nav button:nth-child(3)::before{content:'▤'}nav button:nth-child(4)::before{content:'▦'}nav button:nth-child(5)::before{content:'↻'}nav button:nth-child(6)::before{content:'▱'}nav button:nth-child(7)::before{content:'♡'}nav button:nth-child(8)::before{content:'▥'}nav button:nth-child(9)::before{content:'⚙'}
+nav button.active{background:#f5e0e9;border:0;color:#86425e;font-weight:800}
+section,.card{border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 5px 20px #69425308;margin:16px 0}
+h2{font-size:19px;letter-spacing:.01em;color:#513e4a}h3{color:#624c5a}
+.amount{color:#694253;font-size:30px;margin:12px 0;letter-spacing:-.025em}
+.negative,.danger{color:#b43b4d!important}
+.row{border-color:#f0e7ec;gap:10px}
+.metric{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:10px 0;line-height:1.6}
+.metric span{flex:1;min-width:0}.metric strong{float:none;flex-shrink:0;font-variant-numeric:tabular-nums}
+.notice,.development{background:#f0f6f1;border:1px solid #dcebe1;color:#405f50}
+.error{background:#fff0f1;color:#a63245;border:1px solid #f3d3d8}
+.badge,.pill{background:#f5e7ee;color:#80516a}
+input,select,textarea{border-color:#e5d8e0;color:#423740;background:#fff}
+input[type=checkbox]{accent-color:var(--main)}
+.pay-buttons .active{background:#f5e0e9;border:2px solid #b77691;color:#70435a}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline-color:#a45876}
+details{border-radius:14px}#app>details{background:white;border:1px solid var(--line);padding:8px 18px}
+summary{color:#77536a}
+.fixed-group,.split-row,.passbook-planned{background:#fbf7fa}
+.pending{border-color:#c48aa1}
+.passbook-funding>summary{background:#eaf4ee;color:#416451}
+.passbook-statement>summary{color:#77536a}
+.passbook-table th,.passbook-table td,.funding-deadlines li+li{border-color:#eee4e9}
+.passbook-planned .passbook-status{color:#92506b}
+.floating{right:max(16px,calc((100vw - 1100px)/2 + 18px));border-radius:999px;padding:15px 24px;box-shadow:0 8px 24px #86425e35}
+dialog{border-radius:24px;box-shadow:0 15px 65px #47313f33}dialog::backdrop{background:#47313f66}
+.account-overview{padding:22px}
+.account-overview h3{font-size:15px;margin:22px 0 12px}
+.account-overview-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.account-overview-link{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;min-height:96px;padding:13px 15px;background:#f9f2f6;border-color:#eddee7;font-size:13px;line-height:1.4}
+.account-overview-link strong{font-size:21px;color:#624353;letter-spacing:-.025em}
+.account-overview-grid li:nth-child(3n+2) .account-overview-link{background:#edf5ef;border-color:#dcebe0}
+.account-overview-grid li:nth-child(3n+3) .account-overview-link{background:#f2eff9;border-color:#e5deef}
+.account-overview-link:has(.negative){background:#fff0f1!important;border-color:#efcdd3!important}
+.passbook-balances{background:#f8f4f7;padding:14px;border-radius:14px}
+#message{position:fixed;z-index:10;top:12px;left:50%;transform:translateX(-50%);width:min(92vw,520px)}
+#message p{margin:0;box-shadow:0 6px 22px #47313f20}
+#message .notice{animation:budget-toast 5s forwards;pointer-events:none}
+#message:has(.notice){pointer-events:none}
+@keyframes budget-toast{0%,80%{opacity:1}100%{opacity:0;visibility:hidden}}
+@media(prefers-reduced-motion:reduce){#message .notice{animation:none}}
+@media(max-width:600px){
+ main{padding:12px 12px 110px}header{padding:14px 16px}header h1{font-size:24px}
+ nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:12px 0 16px;padding:6px}
+ nav button{font-size:12px;min-height:48px;padding:6px 1px}nav button::before{font-size:19px}
+ section,.card,.account-overview{padding:16px;border-radius:18px}h2{font-size:17px}
+ .account-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .account-overview-link{min-height:88px;padding:12px;font-size:12px}
+ .account-overview-link strong{font-size:19px}
+ .account-month-controls{gap:5px}.account-month-controls button{padding:8px;font-size:13px}
+ .metric{font-size:14px}.floating{right:14px}
+}

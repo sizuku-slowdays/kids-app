@@ -261,8 +261,24 @@ function cashflowHome(){
  if(provisional&&shown!=null)s.append(el('p','暫定・未確認の支払い等で減る可能性があります。使ってよいと確定した金額ではありません。','notice'));
  if(estimate!=null&&estimate<0)s.append(el('p','登録済みの金額でも '+yen(-estimate)+' 不足しています。','notice'));
  const calc=details(s,'今月の計算内訳');
- metric(calc,'現在の口座・現金合計',funds.currentAssets);
- metric(calc,'－今月までの残りの支払い',funds.currentPayments);
+ const balanceDetails=details(calc,'現在の口座・現金合計　'+yen(funds.currentAssets));
+ for(const account of funds.accountForecasts)metric(balanceDetails,payName(account.accountId),account.currentBalance);
+ const paymentDetails=details(calc,'－今月までの残りの支払い　'+yen(funds.currentPayments));
+ const groups=new Map();
+ for(const item of funds.rows||[]){
+  if(!['bill','plan'].includes(item.kind)||item.date.slice(0,7)>today.slice(0,7))continue;
+  const key=item.from||'';
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(item);
+ }
+ for(const [id,items] of groups){
+  const total=items.reduce((sum,item)=>sum+item.amount,0);
+  const group=details(paymentDetails,(id?payName(id):'引落口座未設定')+'　'+yen(total));
+  for(const item of items)row(group,item.name,yen(item.amount),(item.originalDate||item.date)+(item.unknown?' ／ 金額未確認':item.uncertain||item.virtual||item.review?' ／ 暫定':'')+(item.overdue?' ／ 期限経過':''));
+ }
+ if(!groups.size)paymentDetails.append(el('p','登録済みの残りの支払いはありません。','muted'));
+ const groupedTotal=[...groups.values()].flat().reduce((sum,item)=>sum+item.amount,0);
+ if(groupedTotal!==funds.currentPayments)paymentDetails.append(el('p','内訳と支払合計に差があります。確認してください。','notice'));
  if(funds.currentReserved==null)calc.append(el('p','生活費・確保額：未設定（暫定額から未控除）','notice'));
  else metric(calc,'－生活費・確保額',funds.currentReserved);
  metric(calc,'－積立の確保済み資金',funds.savingsReserved);

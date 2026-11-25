@@ -6,8 +6,8 @@ const source=readFileSync(new URL('../public/app.js',import.meta.url),'utf8').re
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
 class Element {constructor(tag){this.tag=tag;this.children=[];this.classList={add(){}};this.isConnected=true;this.textContent='';this.value='';this.dataset={};this.scrollHeight=1000;this.scrollTop=0;this.clientHeight=300;}append(...nodes){this.children.push(...nodes);}replaceChildren(...nodes){this.children=nodes;}setAttribute(name,value){this[name]=value;}addEventListener(){}getBoundingClientRect(){return {top:0,bottom:300};}querySelector(){return null;} }
 function account(letter){return {id:'parent-'+letter,role:'guardian',alias:'Test parent '+letter,stamps:{},children:[{id:'child-'+letter,alias:'Test child '+letter,paused:0,photos_enabled:0,timezone:'Asia/Tokyo',schedule_json:'[[],[],[],[],[],[],[]]',revision:1}]};}
-function harness(handler){const nodes={app:new Element('main'),identity:new Element('header'),status:new Element('p')},calls=[];const context=vm.createContext({document:{getElementById:id=>nodes[id],createElement:tag=>new Element(tag),createDocumentFragment:()=>new Element('fragment'),addEventListener(){},hidden:false},location:{hash:'',pathname:'/'},history:{},URLSearchParams,crypto:{randomUUID:()=> 'test-nonce'},innerHeight:844,navigator:{},setInterval:()=>1,clearInterval(){},fetch:async(url,opts)=>{calls.push(url);return handler(url,opts);},drawQR(){},confirm:()=>true});vm.runInContext(source,context);return {context,nodes,calls,run:code=>vm.runInContext(code,context)};}
-const response=(data,status=200)=>({ok:status<400,json:async()=>data});
+function harness(handler){const nodes={app:new Element('main'),identity:new Element('header'),status:new Element('p')},calls=[];const context=vm.createContext({document:{getElementById:id=>nodes[id],createElement:tag=>new Element(tag),createDocumentFragment:()=>new Element('fragment'),addEventListener(){},hidden:false},location:{hash:'',pathname:'/'},history:{},URLSearchParams,crypto:{randomUUID:()=> 'test-nonce'},innerHeight:844,navigator:{},window:{addEventListener(){}},AbortController,setTimeout,clearTimeout,setInterval:()=>1,clearInterval(){},fetch:async(url,opts)=>{calls.push(url);return handler(url,opts);},drawQR(){},confirm:()=>true});vm.runInContext(source,context);return {context,nodes,calls,run:code=>vm.runInContext(code,context)};}
+const response=(data,status=200)=>({ok:status<400,status,json:async()=>data});
 function defaults(url){if(url==='/api/info')return response({consent_version:'test'});if(url.includes('/messages'))return response({messages:[],peer_read_seq:0});if(url.startsWith('/api/friends'))return response({friends:[]});if(url==='/api/invitations')return response({invitations:[]});if(url.startsWith('/api/media'))return response({media:[]});if(url.endsWith('/sessions'))return response({sessions:[]});throw Error('Unexpected '+url);}
 test('switching guardians selects only a child in the new account',async()=>{let current=account('A');const h=harness(url=>url==='/api/me'?response(current):defaults(url));await h.run('start()');assert.equal(h.run('selected'),'child-A');current=account('B');await h.run('start()');assert.equal(h.run('selected'),'child-B');assert.ok(h.calls.includes('/api/friends?child=child-B'));assert.equal(h.run('me.id'),'parent-B');});
 test('a delayed guardian render cannot read null account or replace the logged-out screen',async()=>{let active=true;const pending=defer(),requested=defer();const h=harness(url=>{if(url==='/api/me')return active?response(account('A')):response({error:'login'},401);if(url==='/api/logout'){active=false;return response({ok:true});}if(url.startsWith('/api/friends')){requested.resolve();return pending.promise;}return defaults(url);});const old=h.run('start()');await requested.promise;await h.run('logout()');pending.resolve(response({friends:[{id:'old-talk',peer_alias:'Old child',state:'active'}]}));await old;assert.equal(h.run('me'),null);assert.equal(h.run('selected'),'');assert.equal(h.nodes.identity.children.length,0);assert.equal(h.nodes.status.textContent,'');assert.ok(h.nodes.app.children.some(c=>c.children?.some(n=>n.textContent==='ログイン')));});
@@ -26,3 +26,38 @@ test('one bulk action fills all days without writing; explicit Save uses the exi
 test('weekday and weekend batch actions leave other days unchanged and permit a daily override',async()=>{const h=harness(url=>url==='/api/me'?response(account('A')):defaults(url));await h.run('start()');const c=settingsControls(h);c.from.value='09:00';c.to.value='10:00';await c.button('毎日に反映').onclick();c.from.value='16:00';c.to.value='18:00';await c.button('平日（月〜金）に反映').onclick();assert.equal(c.day('日').value,'09:00');assert.equal(c.day('土').value,'09:00');for(const d of ['月','火','水','木','金'])assert.equal(c.day(d).value,'16:00');c.from.value='10:30';c.to.value='17:00';await c.button('土日に反映').onclick();for(const d of ['月','火','水','木','金'])assert.equal(c.day(d).value,'16:00');assert.equal(c.day('日').value,'10:30');assert.equal(c.day('土').value,'10:30');c.day('水').value='17:15';assert.equal(c.day('水').value,'17:15');assert.equal(c.day('火').value,'16:00');});
 test('incomplete, reversed and invalid bulk times neither change days nor issue a settings write',async()=>{const writes=[];const h=harness((url,opts)=>{if(url==='/api/me')return response(account('A'));if(opts.method!=='GET')writes.push(url);return defaults(url);});await h.run('start()');const c=settingsControls(h);c.from.value='09:00';c.to.value='10:00';await c.button('毎日に反映').onclick();for(const [from,to] of [['','18:00'],['18:00','17:00'],['17:00','17:00'],['25:00','26:00']]){c.from.value=from;c.to.value=to;await c.button('毎日に反映').onclick();for(const d of ['日','月','火','水','木','金','土'])assert.equal(c.day(d).value,'09:00');assert.ok(h.nodes.status.textContent.length>0);}assert.equal(writes.length,0);});
 test('returning from another app retains unsaved bulk time inputs and copied daily values',async()=>{const h=harness(url=>url==='/api/me'?response(account('A')):defaults(url));await h.run('start()');const c=settingsControls(h);c.from.value='16:15';c.to.value='18:30';await c.button('平日（月〜金）に反映').onclick();await h.run('resume()');assert.ok(h.nodes.app.children.includes(c.section));assert.equal(c.from.value,'16:15');assert.equal(c.to.value,'18:30');assert.equal(c.day('月').value,'16:15');assert.equal(c.day('土').value,'');});
+
+test('a temporary talk failure preserves the draft and resumes on retry',async()=>{
+ let down=false;
+ const h=harness(url=>{
+  if(url==='/api/me')return response(childAccount('A'));
+  if(url.includes('/messages')&&down)throw new TypeError('offline');
+  return defaults(url);
+ });
+ await h.run('start()');
+ await h.run("openTalk({id:'talk-test',peer_alias:'Test child B'})");
+ const view=h.nodes.app.children[0];
+ const draft=descendants(view).find(n=>n.tag==='textarea');
+ const retry=descendants(view).find(n=>n.textContent==='読み込みなおす');
+ draft.value='まだ送っていない';
+ down=true;
+ await h.run('refreshVisible()');
+ assert.equal(retry.hidden,false);
+ assert.equal(h.nodes.app.children[0],view);
+ assert.equal(draft.value,'まだ送っていない');
+ down=false;
+ await retry.onclick();
+ assert.equal(retry.hidden,true);
+ assert.equal(draft.value,'まだ送っていない');
+});
+
+test('a transient startup failure offers a retry without treating it as logout',async()=>{
+ let down=true;
+ const h=harness(url=>url==='/api/me'?(down?response({error:'temporary'},503):response(childAccount('A'))):defaults(url));
+ await h.run('start()');
+ assert.ok(!h.calls.includes('/api/info'));
+ const retry=descendants(h.nodes.app).find(n=>n.textContent==='もう一度ひらく');
+ down=false;
+ await retry.onclick();
+ assert.equal(h.run('me.id'),'child-A');
+});

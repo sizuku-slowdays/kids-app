@@ -999,7 +999,7 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  updateAvatar(); loadAll(); resyncNotificationsOnce();
+  updateAvatar(); render(); loadAll().catch(e=>{console.warn('予定の読み込みに失敗しました',e);if(document.getElementById('app').style.display!=='none')alert('予定の読み込みに失敗しました。再読み込みしてください。');}); resyncNotificationsOnce();
 }
 async function resyncNotificationsOnce() {
   const key = 'home_calendar_notification_sync_v2:'+homeCalendarUserId;
@@ -1014,15 +1014,31 @@ async function resyncNotificationsOnce() {
 }
 function updateAvatar() { if (!myProfile) return; const btn = document.getElementById('avatar-btn'); btn.style.background = myProfile.avatar_color; btn.textContent = myProfile.display_name.charAt(0); document.getElementById('menu-name').textContent = myProfile.display_name; const isAdmin = myProfile.role === 'admin'||myProfile.can_configure_google===true; const gs = document.getElementById('google-settings-menu'); if (gs) gs.style.display = isAdmin ? '' : 'none'; const fm = document.getElementById('family-members-menu'); if (fm) fm.style.display = 'none'; }
 let sharingData=null,editingCalendar=null,eventVisibility=null;
-async function loadAll() { sharingData=homeConnection?.acl_version?await api('/sharing'):null;calendars = await api('/calendars'); renderLegend(); await loadEvents(); }
+let calendarLoadGeneration=0;
+async function loadAll() {
+ const generation=++calendarLoadGeneration;
+ const [sharing,list]=await Promise.all([homeConnection?.acl_version?api('/sharing'):Promise.resolve(null),api('/calendars')]);
+ if(generation!==calendarLoadGeneration)return;
+ sharingData=sharing;calendars=list;renderLegend();await loadEvents();
+}
 
-async function fetchGoogleEvents() {
-  try {
-    const y = currentDate.getFullYear(), m = currentDate.getMonth();
-    const from = dateStr(new Date(y, m-1, 1)), to = dateStr(new Date(y, m+2, 0));
-    gEvents = await api(`/google-events?from=${from}&to=${to}`);
-  } catch(e) { gEvents = []; console.warn('Google Calendar fetch error', e); }
-  renderLegend(); render();
+let googleLoadGeneration=0;
+function calendarRange(){
+ const y=currentDate.getFullYear(),m=currentDate.getMonth();
+ return 'from='+dateStr(new Date(y,m-1,1))+'&to='+dateStr(new Date(y,m+2,0));
+}
+async function fetchGoogleEvents(range=calendarRange()) {
+ const generation=++googleLoadGeneration;
+ try {
+  const result=await api('/google-events?'+range);
+  if(generation!==googleLoadGeneration||range!==calendarRange())return;
+  gEvents=result;
+ } catch(e) {
+  if(generation!==googleLoadGeneration||range!==calendarRange())return;
+  gEvents=[];console.warn('Google Calendar fetch error',e);
+ }
+ renderLegend();render();
+ if(selectedDate)renderDayPanel(selectedDate);
 }
 async function openFamilyMembers() {
   document.getElementById('user-menu').classList.remove('open');
@@ -1133,11 +1149,15 @@ function makeLegendItem(id, name, color, isGoogle) {
 }
 function toggleLegend(id, el) { if (hiddenCals.has(id)) { hiddenCals.delete(id); el.classList.remove('hidden'); } else { hiddenCals.add(id); el.classList.add('hidden'); } localStorage.setItem('homeCalendarHidden:'+homeCalendarUserId, JSON.stringify([...hiddenCals])); render(); }
 
+let eventLoadGeneration=0;
 async function loadEvents() {
-  const y = currentDate.getFullYear(), m = currentDate.getMonth();
-  const from = dateStr(new Date(y, m-1, 1)), to = dateStr(new Date(y, m+2, 0));
-  events = await api(`/events?from=${from}&to=${to}`);
-  await fetchGoogleEvents();
+ const generation=++eventLoadGeneration,range=calendarRange();
+ const pendingGoogle=fetchGoogleEvents(range);
+ const result=await api('/events?'+range);
+ if(generation!==eventLoadGeneration||range!==calendarRange())return;
+ events=result;renderLegend();render();
+ if(selectedDate)renderDayPanel(selectedDate);
+ await pendingGoogle;
 }
 
 function allEvents() { const orig = events.filter(e => !hiddenCals.has(e.calendar_id)); const g = gEvents.filter(e=>!hiddenCals.has(e.calendar_id)); return [...orig, ...g]; }

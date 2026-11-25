@@ -102,10 +102,10 @@ function openFundingSource(item){
   const plan=(data.cashPlans||[]).find(p=>p.id===item.id);
   if(plan)cashPlanDetail(plan);
 }
-function fundsForm(){
- const funds=summary.funds,month=today.slice(0,7);
- modal('今月の生活費・確保額');
- const f=el('form'),living=field(f,'今月これから使う生活費（円）','number',funds.reserves?.living??data.livingReserve??'',true);
+function fundsForm(targetMonth=today.slice(0,7)){
+ const month=typeof targetMonth==='string'?targetMonth:today.slice(0,7),funds={reserves:data.fundReserves?.[month]};
+ modal(monthLabel(month)+'の生活費・確保額');
+ const f=el('form'),living=field(f,'カード・支払予定に含まれない生活費（円）','number',funds.reserves?.living??'',true);
  f.append(el('p','今後の支払いに別途残すお金だけを登録します。すでに引落予定にある支払いは、ここへ重ねて入れないでください。生活費が不要なら0円を入力してください。','notice'));
  const list=el('div');f.append(list);
  const goals=[];
@@ -115,14 +115,9 @@ function fundsForm(){
   group.append(button('この用途を外す',()=>{goals.splice(goals.indexOf(fields),1);group.remove();}));
   list.append(group);
  }
- if(funds.savingsReserved||funds.futureSavings){
-  metric(breakdown,'－目的別積立の確保済み資金',funds.savingsReserved);
-  metric(breakdown,'－今後の積立予定（今月まで '+yen(funds.currentSavings)+'）',funds.futureSavings);
-  breakdown.append(button('積立目標を確認',()=>{tab='savings';render();}));
- }
  for(const goal of funds.reserves?.goals||[])addGoal(goal);
  f.append(button('＋ 確保する用途を追加',()=>addGoal()));
- saveForm(f,'今月分を保存','cashflow.funds',()=>({month,living:amount(living),goals:goals.map(goal=>({name:goal.name.value,amount:amount(goal.value)}))}));
+ saveForm(f,'保存','cashflow.funds',()=>({month,living:amount(living),goals:goals.map(goal=>({name:goal.name.value,amount:amount(goal.value)}))}));
  dialog.append(f);
 }
 function monthlyFunding(funds){
@@ -241,6 +236,41 @@ function spendingMonths(host=root){
  }
  sectionRoot.append(el('p','給与は入金月の翌月、手当は入金月、カード代は銀行からの引落月に集計します。口座間の振替は収支から除きます。','muted'));
 }
+function nextCardBudget(host,funds){
+ const next=nextMonth(today.slice(0,7)),m=summary.spendingMonths?.months?.find(x=>x.month===next);
+ if(!m)return;
+ const rows=(funds.rows||[]).filter(x=>x.date.slice(0,7)===next);
+ const total=items=>items.reduce((n,x)=>n+(x.amount||0),0);
+ const bills=rows.filter(x=>x.kind==='bill'),rakuten=bills.filter(x=>/楽天|rakuten/i.test(x.name));
+ const otherCards=total(bills.filter(x=>!rakuten.includes(x))),used=total(rakuten);
+ const direct=total(rows.filter(x=>x.kind==='plan'));
+ const reserve=data.fundReserves?.[next],extra=reserve?(reserve.living||0)+total(reserve.goals||[]):0;
+ const saving=total((summary.savingsGoals?.plans||[]).filter(x=>x.period===next));
+ const carry=funds.currentAllowanceEstimate;
+ // Current allowance already contains posted salary; add only unposted current-month salary.
+ const pendingSalary=total(m.items.filter(x=>x.kind==='salary'&&x.status==='planned'));
+ const nextIncome=total(m.items.filter(x=>['benefit','other'].includes(x.kind)&&x.status!=='posted'));
+ const cap=carry==null?null:carry+pendingSalary+nextIncome-direct-otherCards-extra-saving;
+ const panel=el('div',undefined,'next-card-budget');host.append(panel);
+ panel.append(el('h3',monthLabel(next)+'の楽天カード引落予算（暫定）'));
+ metric(panel,'引落予算（2枚合計）',cap==null?null:Math.max(0,cap));
+ metric(panel,'登録済み請求見込',used);
+ panel.append(el('p','あとカードで使える金額','muted'),el('p',cap==null?'要確認':yen(Math.max(0,cap-used)),'amount'));
+ if(cap!=null&&cap<used)panel.append(el('p','予算不足 '+yen(used-cap),'notice'));
+ panel.append(el('p','引落月が '+monthLabel(next)+' になる利用分のみ。未登録の支払い・収入で変動します。','muted'));
+ const d=details(panel,'予算の計算内訳・設定');
+ metric(d,'繰越見込額',carry);
+ metric(d,'＋ 未入金の当月給与',pendingSalary);
+ metric(d,'＋ 翌月の手当・その他入金見込',nextIncome);
+ metric(d,'－ カード以外の支払予定',direct);
+ metric(d,'－ その他のカード引落',otherCards);
+ metric(d,'－ 翌月の積立予定',saving);
+ metric(d,'－ 翌月の生活費・繰越確保額',extra);
+ for(const item of rakuten)metric(d,item.name,item.amount);
+ if(!reserve)d.append(el('p','翌月の生活費・繰越確保額が未設定です。','notice'));
+ if(!m.salaryKnown||m.benefitUnresolved||funds.currentUnknown||!rakuten.length)d.append(el('p','給与・手当・カード請求などの登録状況を確認してください。','notice'));
+ d.append(button('翌月の生活費・繰越確保額を設定',()=>fundsForm(next)));
+}
 function cashflowHome(){
  const funds=summary.funds;
  if(!funds?.accountForecasts)return;
@@ -260,6 +290,7 @@ function cashflowHome(){
  s.append(el('p',shown==null?'口座残高の設定が必要です':yen(Math.max(0,shown)),'amount'));
  if(provisional&&shown!=null)s.append(el('p','暫定・未確認の支払い等により、実際の繰越額は変動します。','notice'));
  if(estimate!=null&&estimate<0)s.append(el('p','登録済みの金額でも '+yen(-estimate)+' 不足しています。','notice'));
+ nextCardBudget(s,funds);
  const calc=details(s,'今月の計算内訳');
  const balanceDetails=details(calc,'現在の口座・現金合計　'+yen(funds.currentAssets));
  for(const account of funds.accountForecasts)metric(balanceDetails,payName(account.accountId),account.currentBalance);

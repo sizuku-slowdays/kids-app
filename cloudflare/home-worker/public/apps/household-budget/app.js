@@ -36,7 +36,7 @@ function details(host,title){const d=el('details');d.append(el('summary',title))
 async function load(){const sequence=++loadSequence;const value=await request('?'+new URLSearchParams({...(month?{month}:{}),...(tab==='accounts'?{accountMonth:accountViewMonth||today.slice(0,7)||'current'}:{}),basis}));if(sequence!==loadSequence)return;if(userId&&userId!==value.userId){closePrivate();inMemoryPending=null;spendingDate='';accountViewMonth='';}userId=value.userId;calendarStatus=value.calendar||{enabled:false,pending:0};data=value.data;summary=value.summary;revision=value.revision;today=value.today;month=month||today.slice(0,7);
  if(!pending()){for(const targetMonth of summary.generation||[]){try{await send('plans.generate',{month:targetMonth});return load();}catch(e){if(e.status!==409)throw e;break;}}}render();await openBudgetLink();}
 function nextMonth(m){const [y,n]=m.split('-').map(Number);return new Date(Date.UTC(y,n,1)).toISOString().slice(0,7);}
-function render(){root.replaceChildren();$('nav').replaceChildren(...[['home','ホーム'],['entries','収支'],['accounts','口座'],['plans','予定'],['fixed','固定費'],['cards','カード'],['savings','積立'],['stats','集計'],['settings','設定']].map(([id,label])=>button(label,async()=>{tab=id;accountId='';if(id!=='stats'){month=today.slice(0,7);basis='date';await load();}else render();},tab===id?'active':'')));
+function render(){root.classList.toggle('budget-home-layout',tab==='home');root.replaceChildren();$('nav').replaceChildren(...[['home','ホーム'],['entries','収支'],['accounts','口座'],['plans','予定'],['fixed','固定費'],['cards','カード'],['savings','積立'],['stats','集計'],['settings','設定']].map(([id,label])=>button(label,async()=>{tab=id;accountId='';if(id!=='stats'){month=today.slice(0,7);basis='date';await load();}else render();},tab===id?'active':'')));
  const unfinished=pending();if(unfinished){const s=section('前回の操作を確認してください');s.append(el('p','通信が途切れた可能性があります。同じ操作番号で再試行するため二重には反映しません。','notice'),button('前回と同じ内容で再試行',async()=>{await send(unfinished.command.type,unfinished.command.data,unfinished.eventId,unfinished);await load();},'primary'));return;}
  if(!data.startDate&&tab==='home'){const s=section('残高管理はまだ開始していません');s.append(el('p','既存の収支を引き継いでも、口座残高へは自動反映しません。開始日の取引前残高とカード未払金を確認してから開始します。','notice'),button('開始残高を設定',startForm,'primary'),button('既存のデータを引き継ぐ',importForm));}
  if(tab==='home')home();if(tab==='entries')entriesPage();if(tab==='accounts')accountsPage();if(tab==='plans')cashPlansPage();if(tab==='fixed')fixedPage();if(tab==='cards')cardsPage();if(tab==='savings')savingsPage();if(tab==='stats')statsPage();if(tab==='settings')settingsPage();}
@@ -180,6 +180,7 @@ function monthEndBreakdown(host,funds){
  if(excludedAccounts.length)panel.append(el('p','残高の集計対象外（開始残高未設定または開始日前） '+excludedAccounts.map(account=>account.name).join('、'),'muted'));
  if(funds.currentUnknown)panel.append(el('p','未確認の取引・予定があるため、下の「要確認」も確認してください。','notice'));
  const accounts=details(panel,'口座ごとの今月末残高');
+ accounts.classList.add('budget-month-end-accounts');
  for(const account of funds.accountForecasts){
   const item=row(accounts,payName(account.accountId),yen(account.monthEnd),'現在残高 '+yen(account.currentBalance));
   item.append(button('口座の記録を確認',()=>{tab='accounts';accountViewMonth=today.slice(0,7);accountId=account.accountId;return load();}));
@@ -277,7 +278,9 @@ function cashflowHome(){
  const start=root.children.length;
  monthlyFunding(funds);
  const fundingPanel=root.children[start];
+ fundingPanel.classList.add('budget-funding-panel');
  const monthly=section('今月末の残高見込'+(funds.monthTentative?'（暫定）':''));
+ monthly.classList.add('budget-month-end-panel');
  monthly.append(el('p',yen(funds.monthEnd),'amount'));
  monthEndBreakdown(details(monthly,'残高の内訳'),funds);
  const s=section('来月への繰越見込額');

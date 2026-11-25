@@ -28,8 +28,17 @@ import {
   ITERATIONS,
 } from "./security";
 
-type HomeEnv = Env & { BOOTSTRAP_SECRET?: string; FAMILY_INVITES_ENABLED?:string };
+type HomeEnv = Env & { BOOTSTRAP_SECRET?: string; FAMILY_INVITES_ENABLED?:string; OSHABERI_URL?: string; OSHABERI_HOME_USER_IDS?: string };
 
+function oshaberiLink(env: HomeEnv, userId: string): string | undefined {
+  if (!env.OSHABERI_URL || !env.OSHABERI_HOME_USER_IDS?.split(',').some(id => id.trim() === userId)) return;
+  try {
+    const url = new URL(env.OSHABERI_URL);
+    if (url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash) return url.href;
+  } catch {
+    return;
+  }
+}
 type User = {
   id: string;
   login_name: string;
@@ -559,6 +568,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
           platform_role: user.platform_role,
         },
         groups: groups.results,
+        oshaberi_url: oshaberiLink(env, user.id),
       });
     }
     if (path === "/api/logout" && method === "POST") {

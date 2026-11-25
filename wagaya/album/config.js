@@ -1,4 +1,4 @@
 window.ALBUM_CONFIG = {
-  apiBase: 'https://wagaya-album-api.sslowdayss.workers.dev',
+  apiBase: 'https://cetus.fun/wagaya',
   maxFileSizeMB: 50
 };

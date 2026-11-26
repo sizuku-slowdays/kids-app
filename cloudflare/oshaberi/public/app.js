@@ -2,8 +2,11 @@ import {drawQR} from './qr.js';
 const $=id=>document.getElementById(id),app=$('app');
 let me,selected='',talk='',timer,loading=false,readSeq=0,viewVersion=0,signingOut=false,refreshVisible=null,resuming=false;
 class StaleViewError extends Error {constructor(){super('画面が切り替わりました');this.name='StaleViewError';}}
-let invitation=new URLSearchParams(location.hash.slice(1)).get('invite')||'';
-if(invitation)history.replaceState(null,'',location.pathname);
+const launchParams=new URLSearchParams(location.hash.slice(1));
+let homeTicket=launchParams.get('home')||'';
+const homeStart=new URLSearchParams(location.search).get('home-start')==='1'||location.hash==='#home-start';
+let invitation=launchParams.get('invite')||'';
+if(invitation||homeTicket||homeStart)history.replaceState(null,'',location.pathname);
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 function field(parent,label,node){const l=el('label',label);l.append(node);parent.append(l);return node;}
 function input(parent,label,type='text'){const n=el('input');n.type=type;field(parent,label,n);return n;}
@@ -14,19 +17,38 @@ function consent(parent){const check=input(parent,'保護者です。子ども�
 function credentials(parent,create=false){const name=create?input(parent,'呼び名（本名でなくて大丈夫）'):null,login=input(parent,'ログインID'),password=input(parent,'パスワード（12文字以上）','password');login.autocomplete='username';password.autocomplete=create?'new-password':'current-password';return {name,login,password};}
 function data(c){return {login:c.login.value,password:c.password.value,...(c.name?{alias:c.name.value}:{})};}
 function showRecovery(code){const c=card('復旧コードを保管してください');c.append(el('p','パスワードを忘れたときに使います。この画面で一度だけ表示します。子どもや相手の家庭には渡さず、安全な場所へ保管してください。'),el('pre',code));}
-async function start(){if(signingOut)return;const version=++viewVersion;clearInterval(timer);talk='';refreshVisible=null;loading=false;try{const account=await api('me');if(!account||!['guardian','child'].includes(account.role))throw Error('ログインを確認してください');me=account;selected=me.role==='child'?me.id:(me.children.some(c=>c.id===selected)?selected:me.children[0]?.id||'');await dashboard();}catch(e){if(version!==viewVersion||e.name==='StaleViewError')return;me=null;selected='';await loginScreen();}}
+async function start(){if(signingOut)return;if(homeTicket)return startHomeLink();const version=++viewVersion;clearInterval(timer);talk='';refreshVisible=null;loading=false;try{const account=await api('me');if(!account||!['guardian','child'].includes(account.role))throw Error('ログインを確認してください');me=account;selected=me.role==='child'?me.id:(me.children.some(c=>c.id===selected)?selected:me.children[0]?.id||'');await dashboard();}catch(e){if(version!==viewVersion||e.name==='StaleViewError')return;me=null;selected='';await loginScreen();}}
 async function logout(){signingOut=true;++viewVersion;clearInterval(timer);talk='';refreshVisible=null;selected='';me=null;app.replaceChildren();$('identity').replaceChildren();try{await api('logout','POST',{});}finally{signingOut=false;await start();}}
+async function beginHomeLink(){
+ const verifier=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
+ sessionStorage.setItem('oshaberi-home-verifier',verifier);
+ const challenge=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))),b=>b.toString(16).padStart(2,'0')).join('');
+ location.replace('https://cetus.fun/wagaya/?oshaberi_challenge='+challenge);
+}
+async function startHomeLink(){
+ app.replaceChildren();$('identity').replaceChildren();const c=card('我が家からおしゃべり');
+ try{
+  const verifier=sessionStorage.getItem('oshaberi-home-verifier')||'';
+ const r=await api('home-link','POST',{ticket:homeTicket,verifier});
+  if(!r.link_required){sessionStorage.removeItem('oshaberi-home-verifier');homeTicket='';await start();return;}
+  c.append(el('p','我が家の利用者：'+r.home_name),el('p','初回だけ、自分のおしゃべりのログインIDとパスワードを入力して連携してください。家族でも他の人のアカウントを選ばないでください。'));
+  const creds=credentials(c);
+  c.append(btn('このアカウントを連携する',async()=>{if(!confirm('我が家の「'+r.home_name+'」と、このおしゃべりアカウントを連携しますか？'))return;await api('home-link','POST',{ticket:homeTicket,verifier,...data(creds)});sessionStorage.removeItem('oshaberi-home-verifier');homeTicket='';await start();},'primary'));
+ }catch(e){c.append(el('p',e.message));}
+ c.append(btn('連携せずログイン画面へ',()=>{sessionStorage.removeItem('oshaberi-home-verifier');homeTicket='';return loginScreen();}));
+}
 async function loginScreen(){refreshVisible=null;app.replaceChildren();$('identity').replaceChildren();const info=await api('info');const hero=card('すきなときに、おしゃべり。');hero.classList.add('hero');hero.append(el('p','おうちの人が、ふたりを友だちにしたらスタート。通知はこないよ。'),el('p','おうちの人も、ふたりのおはなしを見られます。','notice'));const c=card('ログイン');const creds=credentials(c),device=input(c,'この端末の呼び名');device.value='この端末';c.append(btn('ログイン',async()=>{await api('login','POST',{...data(creds),device:device.value});await start();},'primary'));
  const d=el('details');d.append(el('summary','はじめての保護者の方'));c.append(d);const reg=credentials(d,true),code=input(d,invitation?'招待を読み込みました（登録用コードは不要）':'登録用コード','password'),agree=consent(d);d.append(btn('保護者アカウントを作る',async()=>{const result=await api('register','POST',{...data(reg),setup_code:code.value,invite:invitation,agree:agree.checked,consent_version:info.consent_version});showRecovery(result.recovery_code);$('status').textContent='登録しました。復旧コードを保管して、上のログインから入ってください。';},'primary'));
  const recovery=el('details');recovery.append(el('summary','パスワードを忘れた保護者の方'));c.append(recovery);const rc=credentials(recovery),key=input(recovery,'復旧コード','password');rc.password.autocomplete='new-password';recovery.append(btn('新しいパスワードで復旧',async()=>{const result=await api('recover','POST',{...data(rc),recovery_code:key.value});showRecovery(result.recovery_code);}));
 }
 async function dashboard(){if(!me)return;clearInterval(timer);talk='';refreshVisible=null;app.replaceChildren();$('identity').replaceChildren(el('span',me.alias),btn('ログアウト',logout));
  if(me.role==='guardian')await parentView();else await childView();
+ const detail=el('details');detail.append(el('summary','我が家との連携を解除'));const pw=input(detail,'自分のおしゃべりパスワード','password');detail.append(btn('連携を解除する',async()=>{if(!confirm('次回は我が家からの連携し直しが必要です。解除しますか？'))return;await api('home-unlink','POST',{password:pw.value});pw.value='';$('status').textContent='連携を解除しました。';}));app.append(detail);
 }
 async function childView(){
  const intro=card('こんにちは、'+me.alias+'！');intro.append(el('p','おうちの人も、ふたりのおはなしを見られるよ。','notice'));
  if(!me.available){intro.append(el('p','いまは、おやすみの時間。おうちの人が決めた時間に、またひらいてね。'));return;}
- const friends=card('ともだち');await renderFriends(friends);const refreshFriends=async()=>{if(document.hidden||talk)return;try{const content=el('div');await renderFriends(content);friends.replaceChildren(el('h2','ともだち'),content);}catch(e){if(e.name==='StaleViewError')return;clearInterval(timer);friends.replaceChildren(el('p',e.message));}};refreshVisible=refreshFriends;timer=setInterval(refreshFriends,10000);const media=card('じぶんのスタンプ');await mediaList(media,false);uploadForm(media,'stamp');
+ const family=await familyPanel(false);const friends=card('ともだち');await renderFriends(friends);const refreshFriends=async()=>{if(document.hidden||talk)return;try{const content=el('div');await renderFriends(content);if(family?.isConnected){const next=el('div');await familyPanel(false,next);family.replaceChildren(...next.firstElementChild.childNodes);}friends.replaceChildren(el('h2','ともだち'),content);}catch(e){if(e.name==='StaleViewError')return;clearInterval(timer);friends.replaceChildren(el('p',e.message));}};refreshVisible=refreshFriends;timer=setInterval(refreshFriends,10000);const media=card('じぶんのスタンプ');await mediaList(media,false);uploadForm(media,'stamp');
 }
 async function renderFriends(parent){const {friends}=await api('friends'+(me.role==='guardian'?'?child='+selected:''));const list=el('div',undefined,'friends');parent.append(list);if(!friends.length)list.append(el('p','まだトークはありません。おうちの人に友だち登録をしてもらおう。','muted'));
  for(const f of friends){const box=el('div',undefined,'card');box.append(el('h3',f.peer_alias),el('span',({pending:'双方のおうちの人の承認待ち',active:'おしゃべりできます',ended:'友だち登録を解除しました',blocked:'ブロック中'})[f.state],'badge'));
@@ -38,7 +60,38 @@ async function renderFriends(parent){const {friends}=await api('friends'+(me.rol
   if(f.state==='blocked')box.append(btn('自分側のブロックを解除',async()=>{await api('friends/'+f.id+'/unblock?child='+encodeURIComponent(selected),'POST',{});$('status').textContent='解除しました。トークを再開するには、友だち登録をやり直してください。';}));
  }list.append(box);}
 }
+async function familyPanel(parent,container=app){
+ const panel=card('家族のおしゃべり',container),{groups,ready}=await api('family-groups');
+ if(!ready){panel.append(el('p','家族トークの準備中です。'));return panel;}
+ for(const g of groups){panel.append(el('p',g.members.map(m=>m.alias).join('・')),btn('家族トークをひらく',()=>openFamily(g),'primary'));}
+ if(parent&&!groups.length&&me.children.length){
+  const choices=me.children.map(c=>{const check=input(panel,c.alias,'checkbox');check.checked=true;return {c,check};});
+  panel.append(btn('家族トークを作る',async()=>{const ids=choices.filter(x=>x.check.checked).map(x=>x.c.id);if(!confirm('選んだ子どもと自分の家族トークを作りますか？'))return;await api('family-groups','POST',{member_ids:ids});await dashboard();},'primary'));
+ }
+ if(!parent&&!groups.length)panel.append(el('p','おうちの人が家族トークを作ると、ここに表示されるよ。'));
+ return panel;
+}
+async function openFamily(g){
+ clearInterval(timer);talk=g.id;refreshVisible=null;app.replaceChildren();
+ const panel=card('家族のおしゃべり');panel.append(btn('一覧にもどる',()=>start()),el('p',g.members.map(m=>m.alias).join('・')));
+ const rows=el('div',undefined,'bubbles');panel.append(rows);
+ let last=0,first=0,busy=false;const pending=new Map();
+ async function refresh(older=false){
+  if(busy||talk!==g.id||document.hidden)return;busy=true;
+  try{const {messages}=await api('family-groups/'+g.id+'/messages?'+(older?'before='+first:'after='+last));if(talk!==g.id)return;
+   const fragment=document.createDocumentFragment();for(const m of messages){if(rows.querySelector('[data-seq="'+m.seq+'"]'))continue;last=Math.max(last,m.seq);first=first?Math.min(first,m.seq):m.seq;const n=el('div',undefined,'message'+(m.author_id===me.id?' mine':''));n.dataset.seq=m.seq;n.append(el('small',m.author_alias+' · '+new Date(m.created_at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})),el('p',m.kind==='standard'?(me.stamps[m.text]||m.text):m.text));fragment.append(n);}
+   if(older)rows.prepend(fragment);else{rows.append(fragment);rows.scrollTop=rows.scrollHeight;}
+  }catch(e){showError(e);if(e.status===403){clearInterval(timer);rows.replaceChildren();}}finally{busy=false;}
+ }
+ panel.insertBefore(btn('前のおはなしを読む',()=>first&&refresh(true)),rows);
+ const message=field(panel,'メッセージ',el('textarea'));message.maxLength=2000;
+ async function send(payload){const key=JSON.stringify(payload);if(!pending.has(key))pending.set(key,crypto.randomUUID());await api('family-groups/'+g.id+'/messages','POST',{...payload,nonce:pending.get(key)});pending.delete(key);await refresh();}
+ panel.append(btn('送信',async()=>{const value=message.value;await send({kind:'text',text:value});if(message.value===value)message.value='';},'primary'));
+ const stamps=el('div',undefined,'row');for(const [id,label] of Object.entries(me.stamps))stamps.append(btn(label,()=>send({kind:'standard',stamp:id})));panel.append(stamps);
+ refreshVisible=refresh;await refresh();timer=setInterval(refresh,5000);
+}
 async function parentView(){
+ await familyPanel(true);
  const top=card('おうちの人の見守り');top.append(el('p','子どもの発言と相手の発言を見られます。ここで見ても、子どもの「既読」は変わりません。','notice'));
  if(me.children.length){const sel=el('select');for(const c of me.children){const o=el('option',c.alias);o.value=c.id;sel.append(o);}sel.value=selected;sel.setAttribute('aria-label','管理する子ども');sel.onchange=()=>{selected=sel.value;dashboard().catch(showError);};top.append(sel);}
  const add=el('details');add.append(el('summary','子どものアカウントを作る'));top.append(add);const creds=credentials(add,true),agree=consent(add);add.append(el('small','親子で別のログインIDとパスワードを使います。初期状態では利用時間が未設定、写真送信はOFFです。'));
@@ -113,4 +166,4 @@ async function openTalk(f){clearInterval(timer);refreshVisible=null;talk=f.id;re
 async function resume(){if(document.hidden||signingOut||resuming)return;resuming=true;try{const account=await api('me');const previous=me;const changed=!previous||!account||account.id!==previous.id||account.role!==previous.role||(account.role==='guardian'&&(selected?!account.children.some(c=>c.id===selected):account.children.length>0))||(account.role==='child'&&(account.available!==previous.available||account.settings.photos_enabled!==previous.settings.photos_enabled));if(changed){app.replaceChildren();$('identity').replaceChildren();await start();return;}me=account;if(refreshVisible)await refreshVisible();}catch(e){if(e.name==='StaleViewError')return;if(e.status===401||e.status===403){app.replaceChildren();$('identity').replaceChildren();await start();}else showError(e);}finally{resuming=false;}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume().catch(showError);});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-start().catch(showError);
+if(homeStart)beginHomeLink().catch(showError);else start().catch(showError);

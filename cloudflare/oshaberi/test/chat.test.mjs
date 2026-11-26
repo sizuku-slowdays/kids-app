@@ -7,9 +7,11 @@ import {packPixels,PIXEL_MIME} from '../src/pixel-images.js';
 import {CONSENT_VERSION,hash} from '../src/security.js';
 const password='test-password-only-2026';
 async function fixture(){
- const mf=new Miniflare(convertV4MiniflareOptions({name:'oshaberi-local-test',modules:true,scriptPath:fileURLToPath(new URL('../.build/index.js',import.meta.url)),compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{CHAT_DB:'isolated-chat-db'},r2Buckets:{CHAT_FILES:'isolated-chat-r2'},bindings:{RELEASE_ENABLED:'1',REGISTRATION_ENABLED:'1',INVITATIONS_ENABLED:'1',RATE_SECRET:'local-test-only-secret',BOOTSTRAP_CODE:'local-test-only-code'},serviceBindings:{ASSETS:()=>new Response('local fixture')}}));
+ const mf=new Miniflare(convertV4MiniflareOptions({name:'oshaberi-local-test',modules:true,scriptPath:fileURLToPath(new URL('../.build/index.js',import.meta.url)),compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:{CHAT_DB:'isolated-chat-db'},r2Buckets:{CHAT_FILES:'isolated-chat-r2'},bindings:{RELEASE_ENABLED:'1',REGISTRATION_ENABLED:'1',INVITATIONS_ENABLED:'1',RATE_SECRET:'local-test-only-secret',BOOTSTRAP_CODE:'local-test-only-code',OSHABERI_HOME_LINK_SECRET:'isolated-test-secret-only-1234567890'},serviceBindings:{ASSETS:()=>new Response('local fixture')}}));
  const db=await mf.getD1Database('CHAT_DB');const sql=await readFile(new URL('../migrations/0001_chat.sql',import.meta.url),'utf8');
  for(const s of sql.replace(/^--.*$/gm,'').match(/\s*CREATE TRIGGER[\s\S]*?\nEND;|[^;]+;/g)||[])await db.prepare(s).run();
+ const groupSql=await readFile(new URL('../migrations/0002_family_groups.sql',import.meta.url),'utf8');for(const statement of groupSql.replace(/^--.*$/gm,'').split(';').filter(x=>x.trim()))await db.prepare(statement).run();
+ const linkSql=await readFile(new URL('../migrations/0003_home_links.sql',import.meta.url),'utf8');for(const statement of linkSql.split(';').filter(x=>x.trim()))await db.prepare(statement).run();
  let ip=0;
  async function call(path,who,method='GET',data,extra={}){
   const headers={...(who?{Cookie:who.cookie}:{}),Origin:'https://chat.test','X-Oshaberi':'1','CF-Connecting-IP':'192.0.2.'+(++ip),...(data?{'Content-Type':'application/json'}:{}),...extra};
@@ -144,4 +146,35 @@ test('one guardian can connect siblings and both children can send messages',asy
   assert.equal((await call(path,guardian,'POST',pair)).status,409);
   assert.equal((await call(messages,first)).status,403);
  }finally{await mf.dispose();}
+});
+
+test('family group: guardian and siblings send as themselves, unrelated family denied, time and pause enforced',async()=>{
+ const t=await fixture();try{const {ok,call,parent,child,enable}=t;
+ const p=await parent('group_parent'),other=await parent('other_parent'),a=await child(p,'group_child_a'),b=await child(p,'group_child_b'),c=await child(other,'other_child');
+ await enable(p,a);await enable(p,b);await enable(other,c);
+ assert.equal((await call('/api/family-groups',p,'POST',{member_ids:[a.id,c.id]})).status,403);
+ assert.equal((await call('/api/family-groups',a,'POST',{member_ids:[b.id]})).status,403);
+ const g=await ok('/api/family-groups',p,'POST',{member_ids:[a.id,b.id]});
+ assert.equal((await ok('/api/family-groups',p,'POST',{member_ids:[a.id,b.id]})).id,g.id);
+ for(const who of [p,a,b]){assert.equal((await ok('/api/family-groups',who)).groups[0].members.length,3);await ok('/api/family-groups/'+g.id+'/messages',who,'POST',{kind:'text',text:'test',nonce:crypto.randomUUID()});}
+ const path='/api/family-groups/'+g.id+'/messages';
+ assert.deepEqual((await ok(path,b)).messages.map(m=>m.author_id),[p.id,a.id,b.id]);
+ assert.equal((await call(path,c)).status,403);assert.equal((await call(path,other)).status,403);
+ await enable(p,a,true);assert.equal((await call(path,a)).status,403);
+ assert.equal((await ok(path,p)).messages.length,3);
+ }finally{await t.mf.dispose();}
+});
+
+test('HOME link requires existing account credentials, one-time signed ticket and stable identity',async()=>{
+ const t=await fixture();try{const {ok,call,parent}=t;const p=await parent('link_parent'),other=await parent('link_other');
+ const enc=new TextEncoder(),secret='isolated-test-secret-only-1234567890',verifier='a'.repeat(64),challenge=await hash(verifier);
+ async function ticket(sub){const payload=Buffer.from(JSON.stringify({aud:'oshaberi-home-v1',sub,name:'fixture',challenge,nonce:await hash(crypto.randomUUID()),exp:Date.now()+60000})).toString('base64url');const key=await crypto.subtle.importKey('raw',enc.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return payload+'.'+Buffer.from(await crypto.subtle.sign('HMAC',key,enc.encode(payload))).toString('base64url');}
+ const one=await ticket('home-a');assert.equal((await call('/api/home-link',null,'POST',{ticket:one,verifier:'b'.repeat(64)})).status,403);assert.equal((await ok('/api/home-link',null,'POST',{verifier,ticket:one})).link_required,true);
+ assert.equal((await call('/api/home-link',null,'POST',{verifier,ticket:one,login:'link_parent',password:'wrong-password-123'})).status,401);
+ const linked=await call('/api/home-link',null,'POST',{verifier,ticket:one,login:'link_parent',password});assert.equal(linked.status,200);assert.equal((await ok('/api/me',{cookie:linked.headers.get('set-cookie').split(';')[0]})).id,p.id);
+ assert.equal((await call('/api/home-link',null,'POST',{verifier,ticket:one})).status,409);
+ const two=await ticket('home-a');const auto=await call('/api/home-link',other,'POST',{verifier,ticket:two});assert.equal(auto.status,200);assert.equal((await ok('/api/me',{cookie:auto.headers.get('set-cookie').split(';')[0]})).id,p.id);
+ const three=await ticket('home-b');assert.equal((await call('/api/home-link',null,'POST',{verifier,ticket:three,login:'link_parent',password})).status,409);
+ assert.equal((await call('/api/home-link',null,'POST',{verifier,ticket:three+'x'})).status,403);
+ }finally{await t.mf.dispose();}
 });

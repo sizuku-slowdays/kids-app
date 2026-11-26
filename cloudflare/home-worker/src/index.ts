@@ -1,3 +1,4 @@
+import {createOshaberiTicket} from './oshaberi-link';
 import {budgetCalendarJob,budgetNotificationCheck,deliverBudgetCalendar} from './budget-calendar';
 import {budgetRoute,runBudgetSchedules} from './budget';
 import {bodyIdentity,bodyProxy} from './body-calendar';
@@ -28,7 +29,7 @@ import {
   ITERATIONS,
 } from "./security";
 
-type HomeEnv = Env & { BOOTSTRAP_SECRET?: string; FAMILY_INVITES_ENABLED?:string; OSHABERI_URL?: string; OSHABERI_HOME_USER_IDS?: string };
+type HomeEnv = Env & { BOOTSTRAP_SECRET?: string; FAMILY_INVITES_ENABLED?:string; OSHABERI_URL?: string; OSHABERI_HOME_USER_IDS?: string; OSHABERI_HOME_LINK_SECRET?: string };
 
 function oshaberiLink(env: HomeEnv, userId: string): string | undefined {
   if (!env.OSHABERI_HOME_USER_IDS?.split(',').some(id => id.trim() === userId)) return;
@@ -492,6 +493,17 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if (s) {
     const user = await currentUser(env, s);
     requireValue(user, 401, "ログインしてください");
+    if(path==='/api/oshaberi/launch'&&method==='POST'){
+      const target=oshaberiLink(env,user.id);
+      requireValue(target,403,'おしゃべりは利用できません');
+      const secret=env.OSHABERI_HOME_LINK_SECRET;
+      requireValue(secret&&secret.length>=32,503,'おしゃべり連携は準備中です');
+      const data=await body(request);
+      requireValue(typeof data.challenge==='string'&&/^[a-f0-9]{64}$/.test(data.challenge),400,'連携を開始し直してください');
+      const url=new URL(target);
+      url.hash='home='+await createOshaberiTicket(user.id,user.display_name,secret,randomToken(),data.challenge);
+      return json({url:url.href});
+    }
     if(path==='/api/families'||path.startsWith('/api/families/'))return familiesRoute(request,env,user,body);
     if(path==='/api/school-prep'||path.startsWith('/api/school-prep/')){
       requireValue(await appAllowed(env,user.id,'school-prep'),403,'このアプリは利用できません');
@@ -569,6 +581,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
         },
         groups: groups.results,
         oshaberi_url: oshaberiLink(env, user.id),
+        oshaberi_home_link: !!(env.OSHABERI_HOME_LINK_SECRET?.length && env.OSHABERI_HOME_LINK_SECRET.length>=32),
       });
     }
     if (path === "/api/logout" && method === "POST") {

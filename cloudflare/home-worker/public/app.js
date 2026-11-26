@@ -167,6 +167,14 @@ function authScreen() {
 }
 async function home() {
   me = await api("/api/me");
+  const challenge=new URLSearchParams(location.search).get('oshaberi_challenge');
+  if(challenge&&/^[a-f0-9]{64}$/.test(challenge)&&me.oshaberi_url&&me.oshaberi_home_link){
+    history.replaceState(null,'',location.pathname);
+    const result=await api('/api/oshaberi/launch','POST',{challenge});
+    const target=new URL(result.url),expected=new URL(me.oshaberi_url);
+    if(target.origin!==expected.origin)throw Error('おしゃべりのURLを確認してください');
+    location.replace(target.href);return;
+  }
   apps = await api("/api/home");
   root.classList.remove("home-editor");
   root.replaceChildren();
@@ -185,6 +193,7 @@ async function home() {
     if (url.protocol === 'https:') {
       const link = el('a', null, 'previous-home');
       link.href = url.href;
+      if(me.oshaberi_home_link){url.searchParams.set('home-start','1');link.href=url.href;}
       link.append(el('span', '💬', 'icon'), el('strong', 'おしゃべり'), el('small', '›'));
       root.append(link);
     }

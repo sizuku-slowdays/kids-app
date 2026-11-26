@@ -180,6 +180,15 @@ async function home() {
   const actions=el("div",null,"home-actions");actions.append(button("HOMEを編集",()=>editHome().catch(showError),"quiet"),button("⚙️ 設定", settings, "quiet"));
   header.append(title,actions);
   root.append(header);
+  if (me.oshaberi_url) {
+    const url = new URL(me.oshaberi_url);
+    if (url.protocol === 'https:') {
+      const link = el('a', null, 'previous-home');
+      link.href = url.href;
+      link.append(el('span', '💬', 'icon'), el('strong', 'おしゃべり'), el('small', '›'));
+      root.append(link);
+    }
+  }
   const visibleApps=apps.filter(a=>a.visible);
   const legacyHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy");
   const isMamaHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy"&&["owner","admin"].includes(g.role));

@@ -1,5 +1,4 @@
 // Runs in Cloudflare Builds. Writes configuration only; no API calls or DB writes.
-import {writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -22,6 +21,4 @@ export function ownerCloudConfig(args,now=Date.now()){
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  throw new Error('This owner-test deploy command is retired for production. Use configure-cloud-production.mjs with the existing database ID.');
- await writeFile(resolve(fileURLToPath(new URL('..',import.meta.url)),'.owner-cloud.jsonc'),JSON.stringify(config,null,2)+'\n');
- console.log('OWNER CONFIG READY: dedicated oshaberi only; external registration/invitations disabled. No API calls, schema imports or deployment performed.');
 }

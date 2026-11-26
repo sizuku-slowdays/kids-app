@@ -1,4 +1,6 @@
 import {ensure,uid,token,hash,passwordHash,same,credentials,alias,validateSchedule,timeAllowed,body,limitedBytes,quota,DAY,CONSENT_VERSION,STANDARD_STAMPS} from './security.js';
+import {homeLink,unlinkHomeAccount} from './home-link.js';
+import {familyGroups,groupsReady} from './family-groups.js';
 import {privateTestGate} from './private-test.js';
 import {pixelsToPng,PIXEL_MIME,MAX_PIXEL_BYTES} from './pixel-images.js';
 const json=(value,status=200,headers={})=>Response.json(value,{status,headers:{'Cache-Control':'no-store',...headers}});
@@ -39,6 +41,7 @@ async function route(req,env){
  if(!p.startsWith('/api/')&&!p.startsWith('/media/'))return env.ASSETS.fetch(req);
  if(!['GET','HEAD'].includes(method))ensure(req.headers.get('Origin')===u.origin&&req.headers.get('X-Oshaberi')==='1','この画面から操作してください',403);
  if(p==='/api/info'&&method==='GET')return json({consent_version:CONSENT_VERSION,registration:env.REGISTRATION_ENABLED==='1',invitations:env.INVITATIONS_ENABLED==='1',stamps:STANDARD_STAMPS});
+ if(p==='/api/home-link'&&method==='POST')return homeLink(req,env,newSession);
  if(['/api/register','/api/login','/api/recover'].includes(p)&&method==='POST'){
   ensure(env.RATE_SECRET,'初期設定を確認してください',503);
   const ip=req.headers.get('CF-Connecting-IP')||'local';await quota(db,'auth-ip:'+await hash(env.RATE_SECRET+ip),20,15*60000);
@@ -55,11 +58,12 @@ async function route(req,env){
   const a=await db.prepare('SELECT * FROM accounts WHERE login=? AND active=1').bind(login).first();
   if(p==='/api/recover'){
    ensure(a?.role==='guardian'&&typeof b.recovery_code==='string'&&same(await hash(b.recovery_code),a.recovery_hash),'復旧情報を確認してください',403);
-   const salt=token(),recovery=token();const results=await db.batch([db.prepare('UPDATE accounts SET salt=?,password_hash=?,recovery_hash=? WHERE id=? AND recovery_hash=?').bind(salt,await passwordHash(b.password,salt),await hash(recovery),a.id,a.recovery_hash),db.prepare('UPDATE sessions SET revoked=1 WHERE account_id=?').bind(a.id),record(db,a.id,'account.recovered',a.id)]);ensure(results[0].meta.changes===1,'復旧情報を確認してください',409);return json({ok:true,recovery_code:recovery});
+   const salt=token(),recovery=token();const results=await db.batch([db.prepare('UPDATE accounts SET salt=?,password_hash=?,recovery_hash=? WHERE id=? AND recovery_hash=?').bind(salt,await passwordHash(b.password,salt),await hash(recovery),a.id,a.recovery_hash),db.prepare('UPDATE sessions SET revoked=1 WHERE account_id=?').bind(a.id),record(db,a.id,'account.recovered',a.id)]);ensure(results[0].meta.changes===1,'復旧情報を確認してください',409);await unlinkHomeAccount(db,a.id);return json({ok:true,recovery_code:recovery});
   }
   const calculated=await passwordHash(b.password,a?.salt||'invalid-login-timing-salt');ensure(a&&same(calculated,a.password_hash),'ログインIDかパスワードを確認してください',401);return newSession(db,a,b.device);
  }
  const a=await auth(req,db);await quota(db,'api:'+a.id,240,60000);
+ const groupResponse=await familyGroups(req,db,a,(_db,child)=>childAvailable(db,child));if(groupResponse)return groupResponse;
  if(p==='/api/logout'&&method==='POST'){await db.prepare('UPDATE sessions SET revoked=1 WHERE id=?').bind(a.session_id).run();return json({ok:true},200,{'Set-Cookie':cookie('',0)});}
  if(p==='/api/me'&&method==='GET'){
   const children=a.role==='guardian'?await all(db.prepare('SELECT c.id,c.alias,g.family_id,s.* FROM guardian_children g JOIN accounts c ON c.id=g.child_id JOIN child_settings s ON s.child_id=c.id WHERE g.guardian_id=? AND c.active=1').bind(a.id)):[];
@@ -80,16 +84,19 @@ async function route(req,env){
    let valid=false;try{new Intl.DateTimeFormat('en',{timeZone:b.timezone}).format();valid=true;}catch{}ensure(valid,'タイムゾーンを確認してください');const schedule=validateSchedule(b.schedule);
    const r=await db.batch([db.prepare('UPDATE child_settings SET paused=?,photos_enabled=?,timezone=?,schedule_json=?,revision=revision+1 WHERE child_id=? AND revision=?').bind(+b.paused,+b.photos_enabled,b.timezone,JSON.stringify(schedule),child,b.revision),record(db,a.id,'child.settings',child)]);ensure(r[0].meta.changes===1,'設定が変わりました。読み直してください',409);return json({ok:true});
   }
-  if(op==='password'&&method==='POST'){const b=await body(req);credentials({login:'dummy',password:b.password});const salt=token();await db.batch([db.prepare('UPDATE accounts SET salt=?,password_hash=? WHERE id=?').bind(salt,await passwordHash(b.password,salt),child),db.prepare('UPDATE sessions SET revoked=1 WHERE account_id=?').bind(child),record(db,a.id,'child.password_reset',child)]);return json({ok:true});}
+  if(op==='password'&&method==='POST'){const b=await body(req);credentials({login:'dummy',password:b.password});const salt=token();await db.batch([db.prepare('UPDATE accounts SET salt=?,password_hash=? WHERE id=?').bind(salt,await passwordHash(b.password,salt),child),db.prepare('UPDATE sessions SET revoked=1 WHERE account_id=?').bind(child),record(db,a.id,'child.password_reset',child)]);await unlinkHomeAccount(db,child);return json({ok:true});}
   if(op==='sessions'&&method==='GET')return json({sessions:await all(db.prepare('SELECT id,device,created_at,expires_at,revoked FROM sessions WHERE account_id=? ORDER BY created_at DESC').bind(child))});
   if(op==='sessions'&&method==='DELETE'){const b=await body(req);await db.batch([db.prepare('UPDATE sessions SET revoked=1 WHERE id=? AND account_id=?').bind(b.session_id,child),record(db,a.id,'session.revoked',b.session_id)]);return json({ok:true});}
   if(op==='delete'&&method==='POST'){const b=await body(req);ensure(b.confirm===true,'削除の確認が必要です');await requirePassword(db,a,b.password);await eraseChild(db,a,child);return json({ok:true});}
  }
+ if(p==='/api/home-unlink'&&method==='POST'){const b=await body(req);await requirePassword(db,a,b.password);await unlinkHomeAccount(db,a.id);return json({ok:true});}
  if(p==='/api/sessions'&&method==='GET')return json({sessions:await all(db.prepare('SELECT id,device,created_at,expires_at,revoked FROM sessions WHERE account_id=? ORDER BY created_at DESC').bind(a.id))});
  if(p==='/api/sessions'&&method==='DELETE'){const b=await body(req);await db.prepare('UPDATE sessions SET revoked=1 WHERE id=? AND account_id=?').bind(b.session_id,a.id).run();return json({ok:true});}
  if(p==='/api/account/delete'&&method==='POST'){
   guardian(a);const b=await body(req);ensure(b.confirm===true,'削除の確認が必要です');await requirePassword(db,a,b.password);const children=await all(db.prepare('SELECT child_id FROM guardian_children WHERE guardian_id=?').bind(a.id));
   for(const c of children)await eraseChild(db,a,c.child_id);
+  await unlinkHomeAccount(db,a.id);
+  if(await groupsReady(db))await db.batch([db.prepare('DELETE FROM family_group_messages WHERE author_id=?').bind(a.id),db.prepare('DELETE FROM family_group_members WHERE account_id=?').bind(a.id)]);
   await db.batch([db.prepare("UPDATE accounts SET active=0,alias='削除した利用者',login=?,salt='',password_hash='',recovery_hash=NULL,deleted_at=? WHERE id=?").bind('deleted-'+a.id,Date.now(),a.id),db.prepare('UPDATE sessions SET revoked=1 WHERE account_id=?').bind(a.id),db.prepare('UPDATE invitations SET revoked=1 WHERE issuer_id=?').bind(a.id),record(db,a.id,'account.deleted',a.id)]);return json({ok:true},200,{'Set-Cookie':cookie('',0)});
  }
  if(p==='/api/invitations'&&method==='GET'){guardian(a);return json({invitations:await all(db.prepare('SELECT id,child_id,expires_at,used,revoked,created_at FROM invitations WHERE issuer_id=? ORDER BY created_at DESC').bind(a.id))});}
@@ -203,10 +210,12 @@ async function route(req,env){
  return json({error:'見つかりません'},404);
 }
 async function eraseChild(db,a,child){
+ await unlinkHomeAccount(db,child);
+ if(await groupsReady(db))await db.batch([db.prepare('DELETE FROM family_group_messages WHERE author_id=?').bind(child),db.prepare('DELETE FROM family_group_members WHERE account_id=?').bind(child)]);
  await db.batch([db.prepare("UPDATE accounts SET active=0,alias='削除した利用者',login=?,salt='',password_hash='',recovery_hash=NULL,deleted_at=? WHERE id=?").bind('deleted-'+child,Date.now(),child),db.prepare('UPDATE sessions SET revoked=1 WHERE account_id=?').bind(child),db.prepare("UPDATE child_settings SET paused=1,photos_enabled=0,schedule_json='[[],[],[],[],[],[],[]]',revision=revision+1 WHERE child_id=?").bind(child),db.prepare("UPDATE friendships SET state='ended' WHERE ? IN(left_child,right_child)").bind(child),db.prepare("UPDATE messages SET kind='removed',text='',media_id=NULL WHERE author_id=?").bind(child),db.prepare("UPDATE media SET status='deleted',expires_at=0 WHERE owner_id=?").bind(child),db.prepare('UPDATE invitations SET revoked=1 WHERE child_id=?').bind(child),record(db,a.id,'child.deleted',child)]);
 }
 export async function cleanup(env){
- const db=env.CHAT_DB,now=Date.now();const media=await all(db.prepare('SELECT id,object_key FROM media WHERE expires_at<=? LIMIT 100').bind(now));
+ const db=env.CHAT_DB,now=Date.now();if(await db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='home_launch_used'").first())await db.prepare('DELETE FROM home_launch_used WHERE expires_at<=?').bind(now).run();if(await groupsReady(db))await db.prepare('DELETE FROM family_group_messages WHERE created_at<?').bind(now-180*DAY).run();const media=await all(db.prepare('SELECT id,object_key FROM media WHERE expires_at<=? LIMIT 100').bind(now));
  for(const m of media){await env.CHAT_FILES.delete(m.object_key);await db.batch([db.prepare("UPDATE messages SET kind='removed',text='',media_id=NULL WHERE media_id=?").bind(m.id),db.prepare('DELETE FROM media WHERE id=?').bind(m.id)]);}
  await db.batch([db.prepare('DELETE FROM messages WHERE created_at<?').bind(now-180*DAY),db.prepare('DELETE FROM sessions WHERE expires_at<? OR revoked=1').bind(now),db.prepare('DELETE FROM rate_buckets WHERE expires_at<?').bind(now),db.prepare('DELETE FROM audit_events WHERE created_at<?').bind(now-90*DAY),db.prepare('DELETE FROM invitations WHERE expires_at<?').bind(now-7*DAY)]);
  const dead="SELECT id FROM accounts WHERE active=0 AND deleted_at<="+(now-180*DAY);

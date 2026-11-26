@@ -231,3 +231,6 @@ Cloudflare Builds 6cd733c6-04aa-4ab2-abe6-cfa37ff1f1ef成功、実行コミッ�
 ## 2026-10-27 おしゃべり：利用時間のまとめ入力
 
 本改修はpublic/app.js、UI回帰試験、管理台帳のみ。D1 schema/保存API/認証/非公開R2/Cron/登録/招待/既存HOMEの変更なし。利用者の写真POSTログはoutcome ok、HTTP200、cpuTimeMs2、wallTimeMs48。単発の報告であり最大画像・連続・cold時の無料枠安定性は未確認。
+
+## 2026-11-26 家族おしゃべり・我が家連携
+おしゃべり独立ブランチの家族グループ用追加D1スキーマ、既存アカウントのHOME連携を実装。保護者自身と同一家庭の子どもが本文・標準スタンプを送信でき、1対1履歴は変更しない。HOME側は別ブランチ。既存D1への追加SQL、両Workerへの同一Secret設定、実端末確認が必要。本番反映未確認。成人追加・グループ写真・既読表示は未実装。詳細は cloudflare/oshaberi/README.md。

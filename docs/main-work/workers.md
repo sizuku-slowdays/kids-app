@@ -244,4 +244,4 @@ HOME家計管理の新規操作は既存の本人専用コマンドAPIと変更�
 
 ### 2026-11-26 おしゃべりへの入口
 
-HOME Workerからリンクを出すには HTTPS の OSHABERI_URL と対象の HOME ユーザー ID をカンマ区切りで指定する OSHABERI_HOME_USER_IDS が必要。
+HOME Workerからリンクを出すには 対象の HOME ユーザー ID をカンマ区切りで指定する OSHABERI_HOME_USER_IDS が必要。既定のリンク先は https://oshaberi.sslowdayss.workers.dev/。

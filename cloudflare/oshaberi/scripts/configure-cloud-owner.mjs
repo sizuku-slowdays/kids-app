@@ -21,7 +21,7 @@ export function ownerCloudConfig(args,now=Date.now()){
  };
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- const config=ownerCloudConfig(process.argv.slice(2));
+ throw new Error('This owner-test deploy command is retired for production. Use configure-cloud-production.mjs with the existing database ID.');
  await writeFile(resolve(fileURLToPath(new URL('..',import.meta.url)),'.owner-cloud.jsonc'),JSON.stringify(config,null,2)+'\n');
  console.log('OWNER CONFIG READY: dedicated oshaberi only; external registration/invitations disabled. No API calls, schema imports or deployment performed.');
 }

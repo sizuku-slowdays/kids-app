@@ -57,7 +57,7 @@ async function start(){
   card('おしゃべりを開けませんでした').append(el('p',e.message),btn('もう一度ひらく',start,'primary'));
  }
 }
-async function logout(){signingOut=true;++viewVersion;clearInterval(timer);talk='';refreshVisible=null;selected='';me=null;app.replaceChildren();$('identity').replaceChildren();try{await api('logout','POST',{});}finally{signingOut=false;await start();}}
+async function logout(){clearChildDraft(me?.id);signingOut=true;++viewVersion;clearInterval(timer);talk='';refreshVisible=null;selected='';me=null;app.replaceChildren();$('identity').replaceChildren();try{await api('logout','POST',{});}finally{signingOut=false;await start();}}
 async function loginScreen(){refreshVisible=null;app.replaceChildren();$('identity').replaceChildren();const info=await api('info');const hero=card('すきなときに、おしゃべり。');hero.classList.add('hero');hero.append(el('p','おうちの人が、ふたりを友だちにしたらスタート。通知はこないよ。'),el('p','おうちの人も、ふたりのおはなしを見られます。','notice'));const c=card('ログイン');const creds=credentials(c),device=input(c,'この端末の呼び名');device.value='この端末';c.append(btn('ログイン',async()=>{await api('login','POST',{...data(creds),device:device.value});await start();},'primary'));
  const d=el('details');d.append(el('summary','はじめての保護者の方'));c.append(d);const reg=credentials(d,true),code=input(d,invitation?'招待を読み込みました（登録用コードは不要）':'登録用コード','password'),agree=consent(d);d.append(btn('保護者アカウントを作る',async()=>{const result=await api('register','POST',{...data(reg),setup_code:code.value,invite:invitation,agree:agree.checked,consent_version:info.consent_version});showRecovery(result.recovery_code);$('status').textContent='登録しました。復旧コードを保管して、上のログインから入ってください。';},'primary'));
  const recovery=el('details');recovery.append(el('summary','パスワードを忘れた保護者の方'));c.append(recovery);const rc=credentials(recovery),key=input(recovery,'復旧コード','password');rc.password.autocomplete='new-password';recovery.append(btn('新しいパスワードで復旧',async()=>{const result=await api('recover','POST',{...data(rc),recovery_code:key.value});showRecovery(result.recovery_code);}));
@@ -80,11 +80,51 @@ async function renderFriends(parent){const {friends}=await api('friends'+(me.rol
   if(f.state==='blocked')box.append(btn('自分側のブロックを解除',async()=>{await api('friends/'+f.id+'/unblock','POST',{});$('status').textContent='解除しました。トーク再開には新しい招待と双方の承認が必要です。';}));
  }list.append(box);}
 }
+function childDraftKey(accountId){return 'oshaberi:child-registration:'+accountId;}
+function clearChildDraft(accountId){
+ if(!accountId)return;
+ try{sessionStorage.removeItem(childDraftKey(accountId));}catch{}
+}
+function newChildPassword(){
+ const random=crypto.getRandomValues(new Uint8Array(16));
+ return Array.from(random,byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+function childRegistrationForm(parent){
+ const accountId=me.id, draftKey=childDraftKey(accountId);
+ const add=el('details');add.append(el('summary','子どものアカウントを作る'));parent.append(add);
+ const creds=credentials(add,true),agree=consent(add);
+ try{
+  const draft=JSON.parse(sessionStorage.getItem(draftKey)||'null');
+  if(draft){creds.name.value=draft.alias;creds.login.value=draft.login;add.open=true;}
+ }catch{}
+ function retainDraft(){
+  if(!creds.name.value&&!creds.login.value){clearChildDraft(accountId);return;}
+  try{sessionStorage.setItem(draftKey,JSON.stringify({alias:creds.name.value,login:creds.login.value}));}catch{}
+ }
+ creds.name.addEventListener('input',retainDraft);
+ creds.login.addEventListener('input',retainDraft);
+ const actions=el('div',undefined,'row');
+ actions.append(btn('パスワードを作る',()=>{
+  if(creds.password.value&&!confirm('入力中のパスワードを新しく作り直しますか？'))return;
+  creds.password.value=newChildPassword();
+  $('status').textContent='パスワードを作りました。登録前にパスワード管理アプリへ控えてください。';
+ }),btn('パスワードをコピー',async()=>{
+  if(!creds.password.value){creds.password.focus();throw Error('先にパスワードを入力するか、作ってください。');}
+  try{await navigator.clipboard.writeText(creds.password.value);}
+  catch{creds.password.type='text';creds.password.focus();creds.password.select();throw Error('自動でコピーできませんでした。選択した文字をコピーしてください。');}
+  $('status').textContent='パスワードをコピーしました。';
+ }));
+ add.append(actions,el('small','親子で別のログインIDとパスワードを使います。初期状態では利用時間が未設定、写真送信はOFFです。'));
+ add.append(btn('この子を登録',async()=>{
+  await api('children','POST',{...data(creds),agree:agree.checked,consent_version:me.consent_version});
+  clearChildDraft(accountId);
+  await start();
+ },'primary'));
+}
 async function parentView(){
  const top=card('おうちの人の見守り');top.append(el('p','子どもの発言と相手の発言を見られます。ここで見ても、子どもの「既読」は変わりません。','notice'));
  if(me.children.length){const sel=el('select');for(const c of me.children){const o=el('option',c.alias);o.value=c.id;sel.append(o);}sel.value=selected;sel.setAttribute('aria-label','管理する子ども');sel.onchange=()=>{selected=sel.value;dashboard().catch(showError);};top.append(sel);}
- const add=el('details');add.append(el('summary','子どものアカウントを作る'));top.append(add);const creds=credentials(add,true),agree=consent(add);add.append(el('small','親子で別のログインIDとパスワードを使います。初期状態では利用時間が未設定、写真送信はOFFです。'));
- add.append(btn('この子を登録',async()=>{await api('children','POST',{...data(creds),agree:agree.checked,consent_version:me.consent_version});await start();},'primary'));
+ childRegistrationForm(top);
  if(selected){
   const friends=card('友だちとトーク'),friendRows=el('div');friends.append(friendRows);await renderFriends(friendRows);
   const inv=card('友だちを招待');inv.append(el('p','相手の保護者へURLかQRコードを渡してください。1回・3日間のみ有効。参加後、双方が相手の子を確認して承認します。'));

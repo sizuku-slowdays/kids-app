@@ -20,7 +20,7 @@ async function conversation(db,a,id,requestedChild){
  if(a.role==='child'){await childAvailable(db,f.left_child,false);await childAvailable(db,f.right_child,false);await childAvailable(db,child,true);}else{const active=await db.prepare('SELECT COUNT(*) n FROM accounts WHERE id IN(?,?) AND active=1').bind(f.left_child,f.right_child).first();ensure(active.n===2,'このトークは利用できません',403);}
  return {f,child,peer:child===f.left_child?f.right_child:f.left_child};
 }
-async function ownFriend(db,a,id){guardian(a);const f=await db.prepare('SELECT * FROM friendships WHERE id=?').bind(id).first();ensure(f,'トークがありません',404);const mine=await db.prepare('SELECT child_id FROM guardian_children WHERE guardian_id=? AND child_id IN(?,?)').bind(a.id,f.left_child,f.right_child).first();ensure(mine,'このトークの操作はできません',403);return {f,child:mine.child_id,peer:mine.child_id===f.left_child?f.right_child:f.left_child};}
+async function ownFriend(db,a,id,requestedChild){guardian(a);const f=await db.prepare('SELECT * FROM friendships WHERE id=?').bind(id).first();ensure(f,'トークがありません',404);const mine=await db.prepare('SELECT child_id FROM guardian_children WHERE guardian_id=? AND child_id IN(?,?) AND (? IS NULL OR child_id=?)').bind(a.id,f.left_child,f.right_child,requestedChild,requestedChild).first();ensure(mine,'このトークの操作はできません',403);return {f,child:mine.child_id,peer:mine.child_id===f.left_child?f.right_child:f.left_child};}
 async function newSession(db,a,device){const raw=token(),id=uid();await db.batch([db.prepare('INSERT INTO sessions VALUES(?,?,?,?,?,?,0)').bind(id,await hash(raw),a.id,alias(device||'この端末'),Date.now(),Date.now()+30*DAY),record(db,a.id,'session.created',id)]);return json({ok:true},200,{'Set-Cookie':cookie(raw)});}
 async function requirePassword(db,a,password){ensure(typeof password==='string'&&password.length<=128&&same(await passwordHash(password,a.salt),a.password_hash),'パスワードを確認してください',403);}
 async function mediaAccess(db,a,m,requestedChild){
@@ -103,6 +103,35 @@ async function route(req,env){
   const pair=[invite.child_id,b.child_id].sort();ensure(!await db.prepare('SELECT 1 FROM blocks WHERE (child_id=? AND peer_id=?) OR (child_id=? AND peer_id=?)').bind(pair[0],pair[1],pair[1],pair[0]).first(),'友達登録できません',403);
   const id=uid();try{const r=await db.batch([db.prepare('UPDATE invitations SET used=1 WHERE id=? AND used=0 AND revoked=0 AND expires_at>?').bind(invite.id,Date.now()),db.prepare("INSERT INTO friendships SELECT ?,?,?,0,0,'pending',? WHERE changes()=1").bind(id,...pair,Date.now()),record(db,a.id,'friendship.requested',id)]);ensure(r[0].meta.changes===1&&r[1].meta.changes===1,'使用済みの招待です',409);}catch{ensure(false,'招待は使用済み、または友達登録済みです',409);}return json({id,state:'pending'});
  }
+ if(p==='/api/friends/household'&&method==='POST'){
+  guardian(a);
+  const {child_id,peer_id}=await body(req);
+  ensure(typeof child_id==='string'&&typeof peer_id==='string'&&child_id!==peer_id,'別々の子どもを選んでください');
+  const [left,right]=[child_id,peer_id].sort();
+  const id=uid();
+  const made=await db.prepare(`INSERT OR IGNORE INTO friendships
+   SELECT ?,?, ?,1,1,'active',? WHERE EXISTS(
+    SELECT 1 FROM guardian_children l JOIN guardian_children r
+    ON r.guardian_id=l.guardian_id AND r.family_id=l.family_id
+    JOIN accounts la ON la.id=l.child_id AND la.active=1 AND la.role='child'
+    JOIN accounts ra ON ra.id=r.child_id AND ra.active=1 AND ra.role='child'
+    WHERE l.guardian_id=? AND l.child_id=? AND r.child_id=?
+   ) AND NOT EXISTS(SELECT 1 FROM blocks WHERE (child_id=? AND peer_id=?) OR (child_id=? AND peer_id=?))`)
+   .bind(id,left,right,Date.now(),a.id,left,right,left,right,right,left).run();
+  if(made.meta.changes){
+   await record(db,a.id,'friendship.household_created',id).run();
+   return json({id});
+  }
+  await manages(db,a,left);await manages(db,a,right);
+  const existing=await db.prepare(`SELECT f.id FROM friendships f JOIN guardian_children l
+   ON l.child_id=f.left_child AND l.guardian_id=?
+   JOIN guardian_children r ON r.child_id=f.right_child AND r.guardian_id=l.guardian_id AND r.family_id=l.family_id
+   WHERE f.left_child=? AND f.right_child=? AND f.state='active'
+   AND NOT EXISTS(SELECT 1 FROM blocks WHERE (child_id=? AND peer_id=?) OR (child_id=? AND peer_id=?))`)
+   .bind(a.id,left,right,left,right,right,left).first();
+  ensure(existing,'この組み合わせではトークを作れません。友だち登録やブロックの状態を確認してください',409);
+  return json(existing);
+ }
  if(p==='/api/friends'&&method==='GET'){
   const child=a.role==='child'?a.id:u.searchParams.get('child');if(a.role==='guardian')await manages(db,a,child);else await childAvailable(db,child);
   const friends=await all(db.prepare(`SELECT f.*,p.alias peer_alias FROM friendships f JOIN accounts p ON p.id=CASE WHEN f.left_child=? THEN f.right_child ELSE f.left_child END WHERE ? IN(f.left_child,f.right_child) AND p.active=1 ORDER BY f.created_at DESC`).bind(child,child));
@@ -110,7 +139,7 @@ async function route(req,env){
   return json({friends});
  }
  m=p.match(/^\/api\/friends\/([^/]+)\/(approve|end|block|unblock)$/);if(m&&method==='POST'){
-  const {f,child,peer}=await ownFriend(db,a,m[1]),op=m[2];
+  const {f,child,peer}=await ownFriend(db,a,m[1],u.searchParams.get('child')),op=m[2];
   if(op==='approve'){
    ensure(f.state==='pending','承認待ちではありません',409);const col=child===f.left_child?'left_approved':'right_approved';
    await db.batch([db.prepare(`UPDATE friendships SET ${col}=1 WHERE id=? AND state='pending' AND NOT EXISTS(SELECT 1 FROM blocks WHERE (child_id=? AND peer_id=?) OR (child_id=? AND peer_id=?))`).bind(f.id,child,peer,peer,child),db.prepare("UPDATE friendships SET state='active' WHERE id=? AND state='pending' AND left_approved=1 AND right_approved=1").bind(f.id),record(db,a.id,'friendship.approved',f.id)]);

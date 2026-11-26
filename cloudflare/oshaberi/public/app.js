@@ -33,9 +33,9 @@ async function renderFriends(parent){const {friends}=await api('friends'+(me.rol
  if(f.unread)box.append(el('p',`新しいおはなし ${f.unread} 件`));
  if(f.state==='active')box.append(btn(me.role==='guardian'?'トークを見守る':'おはなしする',()=>openTalk(f), 'primary'));
  if(me.role==='guardian'){
-  if(f.state==='pending')box.append(btn('この友だち登録を承認',async()=>{await api('friends/'+f.id+'/approve','POST',{});await dashboard();}));
-  if(['pending','active'].includes(f.state))box.append(btn('友だち登録を解除',async()=>{if(confirm('このトークは双方とも開けなくなります。解除しますか？')){await api('friends/'+f.id+'/end','POST',{});await dashboard();}},'danger'),btn('ブロック',async()=>{if(confirm('この相手をブロックしますか？')){await api('friends/'+f.id+'/block','POST',{});await dashboard();}},'danger'));
-  if(f.state==='blocked')box.append(btn('自分側のブロックを解除',async()=>{await api('friends/'+f.id+'/unblock','POST',{});$('status').textContent='解除しました。トーク再開には新しい招待と双方の承認が必要です。';}));
+  if(f.state==='pending')box.append(btn('この友だち登録を承認',async()=>{await api('friends/'+f.id+'/approve?child='+encodeURIComponent(selected),'POST',{});await dashboard();}));
+  if(['pending','active'].includes(f.state))box.append(btn('友だち登録を解除',async()=>{if(confirm('このトークは双方とも開けなくなります。解除しますか？')){await api('friends/'+f.id+'/end?child='+encodeURIComponent(selected),'POST',{});await dashboard();}},'danger'),btn('ブロック',async()=>{if(confirm('この相手をブロックしますか？')){await api('friends/'+f.id+'/block?child='+encodeURIComponent(selected),'POST',{});await dashboard();}},'danger'));
+  if(f.state==='blocked')box.append(btn('自分側のブロックを解除',async()=>{await api('friends/'+f.id+'/unblock?child='+encodeURIComponent(selected),'POST',{});$('status').textContent='解除しました。トークを再開するには、友だち登録をやり直してください。';}));
  }list.append(box);}
 }
 async function parentView(){
@@ -45,6 +45,20 @@ async function parentView(){
  add.append(btn('この子を登録',async()=>{await api('children','POST',{...data(creds),agree:agree.checked,consent_version:me.consent_version});await start();},'primary'));
  if(selected){
   const friends=card('友だちとトーク'),friendRows=el('div');friends.append(friendRows);await renderFriends(friendRows);
+  const currentChild=me.children.find(c=>c.id===selected);
+  const siblings=me.children.filter(c=>c.id!==selected&&c.family_id===currentChild?.family_id);
+  if(siblings.length){
+   const panel=card('きょうだいとトーク'),peer=el('select');
+   for(const child of siblings){const option=el('option',child.alias);option.value=child.id;peer.append(option);}
+   field(panel,'トークするきょうだい',peer);
+   panel.append(btn('きょうだいのトークを作る',async()=>{
+    const other=siblings.find(c=>c.id===peer.value);
+    if(!other||!confirm(currentChild.alias+'さんと'+other.alias+'さんがトークできるようにしますか？'))return;
+    await api('friends/household','POST',{child_id:currentChild.id,peer_id:other.id});
+    await dashboard();
+    $('status').textContent='きょうだいのトークを使えるようにしました。';
+   },'primary'));
+  }
   const inv=card('友だちを招待');inv.append(el('p','相手の保護者へURLかQRコードを渡してください。1回・3日間のみ有効。参加後、双方が相手の子を確認して承認します。'));
   inv.append(btn('招待URLとQRコードを作る',async()=>{const r=await api('invitations','POST',{child_id:selected});const box=el('div'),url=el('input');url.value=r.url;url.readOnly=true;url.setAttribute('aria-label','招待URL');box.append(url);const canvas=el('canvas');await drawQR(canvas,r.url);box.append(canvas,btn('URLをコピー',async()=>{await navigator.clipboard.writeText(r.url);}));inv.append(box);}));
   if(invitation)inv.append(btn('受け取った招待に、この子で参加',async()=>{await api('invitations/accept','POST',{child_id:selected,token:invitation});invitation='';await dashboard();$('status').textContent='友だち申請を作りました。双方のおうちの人が、相手の子を確認して承認してください。';},'primary'));
@@ -72,7 +86,7 @@ function settingsForm(parent){const child=me.children.find(c=>c.id===selected),p
  parent.append(btn('この子の設定を保存',async()=>{const schedule=rows.map(([from,to])=>{if(!from.value&&!to.value)return [];if(!from.value||!to.value)throw Error('開始と終了の両方を選んでください');const minute=s=>s.split(':').reduce((a,n,i)=>a+Number(n)*(i?1:60),0);return [[minute(from.value),minute(to.value)]];});await api('children/'+selected+'/settings','PUT',{paused:paused.checked,photos_enabled:photos.checked,timezone:tz.value,schedule,revision:child.revision});await start();},'primary'));
 }
 async function sessionsView(parent,childMode){const path=childMode?'children/'+selected+'/sessions':'sessions',data=await api(path);for(const s of data.sessions.filter(s=>!s.revoked&&s.expires_at>Date.now())){const row=el('div',undefined,'row');row.append(el('span',s.device),el('small',new Date(s.created_at).toLocaleString('ja-JP')),btn('この端末をログアウト',async()=>{await api(path,'DELETE',{session_id:s.id});await start();}));parent.append(row);}}
-async function mediaList(parent,guardian){const {media}=await api('media'+(guardian?'?child='+selected:''));for(const m of media){const row=el('div',undefined,'divider');row.append(el('p',(m.kind==='stamp'?'スタンプ：':'写真：')+m.label+' / '+({pending:'承認待ち',approved:'使用できます',rejected:'却下',disabled:'無効'})[m.status]));if(['pending','approved'].includes(m.status)){const img=el('img',undefined,'media-preview');img.src='/media/'+m.id+(guardian?'?child='+selected:'');img.alt=m.label;row.append(img);}if(guardian){if(m.status==='pending')row.append(btn('承認して'+(m.kind==='photo'?'相手に送る':'スタンプを使えるようにする'),async()=>{await api('media/'+m.id+'/approve','POST',{});await dashboard();},'primary'),btn('却下',async()=>{await api('media/'+m.id+'/reject','POST',{});await dashboard();}));if(m.status==='approved')row.append(btn('画像を無効にする',async()=>{await api('media/'+m.id+'/disable','POST',{});await dashboard();},'danger'));}parent.append(row);}}
+async function mediaList(parent,guardian){const {media}=await api('media'+(guardian?'?child='+selected:''));for(const m of media){const row=el('div',undefined,'divider');row.append(el('p',(m.kind==='stamp'?'スタンプ：':'写真：')+m.label+' / '+({pending:'承認待ち',approved:'使用できます',rejected:'却下',disabled:'無効'})[m.status]));if(['pending','approved'].includes(m.status)){const img=el('img',undefined,'media-preview');img.src='/media/'+m.id+(guardian?'?child='+selected:'');img.alt=m.label;row.append(img);}if(guardian){if(m.status==='pending')row.append(btn('承認して'+(m.kind==='photo'?'相手に送る':'スタンプを使えるようにする'),async()=>{await api('media/'+m.id+'/approve?child='+encodeURIComponent(selected),'POST',{});await dashboard();},'primary'),btn('却下',async()=>{await api('media/'+m.id+'/reject','POST',{});await dashboard();}));if(m.status==='approved')row.append(btn('画像を無効にする',async()=>{await api('media/'+m.id+'/disable','POST',{});await dashboard();},'danger'));}parent.append(row);}}
 function uploadForm(parent,kind,friendship){const details=el('details');details.append(el('summary',kind==='stamp'?'オリジナルスタンプを登録':'写真をおうちの人に確認してもらう'));parent.append(details);
  details.append(el('p','顔・じゅうしょ・学校の名前・はだかや下着の写真は送らないでね。おうちの人が見てから、相手にとどくよ。相手が写真をほぞんすることもあるよ。','warning'));
  const file=input(details,'写真ライブラリからえらぶ','file');file.accept='image/jpeg,image/png';const name=input(details,'画像の呼び名');name.value=kind==='stamp'?'わたしのスタンプ':'写真';const ack=input(details,'送ってよい写真か、かくにんしたよ','checkbox');

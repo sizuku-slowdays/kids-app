@@ -119,3 +119,29 @@ test('safe deletion, expiry cleanup, auth throttling and default release locks',
  }finally{await mf.dispose();}
  const disabled=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:fileURLToPath(new URL('../.build/index.js',import.meta.url)),compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],bindings:{RELEASE_ENABLED:'0'}}));try{assert.equal((await disabled.dispatchFetch('https://chat.test/api/info')).status,503);assert.equal((await disabled.dispatchFetch('https://chat.test/')).status,503);}finally{await disabled.dispose();}
 });
+
+test('one guardian can connect siblings and both children can send messages',async()=>{
+ const {mf,call,ok,parent,child,enable}=await fixture();
+ try{
+  const guardian=await parent('siblings_parent'),otherGuardian=await parent('other_parent');
+  const first=await child(guardian,'sibling_first'),second=await child(guardian,'sibling_second');
+  const outsider=await child(otherGuardian,'other_child');
+  const path='/api/friends/household',pair={child_id:first.id,peer_id:second.id};
+  assert.equal((await call(path,first,'POST',pair)).status,403);
+  assert.equal((await call(path,guardian,'POST',{child_id:first.id,peer_id:outsider.id})).status,403);
+  const created=await ok(path,guardian,'POST',pair);
+  assert.equal((await ok(path,guardian,'POST',{child_id:second.id,peer_id:first.id})).id,created.id);
+  const messages='/api/talks/'+created.id+'/messages';
+  assert.equal((await call(messages,first)).status,403);
+  await enable(guardian,first);await enable(guardian,second);
+  assert.equal((await ok('/api/friends',first)).friends[0].state,'active');
+  assert.equal((await ok('/api/friends',second)).friends[0].id,created.id);
+  await ok(messages,first,'POST',{kind:'text',text:'こんにちは',nonce:'sibling-first-0001'});
+  await ok(messages,second,'POST',{kind:'text',text:'こんにちは！',nonce:'sibling-second-001'});
+  assert.deepEqual((await ok(messages,second)).messages.map(m=>m.text),['こんにちは','こんにちは！']);
+  assert.equal((await call(messages,outsider)).status,403);
+  await ok('/api/friends/'+created.id+'/block?child='+second.id,guardian,'POST',{});
+  assert.equal((await call(path,guardian,'POST',pair)).status,409);
+  assert.equal((await call(messages,first)).status,403);
+ }finally{await mf.dispose();}
+});

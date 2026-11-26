@@ -6,3 +6,4 @@ node_modules/
 *.PRIVATE.*
 .private-test-config.jsonc
 .owner-cloud.jsonc
+.production-cloud.jsonc

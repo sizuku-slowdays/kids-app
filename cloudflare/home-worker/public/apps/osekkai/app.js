@@ -79,14 +79,14 @@ function select(options,value) {
   return field;
 }
 function labeled(container,title,input) {
-  const label = node('label');
+  const label = node('label',null,input.type==='checkbox'?'osekkai-check':'osekkai-field');
   label.append(node('span',title),input);
   container.append(label);
   return input;
 }
 const charactersByTarget = {homework:'ogre',medicine:'slime',bedtime:'cloud'};
 function formFor(data,person,rule) {
-  const form = node('form',null,'rule');
+  const form = node('form',null,'osekkai-rule-form');
   form.append(node('h3',rule?'通知を編集':'通知を追加'));
   const target = labeled(form,'HOMEアプリ',select(data.targets.map(x=>[x.id,x.label]),rule?.target||'homework'));
   const actor = labeled(form,'キャラクター',select(data.actors.map(x=>[x.id,x.face+' '+x.name]),rule?.character||'ogre'));
@@ -102,7 +102,7 @@ function formFor(data,person,rule) {
   const challenge = labeled(form,'お題・難易度（通知用）',Object.assign(node('input'),{type:'text',maxLength:30,value:rule?.challenge??'',placeholder:'例：7の段'}));
   const enabled = labeled(form,'通知を有効にする',Object.assign(node('input'),{type:'checkbox',checked:rule?!!rule.enabled:true}));
   const guardian = labeled(form,'最後まで報告がなければ、自分の端末に通知する',Object.assign(node('input'),{type:'checkbox',checked:!!rule?.guardian_id}));
-  const preview = node('div');
+  const preview = node('div',null,'osekkai-preview');
   function showPreview() {
     const character = data.actors.find(c=>c.id===actor.value);
     const app = data.targets.find(t=>t.id===target.value);
@@ -121,12 +121,15 @@ function formFor(data,person,rule) {
   actor.onchange=challenge.oninput=showPreview;
   showPreview();
   const save = node('button','保存');
-  form.append(preview,action('セリフをプレビュー',async()=>{
+  const formActions=node('div',null,'osekkai-form-actions');
+  form.append(preview);
+  formActions.append(action('セリフをプレビュー',async()=>{
     const sample=await request('/preview','POST',{household_id:person.household_id,target:target.value,character:actor.value,
       challenge:challenge.value,confirmation:mode.value});
     preview.replaceChildren(speaker(sample.face,sample.name,actor.value),node('p',sample.text,'bubble'));
   }),save);
-  if (rule) form.append(action('編集を閉じる',async()=>{editing=null;await render();}));
+  form.append(formActions);
+  if (rule) formActions.append(action('編集を閉じる',async()=>{editing=null;await render();}));
   form.onsubmit = async event=>{
     event.preventDefault();
     save.disabled=true;

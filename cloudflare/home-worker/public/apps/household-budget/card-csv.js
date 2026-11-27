@@ -56,7 +56,7 @@ export async function fingerprint(card,row){
 }
 export function csvCandidates(state,card,row){
  const type=row.signedAmount<0?'refund':'expense',amount=Math.abs(row.signedAmount);
- return state.entries.filter(e=>!e.void&&e.payment===card&&e.type===type&&e.date===row.date&&e.amount===amount);
+ return state.entries.filter(e=>!e.void&&e.payment===card&&(e.type===type||type==='expense'&&e.type==='advance')&&e.date===row.date&&e.amount===amount);
 }
 export function suggestCategory(state,merchant){
  const key=merchantKey(merchant),saved=state.merchantCategories?.[key];
@@ -76,4 +76,21 @@ export function suggestCategory(state,merchant){
  const rules=[[/ENEOS|エネオス|出光/,state.classificationVersion?'車・交通':'交通・ガソリン'],[/APPLE|アップル|UQ|KDDI|ドコモ/,'通信・サブスク'],[/ベネッセ|進研ゼミ/,state.classificationVersion?'教育':'子ども']];
  const match=rules.find(([re,category])=>re.test(key)&&Object.hasOwn(state.categories.tree,category));
  return match?{category:match[1],source:'店名から推測',review:!!state.classificationVersion}:{category:'',source:'分類が必要'};
+}
+
+// Reserve direct fingerprints first, then consume exact existing transactions once.
+export function matchCsvRows(state,card,rows){
+ const imports=state.csvImports||{},reserved=new Set(),result=new Map();
+ for(const row of rows){
+  if(row.error||!imports[row.key])continue;
+  const id=imports[row.key];
+  reserved.add(id);result.set(row.key,{id,registered:true});
+ }
+ for(const row of rows){
+  if(row.error||result.has(row.key))continue;
+  const eligible=csvCandidates(state,card,row).filter(e=>!reserved.has(e.id)&&merchantKey(e.merchant||e.memo)===merchantKey(row.merchant));
+  const entry=eligible.find(e=>Object.values(imports).includes(e.id))||eligible[0];
+  if(entry){reserved.add(entry.id);result.set(row.key,{id:entry.id,registered:Object.values(imports).includes(entry.id)});}
+ }
+ return result;
 }

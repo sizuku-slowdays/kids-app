@@ -250,3 +250,7 @@ HOME Workerからリンクを出すには 対象の HOME ユーザー ID をカ�
 ## 2026-11-27 家計簿：収入見込みと翌月カード予算
 
 home-workerの既存家計API/JSON状態へincomeOutlookとfundReserves.carryを追加し、cardBudgetをsummaryへ返す。DB schema/Binding/Secrets/Cron/カレンダー/他Workerに変更なし。本人限定・revision・操作ID再送・監査を継続。 [設計・検証](budget-income-outlook-20261127.md)。
+
+## 2026-11-27 HOME家計簿：楽天CSV重複除外・立替
+
+feat/home-auth-foundation（起点 2a73480）の家計簿のみ改修。既存のCSV識別番号を優先し、同一カード・日付・正負金額・正規化店名の既存明細を件数単位で照合。登録済みの分類・残高・履歴は保持。新規CSV支出から立替先を指定し既存の立替精算に連携。DBスキーマ・Worker設定変更なし。家計簿単体94件合格、本番ビルド・反映・実データ確認は未確認。

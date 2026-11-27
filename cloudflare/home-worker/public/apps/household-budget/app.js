@@ -1,4 +1,4 @@
-import {decodeCardCsv,parseRakutenCsv,fingerprint,csvCandidates,suggestCategory,merchantKey} from './card-csv.js';
+import {decodeCardCsv,parseRakutenCsv,fingerprint,csvCandidates,suggestCategory,merchantKey,matchCsvRows} from './card-csv.js';
 import {dailySpending} from './daily-spending.js';
 
 const $=id=>document.getElementById(id),root=$('app'),dialog=$('dialog');
@@ -1324,7 +1324,7 @@ async function csvImportForm(card){
   return count;
  };
  file.onchange=async()=>{
-  previewHost.replaceChildren();rows=[];controls=[];confirmInput.checked=false;
+  previewHost.replaceChildren();rows=[];controls=[];confirmInput.checked=false;f.querySelector('button[type=submit]').disabled=true;
   try{
    if(!file.files[0])return;if(file.files[0].size>2000000)throw Error('CSVは2MB以内で選んでください');
    const decoded=decodeCardCsv(await file.files[0].arrayBuffer());rows=parseRakutenCsv(decoded.text);
@@ -1369,12 +1369,23 @@ async function csvImportForm(card){
     }),count);
    previewHost.append(bulk);
    const imported=data.csvImports||{},used=new Set(Object.values(imported));
-   for(const rowData of rows){
-    const key=await fingerprint(card.id,rowData),box=el('section');previewHost.append(box);
+   const keyed=await Promise.all(rows.map(async row=>({...row,key:await fingerprint(card.id,row)})));
+   const matches=matchCsvRows(data,card.id,keyed);
+   for(const match of matches.values())used.add(match.id);
+   let excluded=0;
+   for(const rowData of keyed){
+    const key=rowData.key,match=matches.get(key);
+    if(match){
+     const prior=data.entries.find(e=>e.id===match.id);
+     if(prior?.csvBilling?.status==='pending'&&!rowData.billingDeferred||!match.registered){
+      controls.push({row:rowData,key,action:{value:'match:'+match.id},autoMatch:true});
+     }
+     excluded++;continue;
+    }
+    const box=el('section');previewHost.append(box);
     box.append(el('h3',rowData.date+' ／ '+rowData.merchant+' ／ '+yen(rowData.signedAmount)));
     if(rowData.paymentMonth)box.append(el('p','CSVの支払月：'+rowData.paymentMonth,'muted'));
     if(rowData.error){box.append(el('p','取り込み対象外・要確認 '+rowData.error,'notice'));continue;}
-    if(imported[key]){const prior=data.entries.find(e=>e.id===imported[key]);if(prior?.csvBilling?.status==='pending'&&!rowData.billingDeferred){box.append(el('p','登録済みの利用です。金額を追加せず、確定した請求月だけ更新できます。','notice'));const action=select(box,'明細の扱い',[['assign','請求月だけ更新する'],['skip','今回は更新しない']],'assign');controls.push({row:rowData,key,action});}else box.append(el('p','登録済みのCSV明細です。再登録しません。','muted'));continue;}
     const candidates=csvCandidates(data,card.id,rowData).filter(e=>!used.has(e.id));
     const pending=data.plans.filter(p=>p.status==='planned'&&p.payment===card.id&&p.amount===Math.abs(rowData.signedAmount)&&p.month===rowData.date.slice(0,7)&&rowData.signedAmount>0);
     const options=[['add','新しい利用として登録'],...pending.map(p=>['plan:'+p.id,'カード固定費と対応付け '+p.name+' ／ '+yen(p.amount)]),...candidates.map(e=>['match:'+e.id,'手入力と対応付け '+e.date+' '+e.memo+' ／ '+yen(e.amount)]),['skip','今回は取り込まない']];
@@ -1387,6 +1398,8 @@ async function csvImportForm(card){
     const purchase=field(extra,'購入内容','text','');purchase.maxLength=500;
     const spending=select(extra,'支出区分',[['','未設定'],...spendingKinds]);
     const savings=select(extra,'積立の種類',[['','指定なし'],'カード投資積立']);
+    const advance=field(box,'立替払いとして登録','checkbox');
+    const counterparty=field(box,'立替先（精算相手）','text','');counterparty.maxLength=100;
     const remember=field(extra,'この分類を次回の候補に保存','checkbox');
     const categoryStatus=el('p',suggestion.source,'muted');box.append(categoryStatus);
     const candidatesForStore=suggestion.candidates?.length?suggestion.candidates:[suggestion];
@@ -1403,8 +1416,11 @@ async function csvImportForm(card){
      const enabled=action.value==='add'||action.value.startsWith('plan:');
      for(const input of [category,picker.middle,person,purchase,spending,savings,remember,chosen])input.disabled=!enabled;
      separate.disabled=action.value!=='add'||!(candidates.length||pending.length);
+     advance.disabled=!enabled||rowData.signedAmount<0;
+     counterparty.disabled=advance.disabled||!advance.checked;
+     counterparty.required=!counterparty.disabled;
     };
-    action.onchange=()=>{update();refresh();};update();
+    action.onchange=()=>{update();refresh();};advance.onchange=()=>{update();refresh();};counterparty.oninput=()=>{confirmInput.checked=false;};update();
     const store=merchantKey(rowData.merchant);
     const refreshCategory=category.onchange;
     category.onchange=()=>{
@@ -1413,8 +1429,12 @@ async function csvImportForm(card){
      refresh();
     };
     for(const input of [picker.middle,person,purchase,spending,savings,remember,chosen,separate])input.addEventListener('change',refresh);
-    controls.push({row:rowData,key,action,category,categoryStatus,separate,store,picker,person,purchase,spending,savings,remember,chosen,box,suggestion});
+    controls.push({row:rowData,key,action,category,categoryStatus,separate,store,picker,person,purchase,spending,savings,remember,chosen,box,suggestion,advance,counterparty});
    }
+   previewHost.prepend(el('p',excluded+'件の登録済み明細を自動除外しました'+(controls.some(x=>x.autoMatch)?'（既存履歴との対応付け・請求月更新は保存時に実行します）':'')+'。','notice'));
+   bulk.hidden=!controls.some(x=>x.box);
+   f.querySelector('button[type=submit]').disabled=!controls.length;
+   if(!controls.length)previewHost.append(el('p','新規明細はありません。再登録は不要です。','notice'));
    refresh();
   }catch(e){rows=[];controls=[];error(e);}
  };
@@ -1422,7 +1442,7 @@ async function csvImportForm(card){
   if(!rows.length)throw Error('CSVを読み込んでください');
   const selected=controls.filter(x=>x.action.value!=='skip');if(selected.some(x=>x.category&&!x.category.disabled&&!x.category.value))throw Error('取り込む明細の大カテゴリを選んでください');if(!selected.length)throw Error('登録または対応付けする明細を選んでください');
   if(selected.some(x=>!x.row.billingDeferred&&x.row.billingMonthNumber&&x.row.billingMonthNumber!==Number(statement.value.slice(5))))throw Error('選んだ明細の支払月と請求月が一致しません。対象の月の明細だけ選んでください');
-  return {cardId:card.id,statementMonth:statement.value,confirm:confirmInput.checked,rows:selected.map(x=>({key:x.key,date:x.row.date,merchant:x.row.merchant,signedAmount:x.row.signedAmount,method:x.row.method,paymentMonth:x.row.paymentMonth,billingMonthNumber:x.row.billingMonthNumber,occurrence:x.row.occurrence,...x.picker?.read(),person:x.person?.value,purchase:x.purchase?.value,spendingKind:x.spending?.value,savingsKind:x.savings?.value,remember:x.remember?.checked,separate:x.separate?.checked,action:x.action.value==='assign'?'assign':x.action.value.startsWith('match:')?'match':x.action.value.startsWith('plan:')?'plan':'add',planId:x.action.value.startsWith('plan:')?x.action.value.slice(5):null,entryId:x.action.value.startsWith('match:')?x.action.value.slice(6):null}))};
+  return {cardId:card.id,statementMonth:statement.value,confirm:confirmInput.checked,rows:selected.map(x=>({key:x.key,date:x.row.date,merchant:x.row.merchant,signedAmount:x.row.signedAmount,method:x.row.method,paymentMonth:x.row.paymentMonth,billingMonthNumber:x.row.billingMonthNumber,occurrence:x.row.occurrence,...x.picker?.read(),person:x.person?.value,purchase:x.purchase?.value,spendingKind:x.spending?.value,savingsKind:x.savings?.value,remember:x.remember?.checked,advance:!!x.advance?.checked,counterparty:x.counterparty?.value,autoMatch:x.autoMatch===true,separate:x.separate?.checked,action:x.action.value==='assign'?'assign':x.action.value.startsWith('match:')?'match':x.action.value.startsWith('plan:')?'plan':'add',planId:x.action.value.startsWith('plan:')?x.action.value.slice(5):null,entryId:x.action.value.startsWith('match:')?x.action.value.slice(6):null}))};
  });dialog.append(f);
 }
 

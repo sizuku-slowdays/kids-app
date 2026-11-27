@@ -2,7 +2,7 @@ import {budgetCalendarItems} from '../src/budget-calendar.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newBudget,applyBudgetCommand,budgetSummary,accountBalance,cardBalance,missingBudgetMonths} from '../src/budget-core.js';
-import {parseCsv,parseRakutenCsv,decodeCardCsv,fingerprint,suggestCategory,merchantKey} from '../public/apps/household-budget/card-csv.js';
+import {parseCsv,parseRakutenCsv,decodeCardCsv,fingerprint,suggestCategory,merchantKey,matchCsvRows} from '../public/apps/household-budget/card-csv.js';
 let serial=0;
 const run=(s,type,data,today='2026-11-07')=>applyBudgetCommand(s,{type,data},{today,eventId:'import-test-'+(++serial)});
 function started(){let s=newBudget();s.startDate='2026-11-01';s.accounts[0].opening=100000;s.accounts[0].openingDate=s.startDate;for(const c of s.cards)Object.assign(c,{opening:0,accountId:'bank-0',closingDay:31,paymentDay:27,monthOffset:1});return s;}
@@ -132,4 +132,34 @@ test('One-off bank withdrawals affect forecasts and calendar immediately, and th
  const cancelled=run(state,'plan.cancel',{id:plan.id,version:2});
  assert.ok(!budgetCalendarItems(cancelled).some(x=>x.id===plan.id));
  assert.deepEqual(cancelled.journal,original.journal);
+});
+
+test('Preview consumes registered and exact manual transactions once, leaving additional identical occurrences new',async()=>{
+ const a=await csvRow(),b=await csvRow(1200,'SYNTHETIC SHOP','2026-11-04',2),c=await csvRow(1200,'SYNTHETIC SHOP','2026-11-04',3);
+ let s=run(started(),'csv.import',csv([a]));
+ s=run(s,'entry.add',{id:'manual-exact',date:a.date,type:'advance',amount:1200,payment:'visa',memo:a.merchant,category:'食費',counterparty:'Synthetic party'});
+ const matches=matchCsvRows(s,'visa',[a,b,c]);
+ assert.equal(matches.get(a.key).registered,true);
+ assert.equal(matches.get(b.key).id,'manual-exact');
+ assert.equal(matches.has(c.key),false);
+ s=run(s,'csv.import',csv([{...b,action:'match',entryId:'manual-exact',autoMatch:true},c]));
+ assert.equal(s.entries.length,3);
+ assert.equal(s.entries.find(e=>e.id==='manual-exact').splits[0].category,'食費');
+ assert.equal(cardBalance(s,'visa','2026-11-07'),3600);
+ assert.equal(matchCsvRows(s,'visa',[a,b,c]).size,3);
+ assert.equal(matchCsvRows(s,'pink',await Promise.all([a,b,c].map(async row=>({...row,key:await fingerprint('pink',row)})))).size,0);
+});
+test('CSV advances enter existing settlement flow, and reimport does not duplicate debt or cash',async()=>{
+ const row={...await csvRow(),advance:true,counterparty:'Synthetic party',remember:false};
+ assert.throws(()=>run(started(),'csv.import',csv([{...row,counterparty:' '}])),/立替先/);
+ let s=run(started(),'csv.import',csv([row]));
+ const entry=s.entries[0];assert.equal(entry.type,'advance');assert.equal(entry.counterparty,'Synthetic party');
+ assert.equal(budgetSummary(s,'2026-11-07').advances[0].remaining,1200);
+ s=run(s,'advance.settle',{date:'2026-11-07',accountId:'bank-0',items:[{id:entry.id,received:1200,waived:0}]});
+ const before=structuredClone(s.journal);
+ s=run(s,'csv.import',csv([row]));
+ assert.deepEqual(s.journal,before);assert.equal(s.entries.length,1);
+ assert.equal(budgetSummary(s,'2026-11-07').advances[0].remaining,0);
+ assert.equal(cardBalance(s,'visa','2026-11-07'),1200);
+ assert.equal(accountBalance(s,'bank-0','2026-11-07'),101200);
 });

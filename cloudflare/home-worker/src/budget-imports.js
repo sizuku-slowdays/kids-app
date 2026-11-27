@@ -70,7 +70,7 @@ export function assignCardBilling(s,d,{monthDate,businessDate,ensureMonth}){
 export function importCardRows(s,d,{cleanEntry,activeEntry,businessDate,monthDate,ensureMonth,now}){
  requireValue(d.confirm===true&&['pink','visa'].includes(d.cardId)&&Array.isArray(d.rows)&&d.rows.length<=500&&d.rows.length>0,'カードと取り込む明細を確認してください');
  monthDate(d.statementMonth,1);const card=s.cards.find(c=>c.id===d.cardId);requireValue(card,'カードが見つかりません');
- s.csvImports||={};const seen=new Set();
+ s.csvImports||={};const seen=new Set(),matched=new Set(d.rows.map(row=>s.csvImports[row.key]).filter(Boolean));
  for(const row of d.rows){
   requireValue(/^[a-f0-9]{64}$/.test(row.key)&&!seen.has(row.key),'明細の識別番号を確認してください');seen.add(row.key);
   const billing=csvBilling(row,d.statementMonth);
@@ -86,7 +86,12 @@ export function importCardRows(s,d,{cleanEntry,activeEntry,businessDate,monthDat
   if(row.action==='skip')continue;
   requireValue(billing||row.billingMonthNumber==null||(Number.isInteger(row.billingMonthNumber)&&row.billingMonthNumber>=1&&row.billingMonthNumber<=12&&row.billingMonthNumber===Number(d.statementMonth.slice(5))),'CSVの支払月と請求月を一致させてください');
   if(row.action==='match'){
-   const match=candidates.find(e=>e.id===row.entryId);requireValue(match&&!used.includes(match.id),'対応する手入力の明細を確認してください');
+   const match=candidates.find(e=>e.id===row.entryId);
+   requireValue(match&&!matched.has(match.id)&&(!used.includes(match.id)||row.autoMatch===true&&merchantKey(match.merchant||match.memo)===merchantKey(row.merchant)),'対応する手入力の明細を確認してください');
+   if(row.autoMatch===true)requireValue(merchantKey(match.merchant||match.memo)===merchantKey(row.merchant),'店名が一致しません');
+   matched.add(match.id);
+   if(match.csvBilling?.status==='pending'&&billing?.status==='confirmed')assignCardBilling(s,{entryId:match.id,month:billing.month,confirm:true},{monthDate,businessDate,ensureMonth});
+   if(row.autoMatch===true&&used.includes(match.id))continue;
    if(billing?.status==='pending'){requireValue(!s.bills.some(b=>b.cardId===d.cardId&&b.status==='confirmed'&&b.month===match.dueDate?.slice(0,7)),'引落済みの明細です。確定済み取引は請求月未確定に変更できません');match.csvBilling=billing;match.dueDate=null;match.csvImported=true;}
    if(modern)match.merchant ||= row.merchant;
    s.csvImports[row.key]=match.id;if(!s.classificationVersion&&row.remember===undefined&&match.splits.length===1){s.merchantCategories||={};s.merchantCategories[merchantKey(row.merchant)]=match.splits[0].category;}continue;
@@ -99,7 +104,8 @@ export function importCardRows(s,d,{cleanEntry,activeEntry,businessDate,monthDat
   requireValue(!candidates.some(e=>!used.includes(e.id))||row.separate===true,'重複候補があります。別の購入であることを確認してください');
   requireValue(Object.hasOwn(s.categories.tree,row.category),'カテゴリを選んでください');
   requireValue(!row.middle||Object.hasOwn(s.categories.tree[row.category],row.middle),'中カテゴリを確認してください');
-  const entry=cleanEntry({id:'csv-'+row.key,date:row.date,type:row.signedAmount<0?'refund':'expense',amount:Math.abs(row.signedAmount),payment:d.cardId,category:row.category,middle:row.middle,person:row.person,spendingKind:row.spendingKind,savingsKind:row.savingsKind,purchase:row.purchase,merchant:modern?row.merchant:undefined,memo:row.merchant},now);
+  requireValue(row.advance!==true||row.signedAmount>0&&typeof row.counterparty==='string'&&row.counterparty.trim(),'立替先を入力してください');
+  const entry=cleanEntry({id:'csv-'+row.key,date:row.date,type:row.signedAmount<0?'refund':row.advance===true?'advance':'expense',counterparty:row.advance===true?String(row.counterparty||'').trim():'',amount:Math.abs(row.signedAmount),payment:d.cardId,category:row.category,middle:row.middle,person:row.person,spendingKind:row.spendingKind,savingsKind:row.savingsKind,purchase:row.purchase,merchant:modern?row.merchant:undefined,memo:row.merchant},now);
   const include=!!s.startDate&&entry.date>=s.startDate;
   activeEntry(s,entry,now,include);
   if(billing)entry.csvBilling=billing;

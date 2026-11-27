@@ -195,7 +195,7 @@ async function render() {
   const data=await request();
   const invitations=byId('invitations'), settings=byId('settings');
   invitations.replaceChildren();settings.replaceChildren();
-  if (data.child && !embedded) {
+  if (data.child) {
     const section=node('section');
     const open=data.events.filter(e=>e.status==='open');
     const history=data.events.filter(e=>e.status!=='open');
@@ -211,7 +211,7 @@ async function render() {
     invitations.append(section);
   }
   if(data.recipients.length) settings.append(guardianSettings(data));
-  if(embedded&&!data.recipients.length) invitations.append(node('p','設定するには我が家の保護者アカウントでログインしてください。'));
+  if(embedded&&!data.child&&!data.recipients.length) invitations.append(node('p','設定するには我が家の保護者アカウントでログインしてください。'));
   else if(!data.child&&!data.recipients.length) invitations.append(node('p','このアカウント向けのお知らせはありません。'));
 }
 if(embedded && location.hash==='#osekkai-center') document.getElementById('osekkai-center').open=true;

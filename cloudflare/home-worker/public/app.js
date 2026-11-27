@@ -169,6 +169,14 @@ function authScreen() {
   }
   root.append(nav);
 }
+// iOS installed web apps can open cross-origin links in a separate browser
+// context. Use the regular authenticated chat entry without an automatic round trip.
+function oshaberiEntryUrl(url,homeLink,device){
+  const agent=device.userAgent||'';
+  const ios=/iPhone|iPad|iPod/i.test(agent)||(/Macintosh/i.test(agent)&&device.maxTouchPoints>1);
+  if(homeLink&&!ios)url.searchParams.set('home-start','1');
+  return url.href;
+}
 async function home() {
   me = await api("/api/me");
   const challenge=new URLSearchParams(location.search).get('oshaberi_challenge');
@@ -197,22 +205,11 @@ async function home() {
     if (url.protocol === 'https:') {
       const link = el('a', null, 'previous-home');
       link.href = url.href;
-      if(me.oshaberi_home_link){url.searchParams.set('home-start','1');link.href=url.href;}
+      link.href = oshaberiEntryUrl(url,me.oshaberi_home_link,navigator);
       link.append(el('span', '💬', 'icon'), el('strong', 'おしゃべり'), el('small', '›'));
       root.append(link);
     }
   }
-  api('/api/osekkai/summary').then(({child,guardian,event})=>{
-    if (!header.isConnected || (!child&&!guardian)) return;
-    const card=el('section',null,'panel');
-    if(event){
-      card.append(el('strong',event.face+' '+event.name),el('p',event.text));
-      if(event.canOpen) card.append(Object.assign(el('a','する'),{href:'/apps/osekkai/open?event='+event.id}));
-    }
-    const label=guardian?'おせっかい通知の設定':event?'お誘いに返事する':'おせっかい通知';
-    card.append(Object.assign(el('a',label),{href: guardian?(me.groups.some(g=>g.kind==='household'&&g.workspace_mode==='legacy')?'https://cetus.fun/kanriapp/notification-center.html#osekkai-center':'/apps/notification/#osekkai-center'):'/apps/osekkai/'}));
-    header.after(card);
-  }).catch(()=>{});
   const visibleApps=apps.filter(a=>a.visible);
   const legacyHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy");
   const isMamaHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy"&&["owner","admin"].includes(g.role));

@@ -183,6 +183,7 @@
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<link rel="stylesheet" href="/wagaya/apps/osekkai/style.css">
 </head>
 <body>
 
@@ -249,6 +250,14 @@
     <p class="hint" id="iosHint"></p>
   </div>
 </details>
+
+<details class="card osekkai" id="osekkai-center">
+  <summary>🐣 おせっかい通知キャラクター</summary>
+  <p>我が家の保護者アカウントで、子ども別のキャラクター・通知時刻・再通知を設定できます。</p>
+  <div id="message" role="status">設定を読み込んでいます。表示されない場合は我が家にログインしてください。</div><div id="invitations"></div><div id="settings"></div>
+  <p><a href="/wagaya/">我が家にログインする</a></p>
+</details>
+<script type="module" src="/wagaya/apps/osekkai/app.js"></script>
 
 <!-- 今日のタイムライン（この画面の主役） -->
 <section class="card timeline">

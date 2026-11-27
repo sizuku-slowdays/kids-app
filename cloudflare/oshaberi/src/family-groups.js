@@ -46,14 +46,23 @@ export async function familyGroups(req,db,a,childAvailable){
   const after=Number(u.searchParams.get('after')||0),before=Number(u.searchParams.get('before')||Number.MAX_SAFE_INTEGER);
   ensure(Number.isSafeInteger(after)&&after>=0&&Number.isSafeInteger(before)&&before>0,'表示位置を確認してください');
   const rows=await all(db.prepare('SELECT m.seq,m.author_id,a.alias AS author_alias,m.kind,m.text,m.created_at FROM family_group_messages m JOIN accounts a ON a.id=m.author_id WHERE m.group_id=? AND m.seq>? AND m.seq<? AND m.created_at>? ORDER BY m.seq '+(after?'ASC':'DESC')+' LIMIT 100').bind(id,after,before,Date.now()-180*DAY));
-  return json({messages:after?rows:rows.reverse()});
+  const recalled=await all(db.prepare("SELECT seq FROM family_group_messages WHERE group_id=? AND text='' AND created_at>?").bind(id,Date.now()-180*DAY));
+  return json({messages:after?rows:rows.reverse(),recalled:recalled.map(r=>r.seq)});
+ }
+ if(method==='DELETE'){
+  ensure(a.role==='guardian','送信取消はおうちの人だけができます',403);
+  const {seq}=await body(req);
+  ensure(Number.isSafeInteger(seq)&&seq>0,'メッセージを確認してください');
+  const result=await db.prepare("UPDATE family_group_messages SET text='' WHERE group_id=? AND seq=? AND created_at>? AND EXISTS(SELECT 1 FROM family_groups WHERE id=? AND creator_id=?)").bind(id,seq,Date.now()-180*DAY,id,a.id).run();
+  ensure(result.meta.changes===1,'メッセージを確認してください',404);
+  return json({ok:true});
  }
  if(method==='POST'){
   const b=await body(req),text=b.kind==='standard'?b.stamp:b.text;
   ensure((b.kind==='text'&&typeof text==='string'&&text.trim()&&text.length<=2000)||(b.kind==='standard'&&Object.hasOwn(STANDARD_STAMPS,text)),'メッセージまたはスタンプを確認してください');
   ensure(typeof b.nonce==='string'&&/^[a-zA-Z0-9_-]{16,80}$/.test(b.nonce),'送信番号を確認してください');
   const old=await db.prepare('SELECT * FROM family_group_messages WHERE author_id=? AND nonce=?').bind(a.id,b.nonce).first();
-  if(old){ensure(old.group_id===id&&old.kind===b.kind&&old.text===text,'送信番号が重複しています',409);return json({seq:old.seq});}
+  if(old){ensure(old.group_id===id&&(old.text===''||(old.kind===b.kind&&old.text===text)),'送信番号が重複しています',409);return json({seq:old.seq});}
   await quota(db,'message-minute:'+a.id,12,60000);await quota(db,'message-day:'+a.id,240,DAY);
   await db.prepare(`INSERT OR IGNORE INTO family_group_messages(group_id,author_id,nonce,kind,text,created_at) SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM family_group_members WHERE group_id=? AND account_id=? AND account_id IN(${eligible})) AND EXISTS(SELECT 1 FROM accounts a WHERE a.id=? AND a.active=1 AND (a.role='guardian' OR EXISTS(SELECT 1 FROM child_settings s WHERE s.child_id=a.id AND s.paused=0)))`).bind(id,a.id,b.nonce,b.kind,text,Date.now(),id,a.id,id,id,a.id).run();
   const saved=await db.prepare('SELECT * FROM family_group_messages WHERE author_id=? AND nonce=?').bind(a.id,b.nonce).first();

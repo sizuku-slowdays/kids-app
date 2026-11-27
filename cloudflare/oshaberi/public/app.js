@@ -78,9 +78,11 @@ async function openFamily(g){
  let last=0,first=0,busy=false;const pending=new Map();
  async function refresh(older=false){
   if(busy||talk!==g.id||document.hidden)return;busy=true;
-  try{const {messages}=await api('family-groups/'+g.id+'/messages?'+(older?'before='+first:'after='+last));if(talk!==g.id)return;
-   const fragment=document.createDocumentFragment();for(const m of messages){if(rows.querySelector('[data-seq="'+m.seq+'"]'))continue;last=Math.max(last,m.seq);first=first?Math.min(first,m.seq):m.seq;const n=el('div',undefined,'message'+(m.author_id===me.id?' mine':''));n.dataset.seq=m.seq;n.append(el('small',m.author_alias+' · '+new Date(m.created_at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})),el('p',m.kind==='standard'?(me.stamps[m.text]||m.text):m.text));fragment.append(n);}
+  try{const {messages,recalled=[]}=await api('family-groups/'+g.id+'/messages?'+(older?'before='+first:'after='+last));if(talk!==g.id)return;
+   const markRemoved=n=>{n.querySelector('p').textContent='メッセージの送信が取り消されました';n.querySelector('button')?.remove();};
+   const fragment=document.createDocumentFragment();for(const m of messages){if(rows.querySelector('[data-seq="'+m.seq+'"]'))continue;last=Math.max(last,m.seq);first=first?Math.min(first,m.seq):m.seq;const n=el('div',undefined,'message'+(m.author_id===me.id?' mine':''));n.dataset.seq=m.seq;n.append(el('small',m.author_alias+' · '+new Date(m.created_at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})),el('p',m.kind==='standard'?(me.stamps[m.text]||m.text):m.text));if(m.text==='')markRemoved(n);else if(me.role==='guardian')n.append(btn('送信取消',async()=>{if(!confirm('このメッセージを全員の画面から取り消しますか？'))return;await api('family-groups/'+g.id+'/messages','DELETE',{seq:m.seq});markRemoved(n);await refresh();},'danger'));fragment.append(n);}
    if(older)rows.prepend(fragment);else{rows.append(fragment);rows.scrollTop=rows.scrollHeight;}
+   for(const seq of recalled){const n=rows.querySelector('[data-seq=+seq+]');if(n)markRemoved(n);}
   }catch(e){showError(e);if(e.status===403){clearInterval(timer);rows.replaceChildren();}}finally{busy=false;}
  }
  panel.insertBefore(btn('前のおはなしを読む',()=>first&&refresh(true)),rows);

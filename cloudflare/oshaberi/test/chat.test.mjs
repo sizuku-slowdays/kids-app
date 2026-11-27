@@ -160,6 +160,18 @@ test('family group: guardian and siblings send as themselves, unrelated family d
  const path='/api/family-groups/'+g.id+'/messages';
  assert.deepEqual((await ok(path,b)).messages.map(m=>m.author_id),[p.id,a.id,b.id]);
  assert.equal((await call(path,c)).status,403);assert.equal((await call(path,other)).status,403);
+ const seq=(await ok(path,b)).messages[1].seq;
+ for(const who of [a,b,c,other])assert.equal((await call(path,who,'DELETE',{seq})).status,403);
+ assert.equal((await call(path,p,'DELETE',{seq:999999})).status,404);
+ await ok(path,p,'DELETE',{seq});
+ await ok(path,p,'DELETE',{seq});
+ for(const who of [p,a,b]){
+  const history=await ok(path,who);
+  assert.equal(history.messages.find(m=>m.seq===seq).text,'');
+  assert.deepEqual(history.recalled,[seq]);
+  assert.deepEqual((await ok(path+'?after='+seq,who)).recalled,[seq]);
+ }
+
  await enable(p,a,true);assert.equal((await call(path,a)).status,403);
  assert.equal((await ok(path,p)).messages.length,3);
  }finally{await t.mf.dispose();}

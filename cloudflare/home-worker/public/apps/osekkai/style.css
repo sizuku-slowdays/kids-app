@@ -62,3 +62,9 @@
  .osekkai .action-row{gap:6px}
  .osekkai .invitation{padding:10px}
 }
+
+.osekkai .osekkai-recipient-picker{margin:12px 0 16px}
+.osekkai .osekkai-recipient-picker>strong{font-size:14px;display:block;margin-bottom:7px}
+.osekkai .osekkai-recipient-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.osekkai .osekkai-recipient-buttons button{flex:1 1 95px;min-width:0;max-width:100%;padding:9px 10px;border:1.5px solid #d5dbe4;border-radius:12px;background:#f7f8fa;color:#42506a;font-size:14px;font-weight:700}
+.osekkai .osekkai-recipient-buttons button[aria-pressed=true]{background:#5969d9;color:#fff;border-color:#5969d9}

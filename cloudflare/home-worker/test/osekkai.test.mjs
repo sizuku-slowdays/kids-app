@@ -96,5 +96,15 @@ test('osekkai has household and recipient isolation, idempotent scheduling and s
   assert.equal((await readEvent('older')).filter(e=>e.target==='medicine').length,1,'recreated medication rule must not prompt after completed medication');
   assert.equal((await api('/rules','parent','POST',{...rule,recipient_id:'younger',target:'food',character:'chick',notify_guardian:false})).status,200);
   assert.equal((await readEvent('younger')).length,1,'declining an optional target stops further invitations for that day');
+  const both={...rule,recipient_ids:['older','younger'],target:'bedtime',character:'cloud',enabled:false,notify_guardian:false};
+  assert.equal((await api('/rules','younger','POST',both)).status,404);
+  assert.equal((await api('/rules','parent','POST',{...both,recipient_ids:['older','outsider']})).status,404);
+  assert.equal((await api('/rules','parent','POST',{...both,recipient_ids:['older','older']})).status,400);
+  assert.equal((await api('/rules','parent','POST',both)).status,200);
+  const bedtime=(await (await api('','parent')).json()).rules.filter(r=>r.target==='bedtime');
+  assert.deepEqual(bedtime.map(r=>r.recipient_id).sort(),['older','younger']);
+  assert.equal((await api('/rules','parent','POST',{...both,recipient_ids:['younger','older'],target:'medicine',character:'slime',confirmation:'medication'})).status,409);
+  assert.equal((await (await api('','parent')).json()).rules.filter(r=>r.recipient_id==='younger'&&r.target==='medicine').length,0,'batch rollback');
+
  }finally{await mf.dispose();}
 });

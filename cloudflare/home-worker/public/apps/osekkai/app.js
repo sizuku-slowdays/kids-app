@@ -85,9 +85,10 @@ function labeled(container,title,input) {
   return input;
 }
 const charactersByTarget = {homework:'ogre',medicine:'slime',bedtime:'cloud'};
-function formFor(data,person,rule) {
+function formFor(data,people,rule) {
+  const person=people[0];
   const form = node('form',null,'osekkai-rule-form');
-  form.append(node('h3',rule?'通知を編集':'通知を追加'));
+  form.append(node('h3',rule?person.name+'の通知を編集':people.length>1?'姉妹ふたりに通知を追加':'通知を追加'));
   const target = labeled(form,'HOMEアプリ',select(data.targets.map(x=>[x.id,x.label]),rule?.target||'homework'));
   const actor = labeled(form,'キャラクター',select(data.actors.map(x=>[x.id,x.face+' '+x.name]),rule?.character||'ogre'));
   const start = labeled(form,'通知時刻（日本時間）',Object.assign(node('input'),{type:'time',required:true,value:rule?.time||'19:00'}));
@@ -137,12 +138,12 @@ function formFor(data,person,rule) {
       const selected = checks.filter(x=>x.checked).map(x=>Number(x.value));
       if (!selected.length) throw new Error('曜日を1つ以上選んでください。');
       await request('/rules','POST',{
-        id:rule?.id,household_id:person.household_id,recipient_id:person.id,
+        id:rule?.id,household_id:person.household_id,recipient_id:person.id,...(!rule&&people.length>1?{recipient_ids:people.map(p=>p.id)}:{}),
         target:target.value,character:actor.value,time:start.value,weekdays:selected,
         intensity:Number(intensity.value),retries:Number(retries.value),interval_min:Number(interval.value),
         confirmation:mode.value,challenge:challenge.parentElement.hidden?'':challenge.value,enabled:enabled.checked,notify_guardian:!guardian.parentElement.hidden&&guardian.checked,
       });
-      editing=null;await render();message.textContent='保存しました。';
+      editing=null;await render();message.textContent=people.length>1?'選んだ子ども全員に保存しました。':'保存しました。';
     }catch(e){message.textContent=e.message;}finally{save.disabled=false;}
   };
   return form;
@@ -151,16 +152,29 @@ function guardianSettings(data) {
   const section=node('section');
   section.append(node('h2','保護者の通知設定'));
   const key = p=>p.household_id+'/'+p.id;
-  if (!data.recipients.some(p=>key(p)===recipientKey)) recipientKey=key(data.recipients[0]);
-  const person = data.recipients.find(p=>key(p)===recipientKey);
-  const people = labeled(section,'通知を受け取る子',select(data.recipients.map(p=>[key(p),p.name]),recipientKey));
-  people.onchange=()=>{recipientKey=people.value;editing=null;section.replaceWith(guardianSettings(data));};
-  const own = data.rules.filter(r=>r.recipient_id===person.id&&r.household_id===person.household_id);
+  const choices=data.recipients.map(p=>({key:key(p),label:p.name,people:[p]}));
+  for(const house of new Set(data.recipients.map(p=>p.household_id))){
+    const people=data.recipients.filter(p=>p.household_id===house);
+    if(people.length===2) choices.push({key:'both:'+house,label:'👭 姉妹ふたり',people});
+  }
+  if(!choices.some(c=>c.key===recipientKey)) recipientKey=choices[0].key;
+  const selected=choices.find(c=>c.key===recipientKey);
+  const receiver=node('div',null,'osekkai-recipient-picker');
+  receiver.append(node('strong','だれに送る？'));
+  const buttons=node('div',null,'osekkai-recipient-buttons');
+  for(const choice of choices){
+    const icon=choice.people.length===1?(choice.label.includes('長女')?'🐒 ':choice.label.includes('次女')?'🦄 ':'👤 '):'';
+    const button=action(icon+choice.label,async()=>{recipientKey=choice.key;editing=null;section.replaceWith(guardianSettings(data));});
+    button.setAttribute('aria-pressed',String(choice.key===recipientKey));buttons.append(button);
+  }
+  receiver.append(buttons);section.append(receiver);
+  const own=data.rules.filter(r=>selected.people.some(p=>p.id===r.recipient_id&&p.household_id===r.household_id));
   for(const r of own) {
+    const person=selected.people.find(p=>p.id===r.recipient_id&&p.household_id===r.household_id);
     const card=node('article',null,'invitation');
     const app=data.targets.find(t=>t.id===r.target);
     const char=data.actors.find(c=>c.id===r.character);
-    card.append(node('h3',char.face+' '+app.label+' ・ '+r.time),node('small',r.enabled?'通知中':'一時停止中'));
+    card.append(node('h3',char.face+' '+app.label+' ・ '+r.time),node('small',person.name+' ・ '+(r.enabled?'通知中':'一時停止中')));
     const controls=node('div',null,'action-row');
     const ids={id:r.id,recipient_id:person.id,household_id:person.household_id};
     controls.append(action('編集',async()=>{editing=r.id;await render();}),action(r.enabled?'一時停止':'再開',async()=>{
@@ -173,7 +187,8 @@ function guardianSettings(data) {
     }));
     card.append(controls);section.append(card);
   }
-  section.append(formFor(data,person,own.find(r=>r.id===editing)));
+  const editRule=own.find(r=>r.id===editing);
+  section.append(formFor(data,editRule?selected.people.filter(p=>p.id===editRule.recipient_id&&p.household_id===editRule.household_id):selected.people,editRule));
   return section;
 }
 async function render() {

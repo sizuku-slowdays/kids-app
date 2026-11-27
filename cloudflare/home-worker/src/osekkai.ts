@@ -248,6 +248,27 @@ export async function osekkaiRoute(request: Request, db: D1Database, user: strin
   }
   if (endpoint !== '/rules' || !['POST','DELETE'].includes(method)) return denied();
   const v = await read(request), house = String(v.household_id||''), recipient = String(v.recipient_id||'');
+  if(method==='POST' && Array.isArray(v.recipient_ids)){
+    const recipients=v.recipient_ids;
+    if(v.id||v.test||recipients.length!==2||new Set(recipients).size!==2||recipients.some(x=>typeof x!=='string')||!validate(v))
+      return json({error:'送信先と通知設定を確認してください'},400);
+    if(!await eligible(db,user,house,false)) return denied();
+    const target=v.target as Target;
+    for(const id of recipients as string[]){
+      if(!await eligible(db,id,house,true))return denied();
+      if(!await targetAllowed({target,recipient_id:id},grant))return json({error:'子どもに対象アプリの利用権限がありません'},403);
+      const count=await db.prepare('SELECT COUNT(*) n FROM home_osekkai_rules WHERE recipient_id=? AND deleted=0').bind(id).first<{n:number}>();
+      if((count?.n??0)>=16)return json({error:'設定は一人につき16件までです'},409);
+    }
+    const values=[target,String(v.character),String(v.time),JSON.stringify(v.weekdays),Number(v.interval_min),Number(v.retries),Number(v.intensity),v.enabled?1:0,String(v.confirmation),String(v.challenge).trim(),v.notify_guardian===true?user:null];
+    try{
+      await db.batch((recipients as string[]).map(id=>db.prepare('INSERT INTO home_osekkai_rules(id,household_id,recipient_id,target,character,time,weekdays,interval_min,retries,intensity,enabled,confirmation,challenge,guardian_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),house,id,...values)));
+    }catch(error){
+      if(v.confirmation==='medication'&&/UNIQUE constraint/i.test(String(error)))return json({error:'服薬確認の設定は一人につき1件までです'},409);
+      throw error;
+    }
+    return json({ok:true});
+  }
   if (!await eligible(db,user,house,false) || !await eligible(db,recipient,house,true)) return denied();
   const id = String(v.id||'');
   const old = id ? await db.prepare('SELECT * FROM home_osekkai_rules WHERE id=? AND household_id=? AND recipient_id=? AND deleted=0').bind(id,house,recipient).first<Rule>() : null;

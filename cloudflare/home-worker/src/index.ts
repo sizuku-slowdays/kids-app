@@ -1,4 +1,5 @@
 import {createOshaberiTicket} from './oshaberi-link';
+import { osekkaiInternal, osekkaiRoute, osekkaiOpen } from './osekkai';
 import {budgetCalendarJob,budgetNotificationCheck,deliverBudgetCalendar} from './budget-calendar';
 import {budgetRoute,runBudgetSchedules} from './budget';
 import {bodyIdentity,bodyProxy} from './body-calendar';
@@ -254,6 +255,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
   if(url.hostname==='calendar-auth.internal'&&path==='/internal/family-readiness'&&method==='GET'){const ready=env.FAMILY_INVITES_ENABLED==='1'&&await env.DB.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='family_workspaces'").first();return json({protocol:ready?'multi-family-v1':null});}
   if(path==='/internal/budget-calendar/job')return budgetCalendarJob(request,env);
   if (path === '/internal/passbook-gifts/notification-check') return giftNotificationCheck(request,env);
+  if (path.startsWith('/internal/osekkai/')) return osekkaiInternal(request,env.DB,(user,app)=>appAllowed(env,user,app));
   if (path === '/internal/school-prep/notification-check') return schoolNotificationCheck(request,env);
   if (url.hostname === 'notification-auth.internal' && path === '/internal/notification-check' && method === 'GET') {
     const target=await env.DB.prepare('SELECT * FROM users WHERE id=? AND active=1').bind(url.searchParams.get('user')||'').first<User>();
@@ -479,13 +481,13 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       401,
       "ログインIDかパスワードを確認してください",
     );
-    return json({ ok: true }, 200, {
-      "Set-Cookie": await issueSession(
-        env,
-        user.id,
-        name(data.device_name || "この端末"),
-      ),
-    });
+    const previous = await session(env, request);
+    const cookie = await issueSession(env,user.id,name(data.device_name || "この端末"));
+    if (previous && previous.user_id !== user.id) {
+      // Device subscriptions validate their original session immediately before sending.
+      await env.DB.prepare('UPDATE sessions SET revoked_at=? WHERE id=? AND revoked_at IS NULL').bind(now,previous.id).run();
+    }
+    return json({ ok: true }, 200, { "Set-Cookie": cookie });
   }
   const s = await session(env, request);
   if (path.startsWith("/api/") || path.startsWith("/media/"))
@@ -505,6 +507,7 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
       return json({url:url.href});
     }
     if(path==='/api/families'||path.startsWith('/api/families/'))return familiesRoute(request,env,user,body);
+    if(path==='/api/osekkai'||path.startsWith('/api/osekkai/'))return osekkaiRoute(request,env.DB,user.id,body,(id,app)=>appAllowed(env,id,app));
     if(path==='/api/school-prep'||path.startsWith('/api/school-prep/')){
       requireValue(await appAllowed(env,user.id,'school-prep'),403,'このアプリは利用できません');
       return schoolRoute(request,env,user.id,r=>body(r,path==='/api/school-prep/week'?110000:16384));
@@ -840,6 +843,28 @@ async function route(request: Request, env: HomeEnv, mark: (stage: string) => vo
     const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
     const protectedHeaders=new Headers(response.headers);for(const [key,value]of Object.entries(headers))protectedHeaders.set(key,value);
     return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:protectedHeaders});
+  }
+  if (path === '/apps/osekkai' || path.startsWith('/apps/osekkai/')) {
+    requireValue(['GET','HEAD'].includes(method),405,'この操作はできません');
+    const event=url.searchParams.get('event')||'';
+    const isEvent=/^[a-f0-9-]{36}$/.test(event);
+    const isOpen=path==='/apps/osekkai/open';
+    const login='/login'+(isEvent?'?osekkai='+event+'&open='+Number(isOpen):'');
+    if(!s) return new Response(null,{status:303,headers:{...headers,Location:login}});
+    if(isOpen){
+      const result=await osekkaiOpen(env.DB,s.user_id,event,(id,app)=>appAllowed(env,id,app));
+      if(result.status!==404)return result;
+      return new Response(method==='HEAD'?null:'<!doctype html><html lang="ja"><meta charset="utf-8"><title>おせっかい通知</title><main><h1>この通知を開けません</h1><p>通知を受け取ったアカウントで開いてください。</p><a href="'+login.replaceAll('&','&amp;')+'">受け取ったアカウントでログイン</a></main>',{status:404,headers:{...headers,'Content-Type':'text/html; charset=utf-8'}});
+    }
+    if(path==='/apps/osekkai') return new Response(null,{status:303,headers:{...headers,Location:'/apps/osekkai/'}});
+    const file=path.slice('/apps/osekkai/'.length)||'index.html';
+    requireValue(['index.html','app.js','style.css'].includes(file),404,'見つかりません');
+    const assetUrl=new URL(url);
+    assetUrl.pathname='/apps/osekkai/'+file;
+    const response=await env.ASSETS.fetch(new Request(assetUrl,{method}));
+    const resultHeaders=new Headers(response.headers);
+    for(const [key,value] of Object.entries(headers))resultHeaders.set(key,value);
+    return new Response(method==='HEAD'?null:response.body,{status:response.status,headers:resultHeaders});
   }
   if (path === '/apps/school-prep' || path.startsWith('/apps/school-prep/')) {
     if(!s)return new Response(null,{status:303,headers:{...headers,Location:'/login'}});

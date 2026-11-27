@@ -143,7 +143,11 @@ function authScreen() {
         "POST",
         data,
       );
-      location.replace("/");
+      const query=new URLSearchParams(location.search);
+      const invitation=query.get('osekkai')||'';
+      if (/^[a-f0-9-]{36}$/.test(invitation) && mode === '/login') {
+        location.replace((query.get('open')==='1'?'/apps/osekkai/open?event=':'/apps/osekkai/?event=')+invitation);
+      } else location.replace("/");
     } catch (e) {
       error.textContent = e.message;
     } finally {
@@ -198,6 +202,17 @@ async function home() {
       root.append(link);
     }
   }
+  api('/api/osekkai/summary').then(({child,guardian,event})=>{
+    if (!header.isConnected || (!child&&!guardian)) return;
+    const card=el('section',null,'panel');
+    if(event){
+      card.append(el('strong',event.face+' '+event.name),el('p',event.text));
+      if(event.canOpen) card.append(Object.assign(el('a','する'),{href:'/apps/osekkai/open?event='+event.id}));
+    }
+    const label=guardian?'おせっかい通知の設定':event?'お誘いに返事する':'おせっかい通知';
+    card.append(Object.assign(el('a',label),{href: guardian?(me.groups.some(g=>g.kind==='household'&&g.workspace_mode==='legacy')?'https://cetus.fun/kanriapp/notification-center.html#osekkai-center':'/apps/notification/#osekkai-center'):'/apps/osekkai/'}));
+    header.after(card);
+  }).catch(()=>{});
   const visibleApps=apps.filter(a=>a.visible);
   const legacyHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy");
   const isMamaHome=me.groups.some(g=>g.kind==="household"&&g.workspace_mode==="legacy"&&["owner","admin"].includes(g.role));

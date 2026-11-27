@@ -286,7 +286,7 @@ async function sendPush(sub, payloadObj, env) {
 
       'Content-Type': 'application/octet-stream',
 
-      TTL: '3600',
+      TTL: String(payloadObj.ttl || 3600),
 
       Urgency: 'normal',
 
@@ -1937,7 +1937,10 @@ export default {
 
     ctx.waitUntil(
 
-      runSchedule(env, new Date(event.scheduledTime || Date.now())).catch((e) => console.error('runSchedule failed', e))
+      Promise.all([
+        runSchedule(env, new Date(event.scheduledTime || Date.now())).catch((e) => console.error('runSchedule failed', e)),
+        runOsekkaiSchedule(env).catch(() => console.error('osekkai_schedule_failed')),
+      ])
 
     );
 
@@ -2000,13 +2003,33 @@ function legacySafeResponse(value){
  return value;
 }
 
+// Run from the existing per-minute notification cron with the existing HOME service binding.
+async function runOsekkaiSchedule(env) {
+  if (!env.HOME_AUTH) return;
+  const home = 'https://notification-auth.internal/internal/osekkai/';
+  const tick = await env.HOME_AUTH.fetch(new Request(home+'tick',{method:'POST'}));
+  if (!tick.ok) return;
+  const {deliveries} = await tick.json();
+  for (const {id} of deliveries) {
+    const request = new Request('https://notification.internal/internal/osekkai/send',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delivery_id:id}),
+    });
+    const response = await schoolPreparationPush(request,env,true);
+    if (!response.ok) continue;
+    const {delivered} = await response.json();
+    await env.HOME_AUTH.fetch(new Request(home+'result?delivery='+encodeURIComponent(id),{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delivered}),
+    }));
+  }
+}
+
 // School completion messages use existing HOME subscriptions; legacy rules stay unchanged.
-async function schoolPreparationPush(request,env){
+async function schoolPreparationPush(request,env,osekkai=false){
  if(new URL(request.url).hostname!=='notification.internal'||request.method!=='POST')return json({error:'見つかりません'},request,env,404);
  if(!env.HOME_AUTH)return json({error:'HOME_AUTHの接続を確認してください'},request,env,503);
  const input=await request.json().catch(()=>null),delivery=String(input?.delivery_id||'');
- if(!/^[a-zA-Z0-9_-]{1,100}$/.test(delivery))return json({error:'通知IDを確認してください'},request,env,400);
- const checkUrl=new URL('https://notification-auth.internal/internal/school-prep/notification-check');checkUrl.searchParams.set('delivery',delivery);
+ if(!(osekkai?/^[a-f0-9-]{36}-[0-4]$/:/^[a-zA-Z0-9_-]{1,100}$/).test(delivery))return json({error:'通知IDを確認してください'},request,env,400);
+ const checkUrl=new URL(osekkai?'https://notification-auth.internal/internal/osekkai/check':'https://notification-auth.internal/internal/school-prep/notification-check');checkUrl.searchParams.set('delivery',delivery);
  const response=await env.HOME_AUTH.fetch(new Request(checkUrl));
  if(!response.ok)return json({error:'学校準備のHOME対応を確認してください'},request,env,503);
  const data=await response.json();
@@ -2019,17 +2042,25 @@ async function schoolPreparationPush(request,env){
   const liveResponse=await env.HOME_AUTH.fetch(new Request(liveUrl));if(!liveResponse.ok)continue;
   const live=await liveResponse.json();if(!live.allowed||live.recipient_id!==sub.home_user_id)continue;
   const now=Math.floor(Date.now()/1000);
-  await env.DB.prepare("INSERT OR IGNORE INTO school_push_deliveries VALUES(?,?,'pending',0,?)").bind(delivery,sub.endpoint,new Date().toISOString()).run();
-  const old=await env.DB.prepare('SELECT status FROM school_push_deliveries WHERE delivery_id=? AND endpoint=?').bind(delivery,sub.endpoint).first();
+  const deliveryKey=osekkai?'osekkai-'+delivery:delivery;
+  await env.DB.prepare("INSERT OR IGNORE INTO school_push_deliveries VALUES(?,?,'pending',0,?)").bind(deliveryKey,sub.endpoint,new Date().toISOString()).run();
+  const old=await env.DB.prepare('SELECT status FROM school_push_deliveries WHERE delivery_id=? AND endpoint=?').bind(deliveryKey,sub.endpoint).first();
   if(old?.status==='sent'){delivered++;continue;}
-  const claim=await env.DB.prepare("UPDATE school_push_deliveries SET status='sending',lease_until=? WHERE delivery_id=? AND endpoint=? AND status!='sent' AND lease_until<? RETURNING delivery_id").bind(now+90,delivery,sub.endpoint,now).first();
+  const claim=await env.DB.prepare("UPDATE school_push_deliveries SET status='sending',lease_until=? WHERE delivery_id=? AND endpoint=? AND status!='sent' AND lease_until<? RETURNING delivery_id").bind(now+90,deliveryKey,sub.endpoint,now).first();
   if(!claim){failed++;continue;}
   try{
-   const result=await sendPush(sub,{title:'🎒 学校じゅんび',body:String(live.body||'準備状況が更新されました').slice(0,120),url:live.url,tag:'school-'+delivery,icon:'https://cetus.fun/wagaya/home-icon-192.png'},env);
+   const result=await sendPush(sub,{title:osekkai?String(live.title||'我が家のお知らせ'):'🎒 学校じゅんび',body:String(live.body||'準備状況が更新されました').slice(0,120),url:live.url,inboxUrl:osekkai?live.inboxUrl:undefined,tag:osekkai?deliveryKey:'school-'+delivery,ttl:osekkai?300:3600,icon:'https://cetus.fun/wagaya/home-icon-192.png'},env);
+   if(osekkai&&result.gone){
+    await env.DB.batch([
+      env.DB.prepare('UPDATE push_subscriptions SET enabled=0 WHERE endpoint=?').bind(sub.endpoint),
+      env.DB.prepare("DELETE FROM school_push_deliveries WHERE delivery_id=? AND endpoint=?").bind(deliveryKey,sub.endpoint),
+    ]);
+    continue;
+   }
    if(!result.ok)throw Error('push_failed');
-   await env.DB.prepare("UPDATE school_push_deliveries SET status='sent',lease_until=0,updated_at=? WHERE delivery_id=? AND endpoint=?").bind(new Date().toISOString(),delivery,sub.endpoint).run();delivered++;
+   await env.DB.prepare("UPDATE school_push_deliveries SET status='sent',lease_until=0,updated_at=? WHERE delivery_id=? AND endpoint=?").bind(new Date().toISOString(),deliveryKey,sub.endpoint).run();delivered++;
   }catch{
-   await env.DB.prepare("UPDATE school_push_deliveries SET status='pending',lease_until=0,updated_at=? WHERE delivery_id=? AND endpoint=?").bind(new Date().toISOString(),delivery,sub.endpoint).run();failed++;
+   await env.DB.prepare("UPDATE school_push_deliveries SET status='pending',lease_until=0,updated_at=? WHERE delivery_id=? AND endpoint=?").bind(new Date().toISOString(),deliveryKey,sub.endpoint).run();failed++;
   }
  }
  return json({ok:failed===0,protocol:'school-v1',delivered,failed},request,env,failed?503:200);

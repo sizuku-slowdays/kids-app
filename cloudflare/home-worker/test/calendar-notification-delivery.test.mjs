@@ -64,3 +64,33 @@ test('new calendar IDs never fall back to all on an older notification worker',a
  assert.equal(result.skipped,true);assert.deepEqual(requests,['https://notification.test/api/health']);
 });
 
+
+test('osekkai cron retries the same delivery without duplicating push or reaching a sibling device',async()=>{
+ const sqlite=new DatabaseSync(':memory:');
+ sqlite.exec(`
+ CREATE TABLE push_subscriptions(endpoint TEXT PRIMARY KEY,enabled INTEGER);
+ CREATE TABLE home_notification_subscriptions(endpoint TEXT PRIMARY KEY,home_user_id TEXT,home_session_id TEXT);
+ INSERT INTO push_subscriptions VALUES('https://push.test/first',1),('https://push.test/second',1),('https://push.test/old',1);
+ INSERT INTO home_notification_subscriptions VALUES('https://push.test/first','older','first'),('https://push.test/second','younger','second'),('https://push.test/old','older','old');
+ `);
+ sqlite.exec(await readFile(new URL('../../notification-center-api/school-preparation.sql',import.meta.url),'utf8'));
+ const DB={prepare(sql){let values=[];return {bind(...args){values=args;return this;},async run(){return sqlite.prepare(sql).run(...values);},async all(){return {results:sqlite.prepare(sql).all(...values)};},async first(){return sqlite.prepare(sql).get(...values)||null;}};}};
+ const id='01234567-0123-4123-8123-012345678901-0',sent=[],acks=[];
+ const home={async fetch(request){
+  const url=new URL(request.url);
+  if(url.pathname.endsWith('/tick'))return Response.json({deliveries:[{id}]});
+  if(url.pathname.endsWith('/result')){acks.push(await request.json());return Response.json({ok:true});}
+  return Response.json({allowed:url.searchParams.get('session')!=='old',recipient_id:'older',title:'ぷんすけ',body:'できたら教えてね',url:'/wagaya/apps/osekkai/open?event=test',inboxUrl:'/wagaya/apps/osekkai/?event=test'});
+ }};
+ const source=await readFile(new URL('../../notification-center-api/notification-center-api.js',import.meta.url),'utf8');
+ const sandbox=vm.createContext({Response,Request,URL,URLSearchParams,TextEncoder,TextDecoder,Date,console,sent});
+ vm.runInContext(source.replace('export default {','globalThis.worker = {')+
+   '\n sendPush=async(sub,payload)=>{sent.push({endpoint:sub.endpoint,payload});return {ok:true};};globalThis.tick=runOsekkaiSchedule;',sandbox);
+ await sandbox.tick({DB,HOME_AUTH:home});await sandbox.tick({DB,HOME_AUTH:home});
+ assert.equal(sent.length,1);
+ assert.equal(sent[0].endpoint,'https://push.test/first');
+ assert.equal(sent[0].payload.ttl,300);
+ assert.match(sent[0].payload.url,/open\?event/);
+ assert.equal(acks.at(-1).delivered,1);
+ sqlite.close();
+});

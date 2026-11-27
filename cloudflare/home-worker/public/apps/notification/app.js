@@ -1,5 +1,5 @@
-let currentUserId=null;const register=document.getElementById('register');
-try{const r=await fetch('/api/me',{cache:'no-store'});if(!r.ok){location.replace('/login');}else{const me=await r.json();currentUserId=me.user.id;document.getElementById('person').textContent=me.user.display_name+' さんの通知';register.disabled=false;}}catch{document.getElementById('status').textContent='接続できませんでした。開き直してください';}
+let currentUserId=null;const register=document.getElementById('register');const unregister=document.getElementById('unregister');
+try{const r=await fetch('/api/me',{cache:'no-store'});if(!r.ok){location.replace('/login');}else{const me=await r.json();currentUserId=me.user.id;document.getElementById('person').textContent=me.user.display_name+' さんの通知';register.disabled=false;unregister.disabled=false;}}catch{document.getElementById('status').textContent='接続できませんでした。開き直してください';}
 register.onclick=async()=>{register.disabled=true;try{await connectCalendarNotifications();}finally{register.disabled=false;}};
 async function connectCalendarNotifications(){
  const message=document.getElementById('status');
@@ -19,3 +19,19 @@ async function connectCalendarNotifications(){
   message.textContent=saved.user.display_name+'として登録しました';
  }catch(e){message.textContent=e.message;}
 }
+
+unregister.onclick=async()=>{
+ const status=document.getElementById('status');
+ unregister.disabled=true;
+ try{
+  const mounted=location.pathname.startsWith('/wagaya/');
+  const reg=await navigator.serviceWorker.getRegistration(mounted?'/wagaya/':'/apps/calendar/');
+  const sub=await reg?.pushManager.getSubscription();
+  if(sub){
+   const res=await fetch('/api/notifications/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint})});
+   if(!res.ok)throw Error('通知を解除できませんでした');
+  }
+  status.textContent='このアカウントの端末登録を解除しました';
+ }catch(e){status.textContent=e.message;}
+ finally{unregister.disabled=false;}
+};

@@ -254,3 +254,11 @@ home-workerの既存家計API/JSON状態へincomeOutlookとfundReserves.carryを
 ## 2026-11-27 HOME家計簿：楽天CSV重複除外・立替
 
 feat/home-auth-foundation（起点 2a73480）の家計簿のみ改修。既存のCSV識別番号を優先し、同一カード・日付・正負金額・正規化店名の既存明細を件数単位で照合。登録済みの分類・残高・履歴は保持。新規CSV支出から立替先を指定し既存の立替精算に連携。DBスキーマ・Worker設定変更なし。家計簿単体94件合格、本番ビルド・反映・実データ確認は未確認。
+## 2026-11-18 HOME おせっかい通知
+
+home-workerに0029のテーブルを追加し、既存notification-center-apiのCron・VAPID・購読・配信記録を再利用。新Worker・バインディングは不要。 [設定・検証・反映手順](osekkai-20261118.md)。
+
+
+### 2026-11-28 おせっかい通知の統合
+
+旧ローカル f66b733 のHOME用0029 migrationと通知Worker既存Cron連携を最新HOMEへ復元。DB/既存Binding/Cronの変更は追加migrationのみ。通知Workerは手動デプロイ要。

@@ -1,0 +1,33 @@
+.osekkai{max-width:780px;margin:auto;padding:18px}
+.osekkai section,.osekkai details{margin:14px 0}
+.osekkai .invitation{border:1px solid #e6d8c3;border-radius:22px;padding:15px;margin:12px 0;background:#fff9ed}
+.osekkai .speaker{display:flex;gap:12px;align-items:center;margin:0 0 8px}
+.osekkai .face{display:grid;place-items:center;width:3.5rem;height:3.5rem;border-radius:44% 52% 48% 52%;background:#ffe6a5;font-size:1.75rem}
+.osekkai .face-ogre{background:#ffcbb5}.osekkai .face-cloud{background:#e6e4fa}.osekkai .face-slime{background:#ccebc9}
+.osekkai .bubble{background:#fff;border-radius:6px 18px 18px;padding:10px 14px}
+.osekkai .action-row,.osekkai .days{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.osekkai .action-row a{padding:9px 12px}
+.osekkai button,.osekkai select{min-height:42px}
+.osekkai .rule{border:1px solid #e6d8c3;border-radius:15px;padding:14px}
+.osekkai form>label,.osekkai fieldset{display:block;margin:9px 0}
+.osekkai label input[type=checkbox]{width:auto;min-height:0}
+.osekkai .days label{display:flex;align-items:center;gap:3px;padding:5px;margin:0}
+.osekkai [hidden]{display:none!important}
+
+.osekkai .face{position:relative;flex:0 0 3.5rem;border:2px solid #7a542e;box-shadow:0 3px 0 #d6bd8a;isolation:isolate}
+.osekkai .portrait-eyes{position:absolute;top:39%;left:25%;width:7px;height:9px;background:#49362c;border-radius:50%;box-shadow:20px 0 #49362c}
+.osekkai .portrait-mouth{position:absolute;bottom:17%;left:38%;width:14px;height:9px;border-bottom:3px solid #70452c;border-radius:0 0 50% 50%}
+.osekkai .face-chick .portrait-mouth{background:#f6a831;border:0;transform:rotate(45deg);width:10px;height:10px;bottom:26%}
+.osekkai .face-chick .portrait-accent{position:absolute;top:-7px;left:22px;width:8px;height:13px;border:2px solid #a3772a;background:#ffe6a5;transform:rotate(-20deg);border-radius:80% 0}
+.osekkai .face-ogre{background:#ffb5a4;border-radius:45% 45% 38% 38%}
+.osekkai .face-ogre .portrait-accent::before,.osekkai .face-ogre .portrait-accent::after{content:'';position:absolute;top:-11px;width:13px;height:16px;background:#ffe8a4;border:2px solid #7a542e;border-radius:90% 10% 10% 10%;z-index:-1}
+.osekkai .face-ogre .portrait-accent::before{left:5px;transform:rotate(-25deg)}
+.osekkai .face-ogre .portrait-accent::after{right:5px;transform:rotate(35deg)}
+.osekkai .face-cloud{border-radius:46%;background:#eae8ff;box-shadow:-5px 2px #ddd8f0,5px 2px #ddd8f0}
+.osekkai .face-cloud .portrait-eyes{height:4px;border-radius:0 0 80% 80%;top:44%}
+.osekkai .face-slime{background:#b6e7bb;border-radius:70% 45% 38% 38%;transform:rotate(-3deg)}
+.osekkai .mood-impatient .portrait-mouth,.osekkai .mood-angry .portrait-mouth,.osekkai .mood-steam .portrait-mouth{width:12px;height:12px;border:2px solid #70452c;background:#fff;border-radius:50%}
+.osekkai .mood-angry .portrait-eyes,.osekkai .mood-steam .portrait-eyes{transform:rotate(15deg);height:5px}
+.osekkai .mood-steam .portrait-steam{position:absolute;top:-24px;left:14px;width:8px;height:18px;background:#e1d9d2;border-radius:50%;box-shadow:14px -4px #e1d9d2;opacity:.85}
+.osekkai .mood-celebrate .portrait-mouth{height:15px;background:#a8524b;border:2px solid #70452c;border-radius:10% 10% 70% 70%}
+.osekkai .mood-celebrate{outline:3px solid #ffdb78;outline-offset:3px}

@@ -4,7 +4,7 @@ let me,selected='',talk='',timer,loading=false,readSeq=0,viewVersion=0,signingOu
 class StaleViewError extends Error {constructor(){super('画面が切り替わりました');this.name='StaleViewError';}}
 const launchParams=new URLSearchParams(location.hash.slice(1));
 let homeTicket=launchParams.get('home')||'';
-const homeStart=new URLSearchParams(location.search).get('home-start')==='1'||location.hash==='#home-start';
+const homeStart=new URLSearchParams(location.search||'').get('home-start')==='1'||location.hash==='#home-start';
 let invitation=launchParams.get('invite')||'';
 if(invitation||homeTicket||homeStart)history.replaceState(null,'',location.pathname);
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -19,6 +19,7 @@ function data(c){return {login:c.login.value,password:c.password.value,...(c.nam
 function showRecovery(code){const c=card('復旧コードを保管してください');c.append(el('p','パスワードを忘れたときに使います。この画面で一度だけ表示します。子どもや相手の家庭には渡さず、安全な場所へ保管してください。'),el('pre',code));}
 async function start(){if(signingOut)return;if(homeTicket)return startHomeLink();const version=++viewVersion;clearInterval(timer);talk='';refreshVisible=null;loading=false;try{const account=await api('me');if(!account||!['guardian','child'].includes(account.role))throw Error('ログインを確認してください');me=account;selected=me.role==='child'?me.id:(me.children.some(c=>c.id===selected)?selected:me.children[0]?.id||'');await dashboard();}catch(e){if(version!==viewVersion||e.name==='StaleViewError')return;me=null;selected='';await loginScreen();}}
 async function logout(){signingOut=true;++viewVersion;clearInterval(timer);talk='';refreshVisible=null;selected='';me=null;app.replaceChildren();$('identity').replaceChildren();try{await api('logout','POST',{});}finally{signingOut=false;await start();}}
+function clearHomeVerifier(){try{sessionStorage.removeItem('oshaberi-home-verifier');}catch{}}
 async function beginHomeLink(){
  const verifier=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
  sessionStorage.setItem('oshaberi-home-verifier',verifier);
@@ -30,14 +31,14 @@ async function startHomeLink(){
  try{
   const verifier=sessionStorage.getItem('oshaberi-home-verifier')||'';
  const r=await api('home-link','POST',{ticket:homeTicket,verifier});
-  if(!r.link_required){sessionStorage.removeItem('oshaberi-home-verifier');homeTicket='';await start();return;}
+  if(!r.link_required){clearHomeVerifier();homeTicket='';await start();return;}
   c.append(el('p','我が家の利用者：'+r.home_name),el('p','初回だけ、自分のおしゃべりのログインIDとパスワードを入力して連携してください。家族でも他の人のアカウントを選ばないでください。'));
   const creds=credentials(c);
-  c.append(btn('このアカウントを連携する',async()=>{if(!confirm('我が家の「'+r.home_name+'」と、このおしゃべりアカウントを連携しますか？'))return;await api('home-link','POST',{ticket:homeTicket,verifier,...data(creds)});sessionStorage.removeItem('oshaberi-home-verifier');homeTicket='';await start();},'primary'));
+  c.append(btn('このアカウントを連携する',async()=>{if(!confirm('我が家の「'+r.home_name+'」と、このおしゃべりアカウントを連携しますか？'))return;await api('home-link','POST',{ticket:homeTicket,verifier,...data(creds)});clearHomeVerifier();homeTicket='';await start();},'primary'));
  }catch(e){c.append(el('p',e.message));}
- c.append(btn('連携せずログイン画面へ',()=>{sessionStorage.removeItem('oshaberi-home-verifier');homeTicket='';return loginScreen();}));
+ c.append(btn('連携せずログイン画面へ',()=>{clearHomeVerifier();homeTicket='';return loginScreen();}));
 }
-async function loginScreen(){refreshVisible=null;app.replaceChildren();$('identity').replaceChildren();const info=await api('info');const hero=card('すきなときに、おしゃべり。');hero.classList.add('hero');hero.append(el('p','おうちの人が、ふたりを友だちにしたらスタート。通知はこないよ。'),el('p','おうちの人も、ふたりのおはなしを見られます。','notice'));const c=card('ログイン');const creds=credentials(c),device=input(c,'この端末の呼び名');device.value='この端末';c.append(btn('ログイン',async()=>{await api('login','POST',{...data(creds),device:device.value});await start();},'primary'));
+async function loginScreen(){refreshVisible=null;app.replaceChildren();$('identity').replaceChildren();const info=await api('info');const hero=card('すきなときに、おしゃべり。');hero.classList.add('hero');hero.append(el('p','おうちの人が、ふたりを友だちにしたらスタート。通知はこないよ。'),el('p','おうちの人も、ふたりのおはなしを見られます。','notice'));const c=card('ログイン');const creds=credentials(c),device=input(c,'この端末の呼び名');device.value='この端末';c.append(btn('ログイン',async()=>{await api('login','POST',{...data(creds),device:device.value});await start();},'primary'),btn('我が家と連携してログイン',beginHomeLink));
  const d=el('details');d.append(el('summary','はじめての保護者の方'));c.append(d);const reg=credentials(d,true),code=input(d,invitation?'招待を読み込みました（登録用コードは不要）':'登録用コード','password'),agree=consent(d);d.append(btn('保護者アカウントを作る',async()=>{const result=await api('register','POST',{...data(reg),setup_code:code.value,invite:invitation,agree:agree.checked,consent_version:info.consent_version});showRecovery(result.recovery_code);$('status').textContent='登録しました。復旧コードを保管して、上のログインから入ってください。';},'primary'));
  const recovery=el('details');recovery.append(el('summary','パスワードを忘れた保護者の方'));c.append(recovery);const rc=credentials(recovery),key=input(recovery,'復旧コード','password');rc.password.autocomplete='new-password';recovery.append(btn('新しいパスワードで復旧',async()=>{const result=await api('recover','POST',{...data(rc),recovery_code:key.value});showRecovery(result.recovery_code);}));
 }
@@ -168,4 +169,4 @@ async function openTalk(f){clearInterval(timer);refreshVisible=null;talk=f.id;re
 async function resume(){if(document.hidden||signingOut||resuming)return;resuming=true;try{const account=await api('me');const previous=me;const changed=!previous||!account||account.id!==previous.id||account.role!==previous.role||(account.role==='guardian'&&(selected?!account.children.some(c=>c.id===selected):account.children.length>0))||(account.role==='child'&&(account.available!==previous.available||account.settings.photos_enabled!==previous.settings.photos_enabled));if(changed){app.replaceChildren();$('identity').replaceChildren();await start();return;}me=account;if(refreshVisible)await refreshVisible();}catch(e){if(e.name==='StaleViewError')return;if(e.status===401||e.status===403){app.replaceChildren();$('identity').replaceChildren();await start();}else showError(e);}finally{resuming=false;}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume().catch(showError);});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-if(homeStart)beginHomeLink().catch(showError);else start().catch(showError);
+if(homeStart)beginHomeLink().catch(async()=>{clearHomeVerifier();await loginScreen();$('status').textContent='我が家との連携が開けない場合は、自分のIDでログインしてください。';}).catch(showError);else start().catch(showError);

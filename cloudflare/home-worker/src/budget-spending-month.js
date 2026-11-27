@@ -53,8 +53,10 @@ export function spendingMonthSummary(state,funds,asOf,defaults=null){
     incomeType([plan.name,plan.memo,plan.category])==='benefit') ||
    state.entries.some(entry=>!entry.void&&entry.type==='income'&&within(entry.date,month)&&
     incomeType([entry.memo,...entry.splits.flatMap(part=>[part.category,part.middle])])==='benefit');
-  const benefitAmount=Number(month.slice(5))%2===0?rule?.even:rule?.odd;
-  if(rule?.enabled&&benefitAmount>0&&!hasBenefit)recorded.push({kind:'benefit',amount:benefitAmount,name:'手当（自動見込）',status:'estimate'});
+  const benefitId=Number(month.slice(5))%2===0?'child':'support';
+  const benefitOverride=state.incomeOutlook?.months?.[month]?.[benefitId];
+  const benefitAmount=benefitOverride?.amount??(benefitId==='child'?rule?.even:rule?.odd);
+  if(rule?.enabled&&benefitOverride?.enabled!==false&&benefitAmount>0&&!hasBenefit)recorded.push({kind:'benefit',amount:benefitAmount,name:'手当（自動見込）',status:'estimate'});
   const benefit=recorded.filter(row=>row.kind==='benefit'),other=recorded.filter(row=>['other','adjustment'].includes(row.kind));
   const payments=recorded.filter(row=>['bank','cash','card'].includes(row.kind));
   const totals=Object.fromEntries(['bank','cash','card'].map(kind=>[kind,-sum(payments.filter(row=>row.kind===kind))||0]));

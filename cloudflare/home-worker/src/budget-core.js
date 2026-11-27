@@ -1,5 +1,6 @@
 import {accountMonthBounds,projectAccountMonth} from './budget-account-month.js';
 import {savingsLegacy,savingsSchedule,savingsHoldings,savingsOverview,savingsGoalBalance,debtPaid} from './budget-savings.js';
+import {nextCardBudget,incomeDefaults} from './budget-card-budget.js';
 import {spendingMonthSummary} from './budget-spending-month.js';
 import {shiftBillingMonth,ruleNeedsPlan,ruleCoversMonth,billEvidence,projectBill,installmentProgress,forecastFunds,plannedCashFlows} from './budget-forecast.js';
 import {budgetPeople, migrateClassification, outstandingAdvance, savingsKinds, spendingKinds} from './budget-classification.js';
@@ -176,12 +177,42 @@ export function applyBudgetCommand(original,command,context){const s=clone(origi
   fail(Array.isArray(d.goals)&&d.goals.length<=30,'確保額の内訳を確認してください');
   const goals=d.goals.map(goal=>({name:text(goal.name,100),amount:yenAmount(goal.amount)}));
   fail(goals.every(goal=>goal.name)&&new Set(goals.map(goal=>goal.name)).size===goals.length,'確保する用途を重複なく入力してください');
-  s.fundReserves={...s.fundReserves,[d.month]:{living:yenAmount(d.living),goals}};
+  s.fundReserves={...s.fundReserves,[d.month]:{living:yenAmount(d.living),goals,...(d.carry!==undefined?{carry:yenAmount(d.carry)}:s.fundReserves?.[d.month]?.carry!==undefined?{carry:s.fundReserves[d.month].carry}:{})}};
   break;
+ }
+ case 'cashflow.incomeRules':{
+  fail(Array.isArray(d.rules)&&d.rules.length===4,'収入見込みの4項目を確認してください');
+  const rules=incomeDefaults.map(base=>{
+   const r=d.rules.find(r=>r.id===base.id);fail(r&&typeof r.enabled==='boolean','収入項目を確認してください');
+   fail(r.day===null||Number.isInteger(r.day)&&r.day>=1&&r.day<=31,'入金予定日を確認してください');
+   fail([-1,0].includes(r.receiptOffset),'入金月を確認してください');
+   if(r.accountId)find(s.accounts,r.accountId);
+   return {...base,amount:yenAmount(r.amount),enabled:r.enabled,day:r.day,accountId:r.accountId||'',receiptOffset:r.receiptOffset};
+  });
+  fail(rules.filter(r=>['child','support'].includes(r.id)).every(r=>r.receiptOffset===0),'手当は実際の入金月で設定してください');
+  s.incomeOutlook={...s.incomeOutlook,rules};
+  s.monthlyBenefit={enabled:rules.some(r=>['child','support'].includes(r.id)&&r.enabled),even:rules.find(r=>r.id==='child').enabled?rules.find(r=>r.id==='child').amount:0,odd:rules.find(r=>r.id==='support').enabled?rules.find(r=>r.id==='support').amount:0};break;
+ }
+ case 'cashflow.incomeMonth':{
+  monthDate(d.month,1);fail(Array.isArray(d.items)&&d.items.length===4,'月別の収入見込みを確認してください');
+  fail(s.incomeOutlook?.rules,'先に基本の収入見込みを保存してください');
+  const values={};
+  for(const r of s.incomeOutlook.rules){
+   const item=d.items.find(i=>i.id===r.id);fail(item&&typeof item.enabled==='boolean','収入項目を確認してください');
+   const date=item.date?day(item.date):null;
+   fail(!date||date.slice(0,7)===monthShift(d.month,r.receiptOffset),'入金月は基本設定の対象月と一致させてください');
+   if(item.accountId)find(s.accounts,item.accountId);
+   values[r.id]={enabled:item.enabled,amount:yenAmount(item.amount),date,accountId:item.accountId||''};
+  }
+  s.incomeOutlook.months={...s.incomeOutlook.months,[d.month]:values};break;
+ }
+ case 'cashflow.incomeMonth.reset':{
+  monthDate(d.month,1);if(s.incomeOutlook?.months)delete s.incomeOutlook.months[d.month];break;
  }
  case 'cashflow.monthlyBenefit':{
   fail(typeof d.enabled==='boolean','手当の設定を確認してください');
   s.monthlyBenefit={enabled:d.enabled,even:yenAmount(d.even),odd:yenAmount(d.odd)};
+  if(s.incomeOutlook)s.incomeOutlook.rules=s.incomeOutlook.rules.map(r=>['child','support'].includes(r.id)?{...r,enabled:d.enabled,amount:r.id==='child'?d.even:d.odd}:r);
   break;
  }
  case 'cashflow.reserve':{s.livingReserve=yenAmount(d.amount);break;}
@@ -601,7 +632,7 @@ export function budgetSummary(s,asOf,month=asOf.slice(0,7),basis='date',options=
   return [plan.id,{month:billMonth||null,status:bill?.status==='confirmed'?'paid':bill?.actual!=null?'billed':'used'}];
  }));
  const installments=Object.fromEntries(s.rules.filter(r=>r.term).map(rule=>[rule.id,{...installmentProgress(s,rule),outside:s.plans.filter(plan=>plan.ruleId===rule.id&&plan.status==='planned'&&!ruleCoversMonth(rule,plan.month)).map(plan=>plan.month)}]));
- const known=accounts.some(a=>a.balance!==null),cardKnown=cards.every(c=>c.balance!==null),assets=known?accounts.filter(a=>a.balance!==null).reduce((n,a)=>n+a.balance,0):null,debt=cardKnown?cards.reduce((n,c)=>n+Math.max(0,c.balance),0):null;return {cashflow,funds,accountMonth,savingsGoals,spendingMonths:spendingMonthSummary(s,funds,asOf,options.defaultMonthlyBenefit),generation,installments,cardCharges,daily,accounts,cards,income,expense,category,people,categoryBreakdown,saved,savings,waived,advanceReceived,advances,assets,debt,net:assets===null||debt===null?null:assets-debt,unreconciled:cards.flatMap(c=>c.bills.filter(b=>b.status==='confirmed'&&b.reconciliation!==0)),basis,month,schedule};
+ const known=accounts.some(a=>a.balance!==null),cardKnown=cards.every(c=>c.balance!==null),assets=known?accounts.filter(a=>a.balance!==null).reduce((n,a)=>n+a.balance,0):null,debt=cardKnown?cards.reduce((n,c)=>n+Math.max(0,c.balance),0):null;return {cardBudget:nextCardBudget(s,funds,projectedCards,savingsGoals,asOf),cashflow,funds,accountMonth,savingsGoals,spendingMonths:spendingMonthSummary(s,funds,asOf,options.defaultMonthlyBenefit),generation,installments,cardCharges,daily,accounts,cards,income,expense,category,people,categoryBreakdown,saved,savings,waived,advanceReceived,advances,assets,debt,net:assets===null||debt===null?null:assets-debt,unreconciled:cards.flatMap(c=>c.bills.filter(b=>b.status==='confirmed'&&b.reconciliation!==0)),basis,month,schedule};
 }
 export function legacyExport(s){const raw=s.legacy?.data?.entries?s.legacy.data:s.legacy||{version:6},entries=[];for(const e of s.entries.filter(e=>!e.void)){e.splits.forEach((p,i)=>entries.push({id:e.legacyIds?.[i]||e.id+':'+i,date:e.date,type:e.type,amount:p.amount,payment:s.cards.find(c=>c.id===e.payment)?.name||s.accounts.find(a=>a.id===e.payment)?.name||e.legacyPayment,category:p.category,categoryMiddle:p.middle,categorySmall:p.small,person:p.person,expenseNature:p.nature,memo:e.memo,settleMonth:e.settleMonth,counterparty:e.counterparty,linkedAdvanceId:e.linkedAdvanceId,...(e.splits.length>1?{receiptId:e.legacyKey?.replace(/^receipt:/,'')||e.id,receiptTotal:e.amount,splitIndex:i,splitCount:e.splits.length}:{})}));}const deletedIds=[...(raw.deletedIds||[]),...s.entries.filter(e=>e.void).flatMap(e=>e.legacyIds?.length?e.legacyIds:e.splits.map((_,i)=>e.id+':'+i)).map(id=>({id}))];const outputIds=new Set(entries.map(e=>e.id));for(const e of s.entries)for(const key of e.legacyIds||[])if(!outputIds.has(key))deletedIds.push({id:key});const represented=new Set(s.entries.flatMap(e=>e.legacyIds||[]));entries.push(...clone((raw.entries||[]).filter(e=>!represented.has(e.id))));return {...clone(raw),entries,deletedIds,categories:clone(s.categories),migrationIssues:clone(s.importIssues),preservedOriginal:clone(s.legacy)};}
 

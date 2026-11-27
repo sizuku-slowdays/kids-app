@@ -320,7 +320,7 @@ export function forecastFunds(state, accounts, cards, asOf, missing, availablePl
   [...cash.duplicateIncome,...cash.duplicateTransfers].some(plan=>plan.date.slice(0,7)<=current)||untrackedTransfers.some(plan=>plan.date.slice(0,7)<=current);
  const unknown = rows.some(row => row.unknown) || missing || missingAccount || unassigned || unprojected;
  const reserves = state.fundReserves?.[current] ?? null;
- const reserved = reserves ? reserves.living + sum(reserves.goals) : null;
+ const reserved = reserves ? reserves.living + sum(reserves.goals) + (reserves.carry||0) : null;
  const savingsPlans=savings.plans.filter(plan=>plan.period<=horizon);
  const currentSavings=sum(savingsPlans.filter(plan=>plan.period<=current));
  const futureSavings=sum(savingsPlans);

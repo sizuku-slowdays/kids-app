@@ -245,3 +245,8 @@ HOME家計管理の新規操作は既存の本人専用コマンドAPIと変更�
 ### 2026-11-26 おしゃべりへの入口
 
 HOME Workerからリンクを出すには 対象の HOME ユーザー ID をカンマ区切りで指定する OSHABERI_HOME_USER_IDS が必要。既定のリンク先は https://oshaberi.sslowdayss.workers.dev/。
+
+
+## 2026-11-27 家計簿：収入見込みと翌月カード予算
+
+home-workerの既存家計API/JSON状態へincomeOutlookとfundReserves.carryを追加し、cardBudgetをsummaryへ返す。DB schema/Binding/Secrets/Cron/カレンダー/他Workerに変更なし。本人限定・revision・操作ID再送・監査を継続。 [設計・検証](budget-income-outlook-20261127.md)。

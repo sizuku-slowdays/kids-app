@@ -107,6 +107,7 @@ function fundsForm(targetMonth=today.slice(0,7)){
  modal(monthLabel(month)+'の生活費・確保額');
  const f=el('form'),living=field(f,'カード・支払予定に含まれない生活費（円）','number',funds.reserves?.living??'',true);
  f.append(el('p','今後の支払いに別途残すお金だけを登録します。すでに引落予定にある支払いは、ここへ重ねて入れないでください。生活費が不要なら0円を入力してください。','notice'));
+ const carry=field(f,'次月へ残す繰越確保額（円、不要なら0）','number',funds.reserves?.carry??'',true);
  const list=el('div');f.append(list);
  const goals=[];
  function addGoal(goal={}){
@@ -117,7 +118,7 @@ function fundsForm(targetMonth=today.slice(0,7)){
  }
  for(const goal of funds.reserves?.goals||[])addGoal(goal);
  f.append(button('＋ 確保する用途を追加',()=>addGoal()));
- saveForm(f,'保存','cashflow.funds',()=>({month,living:amount(living),goals:goals.map(goal=>({name:goal.name.value,amount:amount(goal.value)}))}));
+ saveForm(f,'保存','cashflow.funds',()=>({month,living:amount(living),carry:amount(carry),goals:goals.map(goal=>({name:goal.name.value,amount:amount(goal.value)}))}));
  dialog.append(f);
 }
 function monthlyFunding(funds){
@@ -237,41 +238,79 @@ function spendingMonths(host=root){
  }
  sectionRoot.append(el('p','給与は入金月の翌月、手当は入金月、カード代は銀行からの引落月に集計します。口座間の振替は収支から除きます。','muted'));
 }
-function nextCardBudget(host,funds){
- const next=nextMonth(today.slice(0,7)),m=summary.spendingMonths?.months?.find(x=>x.month===next);
- if(!m)return;
- const rows=(funds.rows||[]).filter(x=>x.date.slice(0,7)===next);
- const total=items=>items.reduce((n,x)=>n+(x.amount||0),0);
- const bills=rows.filter(x=>x.kind==='bill'),rakuten=bills.filter(x=>/楽天|rakuten/i.test(x.name));
- const otherCards=total(bills.filter(x=>!rakuten.includes(x))),used=total(rakuten);
- const direct=total(rows.filter(x=>x.kind==='plan'));
- const reserve=data.fundReserves?.[next],extra=reserve?(reserve.living||0)+total(reserve.goals||[]):0;
- const saving=total((summary.savingsGoals?.plans||[]).filter(x=>x.period===next));
- const carry=funds.currentAllowanceEstimate;
- // Current allowance already contains posted salary; add only unposted current-month salary.
- const pendingSalary=total(m.items.filter(x=>x.kind==='salary'&&x.status==='planned'));
- const nextIncome=total(m.items.filter(x=>['benefit','other'].includes(x.kind)&&x.status!=='posted'));
- const cap=carry==null?null:carry+pendingSalary+nextIncome-direct-otherCards-extra-saving;
- const panel=el('div',undefined,'next-card-budget');host.append(panel);
- panel.append(el('h3',monthLabel(next)+'の楽天カード引落予算（暫定）'));
- metric(panel,'引落予算（2枚合計）',cap==null?null:Math.max(0,cap));
- metric(panel,'登録済み請求見込',used);
- panel.append(el('p','あとカードで使える金額','muted'),el('p',cap==null?'要確認':yen(Math.max(0,cap-used)),'amount'));
- if(cap!=null&&cap<used)panel.append(el('p','予算不足 '+yen(used-cap),'notice'));
- panel.append(el('p','引落月が '+monthLabel(next)+' になる利用分のみ。未登録の支払い・収入で変動します。','muted'));
- const d=details(panel,'予算の計算内訳・設定');
- metric(d,'繰越見込額',carry);
- metric(d,'＋ 未入金の当月給与',pendingSalary);
- metric(d,'＋ 翌月の手当・その他入金見込',nextIncome);
- metric(d,'－ カード以外の支払予定',direct);
- metric(d,'－ その他のカード引落',otherCards);
- metric(d,'－ 翌月の積立予定',saving);
- metric(d,'－ 翌月の生活費・繰越確保額',extra);
- for(const item of rakuten)metric(d,item.name,item.amount);
- if(!reserve)d.append(el('p','翌月の生活費・繰越確保額が未設定です。','notice'));
- if(!m.salaryKnown||m.benefitUnresolved||funds.currentUnknown||!rakuten.length)d.append(el('p','給与・手当・カード請求などの登録状況を確認してください。','notice'));
- d.append(button('翌月の生活費・繰越確保額を設定',()=>fundsForm(next)));
+function incomeOutlookForm(monthOnly=false){
+ const budget=summary.cardBudget;
+ if(!budget)return;
+ modal(monthOnly?monthLabel(budget.month)+'に使う収入見込み':'収入見込みの基本設定');
+ const f=el('form');
+ f.append(el('p','給与は標準で前月入金分を翌月の予算に使います。金額・入金月・日・入金先を確認してください。見込みの保存だけでは残高やカレンダーは変わりません。入金記録は給与・手当・養育費の名称やカテゴリで照合します。未分類の入金は収支画面で分類を確認してください。','notice'));
+ const fields=[];
+ for(const r of budget.rules){
+  const group=el('fieldset');group.append(el('legend',r.name+(r.frequency==='even'?'（偶数月入金）':r.frequency==='odd'?'（奇数月入金）':'')));f.append(group);
+  const override=data.incomeOutlook?.months?.[budget.month]?.[r.id];
+  const source=monthOnly?{...r,...override}:r;
+  if(monthOnly&&r.frequency!=='monthly'&&(Number(budget.month.slice(5))%2===(r.frequency==='even'?1:0))){group.disabled=true;group.append(el('p','この月は入金対象外です。予算に加算しません。','muted'));}
+  const enabled=field(group,monthOnly?'この月の見込みを使う':'見込みを有効にする','checkbox');enabled.checked=source.enabled;
+  const value=field(group,'見込額（円）','number',source.amount,true);
+  let date,day,offset;
+  if(monthOnly){
+   const found=budget.incomes.find(i=>i.id===r.id);
+   date=field(group,'実際の入金予定日','date',override?.date||found?.date||'');
+   if(found?.status==='posted'||found?.status==='planned')group.append(el('p','登録済みの入金・予定が優先されます。金額の修正は収支・予定画面で行ってください。','muted'));
+  }else{
+   if(r.id==='salary'||r.id==='maintenance')offset=select(group,'予算に使う収入の入金月',[[-1,'予算月の前月に入金'],[0,'予算月に入金']],String(r.receiptOffset));
+   day=field(group,'入金予定日（1〜31、31は月末／未定なら空欄）','number',r.day??'');day.min=1;day.max=31;
+  }
+  const account=select(group,'入金先',[['','未設定'],...data.accounts.map(a=>[a.id,a.name])],source.accountId||'');
+  fields.push({r,enabled,value,date,day,offset,account});
+ }
+ saveForm(f,'収入見込みを保存',monthOnly?'cashflow.incomeMonth':'cashflow.incomeRules',()=>{
+  const rows=fields.map(x=>({id:x.r.id,enabled:x.enabled.checked,amount:amount(x.value),accountId:x.account.value,
+   ...(monthOnly?{date:x.date.value||null}:{day:amount(x.day,{optional:true}),receiptOffset:x.offset?Number(x.offset.value):0})}));
+  return monthOnly?{month:budget.month,items:rows}:{rules:rows};
+ });
+ dialog.append(f);
+ if(monthOnly)dialog.append(commandButton('この月の個別設定を解除','cashflow.incomeMonth.reset',{month:budget.month}));
 }
+function nextCardBudget(host,funds){
+ const b=summary.cardBudget;if(!b)return;
+ const panel=el('div',undefined,'next-card-budget');host.append(panel);
+ panel.append(el('h3',monthLabel(b.month)+'の収入・楽天カード予算（暫定）'));
+ const total=rows=>rows.reduce((n,x)=>n+x.amount,0);
+ const incomeGrid=el('div',undefined,'income-budget-grid');panel.append(incomeGrid);
+ metric(incomeGrid,'翌月に使う給与',b.incomes.some(i=>i.id==='salary'&&i.status==='unset')?null:total(b.incomes.filter(i=>i.id==='salary')));
+ metric(incomeGrid,'翌月の手当',b.incomes.some(i=>['child','support'].includes(i.id)&&i.status==='unset')?null:total(b.incomes.filter(i=>['child','support'].includes(i.id))));
+ metric(incomeGrid,'その他の収入見込',total(b.incomes.filter(i=>!['salary','child','support'].includes(i.id))));
+ metric(incomeGrid,'翌月の総資金見込',b.totalFunds);
+ if(!b.configured)panel.append(button('収入見込みを設定',()=>incomeOutlookForm(false),'primary'));
+ metric(panel,'楽天カード引落予算（2枚合計）',b.totalFunds===null?null:Math.max(0,(b.estimate??0)+b.registered));
+ metric(panel,'登録済みカード請求見込',b.registered);
+ panel.append(el('p','あとカードで使える金額','muted'),el('p',b.usable===null?'算出不可／要確認':yen(b.usable),'amount'));
+ if(b.shortage>0)panel.append(el('p','登録済みの金額に対する予算不足 '+yen(b.shortage),'notice'));
+ panel.append(el('p','この引落月に入るカード利用分の予算です。見込み収入に基づく暫定額で、現在すぐ使える預金額とは異なります。','muted'));
+ const messages={savings:'積立の確保元・重複した確保額を確認してください。',incomeSettings:'収入見込みの基本設定を確認して保存してください。',reserves:'翌月の生活費・繰越確保額が未設定です。不要な場合も0円で設定してください。',currentReserves:'今月の残り生活費・確保額が未設定です。',currentUnknown:'今月の繰越計算に未確認項目があります。',unassigned:'請求月未確定の利用・未反映予定があります。',payments:'支払い額やカード明細の照合を確認してください。',card:'楽天カード2枚の請求見込みを確認してください。',incomeConflict:'実績と入金予定、または複数の入金予定が重なっています。見込みの重複加算はしていません。',benefitConflict:'同月の手当が重複する候補があります。入金記録・予定を確認してください。',incomeDate:'入金日が未設定のため、引落日に間に合うかは未確認です。',incomeAccount:'入金先が未設定のため、口座別の資金確認が必要です。',overdueIncome:'予定日を過ぎた未入金の見込みがあります。入金状況を確認してください。',timing:'月間予算とは別に、引落前の口座への準備が必要です。'};
+ if(b.usable===null)panel.append(el('p','設定・登録状況の確認が必要です。内訳の確認事項 '+b.issues.length+'件をご確認ください。','notice'));
+ if(b.issues.includes('timing'))panel.append(el('p',messages.timing,'notice'));
+ const d=details(panel,'予算の計算内訳・設定'+(b.issues.length?'（確認 '+b.issues.length+'件）':''));
+ for(const code of b.issues)d.append(el('p',messages[code]||code,'notice'));
+ metric(d,'繰越資金（下記の給与等を除く）',b.carry);
+ for(const item of b.incomes)row(d,'＋ '+item.name,yen(item.amount),[item.date||'入金日未設定',item.accountId?payName(item.accountId):'入金先未設定',{posted:'入金済み・残高内数',planned:'登録済み予定',estimate:'見込み',unset:'未設定'}[item.status]].join(' ／ '));
+ if(b.embedded)d.append(el('p','給与等 '+yen(b.embedded)+' は月末残高計算に反映済みです。内訳では繰越と分け、予算には一度だけ含めています。','muted'));
+ metric(d,'＝ 総資金見込',b.totalFunds);
+ metric(d,'－ カード以外の支払予定・他のカード引落',b.otherPayments);
+ metric(d,'－ 現金生活費等',b.living);
+ metric(d,'－ 旅行・返済等の確保額',b.goals);
+ metric(d,'－ 翌々月への繰越確保額',b.carryReserve);
+ metric(d,'－ 積立予定',b.saving);
+ metric(d,'－ 楽天カード請求見込',b.registered);
+ metric(d,'＝ 差引見込（未設定項目は別途要確認）',b.estimate);
+ for(const item of b.rakuten)metric(d,item.name,item.amount);
+ for(const t of b.timing)row(d,payName(t.accountId)+' '+t.date+'まで',t.shortage?yen(t.shortage)+'追加準備': '同日入金の順序を確認','引落前 '+yen(t.before)+' ／ 支払い '+yen(t.payments)+' ／ 入金予定 '+yen(t.income));
+ d.append(button('収入見込みの基本設定',()=>incomeOutlookForm(false)));
+ if(b.configured)d.append(button('この月だけ収入を変更',()=>incomeOutlookForm(true)));
+ d.append(button('翌月の生活費・繰越確保額を設定',()=>fundsForm(b.month)),button('入金・振替予定を確認',async()=>{tab='plans';await load();}),button('カード請求見込を確認',async()=>{tab='cards';await load();}));
+}
+
 function cashflowHome(){
  const funds=summary.funds;
  if(!funds?.accountForecasts)return;
@@ -339,6 +378,7 @@ function cashflowHome(){
  metric(breakdown,'－今後のカード定期支払い見込',funds.recurring);
  metric(breakdown,'－その他の支払予定',funds.other);
  metric(breakdown,'－今月の生活費',funds.reserves?.living);
+ metric(breakdown,'－次月へ残す繰越確保額',funds.reserves?.carry??0);
  if(funds.savingsReserved||funds.futureSavings){
   metric(breakdown,'－目的別積立の確保済み資金',funds.savingsReserved);
   metric(breakdown,'－今後の積立予定（今月まで '+yen(funds.currentSavings)+'）',funds.futureSavings);

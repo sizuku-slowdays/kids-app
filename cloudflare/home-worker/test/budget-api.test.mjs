@@ -76,6 +76,18 @@ test('budget private API isolates users, atomically retries commands and keeps i
  assert.deepEqual(after.data.bills,before.data.bills);
  assert.equal((await call('/classification-preview')).data.alreadyApplied,true);
  });
+ await t.test('income outlook is private, audited, idempotent and cannot mutate balances or plans',async()=>{
+ const before=await get();
+ const rules=[['salary',220000,-1],['child',40000,0],['support',100000,0],['maintenance',25000,0]].map(([id,amount,receiptOffset])=>({id,amount,receiptOffset,enabled:true,day:null,accountId:''}));
+ const payload={rules,expectedRevision:before.revision};
+ assert.equal((await post('cashflow.incomeRules',payload,'income-outlook-rules')).status,200);
+ assert.equal((await post('cashflow.incomeRules',payload,'income-outlook-rules')).status,200);
+ const after=await get();assert.equal(after.revision,before.revision+1);
+ for(const key of ['journal','accounts','bills','cashPlans','plans'])assert.deepEqual(after.data[key],before.data[key]);
+ assert.equal(after.summary.cardBudget.configured,true);
+ assert.equal((await get('other')).data.incomeOutlook,undefined);
+ assert.equal((await post('cashflow.incomeRules',{rules,expectedRevision:before.revision},'stale-income-rules')).status,409);
+ });
  await t.test('private JSON export can replay the full command history and detect tampering',async()=>{const backup=(await call('/export')).data;assert.equal(replayBudgetAudit(backup).ok,true);const damaged=structuredClone(backup);damaged.audit[0].after_hash='wrong';assert.throws(()=>replayBudgetAudit(damaged));});
  await t.test('logout/revocation closes private routes and foreign-key integrity stays intact',async()=>{await db.prepare("UPDATE sessions SET revoked_at=? WHERE user_id='owner'").bind(now).run();assert.equal((await call('/audit')).status,401);assert.deepEqual((await db.prepare('PRAGMA foreign_key_check').all()).results,[]);});
  }finally{await mf.dispose();}

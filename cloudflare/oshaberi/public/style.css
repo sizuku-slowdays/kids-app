@@ -22,3 +22,11 @@
 .card:has(>.bubbles)>.row,.card:has(>.bubbles)>.stamps{gap:5px;margin-top:9px}
 .card:has(>.bubbles)>.row>button,.card:has(>.bubbles)>.stamps>button{padding:6px 10px;min-height:44px}
 @media(max-width:420px){.card:has(>.bubbles){padding:10px;margin:8px 0}.bubbles>.message{max-width:86%;padding:8px 11px}.bubbles{padding-inline:8px}}
+
+/* Let the page continue scrolling when conversation reaches either edge. */
+.bubbles{overscroll-behavior-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.family-bubbles{max-height:48vh;max-height:48dvh;scroll-anchor:none}
+.history-tools{margin:6px 0;justify-content:space-between}
+.history-tools button{font-size:.78rem;min-height:38px;padding:5px 10px}
+.bubbles>.message.recalled{background:#f2f3f2;color:#68766f;font-size:.78rem;padding:6px 10px}
+.bubbles>.message.recalled::after{display:none}

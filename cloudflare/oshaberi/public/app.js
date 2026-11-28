@@ -75,20 +75,24 @@ async function familyPanel(parent,container=app){
 async function openFamily(g){
  clearInterval(timer);talk=g.id;refreshVisible=null;app.replaceChildren();
  const panel=card('家族のおしゃべり');panel.append(btn('一覧にもどる',()=>start()),el('p',g.members.map(m=>m.alias).join('・')));
- const rows=el('div',undefined,'bubbles');panel.append(rows);
+ const rows=el('div',undefined,'bubbles family-bubbles');rows.setAttribute('aria-label','家族トーク履歴');panel.append(rows);
  let last=0,first=0,busy=false;const pending=new Map();
  async function refresh(older=false){
   if(busy||talk!==g.id||document.hidden)return;busy=true;
   try{const {messages,recalled=[]}=await api('family-groups/'+g.id+'/messages?'+(older?'before='+first:'after='+last));if(talk!==g.id)return;
-   const markRemoved=n=>{n.querySelector('p').textContent='メッセージの送信が取り消されました';n.querySelector('button')?.remove();};
+   const nearBottom=rows.scrollHeight-rows.scrollTop-rows.clientHeight<80,oldHeight=rows.scrollHeight,oldTop=rows.scrollTop,initial=last===0;
+   const markRemoved=n=>{n.querySelector('p').textContent='送信を取り消しました';n.querySelector('button')?.remove();n.classList.add('recalled');};
    const fragment=document.createDocumentFragment();for(const m of messages){if(rows.querySelector('[data-seq="'+m.seq+'"]'))continue;last=Math.max(last,m.seq);first=first?Math.min(first,m.seq):m.seq;const n=el('div',undefined,'message'+(m.author_id===me.id?' mine':''));n.dataset.seq=m.seq;n.append(el('small',m.author_alias+' · '+new Date(m.created_at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})),el('p',m.kind==='standard'?(me.stamps[m.text]||m.text):m.text));if(m.text==='')markRemoved(n);else if(me.role==='guardian')n.append(btn('送信取消',async()=>{if(!confirm('このメッセージを全員の画面から取り消しますか？'))return;await api('family-groups/'+g.id+'/messages','DELETE',{seq:m.seq});markRemoved(n);await refresh();},'danger'));fragment.append(n);}
-   if(older)rows.prepend(fragment);else{rows.append(fragment);rows.scrollTop=rows.scrollHeight;}
-   for(const seq of recalled){const n=rows.querySelector('[data-seq=+seq+]');if(n)markRemoved(n);}
+   const added=fragment.childElementCount>0;
+   if(older)rows.prepend(fragment);else rows.append(fragment);
+   for(const seq of recalled){const n=Array.from(rows.children).find(node=>String(node.dataset.seq)===String(seq));if(n)markRemoved(n);}
+   if(older)rows.scrollTop=Math.max(0,oldTop+rows.scrollHeight-oldHeight);else if(initial||(added&&nearBottom))rows.scrollTop=rows.scrollHeight;
+   if($('status').textContent.includes('[data-seq=+seq+]'))$('status').textContent='';
   }catch(e){showError(e);if(e.status===403){clearInterval(timer);rows.replaceChildren();}}finally{busy=false;}
  }
- panel.insertBefore(btn('前のおはなしを読む',()=>first&&refresh(true)),rows);
+ const historyTools=el('div',undefined,'row history-tools');historyTools.append(btn('前のおはなしを読む',()=>first&&refresh(true)),btn('最新へ',()=>{rows.scrollTop=rows.scrollHeight;}));panel.insertBefore(historyTools,rows);
  const message=field(panel,'メッセージ',el('textarea'));message.maxLength=2000;
- async function send(payload){const key=JSON.stringify(payload);if(!pending.has(key))pending.set(key,crypto.randomUUID());await api('family-groups/'+g.id+'/messages','POST',{...payload,nonce:pending.get(key)});pending.delete(key);await refresh();}
+ async function send(payload){const key=JSON.stringify(payload);if(!pending.has(key))pending.set(key,crypto.randomUUID());await api('family-groups/'+g.id+'/messages','POST',{...payload,nonce:pending.get(key)});pending.delete(key);await refresh();rows.scrollTop=rows.scrollHeight;}
  panel.append(btn('送信',async()=>{const value=message.value;await send({kind:'text',text:value});if(message.value===value)message.value='';},'primary'));
  const stamps=el('div',undefined,'row');for(const [id,label] of Object.entries(me.stamps))stamps.append(btn(label,()=>send({kind:'standard',stamp:id})));panel.append(stamps);
  refreshVisible=refresh;await refresh();timer=setInterval(refresh,5000);
